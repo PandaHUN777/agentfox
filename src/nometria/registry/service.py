@@ -1,0 +1,581 @@
+"""Pillar 1 — Discovery & Agent Registry.
+
+The design commitment that separates this from a GRC incumbent's registry: **lineage
+is observed, not declared.** Credo AI and OneTrust model a self-reported form; a
+registry that only knows what someone typed into it is the spreadsheet Dana already
+has. Every edge here is derived from spans the agent actually produced, and a
+divergence between declared and observed is itself a finding (P1-7).
+
+Shadow-agent detection (P1-2) is the same idea applied to the population: traffic
+that does not correlate to a registered agent creates the agent record, marked
+unregistered, with a ready-to-submit registration payload attached. Discovery that
+requires the shadow team to cooperate discovers nothing.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import hashlib
+import json
+import re
+import shutil
+import subprocess
+from collections import deque
+from typing import Any
+
+from sqlalchemy import func, select
+from sqlalchemy.orm import Session
+
+from ..models import (
+    Agent,
+    Finding,
+    LineageEdge,
+    McpServer,
+    McpToolSnapshot,
+    Span,
+    Tool,
+    Trace,
+    utcnow,
+)
+
+_SLUG = re.compile(r"[^a-z0-9-]+")
+
+
+def slugify(value: str) -> str:
+    return _SLUG.sub("-", (value or "unknown").strip().lower()).strip("-") or "unknown"
+
+
+# ---------------------------------------------------------------------------
+# Registration & observation
+# ---------------------------------------------------------------------------
+
+
+def register_agent(
+    session: Session,
+    slug: str,
+    *,
+    name: str = "",
+    purpose: str = "",
+    owner_email: str | None = None,
+    owner_team: str | None = None,
+    environment: str = "production",
+    risk_tier: str = "limited",
+    declared_models: list[str] | None = None,
+    declared_tools: list[str] | None = None,
+    data_classes: list[str] | None = None,
+    framework: str | None = None,
+) -> Agent:
+    slug = slugify(slug)
+    agent = session.scalar(select(Agent).where(Agent.slug == slug))
+    if agent is None:
+        agent = Agent(slug=slug)
+        session.add(agent)
+
+    agent.name = name or agent.name or slug
+    agent.purpose = purpose or agent.purpose
+    agent.owner_email = owner_email or agent.owner_email
+    agent.owner_team = owner_team or agent.owner_team
+    agent.environment = environment
+    agent.risk_tier = risk_tier
+    agent.framework = framework or agent.framework
+    agent.declared_models = declared_models or agent.declared_models or []
+    agent.declared_tools = declared_tools or agent.declared_tools or []
+    agent.data_classes = data_classes or agent.data_classes or []
+    agent.registered = True
+    agent.status = "active"
+    if agent.first_seen_at is None:
+        agent.first_seen_at = utcnow()
+    session.flush()
+    return agent
+
+
+def observe_agent(
+    session: Session,
+    slug: str,
+    *,
+    environment: str = "production",
+    model: str | None = None,
+    framework: str | None = None,
+) -> tuple[Agent, bool]:
+    """Record that an agent was seen. Returns ``(agent, is_new_shadow)``.
+
+    Called on every gateway request and every ingested OTel batch, which is what
+    makes P1-2 work without asking anyone to cooperate.
+    """
+    slug = slugify(slug)
+    agent = session.scalar(select(Agent).where(Agent.slug == slug))
+    is_new_shadow = False
+
+    if agent is None:
+        agent = Agent(
+            slug=slug,
+            name=slug,
+            environment=environment,
+            registered=False,
+            status="shadow",
+            risk_tier="limited",
+            first_seen_at=utcnow(),
+        )
+        session.add(agent)
+        session.flush()
+        is_new_shadow = True
+        session.add(
+            Finding(
+                type="shadow_agent",
+                severity="high",
+                title=f"Ungoverned agent '{slug}' observed in {environment}",
+                subject_type="agent",
+                subject_id=agent.id,
+                evidence_json={
+                    "slug": slug,
+                    "environment": environment,
+                    "model": model,
+                    "framework": framework,
+                    "first_seen": utcnow().isoformat(),
+                    # A finding you can act on in one click beats a finding you have
+                    # to translate into a form.
+                    "suggested_registration": {
+                        "slug": slug,
+                        "name": slug,
+                        "environment": environment,
+                        "owner_email": None,
+                        "purpose": "",
+                        "risk_tier": "limited",
+                        "declared_models": [model] if model else [],
+                    },
+                },
+                control_keys=["NOM-DSC-01", "NOM-DSC-02"],
+            )
+        )
+
+    agent.last_seen_at = utcnow()
+    if framework and not agent.framework:
+        agent.framework = framework
+    if model and model not in (agent.declared_models or []):
+        # Observed, not declared — surfaced separately by attest_registry().
+        pass
+    session.flush()
+    return agent, is_new_shadow
+
+
+def detect_shadow_agents(session: Session, window_days: int = 30) -> list[dict[str, Any]]:
+    """Report every unregistered agent with the evidence to act on it."""
+    since = utcnow() - dt.timedelta(days=window_days)
+    out: list[dict[str, Any]] = []
+    for agent in session.scalars(select(Agent).where(Agent.registered.is_(False))):
+        traces = list(
+            session.scalars(
+                select(Trace).where(Trace.agent_slug == agent.slug, Trace.started_at >= since)
+            )
+        )
+        out.append(
+            {
+                "slug": agent.slug,
+                "environment": agent.environment,
+                "first_seen": agent.first_seen_at.isoformat() if agent.first_seen_at else None,
+                "last_seen": agent.last_seen_at.isoformat() if agent.last_seen_at else None,
+                "calls": len(traces),
+                "models": sorted({t.model for t in traces if t.model}),
+                "providers": sorted({t.provider for t in traces if t.provider}),
+                "framework": agent.framework,
+                "suggested_registration": {
+                    "slug": agent.slug,
+                    "name": agent.name or agent.slug,
+                    "environment": agent.environment,
+                    "declared_models": sorted({t.model for t in traces if t.model}),
+                },
+            }
+        )
+    return out
+
+
+def unowned_agents(session: Session) -> list[Finding]:
+    """An unowned agent is a reportable compliance finding (P1-4, NOM-DSC-03)."""
+    findings: list[Finding] = []
+    for agent in session.scalars(select(Agent).where(Agent.status != "retired")):
+        if agent.is_owned:
+            continue
+        findings.append(
+            Finding(
+                type="unowned_agent",
+                severity="medium",
+                title=f"Agent '{agent.slug}' has no accountable owner",
+                subject_type="agent",
+                subject_id=agent.id,
+                evidence_json={"slug": agent.slug, "environment": agent.environment},
+                control_keys=["NOM-DSC-03", "NOM-GOV-03"],
+            )
+        )
+    for finding in findings:
+        session.add(finding)
+    session.flush()
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# Tools & lineage
+# ---------------------------------------------------------------------------
+
+
+def upsert_tool(
+    session: Session,
+    key: str,
+    *,
+    name: str = "",
+    kind: str = "function",
+    impact: str = "read",
+    schema: dict[str, Any] | None = None,
+    description: str = "",
+    mcp_server_id: str | None = None,
+) -> Tool:
+    tool = session.scalar(select(Tool).where(Tool.key == key))
+    if tool is None:
+        tool = Tool(key=key)
+        session.add(tool)
+    tool.name = name or tool.name or key
+    tool.kind = kind
+    tool.impact = impact
+    tool.schema_json = schema or tool.schema_json or {}
+    tool.description = description or tool.description
+    tool.mcp_server_id = mcp_server_id or tool.mcp_server_id
+    session.flush()
+    return tool
+
+
+def record_edge(
+    session: Session,
+    src_type: str,
+    src_id: str,
+    dst_type: str,
+    dst_id: str,
+    relation: str,
+    declared: bool = False,
+) -> LineageEdge:
+    edge = session.scalar(
+        select(LineageEdge).where(
+            LineageEdge.src_id == src_id,
+            LineageEdge.dst_id == dst_id,
+            LineageEdge.relation == relation,
+        )
+    )
+    if edge is None:
+        edge = LineageEdge(
+            src_type=src_type,
+            src_id=src_id,
+            dst_type=dst_type,
+            dst_id=dst_id,
+            relation=relation,
+            declared=declared,
+            # Set explicitly: the column default is applied at flush, and this
+            # counter is incremented before the flush happens.
+            observed_count=0,
+        )
+        session.add(edge)
+    edge.observed_count += 0 if declared else 1
+    edge.last_observed_at = utcnow()
+    if declared:
+        edge.declared = True
+    session.flush()
+    return edge
+
+
+def derive_lineage(session: Session, agent_slug: str | None = None) -> int:
+    """Rebuild the lineage graph from observed spans (P1-3)."""
+    query = select(Trace)
+    if agent_slug:
+        query = query.where(Trace.agent_slug == agent_slug)
+    edges = 0
+    for trace in session.scalars(query):
+        if not trace.agent_slug:
+            continue
+        if trace.model:
+            record_edge(session, "agent", trace.agent_slug, "model", trace.model, "uses_model")
+            edges += 1
+        for span in session.scalars(select(Span).where(Span.trace_id == trace.id)):
+            attrs = span.attributes_json or {}
+            if span.kind == "tool":
+                tool_key = str(attrs.get("gen_ai.tool.name") or span.name)
+                record_edge(session, "agent", trace.agent_slug, "tool", tool_key, "calls_tool")
+                edges += 1
+                server = attrs.get("nometria.mcp_server")
+                if server:
+                    record_edge(
+                        session, "tool", tool_key, "mcp_server", str(server), "connects_mcp"
+                    )
+                    edges += 1
+            elif span.kind == "retrieval":
+                source = str(attrs.get("nometria.data_source") or span.name)
+                record_edge(session, "agent", trace.agent_slug, "data_source", source, "reads_data")
+                edges += 1
+            elif span.kind == "subagent":
+                child = str(attrs.get("nometria.child_agent") or span.name)
+                record_edge(session, "agent", trace.agent_slug, "agent", child, "delegates_to")
+                edges += 1
+    return edges
+
+
+def lineage(session: Session, agent_slug: str, depth: int = 2) -> dict[str, Any]:
+    """Blast-radius query: what does this agent reach, and what reaches it?"""
+    nodes: dict[str, dict[str, Any]] = {}
+    links: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    queue: deque[tuple[str, int]] = deque([(agent_slug, 0)])
+
+    while queue:
+        current, level = queue.popleft()
+        if current in seen or level > depth:
+            continue
+        seen.add(current)
+
+        for edge in session.scalars(select(LineageEdge).where(LineageEdge.src_id == current)):
+            nodes.setdefault(edge.src_id, {"id": edge.src_id, "type": edge.src_type})
+            nodes.setdefault(edge.dst_id, {"id": edge.dst_id, "type": edge.dst_type})
+            links.append(
+                {
+                    "source": edge.src_id,
+                    "target": edge.dst_id,
+                    "relation": edge.relation,
+                    "observed_count": edge.observed_count,
+                    "declared": edge.declared,
+                }
+            )
+            queue.append((edge.dst_id, level + 1))
+
+        for edge in session.scalars(select(LineageEdge).where(LineageEdge.dst_id == current)):
+            nodes.setdefault(edge.src_id, {"id": edge.src_id, "type": edge.src_type})
+            nodes.setdefault(edge.dst_id, {"id": edge.dst_id, "type": edge.dst_type})
+            links.append(
+                {
+                    "source": edge.src_id,
+                    "target": edge.dst_id,
+                    "relation": edge.relation,
+                    "observed_count": edge.observed_count,
+                    "declared": edge.declared,
+                }
+            )
+
+    unique = {f"{link['source']}|{link['target']}|{link['relation']}": link for link in links}
+    return {
+        "root": agent_slug,
+        "depth": depth,
+        "nodes": list(nodes.values()),
+        "links": list(unique.values()),
+        "blast_radius": max(0, len(nodes) - 1),
+    }
+
+
+def attest_registry(session: Session) -> list[Finding]:
+    """Compare declared configuration against observed behaviour (P1-7)."""
+    findings: list[Finding] = []
+    for agent in session.scalars(select(Agent).where(Agent.registered.is_(True))):
+        observed_models = {
+            t.model
+            for t in session.scalars(select(Trace).where(Trace.agent_slug == agent.slug))
+            if t.model
+        }
+        observed_tools = {
+            e.dst_id
+            for e in session.scalars(
+                select(LineageEdge).where(
+                    LineageEdge.src_id == agent.slug, LineageEdge.relation == "calls_tool"
+                )
+            )
+        }
+        undeclared_models = observed_models - set(agent.declared_models or [])
+        undeclared_tools = observed_tools - set(agent.declared_tools or [])
+        if not undeclared_models and not undeclared_tools:
+            continue
+        findings.append(
+            Finding(
+                type="registry_drift",
+                severity="medium",
+                title=f"Agent '{agent.slug}' uses models/tools it has not declared",
+                subject_type="agent",
+                subject_id=agent.id,
+                evidence_json={
+                    "undeclared_models": sorted(undeclared_models),
+                    "undeclared_tools": sorted(undeclared_tools),
+                    "declared_models": agent.declared_models,
+                    "declared_tools": agent.declared_tools,
+                },
+                control_keys=["NOM-DSC-01", "NOM-DSC-04"],
+            )
+        )
+    for finding in findings:
+        session.add(finding)
+    session.flush()
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# MCP inventory & hygiene (P1-5)
+# ---------------------------------------------------------------------------
+
+#: Instructions embedded in a tool *description* — the tool-poisoning shape. A
+#: description is documentation for a human; imperatives aimed at the model are not
+#: documentation.
+_DESCRIPTION_INJECTION = [
+    re.compile(r"\b(?:ignore|disregard)\s+(?:all\s+)?(?:previous|prior)\b", re.I),
+    re.compile(r"\byou\s+must\s+(?:always|first|before)\b", re.I),
+    re.compile(r"\b(?:do\s+not|don'?t|never)\s+(?:tell|inform|mention\s+to)\s+the\s+user\b", re.I),
+    re.compile(r"<\s*(?:system|important|instructions?)\s*>", re.I),
+    re.compile(
+        r"\bbefore\s+(?:using|calling)\s+this\s+tool,?\s+(?:you\s+)?(?:must|should)\b", re.I
+    ),
+]
+
+
+def upsert_mcp_server(
+    session: Session,
+    name: str,
+    *,
+    url: str = "",
+    transport: str = "stdio",
+    trust_level: str = "untrusted",
+    pinned_version: str | None = None,
+) -> McpServer:
+    server = session.scalar(select(McpServer).where(McpServer.name == name))
+    if server is None:
+        server = McpServer(name=name)
+        session.add(server)
+    server.url = url or server.url
+    server.transport = transport
+    server.trust_level = trust_level
+    server.pinned_version = pinned_version or server.pinned_version
+    session.flush()
+    return server
+
+
+def scan_mcp_server(
+    session: Session, server: McpServer, tools: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Snapshot an MCP server's tools and check hygiene.
+
+    Two checks, both native: **schema drift** (the tools changed under us since the
+    last snapshot) and **description injection** (instructions hidden in tool
+    metadata). ``mcp-scan`` is invoked as an external tool when present — never
+    linked as a dependency, because it is Snyk-owned and Snyk is building this
+    category (Appendix A.3).
+    """
+    payload = json.dumps(tools, sort_keys=True, default=str)
+    digest = hashlib.sha256(payload.encode()).hexdigest()
+
+    previous = session.scalars(
+        select(McpToolSnapshot)
+        .where(McpToolSnapshot.mcp_server_id == server.id)
+        .order_by(McpToolSnapshot.captured_at.desc())
+    ).first()
+
+    snapshot = McpToolSnapshot(mcp_server_id=server.id, tools_json=tools, digest=digest)
+    session.add(snapshot)
+    server.last_scanned_at = utcnow()
+
+    issues: list[dict[str, Any]] = []
+
+    if previous is not None and previous.digest != digest:
+        before = {t.get("name"): t for t in (previous.tools_json or [])}
+        after = {t.get("name"): t for t in tools}
+        issues.append(
+            {
+                "type": "schema_drift",
+                "severity": "high",
+                "added": sorted(set(after) - set(before)),
+                "removed": sorted(set(before) - set(after)),
+                "changed": sorted(
+                    n
+                    for n in set(before) & set(after)
+                    if json.dumps(before[n], sort_keys=True) != json.dumps(after[n], sort_keys=True)
+                ),
+            }
+        )
+
+    for tool in tools:
+        text = f"{tool.get('description', '')} {json.dumps(tool.get('inputSchema', {}))}"
+        hits = [p.pattern for p in _DESCRIPTION_INJECTION if p.search(text)]
+        if hits:
+            issues.append(
+                {
+                    "type": "tool_poisoning",
+                    "severity": "critical",
+                    "tool": tool.get("name"),
+                    "patterns": hits,
+                    "excerpt": str(tool.get("description", ""))[:300],
+                }
+            )
+
+    if not server.pinned_version:
+        issues.append(
+            {
+                "type": "unpinned_server",
+                "severity": "medium",
+                "detail": "server has no pinned version; its tools can change silently",
+            }
+        )
+
+    for issue in issues:
+        session.add(
+            Finding(
+                type=issue["type"],
+                severity=issue["severity"],
+                title=f"MCP server '{server.name}': {issue['type'].replace('_', ' ')}",
+                subject_type="mcp_server",
+                subject_id=server.id,
+                evidence_json=issue,
+                control_keys=["NOM-DSC-05"],
+            )
+        )
+    session.flush()
+
+    return {
+        "server": server.name,
+        "digest": digest,
+        "tools": len(tools),
+        "issues": issues,
+        "external_scan": _external_mcp_scan(server),
+    }
+
+
+def _external_mcp_scan(server: McpServer) -> dict[str, Any]:
+    """Invoke `mcp-scan` if the operator installed it. Tool, not dependency."""
+    if not shutil.which("mcp-scan"):
+        return {
+            "ran": False,
+            "reason": "mcp-scan not on PATH (optional external tool; Snyk-owned, "
+            "deliberately not a dependency — Appendix A.3)",
+        }
+    try:  # pragma: no cover - requires the external binary
+        proc = subprocess.run(  # noqa: S603
+            ["mcp-scan", "scan", server.url or server.name, "--json"],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        return {"ran": True, "returncode": proc.returncode, "output": proc.stdout[-4000:]}
+    except Exception as exc:  # pragma: no cover
+        return {"ran": False, "reason": str(exc)}
+
+
+# ---------------------------------------------------------------------------
+# Inventory summary
+# ---------------------------------------------------------------------------
+
+
+def inventory(session: Session) -> dict[str, Any]:
+    agents = list(session.scalars(select(Agent)))
+    by_tier: dict[str, int] = {}
+    by_env: dict[str, int] = {}
+    for agent in agents:
+        by_tier[agent.risk_tier] = by_tier.get(agent.risk_tier, 0) + 1
+        by_env[agent.environment] = by_env.get(agent.environment, 0) + 1
+    return {
+        "agents": len(agents),
+        "registered": sum(1 for a in agents if a.registered),
+        "shadow": sum(1 for a in agents if not a.registered),
+        "unowned": sum(1 for a in agents if not a.is_owned),
+        "by_risk_tier": by_tier,
+        "by_environment": by_env,
+        "frameworks": sorted({a.framework for a in agents if a.framework}),
+        "tools": session.scalar(select(func.count()).select_from(Tool)) or 0,
+        "mcp_servers": session.scalar(select(func.count()).select_from(McpServer)) or 0,
+        "lineage_edges": session.scalar(select(func.count()).select_from(LineageEdge)) or 0,
+    }

@@ -1,0 +1,505 @@
+"""Audit, evidence and compliance routes (Pillars 5 and 6).
+
+Two things are deliberate here:
+
+* There is **no** PUT, PATCH or DELETE on ``/api/audit/entries``. The absence is the
+  control (P5-2).
+* Reading an evidence package writes its own audit entry. Who looked at the evidence
+  is audit-relevant, and a governance product that exempts itself from its own
+  controls is not credible (Appendix E.2.4).
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+from pathlib import Path
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import FileResponse, PlainTextResponse
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from ...audit import chain, evidence, siem
+from ...audit.trace import full_trace, search_traces
+from ...compliance import (
+    all_frameworks,
+    board_view,
+    classify,
+    compute_all,
+    controls_for_framework,
+    framework_coverage,
+    latest_statuses,
+    obligation_calendar,
+    posture,
+    review_mapping,
+)
+from ...compliance import (
+    register as risk_register,
+)
+from ...compliance.risk import assess
+from ...models import (
+    Agent,
+    AuditEntry,
+    Control,
+    EvidencePackage,
+    FrameworkMapping,
+    LegalHold,
+    RetentionPolicy,
+    User,
+)
+from ..deps import current_user, db, require
+
+router = APIRouter(prefix="/api", tags=["audit", "compliance"])
+
+
+# ---------------------------------------------------------------------------
+# Traces (P5-6)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/traces")
+def list_traces(
+    agent: str | None = None,
+    verdict: str | None = None,
+    environment: str | None = None,
+    entity_type: str | None = None,
+    tool: str | None = None,
+    since_days: int | None = None,
+    limit: int = 100,
+    session: Session = Depends(db),
+    _user: User = Depends(current_user),
+) -> dict[str, Any]:
+    since = dt.datetime.now(dt.UTC) - dt.timedelta(days=since_days) if since_days else None
+    return {
+        "traces": search_traces(
+            session,
+            agent_slug=agent,
+            verdict=verdict,
+            environment=environment,
+            entity_type=entity_type,
+            tool_key=tool,
+            since=since,
+            limit=limit,
+        )
+    }
+
+
+@router.get("/traces/{trace_id}")
+def get_trace(
+    trace_id: str, session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    detail = full_trace(session, trace_id)
+    if detail is None:
+        raise HTTPException(404, "unknown trace")
+    return detail
+
+
+# ---------------------------------------------------------------------------
+# Audit chain (P5-2) — append-only, no mutation routes exist
+# ---------------------------------------------------------------------------
+
+
+@router.get("/audit/entries")
+def audit_entries(
+    limit: int = 200,
+    action: str | None = None,
+    session: Session = Depends(db),
+    _user: User = Depends(current_user),
+) -> dict[str, Any]:
+    query = select(AuditEntry).order_by(AuditEntry.seq.desc()).limit(limit)
+    if action:
+        query = query.where(AuditEntry.action == action)
+    return {
+        "stats": chain.chain_stats(session),
+        "entries": [chain.entry_to_row(e) for e in session.scalars(query)],
+    }
+
+
+@router.post("/audit/verify")
+def verify_chain(
+    start_seq: int | None = None,
+    end_seq: int | None = None,
+    session: Session = Depends(db),
+    _user: User = Depends(current_user),
+) -> dict[str, Any]:
+    result = chain.verify_range(session, start_seq, end_seq)
+    return {**result.to_json(), "stats": chain.chain_stats(session)}
+
+
+@router.post("/audit/checkpoint", status_code=201)
+def checkpoint(
+    session: Session = Depends(db), user: User = Depends(require("evidence"))
+) -> dict[str, Any]:
+    record = chain.checkpoint_now(session)
+    if record is None:
+        raise HTTPException(400, "audit chain is empty")
+    return {
+        "seq": record.seq,
+        "digest": record.digest,
+        "signed_at": _iso(record.signed_at),
+        "by": user.email,
+    }
+
+
+# ---------------------------------------------------------------------------
+# SIEM export (P5-4)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/export/siem", response_class=PlainTextResponse)
+def export_siem(
+    format: str = Query("jsonl", pattern="^(jsonl|cef|leef|otlp)$"),
+    since_days: int = 7,
+    limit: int = 1000,
+    session: Session = Depends(db),
+    _user: User = Depends(current_user),
+) -> str:
+    return siem.export(
+        session,
+        format,
+        since=dt.datetime.now(dt.UTC) - dt.timedelta(days=since_days),
+        limit=limit,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Evidence packages (P5-3, P5-7)
+# ---------------------------------------------------------------------------
+
+
+class EvidenceIn(BaseModel):
+    agents: list[str] = Field(default_factory=lambda: ["*"])
+    controls: list[str] = Field(default_factory=lambda: ["*"])
+    period_from: dt.datetime | None = None
+    period_to: dt.datetime | None = None
+
+
+@router.post("/evidence", status_code=201)
+def build_evidence(
+    payload: EvidenceIn, session: Session = Depends(db), user: User = Depends(require("evidence"))
+) -> dict[str, Any]:
+    package = evidence.build(
+        session,
+        agents=payload.agents,
+        controls=payload.controls,
+        period_from=payload.period_from,
+        period_to=payload.period_to,
+        requested_by=user.email,
+    )
+    return {
+        "id": package.id,
+        "path": package.path,
+        "scope": package.scope_json,
+        "manifest": package.manifest_json,
+        "chain_verification": package.chain_verification_json,
+    }
+
+
+@router.get("/evidence")
+def list_evidence(
+    session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    return {
+        "packages": [
+            {
+                "id": p.id,
+                "scope": p.scope_json,
+                "requested_by": p.requested_by,
+                "built_at": _iso(p.built_at),
+                "chain_valid": (p.chain_verification_json or {}).get("valid"),
+                "counts": (p.manifest_json or {}).get("counts", {}),
+            }
+            for p in session.scalars(
+                select(EvidencePackage).order_by(EvidencePackage.built_at.desc())
+            )
+        ]
+    }
+
+
+@router.get("/evidence/{package_id}/download")
+def download_evidence(
+    package_id: str, session: Session = Depends(db), user: User = Depends(require("evidence"))
+):
+    package = session.get(EvidencePackage, package_id)
+    if package is None or not package.path or not Path(package.path).exists():
+        raise HTTPException(404, "evidence package not found on disk")
+    # Who read the evidence is itself audit-relevant (Appendix C §5).
+    chain.append(
+        session,
+        "evidence.downloaded",
+        actor_type="user",
+        actor_id=user.email,
+        subject_type="evidence_package",
+        subject_id=package.id,
+        payload={"scope": package.scope_json},
+    )
+    return FileResponse(
+        package.path, media_type="application/zip", filename=f"nometria-evidence-{package.id}.zip"
+    )
+
+
+# ---------------------------------------------------------------------------
+# Retention & legal hold (P5-5)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/retention")
+def retention(
+    session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    return {
+        "policies": [
+            {
+                "data_class": p.data_class,
+                "retain_days": p.retain_days,
+                "redact_fields": p.redact_fields,
+            }
+            for p in session.scalars(select(RetentionPolicy))
+        ],
+        "legal_holds": [
+            {
+                "id": h.id,
+                "scope": h.scope_json,
+                "reason": h.reason,
+                "placed_by": h.placed_by,
+                "placed_at": _iso(h.placed_at),
+                "released_at": _iso(h.released_at),
+            }
+            for h in session.scalars(select(LegalHold))
+        ],
+    }
+
+
+class LegalHoldIn(BaseModel):
+    scope: dict[str, Any] = Field(default_factory=dict)
+    reason: str
+
+
+@router.post("/legal-holds", status_code=201)
+def place_hold(
+    payload: LegalHoldIn,
+    session: Session = Depends(db),
+    user: User = Depends(require("compliance")),
+) -> dict[str, Any]:
+    hold = LegalHold(scope_json=payload.scope, reason=payload.reason, placed_by=user.email)
+    session.add(hold)
+    session.flush()
+    chain.append(
+        session,
+        "legal_hold.placed",
+        actor_type="user",
+        actor_id=user.email,
+        subject_type="legal_hold",
+        subject_id=hold.id,
+        payload={"scope": payload.scope, "reason": payload.reason},
+    )
+    return {"id": hold.id, "placed_at": _iso(hold.placed_at)}
+
+
+# ---------------------------------------------------------------------------
+# Controls & frameworks (P6-2, P6-4)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/controls")
+def list_controls(
+    session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    statuses = latest_statuses(session)
+    out = []
+    for control in session.scalars(select(Control).order_by(Control.key)):
+        mappings = list(
+            session.scalars(
+                select(FrameworkMapping).where(FrameworkMapping.control_key == control.key)
+            )
+        )
+        status = statuses.get(control.key)
+        out.append(
+            {
+                "key": control.key,
+                "title": control.title,
+                "objective": control.objective,
+                "family": control.family,
+                "pillar": control.pillar,
+                "implemented_by": control.implemented_by,
+                "evidence_sources": control.evidence_sources,
+                "status": status.status if status else "not_computed",
+                "rationale": status.rationale if status else None,
+                "computed_at": _iso(status.computed_at) if status else None,
+                "mappings": [
+                    {
+                        "framework": m.framework,
+                        "reference": m.reference,
+                        "review_status": m.review_status,
+                    }
+                    for m in mappings
+                ],
+            }
+        )
+    return {"controls": out, "posture": posture(session)}
+
+
+@router.post("/controls/compute")
+def compute_controls(
+    window_days: int = 30,
+    session: Session = Depends(db),
+    user: User = Depends(require("compliance")),
+) -> dict[str, Any]:
+    statuses = compute_all(session, window_days)
+    chain.append(
+        session,
+        "compliance.computed",
+        actor_type="user",
+        actor_id=user.email,
+        payload={"controls": len(statuses), "window_days": window_days},
+    )
+    return {
+        "computed": len(statuses),
+        "posture": posture(session),
+        "statuses": [
+            {"control_key": s.control_key, "status": s.status, "rationale": s.rationale}
+            for s in statuses
+        ],
+    }
+
+
+@router.get("/frameworks")
+def frameworks(
+    session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    return {"frameworks": all_frameworks(session)}
+
+
+@router.get("/frameworks/{key}")
+def framework(
+    key: str, session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    coverage = framework_coverage(session, key)
+    coverage["controls"] = controls_for_framework(session, key)
+    coverage["posture"] = posture(session, key)
+    return coverage
+
+
+class ReviewIn(BaseModel):
+    control_key: str
+    framework: str
+    reference: str | None = None
+
+
+@router.post("/frameworks/review")
+def mark_reviewed(
+    payload: ReviewIn, session: Session = Depends(db), user: User = Depends(require("compliance"))
+) -> dict[str, Any]:
+    """Step 3 of the mapping review gate (Appendix B §B.6)."""
+    count = review_mapping(
+        session, payload.control_key, payload.framework, user.email, payload.reference
+    )
+    chain.append(
+        session,
+        "compliance.mapping_reviewed",
+        actor_type="user",
+        actor_id=user.email,
+        subject_type="control",
+        subject_id=payload.control_key,
+        payload=payload.model_dump(),
+    )
+    return {"reviewed": count, "reviewer": user.email}
+
+
+@router.get("/compliance/status")
+def compliance_status(
+    framework: str | None = None,
+    session: Session = Depends(db),
+    _user: User = Depends(current_user),
+) -> dict[str, Any]:
+    return posture(session, framework)
+
+
+# ---------------------------------------------------------------------------
+# Risk & obligations (P6-3, P6-5, P6-6)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/risk/register")
+def get_register(
+    session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    return {"register": risk_register(session)}
+
+
+@router.get("/risk/classify/{slug}")
+def classify_agent(
+    slug: str, session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    agent = session.scalar(select(Agent).where(Agent.slug == slug))
+    if agent is None:
+        raise HTTPException(404, f"unknown agent '{slug}'")
+    return classify(session, agent)
+
+
+class AssessIn(BaseModel):
+    eu_ai_act_class: str | None = None
+    inherent_risk: str = "medium"
+    residual_risk: str = "low"
+    answers: dict[str, Any] = Field(default_factory=dict)
+    review_months: int = 12
+    signed_off_by: str | None = None
+
+
+@router.post("/risk/assessments/{slug}", status_code=201)
+def create_assessment(
+    slug: str,
+    payload: AssessIn,
+    session: Session = Depends(db),
+    user: User = Depends(require("compliance")),
+) -> dict[str, Any]:
+    agent = session.scalar(select(Agent).where(Agent.slug == slug))
+    if agent is None:
+        raise HTTPException(404, f"unknown agent '{slug}'")
+    assessment = assess(
+        session,
+        agent,
+        assessor=user.email,
+        eu_ai_act_class=payload.eu_ai_act_class,
+        inherent_risk=payload.inherent_risk,
+        residual_risk=payload.residual_risk,
+        answers=payload.answers,
+        review_months=payload.review_months,
+        signed_off_by=payload.signed_off_by,
+    )
+    chain.append(
+        session,
+        "risk.assessed",
+        actor_type="user",
+        actor_id=user.email,
+        subject_type="agent",
+        subject_id=agent.id,
+        payload={"class": assessment.eu_ai_act_class, "residual_risk": assessment.residual_risk},
+    )
+    return {
+        "id": assessment.id,
+        "agent": slug,
+        "eu_ai_act_class": assessment.eu_ai_act_class,
+        "mitigations": assessment.mitigations_json,
+        "next_review_at": _iso(assessment.next_review_at),
+    }
+
+
+@router.get("/obligations")
+def obligations(
+    session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    return {"obligations": obligation_calendar(session)}
+
+
+@router.get("/board")
+def board(session: Session = Depends(db), _user: User = Depends(current_user)) -> dict[str, Any]:
+    return board_view(session)
+
+
+def _iso(value: dt.datetime | None) -> str | None:
+    if value is None:
+        return None
+    return (value.replace(tzinfo=dt.UTC) if value.tzinfo is None else value).isoformat()

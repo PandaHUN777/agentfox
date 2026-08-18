@@ -1,0 +1,519 @@
+"""Evaluation routes (Pillar 4).
+
+``POST /api/eval/gate`` is the CI entry point: it returns the regression verdict plus
+JUnit and SARIF so the result lands where the engineer already looks — the PR — rather
+than in a dashboard nobody opens during a release.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+from typing import Any
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from ...audit import chain
+from ...evaluation import (
+    all_scorers,
+    compute_drift,
+    evaluate_slos,
+    gate,
+    run_campaign,
+    sample_production,
+    set_baseline,
+    to_junit,
+    to_sarif,
+)
+from ...evaluation.adapters import available_runners, get_runner
+from ...evaluation.redteam import BUILTIN_PROBES
+from ...evaluation.runner import NativeEvalRunner, fit_envelope
+from ...models import (
+    EvalCase,
+    EvalResult,
+    EvalRun,
+    EvalSuite,
+    RedTeamCampaign,
+    RedTeamFinding,
+    Trace,
+    User,
+)
+from ..deps import current_user, db, require
+
+router = APIRouter(prefix="/api", tags=["evaluation"])
+
+
+# ---------------------------------------------------------------------------
+# Suites & cases
+# ---------------------------------------------------------------------------
+
+
+class SuiteIn(BaseModel):
+    key: str
+    name: str = ""
+    description: str = ""
+    tags: list[str] = Field(default_factory=list)
+
+
+class CaseIn(BaseModel):
+    input: dict[str, Any] = Field(default_factory=dict)
+    expected: dict[str, Any] = Field(default_factory=dict)
+    context: dict[str, Any] = Field(default_factory=dict)
+    labels: list[str] = Field(default_factory=list)
+    split: str = "test"
+
+
+@router.get("/eval/suites")
+def list_suites(
+    session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    out = []
+    for suite in session.scalars(select(EvalSuite).order_by(EvalSuite.key)):
+        cases = session.scalars(select(EvalCase).where(EvalCase.suite_id == suite.id)).all()
+        out.append(
+            {
+                "id": suite.id,
+                "key": suite.key,
+                "name": suite.name,
+                "description": suite.description,
+                "tags": suite.tags,
+                "cases": len(cases),
+            }
+        )
+    return {"suites": out}
+
+
+@router.post("/eval/suites", status_code=201)
+def create_suite(
+    payload: SuiteIn, session: Session = Depends(db), _user: User = Depends(require("eval"))
+) -> dict[str, Any]:
+    suite = session.scalar(select(EvalSuite).where(EvalSuite.key == payload.key))
+    if suite is None:
+        suite = EvalSuite(**payload.model_dump())
+        session.add(suite)
+        session.flush()
+    return {"id": suite.id, "key": suite.key}
+
+
+@router.post("/eval/suites/{key}/cases", status_code=201)
+def add_case(
+    key: str,
+    payload: CaseIn,
+    session: Session = Depends(db),
+    _user: User = Depends(require("eval")),
+) -> dict[str, Any]:
+    suite = _suite(session, key)
+    case = EvalCase(
+        suite_id=suite.id,
+        input_json=payload.input,
+        expected_json=payload.expected,
+        context_json=payload.context,
+        labels=payload.labels,
+        split=payload.split,
+    )
+    session.add(case)
+    session.flush()
+    return {"id": case.id}
+
+
+@router.post("/eval/suites/{key}/cases/from-trace", status_code=201)
+def promote_trace(
+    key: str, trace_id: str, session: Session = Depends(db), user: User = Depends(require("eval"))
+) -> dict[str, Any]:
+    """P4-6 — promote a production failure into a regression test.
+
+    The shortest path from "this went wrong in production" to "this can never ship
+    again" is the feature that makes an eval suite grow instead of rot.
+    """
+    from ...audit.trace import full_trace
+
+    suite = _suite(session, key)
+    trace = session.get(Trace, trace_id)
+    if trace is None:
+        raise HTTPException(404, "unknown trace")
+    detail = full_trace(session, trace_id) or {}
+
+    retrieved: list[str] = []
+    output = ""
+    for span in detail.get("spans", []):
+        attrs = span.get("attributes") or {}
+        if attrs.get("nometria.output"):
+            output = str(attrs["nometria.output"])
+        if span.get("kind") == "retrieval" and attrs.get("nometria.content"):
+            retrieved.append(str(attrs["nometria.content"]))
+
+    case = EvalCase(
+        suite_id=suite.id,
+        input_json={"prompt": trace.intent or ""},
+        expected_json={"goal": trace.intent or ""},
+        context_json={"retrieved": retrieved, "observed_output": output},
+        labels=["from-production", f"verdict:{trace.verdict}"],
+        split="regression",
+        source_trace_id=trace_id,
+    )
+    session.add(case)
+    session.flush()
+    chain.append(
+        session,
+        "eval.case_promoted",
+        actor_type="user",
+        actor_id=user.email,
+        subject_type="eval_case",
+        subject_id=case.id,
+        payload={"suite": key, "trace_id": trace_id},
+    )
+    return {"id": case.id, "suite": key, "source_trace_id": trace_id}
+
+
+# ---------------------------------------------------------------------------
+# Runs & gating
+# ---------------------------------------------------------------------------
+
+
+class RunIn(BaseModel):
+    suite: str
+    target: dict[str, Any] = Field(default_factory=dict)
+    scorers: list[str] | None = None
+    baseline_run_id: str | None = None
+    runner: str | None = None
+
+
+@router.post("/eval/runs", status_code=201)
+def create_run(
+    payload: RunIn, session: Session = Depends(db), user: User = Depends(require("eval"))
+) -> dict[str, Any]:
+    suite = _suite(session, payload.suite)
+    runner = get_runner(payload.runner)
+    if isinstance(runner, NativeEvalRunner):
+        agent = payload.target.get("agent")
+        run = runner.run(
+            session,
+            suite,
+            payload.target,
+            payload.scorers,
+            baseline_run_id=payload.baseline_run_id,
+            envelope=fit_envelope(session, agent) if agent else None,
+        )
+    else:
+        run = runner.run(session, suite, payload.target, payload.scorers)
+
+    chain.append(
+        session,
+        "eval.run",
+        actor_type="user",
+        actor_id=user.email,
+        subject_type="eval_run",
+        subject_id=run.id,
+        payload={
+            "suite": payload.suite,
+            "target": payload.target,
+            "runner": run.runner,
+            "summary": run.summary_json,
+        },
+    )
+    return _run_json(run)
+
+
+@router.get("/eval/runs")
+def list_runs(
+    suite: str | None = None,
+    limit: int = 50,
+    session: Session = Depends(db),
+    _user: User = Depends(current_user),
+) -> dict[str, Any]:
+    query = select(EvalRun).order_by(EvalRun.created_at.desc()).limit(limit)
+    if suite:
+        query = query.where(EvalRun.suite_id == _suite(session, suite).id)
+    return {"runs": [_run_json(r) for r in session.scalars(query)]}
+
+
+@router.get("/eval/runs/{run_id}")
+def get_run(
+    run_id: str, session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    run = session.get(EvalRun, run_id)
+    if run is None:
+        raise HTTPException(404, "unknown run")
+    results = list(session.scalars(select(EvalResult).where(EvalResult.run_id == run_id)))
+    return {
+        **_run_json(run),
+        "results": [
+            {
+                "case_id": r.case_id,
+                "scorer": r.scorer_key,
+                "score": r.score,
+                "passed": r.passed,
+                "detail": r.detail_json,
+                "output": r.output_json,
+            }
+            for r in results
+        ],
+    }
+
+
+class GateIn(BaseModel):
+    suite: str
+    target: dict[str, Any] = Field(default_factory=dict)
+    scorers: list[str] | None = None
+    baseline_run_id: str | None = None
+    thresholds: dict[str, float] = Field(default_factory=dict)
+    min_pass_rate: float | None = None
+
+
+@router.post("/eval/gate")
+def run_gate(
+    payload: GateIn, session: Session = Depends(db), user: User = Depends(require("eval"))
+) -> dict[str, Any]:
+    """P4-1 — the CI entry point. Non-zero exit maps from ``passed: false``."""
+    suite = _suite(session, payload.suite)
+    agent = payload.target.get("agent")
+    run = NativeEvalRunner().run(
+        session,
+        suite,
+        payload.target,
+        payload.scorers,
+        baseline_run_id=payload.baseline_run_id,
+        envelope=fit_envelope(session, agent) if agent else None,
+    )
+    result = gate(session, run, payload.baseline_run_id, payload.thresholds, payload.min_pass_rate)
+    chain.append(
+        session,
+        "eval.gate",
+        actor_type="user",
+        actor_id=user.email,
+        subject_type="eval_run",
+        subject_id=run.id,
+        payload={
+            "suite": payload.suite,
+            "passed": result.passed,
+            "regressions": len(result.regressions),
+        },
+    )
+    return {
+        **result.to_json(),
+        "junit": to_junit(result, payload.suite),
+        "sarif": to_sarif(result),
+    }
+
+
+class BaselineIn(BaseModel):
+    run_id: str
+    label: str = "main"
+    thresholds: dict[str, float] = Field(default_factory=dict)
+
+
+@router.post("/eval/baselines", status_code=201)
+def create_baseline(
+    payload: BaselineIn, session: Session = Depends(db), user: User = Depends(require("eval"))
+) -> dict[str, Any]:
+    run = session.get(EvalRun, payload.run_id)
+    if run is None:
+        raise HTTPException(404, "unknown run")
+    baseline = set_baseline(session, run, payload.label, payload.thresholds)
+    chain.append(
+        session,
+        "eval.baseline_set",
+        actor_type="user",
+        actor_id=user.email,
+        subject_type="baseline",
+        subject_id=baseline.id,
+        payload={"run_id": run.id, "label": payload.label},
+    )
+    return {"id": baseline.id, "label": baseline.label, "run_id": run.id}
+
+
+# ---------------------------------------------------------------------------
+# Online eval, drift, SLOs
+# ---------------------------------------------------------------------------
+
+
+class OnlineIn(BaseModel):
+    agent: str
+    scorers: list[str] | None = None
+    since_days: int = 7
+    rate: float | None = None
+
+
+@router.post("/eval/online")
+def run_online(
+    payload: OnlineIn, session: Session = Depends(db), _user: User = Depends(require("eval"))
+) -> dict[str, Any]:
+    run = sample_production(
+        session,
+        payload.agent,
+        scorers=payload.scorers,
+        since=dt.datetime.now(dt.UTC) - dt.timedelta(days=payload.since_days),
+        rate=payload.rate,
+    )
+    if run is None:
+        return {"sampled": 0, "note": "no production traffic matched the window"}
+    return _run_json(run)
+
+
+@router.get("/eval/drift")
+def drift(
+    agent: str,
+    scorer: str = "groundedness",
+    session: Session = Depends(db),
+    _user: User = Depends(current_user),
+) -> dict[str, Any]:
+    report = compute_drift(session, agent, scorer)
+    if report is None:
+        return {
+            "drifted": None,
+            "note": "insufficient online samples in the current and baseline windows",
+        }
+    return report.to_json()
+
+
+@router.get("/eval/slos")
+def slos(
+    agent: str | None = None, session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    return {"slos": evaluate_slos(session, agent)}
+
+
+@router.get("/eval/scorers")
+def scorers(_user: User = Depends(current_user)) -> dict[str, Any]:
+    return {
+        "scorers": [
+            {
+                "key": s.key,
+                "kind": s.kind,
+                "higher_is_better": getattr(s, "higher_is_better", True),
+                "threshold": getattr(s, "threshold", None),
+            }
+            for s in all_scorers().values()
+        ],
+        "runners": available_runners(),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Red team (P4-4)
+# ---------------------------------------------------------------------------
+
+
+class CampaignIn(BaseModel):
+    agent: str
+    name: str = ""
+    probes: list[str] | None = None
+    runner: str = "native"
+
+
+@router.post("/redteam/campaigns", status_code=201)
+def create_campaign(
+    payload: CampaignIn, session: Session = Depends(db), user: User = Depends(require("eval"))
+) -> dict[str, Any]:
+    campaign = run_campaign(
+        session,
+        payload.agent,
+        name=payload.name,
+        runner=payload.runner,
+        probes=payload.probes,
+    )
+    findings = list(
+        session.scalars(select(RedTeamFinding).where(RedTeamFinding.campaign_id == campaign.id))
+    )
+    chain.append(
+        session,
+        "redteam.campaign",
+        actor_type="user",
+        actor_id=user.email,
+        subject_type="redteam_campaign",
+        subject_id=campaign.id,
+        payload=campaign.summary_json,
+    )
+    return {
+        "id": campaign.id,
+        "status": campaign.status,
+        "summary": campaign.summary_json,
+        "findings": [
+            {
+                "probe": f.probe,
+                "severity": f.severity,
+                "succeeded": f.succeeded,
+                "owasp_id": f.owasp_id,
+                "atlas_id": f.atlas_id,
+                "evidence": f.evidence_json,
+            }
+            for f in findings
+        ],
+    }
+
+
+@router.get("/redteam/campaigns")
+def list_campaigns(
+    session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    return {
+        "campaigns": [
+            {
+                "id": c.id,
+                "name": c.name,
+                "runner": c.runner,
+                "status": c.status,
+                "summary": c.summary_json,
+                "created_at": _iso(c.created_at),
+            }
+            for c in session.scalars(
+                select(RedTeamCampaign).order_by(RedTeamCampaign.created_at.desc())
+            )
+        ]
+    }
+
+
+@router.get("/redteam/probes")
+def list_probes(_user: User = Depends(current_user)) -> dict[str, Any]:
+    from ...evaluation.redteam import available_runners as rt_runners
+
+    return {
+        "probes": [
+            {
+                "key": p.key,
+                "category": p.category,
+                "severity": p.severity,
+                "owasp_id": p.owasp_id,
+                "atlas_id": p.atlas_id,
+                "surface": p.surface,
+                "description": p.description,
+            }
+            for p in BUILTIN_PROBES
+        ],
+        "runners": rt_runners(),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _suite(session: Session, key: str) -> EvalSuite:
+    suite = session.scalar(select(EvalSuite).where(EvalSuite.key == key))
+    if suite is None:
+        raise HTTPException(404, f"unknown eval suite '{key}'")
+    return suite
+
+
+def _run_json(run: EvalRun) -> dict[str, Any]:
+    return {
+        "id": run.id,
+        "suite_id": run.suite_id,
+        "target": run.target_json,
+        "scorers": run.scorer_keys,
+        "status": run.status,
+        "runner": run.runner,
+        "mode": run.mode,
+        "summary": run.summary_json,
+        "baseline_run_id": run.baseline_run_id,
+        "created_at": _iso(run.created_at),
+    }
+
+
+def _iso(value: dt.datetime | None) -> str | None:
+    if value is None:
+        return None
+    return (value.replace(tzinfo=dt.UTC) if value.tzinfo is None else value).isoformat()
