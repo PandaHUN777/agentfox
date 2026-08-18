@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     # NFR-1: hard budget for the whole pre-flight pipeline, and per detector.
     enforcement_budget_ms: int = 100
     detector_timeout_ms: int = 40
+    # P3-13: the *request*-level ceiling across every surface a single governed call
+    # touches. The per-call budget alone is a comfortable lie — one completion
+    # evaluates several messages, the output and every tool call.
+    request_budget_ms: int = 250
     # R3: observe-by-default. Enforcement is something a customer turns on
     # deliberately, after simulating it (P2-7).
     default_policy_mode: str = "observe"  # observe | enforce

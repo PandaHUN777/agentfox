@@ -50,7 +50,7 @@ _COST_ORDER = {
 class PipelineResult:
     results: list[DetectorResult] = field(default_factory=list)
     duration_ms: float = 0.0
-    budget_ms: int = 0
+    budget_ms: float = 0.0
     degraded: list[str] = field(default_factory=list)
     errored: list[str] = field(default_factory=list)
 
@@ -115,9 +115,16 @@ class DetectorPipeline:
         return sorted(applicable, key=lambda d: _COST_ORDER.get(d.key, 50))
 
     # -- execution -------------------------------------------------------
-    def run(self, content: str, context: DetectionContext) -> PipelineResult:
+    def run(
+        self, content: str, context: DetectionContext, budget_ms: float | None = None
+    ) -> PipelineResult:
+        """P3-13: ``budget_ms`` lets a caller hand down what is left of a *request*-level
+        allowance, which is smaller than the per-call budget once several surfaces have
+        already been evaluated. Without it, a stack that respects 100 ms per call can
+        still spend half a second on one request."""
+        effective_budget = self.budget_ms if budget_ms is None else float(budget_ms)
         detectors = self.select(context.surface)
-        result = PipelineResult(budget_ms=self.budget_ms)
+        result = PipelineResult(budget_ms=effective_budget)
         if not detectors:
             return result
 
@@ -126,7 +133,7 @@ class DetectorPipeline:
 
         for future, detector in futures.items():
             elapsed_ms = (time.perf_counter() - started) * 1000
-            remaining_ms = self.budget_ms - elapsed_ms
+            remaining_ms = effective_budget - elapsed_ms
             # Never give a single detector more than its own timeout, and never more
             # than what is left of the whole-pipeline budget.
             allowance = min(self.detector_timeout_ms, max(remaining_ms, 0.0))

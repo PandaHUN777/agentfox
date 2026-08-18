@@ -22,7 +22,7 @@ from ..db import init_db
 from ..guardrails import all_detectors, available_detectors
 from ..providers import all_providers, available_providers
 from .deps import current_user, db
-from .routes import evaluation, governance, inline, policy, registry
+from .routes import evaluation, governance, inline, policy, registry, tuning
 
 log = logging.getLogger(__name__)
 
@@ -100,6 +100,7 @@ def create_app() -> FastAPI:
     app.include_router(policy.router)
     app.include_router(evaluation.router)
     app.include_router(governance.router)
+    app.include_router(tuning.router)
 
     @app.get("/api/health", tags=["platform"])
     def health() -> dict[str, Any]:

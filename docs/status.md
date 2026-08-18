@@ -10,12 +10,12 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | | |
 |---|---|
 | **Capabilities** | 32 tracked |
-| **Built** | 8 ✅ |
-| **Partial** | 10 ◐ |
+| **Built** | 9 ✅ |
+| **Partial** | 9 ◐ |
 | **Absent** | 14 ✗ |
-| **Weighted coverage** | **41%** *(partial counts half)* |
-| **Tests** | 269 |
-| **Lines** | 23,231 (src + tests) |
+| **Weighted coverage** | **42%** *(partial counts half)* |
+| **Tests** | 296 |
+| **Lines** | 24,819 (src + tests) |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
 in [traceability.md](traceability.md).
@@ -25,7 +25,7 @@ in [traceability.md](traceability.md).
 | `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 7 | connector-based estate discovery (P1-8) absent |
 | `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 9 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 8 | no live IdP; Entra/Okta integration (P2-8) absent |
-| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ◐ partial | 16 | tuning surface (P3-12..14) absent |
+| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 34 | model-based detectors wired but need an opt-in weights download |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ✗ absent | 1 |  |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ✗ absent | — |  |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✗ absent | — |  |
@@ -34,7 +34,7 @@ in [traceability.md](traceability.md).
 | `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 17 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ◐ partial | 1 | approvals exist; missed-escalation detection absent |
-| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 17 |  |
+| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 18 |  |
 | `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 9 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 13 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |

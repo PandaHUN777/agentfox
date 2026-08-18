@@ -58,6 +58,12 @@ from .guardrails import (
 )
 from .guardrails.base import taint_rank
 from .guardrails.taint import _flatten
+from .guardrails.tuning import (
+    LatencyLedger,
+    active_suppressions,
+    explain,
+    filter_suppressed,
+)
 from .identity import check_capability, request_approval, verify_credential
 from .integrations.correlation import (
     link_trace,
@@ -120,6 +126,12 @@ class EnforcementResult:
     degraded: list[str] = field(default_factory=list)
     content: str | None = None  # redacted content, when the verdict is a redaction
     reason: str = ""
+    # P3-12/13/14. `explanation` is what an engineer reads instead of "blocked by
+    # policy"; `suppressed` records exceptions that fired, because an exception that
+    # leaves no trace is a hole rather than a control.
+    explanation: dict[str, Any] = field(default_factory=dict)
+    suppressed: list[dict[str, Any]] = field(default_factory=list)
+    latency_budget: dict[str, Any] = field(default_factory=dict)
 
     @property
     def blocked(self) -> bool:
@@ -145,6 +157,9 @@ class EnforcementResult:
             "latency_ms": round(self.latency_ms, 2),
             "degraded": self.degraded,
             "reason": self.reason,
+            "explanation": self.explanation,
+            "suppressed": self.suppressed,
+            "latency_budget": self.latency_budget,
         }
 
 
@@ -184,6 +199,9 @@ class Enforcer:
         self.settings = get_settings()
         self.pipeline = pipeline or DetectorPipeline()
         self.engine = get_engine()
+        # P3-13: one ledger per request, not per call. Reset at the start of each
+        # governed completion; a bare `evaluate()` gets a fresh one on demand.
+        self._ledger: LatencyLedger | None = None
 
     # ------------------------------------------------------------------
     # Identity & agent resolution
@@ -221,6 +239,16 @@ class Enforcer:
     # ------------------------------------------------------------------
     # Core evaluation
     # ------------------------------------------------------------------
+
+    def ledger(self) -> LatencyLedger:
+        """The request-level detector budget (P3-13)."""
+        if self._ledger is None:
+            self._ledger = LatencyLedger(budget_ms=self.settings.request_budget_ms)
+        return self._ledger
+
+    def reset_ledger(self) -> LatencyLedger:
+        self._ledger = LatencyLedger(budget_ms=self.settings.request_budget_ms)
+        return self._ledger
 
     def evaluate(
         self,
@@ -261,7 +289,18 @@ class Enforcer:
             schema=schema,
             prior_tools=prior_tools or [],
         )
-        pipeline_result = self.pipeline.run(content, context)
+        ledger = self.ledger()
+        pipeline_result = self.pipeline.run(
+            content, context, budget_ms=ledger.allowance_ms(self.pipeline.budget_ms)
+        )
+        ledger.charge(pipeline_result, surface)
+
+        # P3-14: suppressions are applied here rather than inside the pipeline. A
+        # suppression is a governance decision about a detector's output, not a
+        # detector concern, and keeping it out of the pipeline means the raw detector
+        # result stays honest.
+        suppressions = active_suppressions(self.session, agent.id if agent else None)
+        suppressed = filter_suppressed(pipeline_result, suppressions, surface=surface)
 
         detections = [
             {
@@ -413,7 +452,15 @@ class Enforcer:
             latency_ms=latency_ms,
             degraded=pipeline_result.degraded,
             reason=reason,
+            suppressed=suppressed,
+            latency_budget=ledger.report(),
         )
+        result.explanation = explain(
+            result,
+            pipeline_result,
+            content=content,
+            surface=surface,
+        ).to_json()
 
         # --- redaction (applied to the content, not just recorded) -------
         if effective in ("redact", "mask", "tokenize") and pipeline_result.detections:
@@ -457,6 +504,12 @@ class Enforcer:
         self.session.add(decision_row)
         self.session.flush()
         result.decision_id = decision_row.id
+        # P3-12: the explanation is built before persistence so the non-persisting
+        # path still gets one, which leaves the dispute payload to be completed here —
+        # a "file a false positive" link with no decision id is not a route anywhere.
+        if result.explanation.get("dispute"):
+            result.explanation["dispute"]["payload"]["decision_id"] = decision_row.id
+            result.explanation["decision_id"] = decision_row.id
 
         # --- 6. escalation (P2-3) ----------------------------------------
         if effective == "escalate":
@@ -672,6 +725,7 @@ class Enforcer:
         streaming path that quietly skips a check is exactly the class of defect
         PL-1 exists to remove.
         """
+        self.reset_ledger()
         agent, identity, _is_shadow = self.resolve(
             agent_slug, credential, environment=environment, model=model
         )

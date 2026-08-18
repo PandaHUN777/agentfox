@@ -51,6 +51,12 @@ def _blocked_response(result, status: int = 403) -> JSONResponse:
                 "rules_fired": result.rules_fired,
                 "entities": result.entities,
                 "approval_id": result.approval_id,
+                # P3-12: "blocked by policy" is not an explanation, and an engineer
+                # who cannot tell whether the guardrail was right will disable it.
+                # The cheapest fix for a false positive must be filing one, not
+                # turning the detector off — so the dispute route ships in the error.
+                "explanation": result.explanation,
+                "suppressed": result.suppressed,
             }
         },
         headers=_headers(result),

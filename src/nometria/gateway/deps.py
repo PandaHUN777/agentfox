@@ -28,6 +28,11 @@ WRITE_ROLES: dict[str, set[str]] = {
     "compliance": {"owner", "admin", "compliance"},
     "evidence": {"owner", "admin", "security", "compliance", "auditor"},
     "users": {"owner", "admin"},
+    # P3-14: filing a false positive is open to anyone who can read a decision, but
+    # *acting* on one by suppressing a detector is a security decision — a developer
+    # silencing a control to unblock a demo is the failure mode this separation exists
+    # to prevent.
+    "suppressions": {"owner", "admin", "security"},
 }
 
 ALL_ROLES = {"owner", "admin", "security", "compliance", "developer", "auditor"}

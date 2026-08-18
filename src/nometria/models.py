@@ -359,6 +359,71 @@ class DetectionFinding(Base, TimestampMixin):
     atlas_id: Mapped[str | None] = mapped_column(String(32))
 
 
+class GuardrailFeedback(Base, TimestampMixin):
+    """P3-14 — a human's verdict on our verdict.
+
+    The measured complaint is that guardrails cannot be tuned: a team gets false
+    positives, has nowhere to put that fact, and turns the detector off. This row is
+    the place to put it, and the input to both precision reporting and threshold
+    recommendation.
+    """
+
+    __tablename__ = "guardrail_feedback"
+    __table_args__ = (Index("ix_feedback_detector", "detector_key", "label"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("gfb"))
+    decision_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    trace_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    agent_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    detector_key: Mapped[str | None] = mapped_column(String(64))
+    entity_type: Mapped[str | None] = mapped_column(String(64))
+    # false_positive | true_positive | false_negative
+    label: Mapped[str] = mapped_column(String(24), index=True)
+    score: Mapped[float] = mapped_column(Float, default=0.0)
+    verdict: Mapped[str | None] = mapped_column(String(16))
+    note: Mapped[str] = mapped_column(Text, default="")
+    actor: Mapped[str | None] = mapped_column(String(200))
+    status: Mapped[str] = mapped_column(String(24), default="open")  # open | applied | rejected
+
+
+class Suppression(Base, TimestampMixin):
+    """P3-14 — a scoped, expiring exception to a detector.
+
+    Expiry is not a nicety. A permanent silent exception is indistinguishable from a
+    detector that stopped working, and that is exactly how guardrail programmes decay.
+    Every suppression carries an owner, a reason and an end date, and every hit is
+    counted so an unused one is visible.
+    """
+
+    __tablename__ = "suppressions"
+    __table_args__ = (Index("ix_suppressions_scope", "agent_id", "detector_key", "entity_type"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("sup"))
+    feedback_id: Mapped[str | None] = mapped_column(String(40))
+    agent_id: Mapped[str | None] = mapped_column(String(40), index=True)  # None = all agents
+    detector_key: Mapped[str] = mapped_column(String(64))
+    entity_type: Mapped[str | None] = mapped_column(String(64))
+    # When set, only this exact matched text is suppressed rather than the whole class.
+    sample_hash: Mapped[str | None] = mapped_column(String(64))
+    surface: Mapped[str | None] = mapped_column(String(24))
+    reason: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str | None] = mapped_column(String(200))
+    expires_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    hits: Mapped[int] = mapped_column(Integer, default=0)
+    revoked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+
+    @property
+    def active(self) -> bool:
+        if self.revoked_at is not None:
+            return False
+        if self.expires_at is None:
+            return True
+        expires = self.expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=dt.UTC)
+        return expires > dt.datetime.now(dt.UTC)
+
+
 class TaintTag(Base, TimestampMixin):
     """P3-4. The substrate for intent-based containment."""
 
