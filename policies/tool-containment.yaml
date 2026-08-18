@@ -1,0 +1,126 @@
+# Intent-based tool containment (P3-4, NOM-RTG-04) — the agent-native policy.
+#
+# This is the file that makes the difference between a model-era filter and an
+# agent-native control plane. Everything here reasons about the *action* and the
+# *provenance of its arguments*, not about the text of a prompt.
+#
+# The design assumption is deliberately pessimistic: assume the model can be
+# convinced of anything, and constrain what a convinced model is permitted to do.
+# These rules hold even when the injection detector missed the payload entirely.
+key: tool-containment
+name: Tool containment and least privilege
+description: >
+  Intent-based authorisation over the full execution path — tool, arguments, argument
+  provenance, prior calls. Controls NOM-RTG-04, NOM-IAM-02, NOM-IAM-03, NOM-RTG-08.
+version: 1
+mode: enforce
+default_effect: allow
+fail_mode: closed
+scope:
+  agents: ["*"]
+
+rules:
+  # --- Taint containment: the core rule -------------------------------
+  - id: taint.irreversible_tool
+    description: >
+      An irreversible action whose arguments came from untrusted content requires a
+      human. This is the rule that stops an indirect injection from moving money even
+      when the model has already been persuaded to try.
+    when:
+      tool_impact: [irreversible]
+      taint_exceeds: user
+    effect: escalate
+    severity: critical
+    reason: >
+      Irreversible tool invoked with arguments originating in untrusted content
+      (retrieved document, tool result or sub-agent output). Human approval required.
+    controls: [NOM-RTG-04, NOM-IAM-03]
+
+  - id: taint.high_impact_tool
+    description: High-impact (but reversible) actions with untrusted arguments.
+    when:
+      tool_impact: [high_impact]
+      taint_exceeds: user
+    effect: escalate
+    severity: high
+    reason: "High-impact tool invoked with arguments of untrusted provenance."
+    controls: [NOM-RTG-04]
+
+  - id: taint.write_from_tool_result
+    description: >
+      A write whose arguments were copied out of another tool's response — the
+      agent-to-agent and tool-chaining poisoning path.
+    when:
+      tool_impact: [write]
+      taint_exceeds: retrieved
+    effect: escalate
+    severity: medium
+    reason: "Write action carries arguments propagated from a tool result."
+    controls: [NOM-RTG-04, NOM-DSC-04]
+
+  # --- Least privilege (NOM-IAM-02) -----------------------------------
+  - id: capability.denied
+    when:
+      capability: denied
+    effect: block
+    severity: high
+    reason: "No capability grants this agent the requested tool and action (default deny)."
+    controls: [NOM-IAM-02]
+
+  - id: capability.approval_required
+    when:
+      capability: requires_approval
+    effect: escalate
+    severity: medium
+    reason: "The granting capability requires human approval for this action."
+    controls: [NOM-IAM-03]
+
+  # --- Intent (NOM-RTG-04) ---------------------------------------------
+  - id: intent.undeclared_irreversible
+    description: >
+      An irreversible action taken without a declared task intent cannot be judged
+      against the task at all, so it cannot be auto-approved.
+    when:
+      tool_impact: [irreversible]
+      intent_declared: false
+    effect: escalate
+    severity: medium
+    reason: "Irreversible action attempted with no declared task intent."
+    controls: [NOM-RTG-04, NOM-IAM-03]
+
+  # --- Consumption & loops (NOM-RTG-08) --------------------------------
+  - id: budget.exceeded
+    when:
+      budget_exceeded: true
+    effect: block
+    severity: medium
+    reason: "Agent budget exhausted (calls, tokens, spend or recursion depth)."
+    controls: [NOM-RTG-08]
+
+  - id: loop.runaway
+    when:
+      loop_detected: true
+    effect: block
+    severity: medium
+    reason: "The same tool has been called repeatedly in one execution path — runaway loop."
+    controls: [NOM-RTG-08]
+
+  # --- Injection reaching a tool boundary ------------------------------
+  - id: injection.in_tool_arguments
+    description: Instruction-like content inside tool arguments.
+    when:
+      surface: [tool_args]
+      detection: {entity_prefix: INJECTION, min_score: 0.6}
+    effect: block
+    severity: critical
+    reason: "Instruction-like content found inside tool-call arguments."
+    controls: [NOM-RTG-04, NOM-RTG-01]
+
+  - id: secrets.in_tool_arguments
+    when:
+      surface: [tool_args]
+      detection: {entity_prefix: SECRET, min_score: 0.9}
+    effect: block
+    severity: critical
+    reason: "Credential found in tool-call arguments."
+    controls: [NOM-RTG-03]

@@ -1,0 +1,91 @@
+# Regulatory obligation calendar (P6-5, NOM-GOV-05).
+#
+# Compliance features do not sell on merit; they sell on deadlines. This file is the
+# demand pump expressed as data, so a schedule change is a content edit rather than a
+# release (PRD R6 — and the schedule has already moved once, via the omnibus delay).
+#
+# Dates reflect the 2026 post-omnibus timeline and remain subject to further EU
+# adjustment. Re-check before committing any compliance-feature delivery date.
+version: 0.1.0
+as_of: 2026-08-17
+
+obligations:
+  - framework: eu-ai-act
+    reference: Art. 5
+    title: Prohibited AI practices
+    description: >
+      Prohibited practices are enforceable. AI-literacy duties apply to all providers
+      and deployers.
+    effective_date: 2025-02-02
+    status: live
+    applies_when:
+      risk_tier: [prohibited, high, limited, minimal]
+
+  - framework: eu-ai-act
+    reference: Art. 50
+    title: Transparency obligations
+    description: >
+      Disclose that a user is interacting with an AI system; mark AI-generated content.
+      Market-surveillance authorities stand up.
+    effective_date: 2026-08-02
+    status: live
+    applies_when:
+      interacts_with_humans: true
+
+  - framework: eu-ai-act
+    reference: Art. 53-55
+    title: General-purpose AI model obligations
+    description: >
+      The GPAI grace period ends; obligations bite for Code-of-Practice signatories.
+      Relevant to deployers through their model providers' documentation duties.
+    effective_date: 2026-12-02
+    status: upcoming
+    applies_when:
+      uses_gpai: true
+
+  - framework: eu-ai-act
+    reference: Annex III / Art. 6(2)
+    title: Standalone high-risk AI systems
+    description: >
+      Full high-risk obligations apply to standalone Annex III systems — risk
+      management (Art. 9), data governance (Art. 10), technical documentation
+      (Art. 11), logging (Art. 12), human oversight (Art. 14), accuracy and
+      cybersecurity (Art. 15). Delayed from 2026.
+    effective_date: 2027-12-02
+    status: upcoming
+    applies_when:
+      risk_tier: [high]
+
+  - framework: eu-ai-act
+    reference: Annex I / Art. 6(1)
+    title: High-risk AI embedded in regulated products
+    description: >
+      Full obligations apply to high-risk AI embedded in products already covered by
+      EU product-safety legislation.
+    effective_date: 2028-08-02
+    status: upcoming
+    applies_when:
+      risk_tier: [high]
+      embedded_in_product: true
+
+  - framework: iso-42001
+    reference: Clause 9.2
+    title: AI management system internal audit
+    description: >
+      Organisations operating a certified AIMS conduct internal audits at planned
+      intervals. Evidence packages support the AI-system-specific portion.
+    effective_date: 2026-12-31
+    status: recurring
+    applies_when:
+      certification: [iso-42001]
+
+  - framework: soc2
+    reference: TSC
+    title: Annual SOC 2 Type II observation period
+    description: >
+      Continuous operation of controls across the observation window. Relevant to
+      Tier-A buyers who need SOC 2 to sell upmarket.
+    effective_date: 2026-12-31
+    status: recurring
+    applies_when:
+      certification: [soc2]
