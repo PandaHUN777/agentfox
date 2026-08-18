@@ -40,6 +40,7 @@ from typing import Any
 
 from ..db import session_scope
 from ..enforcement import EnforcementResult, Enforcer
+from .correlation import links_for
 
 #: Key under which we stash governance state inside the graph's state dict.
 STATE_KEY = "__nometria__"
@@ -165,6 +166,17 @@ class NometriaGuard:
                         "trace_id": pre.trace.id if pre.trace else None,
                         "last_verdict": pre.result.verdict,
                     }
+                    # I-4/I-6: LangChain turns LangSmith tracing on by default, so the
+                    # ambient run tree is usually already there — the link costs the
+                    # user no configuration. Carried in graph state so it survives a
+                    # checkpoint and a resumed run still points at the same run.
+                    if pre.trace is not None:
+                        external = links_for(session, pre.trace.id)
+                        if external:
+                            governance["observability"] = [
+                                {"system": link.system, "trace": link.external_trace_id}
+                                for link in external
+                            ]
                     if pre.stopped:
                         self._stop(pre.result)
                         return self._merge({**governance, "blocked": True})

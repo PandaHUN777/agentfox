@@ -227,6 +227,7 @@ async def chat_completions(
             session_id=x_nometria_session,
             intent=x_nometria_intent,
             trust_map=_trust_map(x_nometria_trust),
+            correlation=dict(request.headers),
             temperature=float(body.get("temperature", 0.0)),
             max_tokens=body.get("max_tokens"),
             mode=x_nometria_stream_mode,
@@ -247,6 +248,7 @@ async def chat_completions(
         session_id=x_nometria_session,
         intent=x_nometria_intent,
         trust_map=_trust_map(x_nometria_trust),
+        correlation=dict(request.headers),
         temperature=float(body.get("temperature", 0.0)),
         max_tokens=body.get("max_tokens"),
     )
@@ -297,6 +299,7 @@ async def messages(
             session_id=x_nometria_session,
             intent=x_nometria_intent,
             trust_map=_trust_map(x_nometria_trust),
+            correlation=dict(request.headers),
             temperature=float(body.get("temperature", 0.0)),
             max_tokens=body.get("max_tokens"),
             mode=x_nometria_stream_mode,
@@ -317,6 +320,7 @@ async def messages(
         session_id=x_nometria_session,
         intent=x_nometria_intent,
         trust_map=_trust_map(x_nometria_trust),
+        correlation=dict(request.headers),
         temperature=float(body.get("temperature", 0.0)),
         max_tokens=body.get("max_tokens"),
     )

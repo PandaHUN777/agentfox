@@ -39,6 +39,7 @@ from ...compliance import (
     register as risk_register,
 )
 from ...compliance.risk import assess
+from ...integrations.correlation import links_for, resolve_external
 from ...models import (
     Agent,
     AuditEntry,
@@ -47,6 +48,7 @@ from ...models import (
     FrameworkMapping,
     LegalHold,
     RetentionPolicy,
+    Trace,
     User,
 )
 from ..deps import current_user, db, require
@@ -86,6 +88,70 @@ def list_traces(
     }
 
 
+# ---------------------------------------------------------------------------
+# Observability correlation (I-4 / I-6)
+# ---------------------------------------------------------------------------
+
+
+# Declared before /traces/{trace_id} deliberately: FastAPI matches in declaration
+# order, so the parameterised route would otherwise swallow this one.
+@router.get("/traces/resolve")
+def resolve_trace(
+    system: str = Query(..., description="langsmith | langfuse | otel"),
+    external_id: str = Query(..., description="their trace id or run/observation id"),
+    session: Session = Depends(db),
+    _user: User = Depends(current_user),
+) -> dict[str, Any]:
+    """Their run id → our governance decision.
+
+    This is the direction that matters during an incident: an engineer is already
+    looking at a Langfuse trace and wants to know which policy shaped it. Nobody
+    ships this, because it requires the governance system to have stored the join
+    key at decision time rather than reconstructing it from timestamps afterwards.
+    """
+    links = resolve_external(session, system, external_id)
+    if not links:
+        raise HTTPException(404, "no governed trace correlates with that id")
+    out = []
+    for link in links:
+        trace = session.get(Trace, link.trace_id)
+        out.append(
+            {
+                "trace_id": link.trace_id,
+                "agent": trace.agent_slug if trace else None,
+                "verdict": trace.verdict if trace else None,
+                "started_at": trace.started_at.isoformat() if trace else None,
+                "system": link.system,
+                "external_trace_id": link.external_trace_id,
+                "external_run_id": link.external_run_id,
+                "url": link.url,
+                "detail": f"/api/traces/{link.trace_id}",
+            }
+        )
+    return {"matches": out}
+
+
+@router.get("/traces/{trace_id}/links")
+def trace_links(
+    trace_id: str, session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    """Our decision → their trace, with a clickable URL where one can be built."""
+    return {
+        "trace_id": trace_id,
+        "links": [
+            {
+                "system": link.system,
+                "external_trace_id": link.external_trace_id,
+                "external_run_id": link.external_run_id,
+                "project": link.project,
+                "url": link.url,
+                "direction": link.direction,
+            }
+            for link in links_for(session, trace_id)
+        ],
+    }
+
+
 @router.get("/traces/{trace_id}")
 def get_trace(
     trace_id: str, session: Session = Depends(db), _user: User = Depends(current_user)
@@ -93,6 +159,10 @@ def get_trace(
     detail = full_trace(session, trace_id)
     if detail is None:
         raise HTTPException(404, "unknown trace")
+    detail["links"] = [
+        {"system": link.system, "external_trace_id": link.external_trace_id, "url": link.url}
+        for link in links_for(session, trace_id)
+    ]
     return detail
 
 

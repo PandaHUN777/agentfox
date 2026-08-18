@@ -548,6 +548,31 @@ class Trace(Base, TimestampMixin):
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
 
 
+class TraceLink(Base, TimestampMixin):
+    """I-4 / I-6 — the join key between our decision and an external observability run.
+
+    Deliberately a link table and not a copy of their span data. Their trace store is
+    better than ours; duplicating it would make us a worse LangSmith. What nobody has
+    is the *join*, so that is the only thing we keep.
+    """
+
+    __tablename__ = "trace_links"
+    __table_args__ = (
+        Index("ix_trace_links_external", "system", "external_trace_id"),
+        Index("ix_trace_links_run", "system", "external_run_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.trace_link_id)
+    trace_id: Mapped[str] = mapped_column(String(40), index=True)
+    system: Mapped[str] = mapped_column(String(32))  # langsmith | langfuse | otel
+    external_trace_id: Mapped[str] = mapped_column(String(200))
+    external_run_id: Mapped[str | None] = mapped_column(String(200))
+    project: Mapped[str | None] = mapped_column(String(200))
+    url: Mapped[str | None] = mapped_column(Text)
+    # inbound: they called us and carried the id. outbound: we created the id.
+    direction: Mapped[str] = mapped_column(String(16), default="inbound")
+
+
 class Span(Base, TimestampMixin):
     """OpenLLMetry semantic conventions live in `attributes_json` (P5-1)."""
 

@@ -78,6 +78,21 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     anthropic_api_key: str | None = None
 
+    # --- Observability correlation (I-4 / I-6) ---------------------------
+    # Correlation itself needs none of these: the join key travels in-band on a
+    # traceparent or vendor header, so a team gets the link with zero configuration.
+    # These only govern the optional write-back of our verdict onto their run.
+    correlation_push: bool = False
+    correlation_timeout_seconds: float = 2.0
+    langsmith_api_url: str = "https://api.smith.langchain.com"
+    langsmith_ui_url: str = "https://smith.langchain.com"
+    langsmith_api_key: str | None = None
+    langsmith_project: str | None = None
+    langfuse_host: str = "https://cloud.langfuse.com"
+    langfuse_public_key: str | None = None
+    langfuse_secret_key: str | None = None
+    langfuse_project: str | None = None
+
     # --- Evaluation (Pillar 4) ------------------------------------------
     eval_runner: str = "native"  # native | promptfoo
     promptfoo_bin: str = "promptfoo"

@@ -175,9 +175,7 @@ def create_app() -> FastAPI:
         for budget in session.scalars(select(Budget).where(Budget.scope_type == "agent")):
             agent = session.get(Agent, budget.scope_id)
             verdict = check_budget(session, "agent", budget.scope_id)
-            budgets.append(
-                {"agent": agent.slug if agent else budget.scope_id, **verdict.to_json()}
-            )
+            budgets.append({"agent": agent.slug if agent else budget.scope_id, **verdict.to_json()})
         return {
             "circuit_breakers": BREAKER.snapshot(),
             "budgets": budgets,

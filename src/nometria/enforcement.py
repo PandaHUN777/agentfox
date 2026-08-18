@@ -27,6 +27,7 @@ Two invariants are enforced here rather than assumed:
 from __future__ import annotations
 
 import json
+import logging
 import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
@@ -58,6 +59,12 @@ from .guardrails import (
 from .guardrails.base import taint_rank
 from .guardrails.taint import _flatten
 from .identity import check_capability, request_approval, verify_credential
+from .integrations.correlation import (
+    link_trace,
+    push_verdict,
+    refs_from_env,
+    refs_from_headers,
+)
 from .models import (
     Agent,
     Budget,
@@ -91,6 +98,8 @@ class ProviderUnavailable(RuntimeError):
 
 
 #: Verdict severity ordering, shared by every comparison in this module.
+log = logging.getLogger(__name__)
+
 _RANK = {"allow": 0, "tokenize": 1, "mask": 2, "redact": 3, "escalate": 4, "block": 5}
 
 
@@ -609,6 +618,40 @@ class Enforcer:
     def _severity(self, result: EnforcementResult) -> tuple[int, int]:
         return (_RANK[result.verdict], _RANK[result.effective_verdict])
 
+    # -- I-4/I-6 observability correlation -------------------------------
+
+    def _correlate(self, trace, correlation) -> None:
+        """Record the join key to LangSmith/Langfuse. Never fails the request.
+
+        Correlation is a convenience for the humans debugging later; it must not be
+        able to take down the path it is describing.
+        """
+        try:
+            if isinstance(correlation, dict):
+                refs = refs_from_headers(correlation)
+            elif correlation:
+                refs = list(correlation)
+            else:
+                refs = []
+            refs = refs + refs_from_env()
+            if refs:
+                link_trace(self.session, trace.id, refs)
+        except Exception as exc:  # pragma: no cover - defensive
+            log.debug("correlation link skipped: %s", exc)
+
+    def _push_correlation(self, trace, result, agent_slug: str | None) -> None:
+        try:
+            push_verdict(
+                self.session,
+                trace.id,
+                verdict=result.verdict,
+                effective_verdict=result.effective_verdict,
+                rules=[r.get("rule_id", "") for r in result.rules_fired],
+                agent_slug=agent_slug,
+            )
+        except Exception as exc:  # pragma: no cover - defensive
+            log.debug("correlation push skipped: %s", exc)
+
     def preflight(
         self,
         *,
@@ -621,6 +664,7 @@ class Enforcer:
         session_id: str | None = None,
         intent: str | None = None,
         trust_map: dict[str, str] | None = None,
+        correlation: dict[str, str] | list[Any] | None = None,
     ) -> PreflightOutcome:
         """Steps 2-6 of the request path, shared by buffered and streaming calls.
 
@@ -645,8 +689,10 @@ class Enforcer:
                 model=model,
                 provider=provider or self.settings.default_provider,
             )
+            self._correlate(trace, correlation)
             control.trace_id = trace.id
             end_trace(self.session, trace, verdict=control.verdict, status="blocked")
+            self._push_correlation(trace, control, agent.slug if agent else agent_slug)
             return PreflightOutcome(
                 agent=agent, identity=identity, trace=trace, result=control, stopped=True
             )
@@ -662,10 +708,13 @@ class Enforcer:
             provider=provider or self.settings.default_provider,
         )
 
+        self._correlate(trace, correlation)
+
         # P15-3: hard caps, checked before the model call rather than after the spend.
         budget = self._budget_gate(agent, trace)
         if budget is not None:
             end_trace(self.session, trace, verdict="block", status="blocked")
+            self._push_correlation(trace, budget, agent.slug if agent else agent_slug)
             return PreflightOutcome(
                 agent=agent, identity=identity, trace=trace, result=budget, stopped=True
             )
@@ -950,6 +999,7 @@ class Enforcer:
             usage=response.usage,
             cost_usd=response.cost_usd,
         )
+        self._push_correlation(trace, final, agent.slug if agent else agent_slug)
         return final, (None if final.blocked else response)
 
     def run_completion(
@@ -964,6 +1014,7 @@ class Enforcer:
         session_id: str | None = None,
         intent: str | None = None,
         trust_map: dict[str, str] | None = None,
+        correlation: dict[str, str] | list[Any] | None = None,
         schema: dict[str, Any] | None = None,
         temperature: float = 0.0,
         max_tokens: int | None = None,
@@ -979,6 +1030,7 @@ class Enforcer:
             session_id=session_id,
             intent=intent,
             trust_map=trust_map,
+            correlation=correlation,
         )
         if pre.stopped:
             return pre.result, None
@@ -1035,6 +1087,7 @@ class Enforcer:
         session_id: str | None = None,
         intent: str | None = None,
         trust_map: dict[str, str] | None = None,
+        correlation: dict[str, str] | list[Any] | None = None,
         schema: dict[str, Any] | None = None,
         temperature: float = 0.0,
         max_tokens: int | None = None,
@@ -1069,6 +1122,7 @@ class Enforcer:
             session_id=session_id,
             intent=intent,
             trust_map=trust_map,
+            correlation=correlation,
         )
         if pre.stopped:
             yield StreamEvent(kind="blocked", result=pre.result)

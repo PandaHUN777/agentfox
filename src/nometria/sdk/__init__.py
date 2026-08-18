@@ -41,6 +41,7 @@ from sqlalchemy.orm import Session
 from ..db import session_scope
 from ..enforcement import EnforcementResult, Enforcer
 from ..guardrails import TaintTracker
+from ..integrations.correlation import refs_from_env
 
 
 class PolicyViolation(Exception):
@@ -351,6 +352,17 @@ class Nometria:
             import json
 
             headers["X-Nometria-Trust"] = json.dumps(kwargs["trust_map"])
+        # I-4/I-6: in remote mode the correlation ids have to travel on the wire, or
+        # the gateway records a governance decision that nothing can be joined to.
+        for ref in refs_from_env():
+            if ref.system == "langsmith":
+                headers["langsmith-trace-id"] = ref.external_trace_id
+                if ref.external_run_id:
+                    headers["langsmith-run-id"] = ref.external_run_id
+            elif ref.system == "langfuse":
+                headers["langfuse-trace-id"] = ref.external_trace_id
+                if ref.external_run_id:
+                    headers["langfuse-observation-id"] = ref.external_run_id
 
         response = httpx.post(
             f"{self.base_url}/v1/chat/completions",
