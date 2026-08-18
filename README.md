@@ -113,6 +113,7 @@ Escalation maps to LangGraph's own `interrupt()` — one pause mechanism, not tw
 | | |
 |---|---|
 | **[PRD (consolidated) ★](docs/PRD-consolidated.md)** | **Start here.** Self-contained: all 11 pillars, with references, OSS options, commercial alternatives and industry state of the art per pillar |
+| **[Implementation status](docs/status.md)** | **Computed coverage — regenerate with `python scripts/coverage.py --write`** |
 | **[PRD v3 — CONSOLIDATED](docs/PRD-v3-consolidated.md)** | **Canonical. Self-contained: evidence, market, 15 pillars with OSS + commercial alternatives per pillar, roadmap** |
 | [PRD v1](docs/PRD.md) | Historical — the original six pillars |
 | [PRD v2](docs/PRD-v2.md) | Historical — the agent-assurance delta |
