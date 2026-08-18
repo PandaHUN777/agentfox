@@ -74,6 +74,21 @@ from .models import (
 from .policy import PolicyInput, active_policies, combine, get_engine
 from .providers import CompletionRequest, get_provider
 from .registry.service import observe_agent, record_edge
+from .reliability import (
+    BREAKER,
+    BudgetVerdict,
+    DegradationRecord,
+    FallbackLadder,
+    ProviderAttempt,
+    check_budget,
+    raise_budget_finding,
+)
+from .reliability import Rung as _Rung
+
+
+class ProviderUnavailable(RuntimeError):
+    """Every provider on the fallback ladder failed or is circuit-open."""
+
 
 #: Verdict severity ordering, shared by every comparison in this module.
 _RANK = {"allow": 0, "tokenize": 1, "mask": 2, "redact": 3, "escalate": 4, "block": 5}
@@ -647,6 +662,14 @@ class Enforcer:
             provider=provider or self.settings.default_provider,
         )
 
+        # P15-3: hard caps, checked before the model call rather than after the spend.
+        budget = self._budget_gate(agent, trace)
+        if budget is not None:
+            end_trace(self.session, trace, verdict="block", status="blocked")
+            return PreflightOutcome(
+                agent=agent, identity=identity, trace=trace, result=budget, stopped=True
+            )
+
         tracker = TaintTracker(trace_id=trace.id)
         tracker.mark_messages(messages, trust_map)
         for mark in tracker.marks:
@@ -718,6 +741,123 @@ class Enforcer:
             messages=redacted_messages,
             result=worst,
         )
+
+    def _budget_gate(self, agent: Agent | None, trace: Trace) -> EnforcementResult | None:
+        """P15-3. A breach is a governed event with an audit entry and a finding —
+        not an HTTP 429 that disappears into a load balancer log."""
+        if agent is None:
+            return None
+        verdict: BudgetVerdict = check_budget(self.session, "agent", agent.id)
+        if not verdict.exceeded:
+            return None
+
+        raise_budget_finding(self.session, "agent", agent.id, verdict)
+        result = EnforcementResult(
+            verdict="block",
+            effective_verdict="block",
+            mode="enforce",
+            trace_id=trace.id,
+            reason=verdict.reason,
+            rules_fired=[
+                {
+                    "rule_id": "budget.exhausted",
+                    "effect": "block",
+                    "reason": verdict.reason,
+                    "severity": "high",
+                    "controls": ["NOM-RTG-08"],
+                }
+            ],
+        )
+        chain.append(
+            self.session,
+            "budget.exhausted",
+            actor_type="agent",
+            actor_id=agent.slug,
+            subject_type="agent",
+            subject_id=agent.id,
+            payload=verdict.to_json(),
+        )
+        return result
+
+    def call_provider(
+        self,
+        request: CompletionRequest,
+        *,
+        provider: str | None,
+        model: str,
+        ladder: FallbackLadder | None = None,
+        stream: bool = False,
+    ):
+        """Call a provider with circuit breaking and a degradation ladder (P15-1/2).
+
+        Returns ``(response_or_iterator, DegradationRecord)``. Degradation is recorded
+        rather than silently absorbed: an answer served by a smaller model did not come
+        from the model the agent was evaluated against, and a baseline that quietly
+        covers a different model is worthless.
+        """
+        preferred = _Rung(provider or self.settings.default_provider, model)
+        ladder = ladder or FallbackLadder.parse(self.settings.fallback_chain)
+        record = DegradationRecord()
+        last_error: Exception | None = None
+
+        for index, rung in enumerate([preferred, *ladder.rungs]):
+            key = f"{rung.provider}:{rung.model}"
+            if not BREAKER.allows(key):
+                record.attempts.append(
+                    ProviderAttempt(
+                        rung.provider,
+                        rung.model,
+                        ok=False,
+                        error="circuit open — failing fast",
+                        breaker_state=BREAKER.state_of(key),
+                    )
+                )
+                continue
+            try:
+                model_provider = get_provider(rung.provider)
+            except KeyError as exc:
+                record.attempts.append(
+                    ProviderAttempt(rung.provider, rung.model, ok=False, error=str(exc))
+                )
+                continue
+
+            attempt_request = CompletionRequest(
+                messages=request.messages,
+                model=rung.model or request.model,
+                temperature=request.temperature,
+                max_tokens=request.max_tokens,
+                tools=request.tools,
+            )
+            try:
+                result = (
+                    model_provider.stream(attempt_request)
+                    if stream
+                    else model_provider.complete(attempt_request)
+                )
+            except Exception as exc:  # noqa: BLE001 - any provider failure trips the breaker
+                BREAKER.record_failure(key)
+                last_error = exc
+                record.attempts.append(
+                    ProviderAttempt(
+                        rung.provider,
+                        rung.model,
+                        ok=False,
+                        error=str(exc),
+                        breaker_state=BREAKER.state_of(key),
+                    )
+                )
+                continue
+
+            BREAKER.record_success(key)
+            record.attempts.append(ProviderAttempt(rung.provider, rung.model, ok=True))
+            record.served_by = key
+            record.degraded = index > 0
+            return result, model_provider, record
+
+        raise ProviderUnavailable(
+            f"every provider on the ladder failed or is circuit-open: "
+            f"{[a.provider + ':' + a.model for a in record.attempts]}"
+        ) from last_error
 
     def _control_verdict(self, agent: Agent | None) -> EnforcementResult | None:
         """PL-3 kill switch / quarantine. Checked before anything else."""
@@ -850,17 +990,19 @@ class Enforcer:
             return (_RANK[result.verdict], _RANK[result.effective_verdict])
 
         # --- 7. provider call --------------------------------------------
-        model_provider = get_provider(provider)
         started = time.perf_counter()
-        response = model_provider.complete(
+        response, model_provider, degradation = self.call_provider(
             CompletionRequest(
                 messages=redacted_messages,
                 model=model,
                 temperature=temperature,
                 max_tokens=max_tokens,
-            )
+            ),
+            provider=provider,
+            model=model,
         )
         provider_ms = (time.perf_counter() - started) * 1000
+        worst.taint = {**worst.taint, "degradation": degradation.to_json()}
         return self._finish_completion(
             agent=agent,
             agent_slug=agent_slug,
@@ -935,7 +1077,6 @@ class Enforcer:
         agent, identity, trace = pre.agent, pre.identity, pre.trace
         tracker, redacted_messages, worst = pre.tracker, pre.messages, pre.result
 
-        model_provider = get_provider(provider)
         request = CompletionRequest(
             messages=redacted_messages,
             model=model,
@@ -944,6 +1085,9 @@ class Enforcer:
         )
 
         started = time.perf_counter()
+        stream_iter, model_provider, degradation = self.call_provider(
+            request, provider=provider, model=model, stream=True
+        )
         accumulated: list[str] = []
         usage: dict[str, int] = {}
         finish_reason: str | None = None
@@ -951,7 +1095,7 @@ class Enforcer:
         last_checked = 0
         window = self.settings.stream_window_chars
 
-        for chunk in model_provider.stream(request):
+        for chunk in stream_iter:
             if chunk.usage:
                 usage = chunk.usage
             if chunk.finish_reason:

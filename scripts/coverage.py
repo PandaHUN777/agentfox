@@ -56,7 +56,10 @@ def _count_tests(pattern: str) -> int:
     total = 0
     for path in TESTS.rglob("test_*.py"):
         body = path.read_text(errors="ignore")
-        total += len(re.findall(rf"def (test_\w*{pattern}\w*)", body))
+        # The group around `pattern` is load-bearing: without it an alternation binds
+        # looser than the `test_` prefix and every branch after the first is silently
+        # missed, which understated half the table.
+        total += len(re.findall(rf"def test_\w*(?:{pattern})\w*", body))
     return total
 
 
@@ -67,8 +70,9 @@ PROBES: list[Probe] = [
           ["def sync_connector"], "shadow|lineage|inventory",
           "connector-based estate discovery (P1-8) absent"),
     Probe("P12", "Hierarchical policy, override semantics, lint", "12 Policy Composition",
-          ["class PolicyDocument"], ["def resolve_effective", "def lint_policy"],
-          "policy", "flat scope-matching only; org→team→agent→user absent"),
+          ["class PolicyDocument", "def resolve_effective", "def lint_policy"],
+          ["def canary_rollout"], "policy|hierarchy",
+          "canary rollout (P12-6) and non-developer authoring (P12-7) absent"),
     # --- Layer B: Constrain
     Probe("P2", "NHI, least privilege, delegation narrowing, approvals", "2 Identity",
           ["def check_capability", "def delegate", "def request_approval"],
@@ -79,8 +83,9 @@ PROBES: list[Probe] = [
            "class SecretsDetector", "class TaintTracker"],
           ["def record_false_positive"], "injection|pii|secret|taint",
           "tuning surface (P3-12..14) absent"),
-    Probe("P9", "Action semantics, blast radius, verified-state preconditions", "9 Action Assurance",
-          ["class ActionAnalyser"], [], "action_analys|blast_radius|destructive"),
+    Probe("P9", "Action semantics, blast radius, verified-state preconditions",
+          "9 Action Assurance", ["class ActionAnalyser"], [],
+          "action_analys|blast_radius|destructive"),
     Probe("P10", "End-user principal, retrieval entitlement filtering", "10 Entitlement",
           ["def resolve_principal"], [], "entitlement|principal|overshar"),
     # --- Layer C: Ground
@@ -111,8 +116,9 @@ PROBES: list[Probe] = [
           "dynamic risk scoring and workflow engine absent (Gartner criteria)"),
     # --- Cross-cutting
     Probe("P15", "Circuit breaker, fallback, caps, backpressure", "15 Cost & Reliability",
-          ["class CircuitBreaker"], [], "circuit|fallback|budget_exceeded",
-          "Budget table counts but nothing enforces"),
+          ["class CircuitBreaker", "class FallbackLadder", "def check_budget"],
+          ["def apply_backpressure"], "reliability|breaker|budget",
+          "backpressure/queue shedding (P15-6) absent; caps are hard stops only"),
     # --- Platform
     Probe("PL-1", "Streaming with inline enforcement", "Platform",
           ["def run_completion_stream", "class StreamChunk", "def _stream_openai"], [],
@@ -127,7 +133,8 @@ PROBES: list[Probe] = [
           "Postgres supported; scale-out untested"),
     Probe("PL-7", "Service-level fail-open", "Platform", ["def service_fallback"], [], ""),
     # --- Integrations
-    Probe("I-1", "LangGraph-native SDK", "Integration", ["class NometriaGuard"], [], "langgraph|guard_"),
+    Probe("I-1", "LangGraph-native SDK", "Integration", ["class NometriaGuard"], [],
+          "langgraph|guard_"),
     Probe("I-2", "MCP inline governance", "Integration",
           ["def scan_mcp_server"], ["def govern_mcp_call"], "mcp",
           "hygiene scanning only; call path not governed"),
@@ -221,6 +228,6 @@ if __name__ == "__main__":
     body = render()
     if args.write:
         (ROOT / "docs" / "status.md").write_text(body)
-        print(f"wrote docs/status.md")
+        print("wrote docs/status.md")
     else:
         print(body)

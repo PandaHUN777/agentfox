@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     # P3-7: what happens when a detector errors or blows its budget.
     fail_mode: str = "open"  # open | closed
 
+    # --- Cost & reliability (P15) ----------------------------------------
+    # Degradation ladder, preferred-first. Empty means no fallback: fail rather than
+    # silently serve from a model the agent was never evaluated against.
+    fallback_chain: list[str] = []
+    breaker_failure_threshold: int = 5
+    breaker_recovery_seconds: float = 30.0
+
     # --- Streaming (PL-1) ------------------------------------------------
     # `buffered` enforces output identically to the non-streaming path at the cost of
     # first-token latency. `windowed` preserves latency but cannot recall content it

@@ -163,6 +163,27 @@ def create_app() -> FastAPI:
             "detector_timeout_ms": get_settings().detector_timeout_ms,
         }
 
+    @app.get("/api/reliability", tags=["platform"])
+    def reliability(session: Session = Depends(db), _u=Depends(current_user)) -> dict[str, Any]:
+        """P15 — circuit-breaker state and live budget consumption."""
+        from sqlalchemy import select
+
+        from ..models import Agent, Budget
+        from ..reliability import BREAKER, check_budget
+
+        budgets = []
+        for budget in session.scalars(select(Budget).where(Budget.scope_type == "agent")):
+            agent = session.get(Agent, budget.scope_id)
+            verdict = check_budget(session, "agent", budget.scope_id)
+            budgets.append(
+                {"agent": agent.slug if agent else budget.scope_id, **verdict.to_json()}
+            )
+        return {
+            "circuit_breakers": BREAKER.snapshot(),
+            "budgets": budgets,
+            "fallback_chain": get_settings().fallback_chain,
+        }
+
     @app.get("/api/providers", tags=["platform"])
     def providers(_u=Depends(current_user)) -> dict[str, Any]:
         """X-2 — the neutrality surface, made inspectable."""
