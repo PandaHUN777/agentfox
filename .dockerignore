@@ -1,0 +1,12 @@
+.venv
+.git
+node_modules
+dashboard/node_modules
+dashboard/.next
+dashboard/.npm-cache
+var
+*.db
+*.db-wal
+*.db-shm
+__pycache__
+.pytest_cache
