@@ -149,6 +149,10 @@ def revoke_credential(session: Session, credential_id: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
+#: Constraint keys that configure the grant rather than naming an argument path.
+RESERVED_CONSTRAINTS = frozenset({"requires_verified_state", "dry_run_only"})
+
+
 @dataclass
 class CapabilityDecision:
     granted: bool = False
@@ -158,6 +162,9 @@ class CapabilityDecision:
     constraint_violations: list[str] = field(default_factory=list)
     max_taint: str = "none"
     taint_violation: str | None = None
+    #: The matched grant's constraints, carried forward so downstream gates (P9-7
+    #: verified state) can read them without a second lookup.
+    constraints: dict[str, Any] = field(default_factory=dict)
 
     @property
     def state(self) -> str:
@@ -175,6 +182,7 @@ class CapabilityDecision:
             "constraint_violations": self.constraint_violations,
             "max_taint": self.max_taint,
             "taint_violation": self.taint_violation,
+            "constraints": self.constraints,
         }
 
 
@@ -261,8 +269,14 @@ def check_capability(
     capability = sorted(matches, key=lambda c: ("*" in c.tool_key, -len(c.tool_key)))[0]
     decision.matched_capability_id = capability.id
     decision.max_taint = capability.max_taint
+    decision.constraints = dict(capability.constraints_json or {})
 
     for path, spec in (capability.constraints_json or {}).items():
+        # Reserved keys configure the grant itself rather than constraining an
+        # argument path; treating `requires_verified_state` as a path would look for
+        # an argument by that name and fail every call.
+        if path in RESERVED_CONSTRAINTS:
+            continue
         value = arguments
         for part in path.split("."):
             value = value.get(part) if isinstance(value, dict) else None

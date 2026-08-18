@@ -1119,6 +1119,46 @@ def scan_mcp(server: str, file: Path | None = typer.Option(None, help="Tool list
         console.print(f"  [dim]mcp-scan: {external['reason']}[/]")
 
 
+@app.command()
+def analyse_action(
+    statement: str = typer.Argument(..., help="SQL, shell command or URL to analyse"),
+    kind: str = typer.Option("sql", help="sql | shell | http"),
+    method: str = typer.Option("GET", help="HTTP method, when kind=http"),
+    dialect: str = typer.Option("postgres", help="SQL dialect"),
+    environment: str = typer.Option("production", help="environment the action binds to"),
+) -> None:
+    """P9 — what would this artefact actually do?
+
+    Deterministic, offline and immediate: no database, no model, no network. The point
+    is that an engineer can check a generated statement before it is ever executed.
+    """
+    from ..guardrails.actions import analyse_http, analyse_shell, analyse_sql, summarise
+
+    if kind == "shell":
+        analysis = analyse_shell(statement)
+    elif kind == "http":
+        analysis = analyse_http(method, statement)
+    else:
+        analysis = analyse_sql(statement, dialect=dialect)
+
+    summary = summarise([analysis], environment)
+    colour = {"critical": "red", "high": "red", "medium": "yellow"}.get(analysis.severity, "green")
+    console.print(
+        f"[bold]{analysis.operation}[/] · blast radius [{colour}]{analysis.blast_radius}[/] · "
+        f"{'reversible' if analysis.reversible else 'IRREVERSIBLE'} · "
+        f"{len(analysis.targets)} target(s): {', '.join(analysis.targets) or '—'}"
+    )
+    if not summary.get("risks"):
+        console.print("  [green]no risks identified[/]")
+    for risk in summary.get("risks", []):
+        risk_colour = {"critical": "red", "high": "red", "medium": "yellow"}.get(
+            risk["severity"], "dim"
+        )
+        console.print(f"  [{risk_colour}]{risk['severity']}[/] {risk['code']} — {risk['detail']}")
+    if summary.get("critical"):
+        raise typer.Exit(1)
+
+
 def main() -> None:  # pragma: no cover - console entry point
     try:
         app()

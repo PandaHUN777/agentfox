@@ -26,6 +26,7 @@ Two invariants are enforced here rather than assumed:
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import logging
 import time
@@ -56,6 +57,8 @@ from .guardrails import (
     TaintTracker,
     redact_content,
 )
+from .guardrails.actions import analyse_arguments
+from .guardrails.actions import summarise as summarise_actions
 from .guardrails.base import taint_rank
 from .guardrails.taint import _flatten
 from .guardrails.tuning import (
@@ -328,6 +331,19 @@ class Enforcer:
             )
             capability = decision.to_json()
 
+        # --- P9 action assurance ------------------------------------------
+        # Argument-level containment governs *the call*; this governs *the artefact*.
+        # An agent holding a legitimate `db.query` capability can pass `DROP TABLE` as
+        # a well-formed string, and every argument check would pass it.
+        action = (
+            summarise_actions(
+                analyse_arguments(arguments or {}, dialect=self.settings.sql_dialect),
+                environment,
+            )
+            if arguments
+            else {}
+        )
+
         # --- budgets & loop containment (P3-10) --------------------------
         budget = self._budget_state(agent, trace, tool_key, prior_tools or [])
 
@@ -343,6 +359,7 @@ class Enforcer:
             "prior_tools": prior_tools or [],
             "detector_degraded": bool(pipeline_result.degraded),
             "arguments_snapshot": arguments or {},
+            "action": action,
         }
 
         # --- 5. policy decision (P6-1) -----------------------------------
@@ -361,6 +378,7 @@ class Enforcer:
             budget=budget,
             prior_tools=prior_tools or [],
             detector_degraded=bool(pipeline_result.degraded),
+            action=action,
         )
 
         bound = active_policies(self.session, agent_slug, environment)
@@ -418,6 +436,26 @@ class Enforcer:
                         "controls": ["NOM-IAM-03"],
                     }
                 )
+
+        # P9: a critical action risk stands on its own, exactly as a capability denial
+        # does. It is a fact about what the statement will do, not a policy opinion —
+        # and a customer who wrote the rule explicitly does not see it twice.
+        for risk in action.get("critical", []):
+            if risk["code"] in fired_ids:
+                continue
+            verdict = "block"
+            effective = "block"
+            fired_ids.add(risk["code"])
+            rules_fired.append(
+                {
+                    "rule_id": risk["code"],
+                    "effect": "block",
+                    "reason": risk["detail"],
+                    "severity": "critical",
+                    "controls": ["NOM-RTG-09"],
+                    "evidence": risk.get("evidence", {}),
+                }
+            )
 
         # P3-7: a degraded pipeline means reduced coverage. Fail-closed converts that
         # into a block; fail-open accepts it and records the gap.
@@ -624,8 +662,10 @@ class Enforcer:
         tracker: TaintTracker | None = None,
         credential: str | None = None,
         prior_tools: list[str] | None = None,
+        verified_state: dict[str, Any] | None = None,
+        dry_run: bool = False,
     ) -> EnforcementResult:
-        """Authorise a tool call on the full execution path (P3-4, P2-2)."""
+        """Authorise a tool call on the full execution path (P3-4, P2-2, P9)."""
         agent, identity, _ = self.resolve(agent_slug, credential)
         tracker = tracker or TaintTracker(trace_id=trace.id if trace else None)
         marks = tracker.taint_arguments(arguments, provenance)
@@ -662,7 +702,61 @@ class Enforcer:
             prior_tools=prior_tools,
             tracker=tracker,
         )
+
+        # P9-7: an irreversible act on a record the agent has not read back from the
+        # system of record is the HR-termination failure — the agent acted on a stale
+        # or hallucinated view of the world. The check runs after the main evaluation
+        # so it composes with, rather than replaces, everything else.
+        stale = self._verified_state_gate(result, verified_state)
+        if stale is not None and not dry_run:
+            result.verdict = "block"
+            result.effective_verdict = "block"
+            result.rules_fired.append(stale)
+            result.reason = stale["reason"]
+
+        # P9-10: a dry run is analysis without execution. The verdict is computed and
+        # recorded exactly as it would be, and the caller is told what *would* have
+        # happened — which is what makes a policy safe to roll out.
+        if dry_run:
+            result.taint["dry_run"] = True
+            result.verdict = "allow"
         return result
+
+    def _verified_state_gate(
+        self, result: EnforcementResult, verified_state: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        capability = (result.taint or {}).get("capability") or {}
+        constraints = capability.get("constraints") or {}
+        if not constraints.get("requires_verified_state"):
+            return None
+
+        max_age = self.settings.verified_state_max_age_seconds
+        if not verified_state or not verified_state.get("read_at"):
+            reason = (
+                "this capability requires the record to be read back from the system "
+                "of record before an irreversible act, and no state read was supplied"
+            )
+        else:
+            try:
+                read_at = dt.datetime.fromisoformat(str(verified_state["read_at"]))
+                if read_at.tzinfo is None:
+                    read_at = read_at.replace(tzinfo=dt.UTC)
+                age = (dt.datetime.now(dt.UTC) - read_at).total_seconds()
+            except ValueError:
+                age = float("inf")
+            if age <= max_age:
+                return None
+            reason = (
+                f"the state read is {int(age)}s old and the capability requires it to "
+                f"be no older than {max_age}s"
+            )
+        return {
+            "rule_id": "action.unverified_state",
+            "effect": "block",
+            "reason": reason,
+            "severity": "critical",
+            "controls": ["NOM-RTG-09", "NOM-IAM-03"],
+        }
 
     # ------------------------------------------------------------------
     # Full inline path (gateway)

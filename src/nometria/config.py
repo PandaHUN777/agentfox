@@ -69,6 +69,13 @@ class Settings(BaseSettings):
     accept_restricted_model_licenses: bool = False
     granite_guardian_model: str = "ibm-granite/granite-guardian-3.0-2b"
 
+    # --- Action assurance (P9) -------------------------------------------
+    # The dialect artefacts are parsed against. Wrong dialect means wrong parse, and
+    # a wrong parse fails closed rather than passing through.
+    sql_dialect: str = "postgres"
+    # P9-7: how fresh a state read must be to authorise an irreversible act.
+    verified_state_max_age_seconds: int = 300
+
     # --- Policy engine (Pillar 6) ---------------------------------------
     policy_engine: str = "native"  # native | opa
     opa_url: str = "http://localhost:8181"

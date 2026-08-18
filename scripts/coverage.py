@@ -112,9 +112,10 @@ PROBES: list[Probe] = [
         "P9",
         "Action semantics, blast radius, verified-state preconditions",
         "9 Action Assurance",
-        ["class ActionAnalyser"],
-        [],
-        "action_analys|blast_radius|destructive",
+        ["def analyse_sql", "class ActionAnalysis", "def _verified_state_gate"],
+        ["def idempotency_key"],
+        "action|blast_radius|destructive|tautolog|unbounded|verified_state|dry_run",
+        "idempotency keys (P9-8) absent",
     ),
     Probe(
         "P10",

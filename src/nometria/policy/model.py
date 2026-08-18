@@ -87,6 +87,13 @@ class Condition(BaseModel):
     #: Fires when argument provenance is more dangerous than this level.
     taint_exceeds: str | None = None
     capability: str | None = None  # denied | requires_approval | granted
+    #: P9 — the *semantics of the generated artefact*, not the tool it was passed to.
+    #: An agent with a legitimate `db.query` capability can still pass `DROP TABLE`.
+    action_operation: list[str] | None = None  # read | write | destructive | admin | unknown
+    #: Fires when the estimated blast radius is at or above this level.
+    blast_radius_at_least: str | None = None  # none | bounded | unknown | unbounded | catastrophic
+    action_reversible: bool | None = None
+    action_risk: str | None = None  # glob on risk code, e.g. "sql.*"
     budget_exceeded: bool | None = None
     loop_detected: bool | None = None
     intent_declared: bool | None = None
@@ -169,6 +176,9 @@ class PolicyInput:
     taint: dict[str, Any] = field(default_factory=dict)
     capability: dict[str, Any] = field(default_factory=dict)
     budget: dict[str, Any] = field(default_factory=dict)
+    #: P9 — the action-assurance summary for this call, empty when nothing executable
+    #: was found in the arguments.
+    action: dict[str, Any] = field(default_factory=dict)
     prior_tools: list[str] = field(default_factory=list)
     detector_degraded: bool = False
 

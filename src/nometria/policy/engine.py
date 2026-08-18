@@ -135,6 +135,9 @@ class NativePolicyEngine:
             if state != cond.capability:
                 return False
 
+        if not self._action_matches(cond, p):
+            return False
+
         if cond.budget_exceeded is not None:
             if bool(p.budget.get("exceeded", False)) != cond.budget_exceeded:
                 return False
@@ -154,6 +157,28 @@ class NativePolicyEngine:
         if cond.expr and not self._eval_expr(cond.expr, p):
             return False
 
+        return True
+
+    @staticmethod
+    def _action_matches(cond: Condition, p: PolicyInput) -> bool:
+        """P9 — match on what the artefact does, not on the tool it arrived through."""
+        action = p.action or {}
+        if cond.action_operation is not None:
+            if action.get("operation") not in cond.action_operation:
+                return False
+        if cond.blast_radius_at_least is not None:
+            rank = {"none": 0, "bounded": 1, "unknown": 2, "unbounded": 3, "catastrophic": 4}
+            if rank.get(str(action.get("blast_radius")), -1) < rank.get(
+                cond.blast_radius_at_least, 99
+            ):
+                return False
+        if cond.action_reversible is not None:
+            if action.get("reversible", True) != cond.action_reversible:
+                return False
+        if cond.action_risk is not None:
+            codes = [r.get("code", "") for r in action.get("risks", [])]
+            if not any(fnmatch.fnmatch(code, cond.action_risk) for code in codes):
+                return False
         return True
 
     @staticmethod

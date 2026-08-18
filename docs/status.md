@@ -11,11 +11,11 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 |---|---|
 | **Capabilities** | 32 tracked |
 | **Built** | 10 ✅ |
-| **Partial** | 8 ◐ |
-| **Absent** | 14 ✗ |
-| **Weighted coverage** | **44%** *(partial counts half)* |
-| **Tests** | 315 |
-| **Lines** | 25,522 (src + tests) |
+| **Partial** | 9 ◐ |
+| **Absent** | 13 ✗ |
+| **Weighted coverage** | **45%** *(partial counts half)* |
+| **Tests** | 356 |
+| **Lines** | 26,539 (src + tests) |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
 in [traceability.md](traceability.md).
@@ -25,8 +25,8 @@ in [traceability.md](traceability.md).
 | `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 8 | connector-based estate discovery (P1-8) absent |
 | `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 9 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 8 | no live IdP; Entra/Okta integration (P2-8) absent |
-| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 35 | model-based detectors wired but need an opt-in weights download |
-| `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ✗ absent | 1 |  |
+| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 36 | model-based detectors wired but need an opt-in weights download |
+| `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 6 | idempotency keys (P9-8) absent |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ✗ absent | — |  |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✗ absent | — |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 4 | lexical groundedness only; source authority absent |

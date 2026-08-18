@@ -54,7 +54,7 @@ the problem. Read that document before the feature gaps below: it changes what t
 | Policy-as-code, immutable versions, observe→enforce promotion, Rego compilation | 12 tests |
 | **Policy simulation** against recorded traffic, exits non-zero on new blocks | `test_policy_simulation_reports_a_diff` |
 | Control status **computed** from telemetry; chain break forces `failing` | `test_broken_chain_makes_the_audit_control_fail_hard` |
-| 36 controls × 7 frameworks with **declared gaps** per framework | `test_every_framework_has_a_gap_list` |
+| 37 controls × 7 frameworks with **declared gaps** per framework | `test_every_framework_has_a_gap_list` |
 | Latency: 2–6 ms added on the heuristic path | `test_enforcement_stays_inside_the_latency_budget` |
 
 ### Verified absent
