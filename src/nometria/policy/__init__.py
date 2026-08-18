@@ -10,6 +10,16 @@ upgrade). They are cross-verified in the test suite, which is what keeps the
 from __future__ import annotations
 
 from .engine import NativePolicyEngine, PolicyEngine, combine
+from .hierarchy import (
+    LEVELS,
+    EffectivePolicy,
+    LintFinding,
+    PolicyLayer,
+    ResolvedRule,
+    lint_policy,
+    lint_summary,
+    resolve_effective,
+)
 from .model import (
     EFFECT_RANK,
     Condition,
@@ -24,9 +34,12 @@ from .model import (
 from .opa import OpaPolicyEngine, compile_to_rego
 from .simulate import SimulationDiff, record_simulation, simulate
 from .store import (
+    active_layers,
     active_policies,
+    effective_for,
     get_engine,
     history,
+    lint_all,
     load_from_dir,
     save_policy,
     set_mode,
@@ -34,6 +47,11 @@ from .store import (
 
 __all__ = [
     "EFFECT_RANK",
+    "LEVELS",
+    "EffectivePolicy",
+    "LintFinding",
+    "PolicyLayer",
+    "ResolvedRule",
     "Condition",
     "DetectionCondition",
     "Effect",
@@ -46,13 +64,19 @@ __all__ = [
     "PolicyInput",
     "Rule",
     "SimulationDiff",
+    "active_layers",
     "active_policies",
+    "effective_for",
     "combine",
     "compile_to_rego",
     "get_engine",
     "history",
+    "lint_all",
+    "lint_policy",
+    "lint_summary",
     "load_from_dir",
     "record_simulation",
+    "resolve_effective",
     "save_policy",
     "set_mode",
     "simulate",

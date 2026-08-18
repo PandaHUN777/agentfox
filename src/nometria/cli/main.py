@@ -382,6 +382,93 @@ def policy_list() -> None:
         console.print(table)
 
 
+@policy_app.command("lint")
+def policy_lint() -> None:
+    """Lint the policy hierarchy (P12-4). Exits 1 on critical or high findings.
+
+    This is the half of hierarchical policy that produces the 87% misconfiguration
+    reduction — composition without a linter just moves the confusion somewhere
+    harder to see.
+    """
+    from ..policy import lint_all
+
+    with _session() as session:
+        report = lint_all(session)
+
+    if not report["findings"]:
+        console.print("[green]no policy issues[/]")
+        return
+
+    table = Table(box=None, pad_edge=False)
+    for column in ("severity", "code", "rule", "level", "message"):
+        table.add_column(column, style="bold" if column == "code" else None)
+    order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    for finding in sorted(report["findings"], key=lambda f: order.get(f["severity"], 9)):
+        colour = {"critical": "red", "high": "red", "medium": "yellow"}.get(
+            finding["severity"], "dim"
+        )
+        table.add_row(
+            f"[{colour}]{finding['severity']}[/]",
+            finding["code"],
+            finding["rule_id"],
+            finding["level"] or "—",
+            finding["message"][:74],
+        )
+    console.print(table)
+    console.print(f"  [dim]{report['counts']}[/]")
+
+    if not report["passed"]:
+        console.print("\n[bold red]LINT FAIL[/] — critical/high findings block the build")
+        raise typer.Exit(1)
+    console.print("\n[green]LINT PASS[/] [dim](advisory findings only)[/]")
+
+
+@policy_app.command("effective")
+def policy_effective(
+    agent: str | None = None,
+    team: str | None = None,
+    user: str | None = None,
+    environment: str = "production",
+) -> None:
+    """Show the policy actually in force for a subject, and where each rule came from.
+
+    Opacity is what makes layered policy dangerous, so the resolver explains itself.
+    """
+    from ..policy import effective_for
+
+    with _session() as session:
+        effective = effective_for(
+            session, agent_slug=agent, environment=environment, team=team, user=user
+        )
+        explanation = effective.explain()
+
+    console.print(
+        f"[bold]effective policy[/] — mode [bold]{explanation['mode']}[/], "
+        f"default {explanation['default_effect']}"
+    )
+    console.print(f"  [dim]layers: {', '.join(explanation['layers']) or 'none'}[/]\n")
+
+    table = Table(box=None, pad_edge=False)
+    for column in ("rule", "effect", "from", "overrides"):
+        table.add_column(column, style="bold" if column == "rule" else None)
+    for rule in explanation["rules"]:
+        table.add_row(
+            rule["rule_id"],
+            rule["effect"],
+            rule["source"],
+            ", ".join(rule["overrides"]) or "—",
+        )
+    console.print(table)
+
+    if explanation["rejected"]:
+        console.print("\n[bold yellow]rejected layer rules[/]")
+        for rejected in explanation["rejected"]:
+            console.print(
+                f"  [yellow]{rejected['rule_id']}[/] at {rejected['level']}:"
+                f"{rejected['scope']} — {rejected['reason'][:88]}"
+            )
+
+
 @policy_app.command("simulate")
 def policy_simulate(
     file: Path = typer.Option(..., "--file", "-f", help="Candidate policy YAML."),

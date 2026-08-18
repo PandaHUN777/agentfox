@@ -679,6 +679,11 @@ class PolicyBinding(Base, TimestampMixin):
     policy_version_id: Mapped[str] = mapped_column(String(40), index=True)
     scope_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     mode: Mapped[str] = mapped_column(String(16), default="observe")
+    # P12 — where this binding sits in the hierarchy. Defaults keep pre-hierarchy
+    # bindings behaving exactly as before: one org-wide layer that extends nothing.
+    level: Mapped[str] = mapped_column(String(16), default="org")
+    scope_id: Mapped[str] = mapped_column(String(160), default="*")
+    compose: Mapped[str] = mapped_column(String(16), default="extend")
     effective_from: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     effective_to: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
 

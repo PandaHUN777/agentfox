@@ -21,7 +21,9 @@ from ...models import Policy, PolicyBinding, PolicyVersion, User
 from ...policy import (
     PolicyDocument,
     compile_to_rego,
+    effective_for,
     history,
+    lint_all,
     record_simulation,
     save_policy,
     set_mode,
@@ -68,6 +70,32 @@ def list_policies(
             }
         )
     return {"policies": out}
+
+
+# ---------------------------------------------------------------------------
+# Hierarchy (P12)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/effective")
+def get_effective(
+    agent: str | None = None,
+    team: str | None = None,
+    user: str | None = None,
+    environment: str = "production",
+    session: Session = Depends(db),
+    _u: User = Depends(current_user),
+) -> dict[str, Any]:
+    """The policy actually in force for a subject, with per-rule provenance (P12-3)."""
+    return effective_for(
+        session, agent_slug=agent, environment=environment, team=team, user=user
+    ).explain()
+
+
+@router.get("/lint")
+def get_lint(session: Session = Depends(db), _u: User = Depends(current_user)) -> dict[str, Any]:
+    """Policy lint (P12-4). `passed` is false when critical/high findings exist."""
+    return lint_all(session)
 
 
 @router.get("/{key}")

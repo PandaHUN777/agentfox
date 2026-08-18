@@ -107,6 +107,9 @@ class Rule(BaseModel):
     enabled: bool = True
     #: Redaction style when effect is redact/mask/tokenize.
     redaction: str = "mask"
+    #: P12-2 — may a narrower level weaken this rule? Loosening is a grant, not a
+    #: right, so the default is no. Tightening never needs permission.
+    overridable: bool = False
 
 
 class PolicyDocument(BaseModel):

@@ -10,20 +10,20 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | | |
 |---|---|
 | **Capabilities** | 32 tracked |
-| **Built** | 6 ✅ |
-| **Partial** | 9 ◐ |
+| **Built** | 7 ✅ |
+| **Partial** | 8 ◐ |
 | **Absent** | 17 ✗ |
-| **Weighted coverage** | **33%** *(partial counts half)* |
-| **Tests** | 211 |
-| **Lines** | 20,701 (src + tests) |
+| **Weighted coverage** | **34%** *(partial counts half)* |
+| **Tests** | 231 |
+| **Lines** | 21,578 (src + tests) |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
 in [traceability.md](traceability.md).
 
 | ID | Pillar | Capability | Status | Tests | Note |
 |---|---|---|---|---|---|
-| `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 3 | connector-based estate discovery (P1-8) absent |
-| `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 5 | flat scope-matching only; org→team→agent→user absent |
+| `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 4 | connector-based estate discovery (P1-8) absent |
+| `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ✅ built | 7 | flat scope-matching only; org→team→agent→user absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 2 | no live IdP; Entra/Okta integration (P2-8) absent |
 | `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ◐ partial | 4 | tuning surface (P3-12..14) absent |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ✗ absent | — |  |
@@ -31,13 +31,13 @@ in [traceability.md](traceability.md).
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✗ absent | — |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 1 | lexical groundedness only; source authority absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ✗ absent | — |  |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 9 | no Ragas adapter, model-based groundedness or annotation queue |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 10 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ◐ partial | 1 | approvals exist; missed-escalation detection absent |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 4 |  |
 | `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 5 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ✗ absent | — | Budget table counts but nothing enforces |
-| `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 11 |  |
+| `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 12 |  |
 | `PL-2` | Platform | Database migrations | ✅ built | 1 |  |
 | `PL-3` | Platform | Kill switch and quarantine | ✅ built | 2 |  |
 | `PL-4` | Platform | Agent loop governance | ✗ absent | — |  |

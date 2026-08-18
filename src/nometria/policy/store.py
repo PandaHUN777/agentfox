@@ -22,6 +22,7 @@ from sqlalchemy.orm import Session
 from ..config import get_settings
 from ..models import Policy, PolicyBinding, PolicyVersion, utcnow
 from .engine import NativePolicyEngine, PolicyEngine
+from .hierarchy import EffectivePolicy, PolicyLayer, lint_policy, lint_summary, resolve_effective
 from .model import PolicyDocument
 from .opa import OpaPolicyEngine
 
@@ -47,12 +48,74 @@ def load_from_dir(directory: Path | None = None) -> list[PolicyDocument]:
     return out
 
 
+def active_layers(session: Session, subject: dict[str, str] | None = None) -> list[PolicyLayer]:
+    """Every bound policy version, as hierarchy layers (P12)."""
+    now = utcnow()
+    rows = session.scalars(
+        select(PolicyBinding).where(
+            PolicyBinding.effective_from <= now,
+            (PolicyBinding.effective_to.is_(None)) | (PolicyBinding.effective_to > now),
+        )
+    ).all()
+
+    layers: list[PolicyLayer] = []
+    for binding in rows:
+        version = session.get(PolicyVersion, binding.policy_version_id)
+        if version is None:
+            continue
+        doc = PolicyDocument.model_validate(version.compiled_json or yaml.safe_load(version.body))
+        scope = binding.scope_json or doc.scope
+        doc.scope = scope
+        doc.mode = binding.mode
+        if subject is not None:
+            agent = subject.get("agent")
+            environment = subject.get("environment")
+            if not doc.matches_scope(agent, environment):
+                continue
+        layers.append(
+            PolicyLayer(
+                document=doc,
+                level=binding.level or "org",
+                scope_id=binding.scope_id or "*",
+                mode=binding.compose or "extend",
+            )
+        )
+    return layers
+
+
+def effective_for(
+    session: Session,
+    agent_slug: str | None = None,
+    environment: str | None = None,
+    team: str | None = None,
+    user: str | None = None,
+    org: str | None = None,
+) -> EffectivePolicy:
+    """Resolve the policy actually in force for a subject, with provenance."""
+    subject = {
+        "org": org or get_settings().org_id,
+        "team": team or "*",
+        "agent": agent_slug or "*",
+        "user": user or "*",
+        "environment": environment or "*",
+    }
+    return resolve_effective(active_layers(session, subject), subject)
+
+
+def lint_all(session: Session) -> dict:
+    """Lint every bound policy layer. Intended for CI (P12-4)."""
+    return lint_summary(lint_policy(active_layers(session)))
+
+
 def save_policy(
     session: Session,
     doc: PolicyDocument,
     author: str = "system",
     notes: str = "",
     bind_mode: str | None = None,
+    level: str = "org",
+    scope_id: str = "*",
+    compose: str = "extend",
 ) -> tuple[Policy, PolicyVersion]:
     """Upsert a policy and append an immutable version."""
     policy = session.scalar(select(Policy).where(Policy.key == doc.key))
@@ -89,6 +152,9 @@ def save_policy(
             policy_version_id=version.id,
             scope_json=doc.scope or {},
             mode=mode,
+            level=level,
+            scope_id=scope_id,
+            compose=compose,
         )
     )
     session.flush()
