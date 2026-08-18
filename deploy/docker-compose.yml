@@ -1,0 +1,95 @@
+# Nometria — self-hosted control plane.
+#
+# Self-host is the default and only MVP deployment mode (X-8, P3-8, NFR-4). Nothing
+# here reaches the internet at runtime: the default model provider is `echo`, egress
+# is off, and no model weights are downloaded. A regulated customer can run this in
+# an air-gapped VPC and every pillar still functions.
+#
+#   docker compose -f deploy/docker-compose.yml up --build
+#
+#   control plane   http://localhost:3000
+#   API + gateway   http://localhost:8080
+#   OPA (optional)  http://localhost:8181
+
+name: nometria
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nometria
+      POSTGRES_PASSWORD: nometria
+      POSTGRES_DB: nometria
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nometria"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Appendix A.1: OPA is the wrapped policy decision engine. It is optional —
+  # NOMETRIA_POLICY_ENGINE defaults to `native`, and the OPA adapter falls back to
+  # the native evaluator if this container is unreachable, because a policy-engine
+  # outage must never take the customer's agent down (NFR-2).
+  opa:
+    image: openpolicyagent/opa:0.70.0
+    command: ["run", "--server", "--addr=0.0.0.0:8181", "--log-level=error"]
+    ports:
+      - "8181:8181"
+
+  gateway:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    environment:
+      NOMETRIA_DATABASE_URL: postgresql+psycopg://nometria:nometria@db:5432/nometria
+      NOMETRIA_ORG_ID: org_default
+      NOMETRIA_ENVIRONMENT: production
+      # Zero egress by default. Set to "true" and supply a key to use a hosted model.
+      NOMETRIA_ALLOW_EGRESS: "false"
+      NOMETRIA_DEFAULT_PROVIDER: echo
+      # Observe by default: enforcement is something the customer turns on
+      # deliberately, after simulating it (PRD R3).
+      NOMETRIA_DEFAULT_POLICY_MODE: observe
+      NOMETRIA_FAIL_MODE: open
+      NOMETRIA_ENFORCEMENT_BUDGET_MS: "100"
+      NOMETRIA_DETECTOR_TIMEOUT_MS: "40"
+      NOMETRIA_POLICY_ENGINE: native
+      NOMETRIA_OPA_URL: http://opa:8181
+      # CHANGE THIS. The checkpoint signing key should live outside the application
+      # database and be held by the customer (NFR-7, Appendix E.2.2).
+      NOMETRIA_AUDIT_SIGNING_KEY: change-me-before-any-real-deployment
+      NOMETRIA_EVIDENCE_DIR: /var/nometria/evidence
+    ports:
+      - "8080:8080"
+    volumes:
+      - evidence:/var/nometria/evidence
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request;urllib.request.urlopen('http://localhost:8080/api/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  dashboard:
+    build:
+      context: ../dashboard
+      dockerfile: ../deploy/Dockerfile.dashboard
+    environment:
+      # Read at request time, not baked at build time — so one image can be pointed
+      # at any control plane.
+      NOMETRIA_API_URL: http://gateway:8080
+      NOMETRIA_USER: admin@example.com
+    ports:
+      - "3000:3000"
+    depends_on:
+      gateway:
+        condition: service_healthy
+
+volumes:
+  db-data:
+  evidence:
