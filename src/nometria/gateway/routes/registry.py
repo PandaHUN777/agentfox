@@ -330,6 +330,26 @@ def scan_mcp(
     return scan_mcp_server(session, server, payload.tools)
 
 
+@router.post("/mcp-servers/{name}/tools")
+def register_mcp_tools(
+    name: str,
+    payload: McpScanIn,
+    session: Session = Depends(db),
+    _user: User = Depends(require("registry")),
+) -> dict[str, Any]:
+    """I-2 — snapshot a listing *and* register each tool in the registry.
+
+    Distinct from ``/scan``, which only reports hygiene. Registration is what gives
+    the tool a policy identity and a digest to compare against at call time; without
+    it the rug-pull check has no baseline.
+    """
+    from ...integrations.mcp import McpGovernor
+
+    governor = McpGovernor(session=session, agent_slug="", server_name=name)
+    report = governor.register_tools(payload.tools)
+    return {**report, "registered": [t.get("name") for t in payload.tools if t.get("name")]}
+
+
 # ---------------------------------------------------------------------------
 # Findings
 # ---------------------------------------------------------------------------

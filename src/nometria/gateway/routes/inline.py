@@ -353,6 +353,52 @@ async def messages(
 # ---------------------------------------------------------------------------
 
 
+class McpCallRequest(BaseModel):
+    server: str
+    tool: str
+    arguments: dict[str, Any] = Field(default_factory=dict)
+    provenance: dict[str, str] = Field(default_factory=dict)
+    # The gateway cannot dial an arbitrary MCP server on the caller's behalf without
+    # becoming an SSRF surface, so the caller supplies the result it got and we govern
+    # both edges of it. Enforcement is inline either way; only the transport moves.
+    result: Any = None
+
+
+@router.post("/v1/mcp/call", summary="Govern an MCP tool call (I-2)")
+def mcp_call(
+    payload: McpCallRequest,
+    session: Session = Depends(db),
+    credential: str | None = Depends(agent_credential),
+    x_nometria_agent: Annotated[str | None, Header()] = None,
+    x_nometria_intent: Annotated[str | None, Header()] = None,
+) -> Any:
+    """Govern one MCP call for callers that are not in-process Python.
+
+    Pre-call the arguments are authorised against the tool's capability and taint
+    ceiling; post-call the result is evaluated on the ``tool_result`` surface and
+    returned redacted where policy says so.
+    """
+    from ...integrations.mcp import McpGovernor
+
+    governor = McpGovernor(
+        session=session,
+        agent_slug=x_nometria_agent or "",
+        server_name=payload.server,
+        credential=credential,
+        intent=x_nometria_intent,
+    )
+    outcome = governor.call(
+        payload.tool,
+        payload.arguments,
+        provenance=payload.provenance or None,
+        transport=lambda _t, _a: payload.result,
+    )
+    decision = outcome.post_decision or outcome.pre_decision
+    if not outcome.allowed and decision is not None:
+        return _blocked_response(decision)
+    return JSONResponse(content={"result": outcome.result, **outcome.to_json()})
+
+
 class GuardContentRequest(BaseModel):
     agent: str
     content: str

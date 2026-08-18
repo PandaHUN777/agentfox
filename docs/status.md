@@ -10,28 +10,28 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | | |
 |---|---|
 | **Capabilities** | 32 tracked |
-| **Built** | 9 ✅ |
-| **Partial** | 9 ◐ |
+| **Built** | 10 ✅ |
+| **Partial** | 8 ◐ |
 | **Absent** | 14 ✗ |
-| **Weighted coverage** | **42%** *(partial counts half)* |
-| **Tests** | 296 |
-| **Lines** | 24,819 (src + tests) |
+| **Weighted coverage** | **44%** *(partial counts half)* |
+| **Tests** | 315 |
+| **Lines** | 25,522 (src + tests) |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
 in [traceability.md](traceability.md).
 
 | ID | Pillar | Capability | Status | Tests | Note |
 |---|---|---|---|---|---|
-| `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 7 | connector-based estate discovery (P1-8) absent |
+| `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 8 | connector-based estate discovery (P1-8) absent |
 | `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 9 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 8 | no live IdP; Entra/Okta integration (P2-8) absent |
-| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 34 | model-based detectors wired but need an opt-in weights download |
+| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 35 | model-based detectors wired but need an opt-in weights download |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ✗ absent | 1 |  |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ✗ absent | — |  |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✗ absent | — |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 4 | lexical groundedness only; source authority absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ✗ absent | — |  |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 17 | no Ragas adapter, model-based groundedness or annotation queue |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 19 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ◐ partial | 1 | approvals exist; missed-escalation detection absent |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 18 |  |
@@ -45,7 +45,7 @@ in [traceability.md](traceability.md).
 | `PL-6` | Platform | HA-ready persistence | ✗ absent | — | Postgres supported; scale-out untested |
 | `PL-7` | Platform | Service-level fail-open | ✗ absent | — |  |
 | `I-1` | Integration | LangGraph-native SDK | ✅ built | 2 |  |
-| `I-2` | Integration | MCP inline governance | ◐ partial | 1 | hygiene scanning only; call path not governed |
+| `I-2` | Integration | MCP inline governance | ✅ built | 10 |  |
 | `I-3` | Integration | FastAPI middleware | ✗ absent | — |  |
 | `I-4` | Integration | LangSmith correlation | ✅ built | 6 |  |
 | `I-5` | Integration | OpenTelemetry | ✅ built | 1 |  |

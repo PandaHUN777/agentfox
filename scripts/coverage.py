@@ -255,10 +255,9 @@ PROBES: list[Probe] = [
         "I-2",
         "MCP inline governance",
         "Integration",
-        ["def scan_mcp_server"],
-        ["def govern_mcp_call"],
-        "mcp",
-        "hygiene scanning only; call path not governed",
+        ["def scan_mcp_server", "class McpGovernor", "def _check_drift"],
+        [],
+        "mcp|drift|undeclared|poison",
     ),
     Probe("I-3", "FastAPI middleware", "Integration", ["class NometriaMiddleware"], [], ""),
     Probe(
