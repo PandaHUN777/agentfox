@@ -9,7 +9,7 @@ what we set out to cover and say nothing about what we never thought of. This on
 walks the path a request actually travels and asks, at each layer, what can go
 wrong there.
 
-**103 scenarios · 84 verified by execution · 84% weighted coverage**
+**103 scenarios · 87 verified by execution · 87% weighted coverage**
 (partial counts half). The harness runs every executable claim against the real
 product and fails if any disagrees — so a row marked ✅ here has fired at least
 once in anger.
@@ -20,7 +20,7 @@ once in anger.
 | L1 input and prompt | 7/9 | `████████████` |
 | L2 retrieval and context | 13.5/14 | `██████████████` |
 | L3 reasoning and planning | 4/5 | `████████████` |
-| L4 tools and actions | 10.5/14 | `███████████` |
+| L4 tools and actions | 13.5/14 | `██████████████` |
 | L5 output and disclosure | 17/18 | `██████████████` |
 | L6 multi-agent | 6/6 | `███████████████` |
 | L7 human interface | 7.5/8 | `██████████████` |
@@ -80,9 +80,9 @@ once in anger.
 | L4.5 | Irreversible act on unverified state | ✅ covered | P9-7 requires_verified_state | ['action.unverified_state'] |
 | L4.6 | Unauthorised tool call | ✅ covered | P2-2 capability default-deny | verdict=block |
 | L4.7 | Tainted argument reaches a high-impact tool | ✅ covered | P3-4 taint ceilings | taint_violation=None verdict=block |
-| L4.8 | Duplicate execution on retry | ✗ absent | — | P9-8 idempotency keys specified, not built. A real money-losing failure. |
-| L4.9 | Partial completion with no rollback | ✗ absent | — | P9-10 compensation not built. |
-| L4.10 | Cascading side effects | ✗ absent | — | Blast radius is statement-local. |
+| L4.8 | Duplicate execution on retry | ✅ covered | F3.7 effect ledger with derived idempotency keys | a retry carrying a fresh request id and timestamp is still recognised as the same operation (critical); the mi |
+| L4.9 | Partial completion with no rollback | ✅ covered | F3.10 compensation planning | unwind runs in reverse order and names 'email.send' as unrecoverable; the ordering problem is reported before  |
+| L4.10 | Cascading side effects | ✅ covered | F3.9 cascade analysis over declared triggers | 'orders.update' reaches ['events.publish', 'email.send', 'db.purge'] and is blocked for touching db.purge; a t |
 | L4.11 | Composed privilege escalation | ✅ covered | P9-9 privilege-change detection | ['sql.privilege_change'] |
 | L4.12 | Destructive shell command | ◐ partial | P9 shell deny-list | 3/3 destructive, benign clean=True |
 | L4.13 | MCP tool changed after authorisation | ✅ covered | I-2 rug-pull detection | blocked before the transport ran |
@@ -130,7 +130,7 @@ once in anger.
 | L8.5 | Model version changes underneath | ◐ partial | P4 drift + version recording | Versions are recorded per decision and drift is measured on scores. No alert on a version change itself. |
 | L8.6 | Prompt change regresses quality | ✅ covered | P4 CI gating with direction-aware scorers | passed=False, 1 absolute failure(s) |
 | L8.7 | Shadow agent in production | ✅ covered | P1-6 shadow detection | 1 shadow agent(s) |
-| L8.8 | Latency budget blown by the guardrails | ✅ covered | P3-13 request-level ledger + fast path | 32 KB document at p50 14.1 ms (budget 100 ms) |
+| L8.8 | Latency budget blown by the guardrails | ✅ covered | P3-13 request-level ledger + fast path | 32 KB document at p50 14.0 ms (budget 100 ms) |
 | L8.9 | Policy misconfiguration | ✅ covered | P12 lint with six codes | 3 finding(s): ['duplicate-id', 'illegal-loosening', 'unconditional'] |
 | L8.10 | Rate-limit or quota exhaustion | ✗ absent | — | No backpressure or queueing. P15-4 specified, not built. |
 | | **L9 data governance** | | | |

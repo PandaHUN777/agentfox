@@ -104,7 +104,7 @@ FAMILIES: dict[str, tuple[str, list[Mode]]] = {
             Mode("F3.6", "Irreversible act on unverified state", ["def _verified_state_gate"]),
             Mode("F3.7", "Duplicate execution on retry", ["def idempotency_key"]),
             Mode("F3.8", "Composed privilege escalation", ["sql.privilege_change"]),
-            Mode("F3.9", "Cascading side effects", ["def _cascade_risk"]),
+            Mode("F3.9", "Cascading side effects", ["def cascade_risk"]),
             Mode("F3.10", "Partial completion, no rollback", ["def compensation_plan"]),
         ],
     ),
@@ -265,10 +265,14 @@ PROBES: list[Probe] = [
         "P9",
         "Action semantics, blast radius, verified-state preconditions",
         "9 Action Assurance",
-        ["def analyse_sql", "class ActionAnalysis", "def _verified_state_gate"],
-        ["def idempotency_key"],
-        "action|blast_radius|destructive|tautolog|unbounded|verified_state|dry_run",
-        "idempotency keys (P9-8) absent",
+        ["def analyse_sql", "class ActionAnalysis", "def _verified_state_gate",
+         "def idempotency_key", "def compensation_plan", "def cascade_risk"],
+        [],
+        "action|blast_radius|destructive|tautolog|unbounded|verified_state|dry_run|"
+        "idempotency|compensation|cascade|duplicate|irreversible|effect",
+        "cascade analysis is exactly as good as the trigger declarations it is given — "
+        "an undeclared webhook stays invisible, and shell analysis remains a deny-list "
+        "rather than a parser",
     ),
     Probe(
         "P10",

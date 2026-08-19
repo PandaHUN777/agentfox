@@ -538,9 +538,16 @@ SCENARIOS: list[Scenario] = [
         "L4 tools and actions",
         "Duplicate execution on retry",
         "A refund issued twice after a timeout.",
-        control="",
-        expect="absent",
-        note="P9-8 idempotency keys specified, not built. A real money-losing failure.",
+        control=(
+            "F3.7 effect ledger with derived idempotency keys"
+        ),
+        expect="covered",
+        note=(
+            "Volatile transport metadata is excluded from the key, so a retry with a fresh request "
+            "id is still the same operation. An effectful call carrying no caller-supplied key is "
+            "itself reported, on the first attempt."
+        ),
+        probe="probe_duplicate_execution",
         tags=["known-gap", "F-priority"],
     ),
     Scenario(
@@ -548,9 +555,16 @@ SCENARIOS: list[Scenario] = [
         "L4 tools and actions",
         "Partial completion with no rollback",
         "Three of five writes succeed, then it fails.",
-        control="",
-        expect="absent",
-        note="P9-10 compensation not built.",
+        control=(
+            "F3.10 compensation planning"
+        ),
+        expect="covered",
+        note=(
+            "Compensations are produced in reverse order and steps with no way back are named "
+            "rather than skipped. Run before the sequence starts, it reports an irreversible step "
+            "that precedes a fallible one — the cheap time to find that out."
+        ),
+        probe="probe_compensation",
         tags=["known-gap"],
     ),
     Scenario(
@@ -558,9 +572,16 @@ SCENARIOS: list[Scenario] = [
         "L4 tools and actions",
         "Cascading side effects",
         "One delete triggers downstream deletes nobody modelled.",
-        control="",
-        expect="absent",
-        note="Blast radius is statement-local.",
+        control=(
+            "F3.9 cascade analysis over declared triggers"
+        ),
+        expect="covered",
+        note=(
+            "Blast radius is statement-local and cannot see that a trigger publishes an event four "
+            "subscribers act on. This follows the declared wiring transitively, and is exactly as "
+            "good as that declaration — an undeclared webhook stays invisible."
+        ),
+        probe="probe_cascade",
     ),
     Scenario(
         "L4.11",

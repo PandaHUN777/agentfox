@@ -1209,6 +1209,85 @@ def probe_fairness() -> Result:
 
 
 # ---------------------------------------------------------------------------
+# F3 effects that outlive the call
+# ---------------------------------------------------------------------------
+#
+# None of these is a bad decision. Every individual call is authorised, well-formed and
+# correct; the failure is in the arrangement, so each probe sets up an arrangement
+# rather than a bad call.
+
+
+def probe_duplicate_execution() -> Result:
+    from nometria.effects import EffectLedger
+
+    ledger = EffectLedger()
+    args = {"order": "A-1", "amount": 50, "request_id": "r1", "timestamp": "2026-01-01"}
+    first = ledger.check("payments.refund", args)
+    ledger.record("payments.refund", args)
+    retry = dict(args, request_id="r2", timestamp="2026-01-02")
+    repeated = ledger.check("payments.refund", retry)
+    keyed = ledger.check("payments.refund", args, key="caller-supplied")
+    codes = {f.code for f in repeated}
+    caught = "duplicate-execution" in codes and "no-idempotency-key" in {
+        f.code for f in first
+    } and not keyed
+    return caught, (
+        "a retry carrying a fresh request id and timestamp is still recognised as the "
+        "same operation (critical); the missing key is reported on the first attempt, "
+        "before anything has gone wrong; a caller-supplied key settles it"
+    )
+
+
+def probe_compensation() -> Result:
+    from nometria.effects import Step, compensation_plan
+
+    sequence = [
+        Step("email.send", irreversible=True),
+        Step("payments.charge", compensator="payments.refund"),
+        Step("orders.create", compensator="orders.cancel"),
+    ]
+    after = compensation_plan(sequence, executed=3)
+    before = compensation_plan(sequence)
+    safe = compensation_plan([
+        Step("orders.create", compensator="orders.cancel"),
+        Step("payments.charge", compensator="payments.refund"),
+    ])
+    codes = {f.code for f in before.findings}
+    caught = (
+        [s.tool for s in after.compensations] == ["orders.create", "payments.charge"]
+        and not after.complete
+        and "irreversible-before-fallible" in codes
+        and safe.complete
+    )
+    return caught, (
+        "unwind runs in reverse order and names 'email.send' as unrecoverable; the "
+        f"ordering problem is reported before anything runs, suggesting {before.ordering_hint}; "
+        "a fully reversible sequence reports nothing"
+    )
+
+
+def probe_cascade() -> Result:
+    from nometria.effects import cascade_risk
+
+    triggers = {
+        "orders.update": ["events.publish"],
+        "events.publish": ["email.send", "db.purge"],
+        "db.purge": [],
+    }
+    reaching = cascade_risk("orders.update", triggers, destructive=("db.purge",))
+    looping = cascade_risk("a", {"a": ["b"], "b": ["a"]})
+    quiet = cascade_risk("db.query", {"db.query": []})
+    caught = (
+        reaching.verdict == "block" and looping.cycles and quiet.verdict == "allow"
+    )
+    return caught, (
+        f"'orders.update' reaches {reaching.reached} and is blocked for touching "
+        f"db.purge; a trigger loop {looping.cycles[0] if looping.cycles else 'MISS'} is "
+        "caught; a tool that sets off nothing reports nothing"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Harness
 # ---------------------------------------------------------------------------
 
