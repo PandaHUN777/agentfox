@@ -116,7 +116,7 @@ Working: runtime detectors (PII/injection/secrets), taint tracking, tool-scoped 
 delegation narrowing, hash-chained audit with an independent verifier, evaluation with CI gating,
 policy engine with simulation and hierarchical composition, circuit breaker and enforced budget caps,
 bidirectional LangSmith/Langfuse correlation, the guardrail tuning surface, MCP call-path
-governance, 37 controls mapped to 7 frameworks. Tranche 0 is complete: streaming, migrations, kill switch and the
+governance, 39 controls mapped to 7 frameworks. Tranche 0 is complete: streaming, migrations, kill switch and the
 LangGraph-native SDK all shipped.
 
 **Not working:** nine of fifteen pillars are partial or absent, and the three capabilities we
