@@ -16,6 +16,7 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Weighted coverage** | **45%** *(partial counts half)* |
 | **Tests** | 356 |
 | **Lines** | 26,539 (src + tests) |
+| **Failure modes covered** | **19%** — 10 of 57 outright, 2 partial |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
 in [traceability.md](traceability.md).
@@ -54,6 +55,24 @@ in [traceability.md](traceability.md).
 | `I-8` | Integration | Ragas scorer adapter | ✗ absent | — |  |
 | `I-10` | Integration | LiteLLM routing | ✗ absent | — |  |
 | `I-11` | Integration | Azure / Bedrock / Vertex providers | ✗ absent | — | OpenAI + Anthropic only |
+
+## Failure-family coverage
+
+Pillars are how the build is organised; **families are what actually goes wrong in
+production**. A pillar can read "built" while the failure it exists to prevent is still
+uncovered, so this table is computed independently rather than derived from the rows
+above. The 50 modes come from [failure-modes.md](failure-modes.md).
+
+| Family | Modes | Covered | Partial | Score | Not yet covered |
+|---|---|---|---|---|---|
+| **F1** Answerability & abstention | 6 | 0 | 0 | ✗ 0/6 | F1.1, F1.2, F1.3, F1.4, F1.5, F1.6 |
+| **F2** Source authority & provenance | 6 | 1 | 0 | ◐ 1/6 | F2.1, F2.2, F2.3, F2.4, F2.6 |
+| **F3** Destructive action | 10 | 7 | 0 | ◐ 7/10 | F3.7, F3.9, F3.10 |
+| **F4** Entitlement & disclosure | 8 | 0 | 1 | ◐ 0.5/8 | F4.1, F4.2, F4.3, F4.4, F4.5, F4.6, F4.7 |
+| **F5** Escalation & resolution | 7 | 0 | 0 | ✗ 0/7 | F5.1, F5.2, F5.3, F5.4, F5.5, F5.6, F5.7 |
+| **F6** Commitment, advice & liability | 6 | 1 | 1 | ◐ 1.5/6 | F6.1, F6.3, F6.4, F6.5 |
+| **F7** Numeric, temporal & entity integrity | 7 | 1 | 0 | ◐ 1/7 | F7.1, F7.2, F7.3, F7.4, F7.5, F7.6 |
+| **F8** Context & retrieval integrity | 7 | 0 | 0 | ✗ 0/7 | F8.1, F8.2, F8.3, F8.4, F8.5, F8.6, F8.7 |
 
 **Reading the gaps.** Absent rows are not oversights — they are the PRD v3 roadmap in
 tranche order. `P9`, `P13` and `P7` are the three genuinely unclaimed capabilities and
