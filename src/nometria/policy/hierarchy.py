@@ -256,9 +256,13 @@ def lint_policy(layers: list[PolicyLayer]) -> list[LintFinding]:
                         "duplicate-id",
                         "high",
                         rule.id,
-                        layer.level,
-                        message=f"'{rule.id}' is defined twice in the same layer; "
+                        # Positional order is (code, severity, rule_id, message, level).
+                        # This call previously passed `level` into `message` *and* a
+                        # `message=` keyword, so the one lint code that catches a
+                        # silently-shadowed rule raised TypeError every time it fired.
+                        f"'{rule.id}' is defined twice in the same layer; "
                         "the later definition silently wins",
+                        layer.level,
                     )
                 )
             ids_in_layer.add(rule.id)

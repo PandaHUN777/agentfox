@@ -363,3 +363,30 @@ def test_each_protective_control_has_a_command(isolated_db):
     help_text = flat(runner.invoke(app, ["--help"]).output)
     for verb in ("boundary", "sources", "escalation", "auth"):
         assert verb in help_text, verb
+
+
+def test_the_duplicate_id_lint_actually_fires(isolated_db):
+    """Regression: this lint code passed `level` positionally into `message` *and* a
+    `message=` keyword, so it raised TypeError every time it fired.
+
+    Nothing caught it because no test ever wrote a policy with a duplicated rule id —
+    the one situation the check exists for. Found by the coverage probe.
+    """
+    from nometria.policy import PolicyDocument, PolicyLayer, lint_policy
+
+    document = PolicyDocument.model_validate(
+        {
+            "key": "probe",
+            "name": "probe",
+            "version": 1,
+            "rules": [
+                {"id": "catch-all", "effect": "block", "when": {}},
+                {"id": "catch-all", "effect": "allow", "when": {}},
+            ],
+        }
+    )
+    findings = lint_policy([PolicyLayer(document=document)])
+    codes = {finding.code for finding in findings}
+    assert "duplicate-id" in codes
+    duplicate = next(f for f in findings if f.code == "duplicate-id")
+    assert "silently wins" in duplicate.message
