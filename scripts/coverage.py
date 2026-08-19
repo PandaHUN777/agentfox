@@ -434,10 +434,14 @@ PROBES: list[Probe] = [
         "P16",
         "Business-process guardrails and the guardrail catalogue",
         "16 Business rules",
-        ["class Ladder", "def find_conflicts", "def run_verification", "CATALOGUE"],
-        ["def compile_from_document"],
-        "ladder|band|business|catalogue|guardrail_kind|conflict|verification",
-        "natural-language policy compilation is a deterministic suggester only",
+        ["class Ladder", "def find_conflicts", "def run_verification", "CATALOGUE",
+         "def compile_document", "_EXTRACTORS"],
+        ["def compile_with_model"],
+        "ladder|band|business|catalogue|guardrail_kind|conflict|verification|compil",
+        "policy compilation is deterministic: 86% of a tuned document and 64% of a "
+        "held-out one compile with no question. Prose with no parseable structure "
+        "(\"be courteous\") is reported as inexpressible rather than guessed at; a "
+        "model-assisted path for those sentences is not built",
     ),
     Probe(
         "X-4",

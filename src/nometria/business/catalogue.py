@@ -216,7 +216,10 @@ CATALOGUE: list[GuardrailKind] = [
             "  when: {surface: [output], detection: {entity_prefix: PII}}"
         ),
         stage="output",
-        signals=["personal data", "pii", "gdpr", "ssn", "card number", "customer data"],
+        signals=["personal data", "pii", "gdpr", "ssn", "card number", "customer data",
+            "credit card", "phone number", "email address", "date of birth",
+            "passport", "social security", "personally identifiable",
+            "personal information", "home address"],
         scenarios=["L1.8", "L5.1"],
     ),
     GuardrailKind(

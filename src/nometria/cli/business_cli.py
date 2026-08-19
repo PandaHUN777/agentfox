@@ -4,6 +4,11 @@ The catalogue commands exist for a specific workflow: someone arrives with a pol
 document and has to turn prose into enforcement. `nometria guardrails suggest` does the
 deterministic half of that mapping and `nometria guardrails catalogue` shows what can
 be expressed at all, which is the question nobody could answer before.
+
+`compile` goes the rest of the way: it reads the document and writes the rules, then
+prints what it had to assume and the short list it genuinely could not decide. The
+number to watch is the auto-compile rate — the share of governance that became
+enforceable without a round-trip to a human.
 """
 
 from __future__ import annotations
@@ -281,6 +286,90 @@ def graph() -> None:
     )
 
 
+def compile_cmd(
+    file: Path = typer.Argument(..., help="Policy document (.txt or .md)."),
+    apply: bool = typer.Option(False, "--apply", help="Save the compiled rules."),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Turn a written policy into executable guardrails."""
+    from nometria.business.compile import compile_document
+    from nometria.business.store import save_ladder
+
+    if not file.exists():
+        console.print(f"[red]No such file:[/red] {file}")
+        raise typer.Exit(1)
+
+    result = compile_document(file.read_text(), key_prefix=file.stem.lower())
+    if as_json:
+        console.print_json(json.dumps(result.to_json()))
+        raise typer.Exit(0)
+
+    rate = result.auto_rate
+    colour = "green" if rate >= 0.8 else "yellow" if rate >= 0.5 else "red"
+    console.print(
+        Panel(
+            f"[{colour}]{rate:.0%}[/{colour}] of the governance in this document "
+            f"compiled without a question.\n"
+            f"{len(result.rules)} rule(s) ready · {len(result.review)} to answer · "
+            f"{len(result.unmappable)} not expressible",
+            title=f"Compiled {file.name}",
+        )
+    )
+
+    for rule in result.rules:
+        table = Table(box=None, show_header=False, padding=(0, 1))
+        table.add_row("[dim]kind[/dim]", rule.kind)
+        for key, value in rule.definition.items():
+            if key in ("kind", "key", "bands"):
+                continue
+            table.add_row(f"[dim]{key}[/dim]", str(value))
+        console.print(f"\n[bold]{rule.key}[/bold]  [dim]confidence {rule.confidence:.2f}[/dim]")
+        console.print(table)
+        if bands := rule.definition.get("bands"):
+            _print_bands(bands)
+        for assumption in rule.assumptions:
+            console.print(f"  [yellow]assumed[/yellow] {assumption.what}")
+            console.print(f"          [dim]{assumption.why}[/dim]")
+
+    if result.review:
+        console.print("\n[bold]Needs a decision[/bold]")
+        for item in result.review:
+            mark = "[red]blocking[/red]" if item.blocking else "[dim]optional[/dim]"
+            console.print(f"  {mark} {item.question}")
+            console.print(f"    [dim]{item.why}[/dim]")
+            if item.options:
+                console.print(f"    [dim]options: {', '.join(item.options)}[/dim]")
+            console.print(f"    [dim]from: {item.source[:90]}[/dim]")
+
+    for sentence in result.unmappable:
+        console.print(f"\n[dim]not expressible as a guardrail:[/dim] {sentence[:100]}")
+
+    if apply:
+        saved = 0
+        for rule in result.rules:
+            if rule.kind == "threshold_ladder":
+                save_ladder(rule.definition)
+                saved += 1
+        console.print(
+            f"\n[green]Saved {saved} ladder(s) in observe mode.[/green] "
+            "Run [bold]nometria guardrails check[/bold], then promote with "
+            "[bold]guardrails apply --enforce[/bold]."
+        )
+
+
+def _print_bands(bands: list[dict]) -> None:
+    for band in bands:
+        edge = f"≤ {band['upto']:g}" if "upto" in band else "above"
+        outcome = band["outcome"]
+        colour = OUTCOME_COLOUR.get(outcome, "white")
+        extra = ""
+        if verify := band.get("verify"):
+            extra = f" via {verify.get('check')}"
+        elif role := band.get("approver_role"):
+            extra = f" → {role}"
+        console.print(f"    [dim]{edge:>10}[/dim]  [{colour}]{outcome}[/{colour}]{extra}")
+
+
 def register(app: typer.Typer) -> None:
     guardrails_app = typer.Typer(
         help="Business guardrails and the guardrail catalogue.", no_args_is_help=True
@@ -293,4 +382,5 @@ def register(app: typer.Typer) -> None:
     guardrails_app.command(name="explain")(explain)
     guardrails_app.command(name="suggest")(suggest_cmd)
     guardrails_app.command(name="graph")(graph)
+    guardrails_app.command(name="compile")(compile_cmd)
     app.add_typer(guardrails_app, name="guardrails")
