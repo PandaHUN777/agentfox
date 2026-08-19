@@ -30,8 +30,7 @@ from nometria.integrations.fastapi import (
 from nometria.integrations.prometheus import render_metrics
 from nometria.providers import all_providers, available_providers, get_provider
 
-from .conftest import PII_TEXT, as_user
-
+from .conftest import PII_TEXT
 
 # ---------------------------------------------------------------------------
 # I-11 / I-10 — enterprise providers

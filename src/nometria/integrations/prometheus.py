@@ -194,9 +194,7 @@ def render_metrics(session: Session, *, window_hours: int = 24) -> str:
                 {},
                 float(
                     session.scalar(
-                        select(func.count())
-                        .select_from(Trace)
-                        .where(Trace.started_at >= since)
+                        select(func.count()).select_from(Trace).where(Trace.started_at >= since)
                     )
                     or 0
                 ),

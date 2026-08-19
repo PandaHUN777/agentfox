@@ -148,9 +148,7 @@ def _delegate(sample: RagasSample) -> RagasScores:  # pragma: no cover - needs r
     )
 
 
-def score_dataset(
-    samples: list[RagasSample], *, prefer_ragas: bool = True
-) -> dict[str, Any]:
+def score_dataset(samples: list[RagasSample], *, prefer_ragas: bool = True) -> dict[str, Any]:
     """Aggregate over a dataset, reporting the per-sample floor alongside the mean.
 
     The mean is what Ragas reports and what teams expect. The minimum is what matters
