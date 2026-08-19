@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 
 from ..db import get_session
 from ..models import ApiToken, User
+from ..tenancy import bind_session, system_scope
 
 # Route family -> roles permitted to mutate. Everyone listed in READ_ROLES may read.
 WRITE_ROLES: dict[str, set[str]] = {
@@ -58,9 +59,17 @@ def current_user(
     if authorization and authorization.lower().startswith("bearer "):
         token = authorization.split(" ", 1)[1]
 
+    # Authentication is the one lookup that legitimately precedes tenancy: we cannot
+    # know which tenant to filter by until we know who is calling. It runs in system
+    # scope for exactly that reason, and binds the tenant immediately afterwards so
+    # nothing downstream is unscoped.
     if token and token.startswith("nom_api_"):
         prefix = token[:16]
-        for row in session.scalars(select(ApiToken).where(ApiToken.key_prefix == prefix)):
+        with system_scope("resolving an API token to its user"):
+            candidates = list(
+                session.scalars(select(ApiToken).where(ApiToken.key_prefix == prefix))
+            )
+        for row in candidates:
             if row.revoked_at:
                 continue
             from argon2 import PasswordHasher
@@ -70,19 +79,35 @@ def current_user(
                 PasswordHasher().verify(row.key_hash, token)
             except VerifyMismatchError:
                 continue
-            user = session.get(User, row.user_id)
+            with system_scope("resolving an API token to its user"):
+                user = session.get(User, row.user_id)
             if user and user.active:
-                return user
+                return _bind(request, session, user)
         raise HTTPException(status_code=401, detail="invalid API token")
 
     email = x_nometria_user or "admin@example.com"
-    user = session.scalar(select(User).where(User.email == email))
+    with system_scope("resolving a development identity header to its user"):
+        user = session.scalar(select(User).where(User.email == email))
     if user is None or not user.active:
         raise HTTPException(
             status_code=401,
             detail=f"unknown user '{email}'. Send X-Nometria-User or a nom_api_ bearer token.",
         )
+    return _bind(request, session, user)
+
+
+def _bind(request: Request, session: Session, user: User) -> User:
+    """Bind the caller's tenant to the request's session.
+
+    Bound to the session rather than to a context variable because FastAPI resolves
+    dependencies and runs handlers in different threadpool contexts — a context
+    variable set here is simply not visible to the route, for sync and async endpoints
+    alike. The session is the one object both reliably share, and the tenant is a
+    property of the unit of work anyway.
+    """
+    bind_session(session, user.org_id)
     request.state.user = user
+    request.state.org_id = user.org_id
     return user
 
 

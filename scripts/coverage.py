@@ -393,6 +393,14 @@ PROBES: list[Probe] = [
     # --- Integrations
     # --- Adoption surface: the reason any of the above gets installed at all.
     Probe(
+        "PL-8",
+        "Tenant isolation enforced at the session",
+        "Platform",
+        ["class TenantScoped", "def _tenant_criteria", "def system_scope"],
+        [],
+        "tenant|tenancy|cross_tenant|isolat",
+    ),
+    Probe(
         "X-1",
         "One-line auto-instrumentation",
         "Adoption",

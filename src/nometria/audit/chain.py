@@ -129,6 +129,9 @@ def append(
     if settings.redact_at_capture:
         payload = redact_payload(payload)
 
+    # Tenant-filtered by the session, so this is the last entry *in this tenant's
+    # chain*. Each tenant therefore has its own chain starting at seq 1, which is what
+    # lets them verify it without being shown anyone else's entries.
     last = session.scalars(select(AuditEntry).order_by(AuditEntry.seq.desc()).limit(1)).first()
     seq = (last.seq + 1) if last else 1
     prev_digest = last.digest if last else GENESIS

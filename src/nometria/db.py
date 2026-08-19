@@ -49,9 +49,18 @@ def get_engine() -> Engine:
 
 
 def get_sessionmaker() -> sessionmaker[Session]:
+    """The one session factory, with tenant isolation already wired in.
+
+    Isolation is installed here rather than at each call site so that there is no way
+    to obtain an unfiltered session by accident — a second, unprotected factory would
+    reintroduce exactly the leak this closes.
+    """
     global _SessionLocal
     if _SessionLocal is None:
+        from .tenancy import install as install_tenancy
+
         _SessionLocal = sessionmaker(bind=get_engine(), expire_on_commit=False, future=True)
+        install_tenancy(_SessionLocal)
     return _SessionLocal
 
 

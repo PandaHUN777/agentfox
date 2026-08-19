@@ -42,12 +42,24 @@ class Base(DeclarativeBase):
     type_annotation_map = {dict[str, Any]: JSON, list[str]: JSON, list[Any]: JSON}
 
 
-class TimestampMixin:
+class TenantScoped:
+    """Carries the tenant key, and is the hook every isolation filter targets.
+
+    Isolation is applied against *this class*, so inheriting it is what makes a model
+    tenant-safe — and :func:`nometria.tenancy.assert_tenant_safe` fails at import if
+    any mapped class does not. That inverts the usual arrangement: instead of
+    remembering to filter each new query, you cannot define a model that escapes the
+    filter in the first place.
+    """
+
+    org_id: Mapped[str] = mapped_column(String(64), default="org_default", index=True)
+
+
+class TimestampMixin(TenantScoped):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), default=utcnow, onupdate=utcnow
     )
-    org_id: Mapped[str] = mapped_column(String(64), default="org_default", index=True)
 
 
 # ---------------------------------------------------------------------------
@@ -791,7 +803,7 @@ class Span(Base, TimestampMixin):
     error: Mapped[str | None] = mapped_column(Text)
 
 
-class AuditEntry(Base):
+class AuditEntry(Base, TenantScoped):
     """P5-2. Append-only, hash-chained.
 
     There is intentionally no ``updated_at``, no ORM update path, and no delete
@@ -800,10 +812,17 @@ class AuditEntry(Base):
     """
 
     __tablename__ = "audit_entries"
+    # The chain is per tenant, so `seq` is unique within an org rather than globally.
+    # A single global chain would make tenant A's verification depend on tenant B's
+    # entries — you cannot check a hash chain you are only allowed to see half of —
+    # and A's evidence package would carry B's digests. One chain per tenant keeps
+    # independent verifiability, which is the whole point of the chain.
+    __table_args__ = (UniqueConstraint("org_id", "seq", name="uq_audit_org_seq"),)
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("aud"))
-    org_id: Mapped[str] = mapped_column(String(64), default="org_default", index=True)
-    seq: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    # `org_id` comes from TenantScoped. It was declared inline here once, which quietly
+    # excluded the audit log — the single most sensitive table — from tenant filtering.
+    seq: Mapped[int] = mapped_column(Integer, index=True)
     occurred_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     actor_type: Mapped[str] = mapped_column(String(24), default="system")
     actor_id: Mapped[str | None] = mapped_column(String(120))
@@ -1029,3 +1048,27 @@ class Obligation(Base, TimestampMixin):
 
 
 __all__ = [n for n in dir() if n[0].isupper()]
+
+
+def _assert_every_model_is_tenant_scoped() -> None:
+    """Fail loudly at import if a model escapes tenant isolation.
+
+    Tenant filtering targets :class:`TenantScoped`, so a model that does not inherit it
+    is invisible to the filter and its rows are readable by every tenant. That is a
+    data breach, and it is the kind introduced by someone adding a table months from
+    now who has never read the tenancy module. Making it an import error means the
+    mistake cannot reach a running system.
+    """
+    escaped = sorted(
+        mapper.class_.__name__
+        for mapper in Base.registry.mappers
+        if not issubclass(mapper.class_, TenantScoped)
+    )
+    if escaped:
+        raise RuntimeError(
+            "these models are not tenant-scoped and would leak across tenants: "
+            f"{escaped}. Inherit TenantScoped (usually via TimestampMixin)."
+        )
+
+
+_assert_every_model_is_tenant_scoped()

@@ -17,7 +17,13 @@ from nometria.models import Base
 
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # `disable_existing_loggers=False` is load-bearing. The default is True, which
+    # switches off every logger already configured — including all of Nometria's. The
+    # effect is that after any migration or stamp (and `init_db` stamps), the platform
+    # stops emitting warnings entirely: provider degradation, fail-open decisions and
+    # tenancy bypasses all go silent. For a product whose whole argument is that
+    # controls must not quietly stop reporting, that is not an acceptable default.
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 config.set_main_option("sqlalchemy.url", get_settings().database_url)
 target_metadata = Base.metadata
