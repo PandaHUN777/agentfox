@@ -4,9 +4,38 @@
 
 See every agent, control what it can do, prove it works, and demonstrate compliance — across every model, framework and cloud.
 
-> **Status: MVP v0.2 — Tranche 0 delivered.** Streaming enforcement, migrations, kill switch and a LangGraph-native SDK now ship.
->
-> **Previously v0.1:** A thin, functional slice across all six product pillars. Runs offline with no API key and no model weights. Not production-hardened. See [docs/PRD.md](docs/PRD.md) §6 for exactly what is and is not built.
+---
+
+## Thirty seconds
+
+```bash
+pip install nometria
+nometria init          # database, controls, baseline policy — offline, idempotent
+nometria check         # scan this repo: what talks to a model, and what is ungoverned
+```
+
+Then one line in your entry point:
+
+```python
+import nometria
+nometria.auto()
+```
+
+Every model call in the process is now traced, evaluated against policy and written to
+a tamper-evident audit log. **Nothing else in your codebase changes, and nothing is
+blocked** — `auto()` starts in observe mode, because a library that begins refusing
+production traffic because someone added an import is indefensible.
+
+```bash
+nometria findings      # what it found
+nometria doctor        # is the runtime configured the way you think it is?
+```
+
+When the findings look right, `nometria policy enforce baseline` is the one step that
+starts blocking. Everything before it is safe to run without reading further.
+
+> **Status: MVP v0.3 — Tranches 0 and 1 delivered, Tranche 2 in progress.** Live
+> coverage, computed by probe rather than asserted: **[docs/status.md](docs/status.md)**.
 
 ---
 

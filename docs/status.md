@@ -9,13 +9,13 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 
 | | |
 |---|---|
-| **Capabilities** | 32 tracked |
-| **Built** | 17 ✅ |
-| **Partial** | 8 ◐ |
+| **Capabilities** | 34 tracked |
+| **Built** | 18 ✅ |
+| **Partial** | 9 ◐ |
 | **Absent** | 7 ✗ |
 | **Weighted coverage** | **66%** *(partial counts half)* |
-| **Tests** | 501 |
-| **Lines** | 32,267 (src + tests) |
+| **Tests** | 562 |
+| **Lines** | 34,361 (src + tests) |
 | **Failure modes covered** | **61%** — 34 of 57 outright, 2 partial |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
@@ -27,16 +27,16 @@ in [traceability.md](traceability.md).
 | `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 11 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 8 | no live IdP; Entra/Okta integration (P2-8) absent |
 | `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 36 | model-based detectors wired but need an opt-in weights download |
-| `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 6 | idempotency keys (P9-8) absent |
+| `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 7 | idempotency keys (P9-8) absent |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ✗ absent | — |  |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 26 |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 20 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ✗ absent | — |  |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 21 | no Ragas adapter, model-based groundedness or annotation queue |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 22 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 12 |  |
-| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 22 |  |
-| `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 9 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
+| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 23 |  |
+| `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 11 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 13 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
 | `PL-2` | Platform | Database migrations | ✅ built | 1 |  |
@@ -45,8 +45,10 @@ in [traceability.md](traceability.md).
 | `PL-5` | Platform | Async workers | ✗ absent | — |  |
 | `PL-6` | Platform | HA-ready persistence | ✗ absent | — | Postgres supported; scale-out untested |
 | `PL-7` | Platform | Service-level fail-open | ✗ absent | — |  |
+| `X-1` | Adoption | One-line auto-instrumentation | ◐ partial | 8 | LangChain/LiteLLM client patching absent |
+| `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 11 |  |
 | `I-1` | Integration | LangGraph-native SDK | ✅ built | 2 |  |
-| `I-2` | Integration | MCP inline governance | ✅ built | 10 |  |
+| `I-2` | Integration | MCP inline governance | ✅ built | 11 |  |
 | `I-3` | Integration | FastAPI middleware and dependency | ✅ built | 7 |  |
 | `I-4` | Integration | LangSmith correlation | ✅ built | 7 |  |
 | `I-5` | Integration | OpenTelemetry | ✅ built | 1 |  |

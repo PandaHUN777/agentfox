@@ -391,6 +391,24 @@ PROBES: list[Probe] = [
     ),
     Probe("PL-7", "Service-level fail-open", "Platform", ["def service_fallback"], [], ""),
     # --- Integrations
+    # --- Adoption surface: the reason any of the above gets installed at all.
+    Probe(
+        "X-1",
+        "One-line auto-instrumentation",
+        "Adoption",
+        ["def auto", "def _patch_openai", "def _patch_anthropic"],
+        ["def _patch_langchain"],
+        "auto|autoguard|one_liner|untouched_app|patch",
+        "LangChain/LiteLLM client patching absent",
+    ),
+    Probe(
+        "X-2",
+        "Static repo discovery and zero-effort CLI",
+        "Adoption",
+        ["def scan_file", "def check", "def doctor"],
+        [],
+        "scan|discovery|doctor|init_is_idempotent|quickstart|ungoverned",
+    ),
     Probe(
         "I-1",
         "LangGraph-native SDK",

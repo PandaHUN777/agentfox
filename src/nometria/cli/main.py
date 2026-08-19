@@ -52,6 +52,13 @@ app.add_typer(redteam_app, name="redteam")
 app.add_typer(scan_app, name="scan")
 app.add_typer(db_app, name="db")
 
+# The three commands a new user runs, registered as top-level verbs. The rest of this
+# CLI is right for an operator running a governance programme and wrong for the first
+# ten minutes.
+from .onboarding import register as _register_onboarding  # noqa: E402
+
+_register_onboarding(app)
+
 
 def _session():
     from ..db import init_db, session_scope
