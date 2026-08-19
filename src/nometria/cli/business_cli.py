@@ -1,0 +1,296 @@
+"""Authoring and inspecting business guardrails from the command line.
+
+The catalogue commands exist for a specific workflow: someone arrives with a policy
+document and has to turn prose into enforcement. `nometria guardrails suggest` does the
+deterministic half of that mapping and `nometria guardrails catalogue` shows what can
+be expressed at all, which is the question nobody could answer before.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import typer
+import yaml
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+console = Console()
+
+OUTCOME_COLOUR = {
+    "allow": "green",
+    "verify": "cyan",
+    "redact": "yellow",
+    "escalate": "yellow",
+    "block": "red",
+}
+
+
+def rules_apply(
+    file: Path = typer.Argument(..., help="YAML ladder definition."),
+    agent: str | None = typer.Option(None, "--agent"),
+    mode: str | None = typer.Option(None, "--mode", help="observe | enforce"),
+) -> None:
+    """Author or update a business rule from a YAML file."""
+    from ..business import Ladder, save_ladder
+    from ..db import session_scope
+
+    try:
+        payload = yaml.safe_load(file.read_text())
+    except (OSError, yaml.YAMLError) as exc:
+        console.print(f"[red]could not read {file}: {exc}[/]")
+        raise typer.Exit(1) from exc
+
+    payload.pop("kind", None)
+    if mode:
+        payload["mode"] = mode
+    try:
+        ladder = Ladder.model_validate(payload)
+    except Exception as exc:
+        console.print(f"[red]{file.name} is not a valid ladder:[/] {exc}")
+        raise typer.Exit(1) from exc
+
+    with session_scope() as session:
+        save_ladder(session, ladder, agent_slug=agent)
+
+    console.print(
+        f"[green]✓[/] [bold]{ladder.key}[/] — {len(ladder.bands)} bands on "
+        f"{ladder.field_path} ({ladder.unit})"
+    )
+    _print_intervals(ladder)
+    if ladder.mode == "observe":
+        console.print("  [dim]observe mode — the outcome is recorded, not applied.[/]")
+
+
+def rules_show(key: str | None = typer.Argument(None, help="Rule key; omit for all.")) -> None:
+    """Show the resolved bands, so an author sees exactly what they wrote."""
+    from ..business import all_ladders
+    from ..db import session_scope
+
+    with session_scope() as session:
+        ladders = [lad for lad in all_ladders(session) if key is None or lad.key == key]
+
+    if not ladders:
+        console.print("[dim]No business rules. Author one with `nometria guardrails apply`.[/]")
+        return
+    for ladder in ladders:
+        console.print(
+            f"\n[bold]{ladder.key}[/]  [dim]{ladder.owner or 'no owner'} · {ladder.mode}[/]"
+        )
+        if ladder.description:
+            console.print(f"  [dim]{ladder.description}[/]")
+        _print_intervals(ladder)
+
+
+def _print_intervals(ladder) -> None:
+    for lower, upper, band in ladder.intervals():
+        low = "−∞" if lower is None else f"{lower:g}"
+        high = "∞" if upper is None else f"{upper:g}"
+        colour = OUTCOME_COLOUR.get(band.outcome, "dim")
+        extra = ""
+        if band.verify:
+            extra = f" [dim]via {band.verify.check}, on fail → {band.verify.on_fail}[/]"
+        elif band.approver_role:
+            extra = f" [dim]approver: {band.approver_role}[/]"
+        console.print(f"    ({low}, {high}]  →  [{colour}]{band.outcome}[/]{extra}")
+
+
+def rules_check(as_json: bool = typer.Option(False, "--json")) -> None:
+    """Find where two teams' rules disagree.
+
+    Two authors setting different thresholds on the same field is not a merge to be
+    resolved by precedence — it is a disagreement between two people, and resolving it
+    silently means one of them is wrong and does not know.
+    """
+    from ..business import all_ladders, find_conflicts
+    from ..db import session_scope
+
+    with session_scope() as session:
+        ladders = all_ladders(session)
+        conflicts = find_conflicts(ladders)
+
+    if as_json:
+        console.print_json(json.dumps([c.to_json() for c in conflicts]))
+        raise typer.Exit(1 if conflicts else 0)
+
+    if not conflicts:
+        console.print(f"[green]✓[/] {len(ladders)} rule(s), no conflicts")
+        return
+    console.print(f"[red]{len(conflicts)} conflict(s)[/] across {len(ladders)} rule(s)\n")
+    for conflict in conflicts:
+        colour = {"critical": "red", "high": "yellow"}.get(conflict.severity, "dim")
+        console.print(f"  [{colour}]{conflict.severity}[/] {conflict.code}")
+        console.print(f"    {conflict.detail}")
+        if conflict.left and conflict.right:
+            console.print(f"    [dim]between {conflict.left} and {conflict.right}[/]")
+    raise typer.Exit(1)
+
+
+def rules_test(
+    key: str = typer.Argument(..., help="Rule key."),
+    values: str = typer.Argument(..., help="Comma-separated values to try."),
+) -> None:
+    """Try values against a rule without running anything."""
+    from ..business import all_ladders, evaluate_ladder
+    from ..db import session_scope
+
+    with session_scope() as session:
+        ladder = next((lad for lad in all_ladders(session) if lad.key == key), None)
+    if ladder is None:
+        console.print(f"[red]unknown rule '{key}'[/]")
+        raise typer.Exit(1)
+
+    table = Table(box=None, padding=(0, 2), header_style="dim")
+    for column in ("value", "outcome", "why"):
+        table.add_column(column)
+    for raw in [v.strip() for v in values.split(",") if v.strip()]:
+        parts = ladder.field_path.split(".")
+        request: dict = {}
+        cursor = request
+        for part in parts[:-1]:
+            cursor[part] = {}
+            cursor = cursor[part]
+        cursor[parts[-1]] = raw
+        decision = evaluate_ladder(ladder, request)
+        colour = OUTCOME_COLOUR.get(decision.outcome, "dim")
+        table.add_row(raw, f"[{colour}]{decision.outcome}[/]", decision.reason[:64])
+    console.print(table)
+
+
+def catalogue(
+    intent: str | None = typer.Option(None, "--intent"),
+    as_json: bool = typer.Option(False, "--json"),
+) -> None:
+    """Every kind of guardrail this product can enforce.
+
+    The answer to "can we express our policy?" — asked before anyone writes YAML.
+    """
+    from ..business.catalogue import CATALOGUE as KINDS
+    from ..business.catalogue import to_json
+
+    kinds = [k for k in KINDS if intent is None or k.intent == intent]
+    if as_json:
+        console.print_json(json.dumps(to_json()))
+        return
+
+    table = Table(box=None, padding=(0, 2), header_style="dim")
+    table.add_column("kind", no_wrap=True)
+    table.add_column("intent", no_wrap=True)
+    table.add_column("stage", no_wrap=True)
+    table.add_column("decides", overflow="ellipsis", no_wrap=True)
+    for kind in kinds:
+        table.add_row(
+            f"[bold]{kind.id}[/]",
+            kind.intent.replace("_", " "),
+            kind.stage,
+            kind.decides,
+        )
+    console.print(table)
+    console.print(
+        f"\n  [dim]{len(kinds)} kind(s). "
+        "`nometria guardrails explain <kind>` for parameters and an example.[/]"
+    )
+
+
+def explain(kind_id: str = typer.Argument(..., help="Guardrail kind id.")) -> None:
+    """Parameters, inputs and a worked example for one guardrail kind."""
+    from ..business.catalogue import BY_ID
+
+    kind = BY_ID.get(kind_id)
+    if kind is None:
+        console.print(f"[red]unknown kind '{kind_id}'[/]")
+        console.print(f"[dim]try: {', '.join(sorted(BY_ID))}[/]")
+        raise typer.Exit(1)
+
+    console.print(
+        Panel(
+            f"[bold]{kind.name}[/]\n[dim]{kind.decides}[/]\n\n"
+            f"[dim]intent[/]  {kind.intent}\n"
+            f"[dim]nature[/]  {kind.nature}\n"
+            f"[dim]stage [/]  {kind.stage}\n"
+            f"[dim]yields[/]  {', '.join(kind.effects) or '—'}",
+            title=f"[bold]{kind.id}[/]",
+            title_align="left",
+            border_style="cyan",
+        )
+    )
+    if kind.inputs:
+        console.print("\n  [bold]Needs the request to carry:[/]")
+        for need in kind.inputs:
+            console.print(f"    · {need}")
+        console.print("    [dim]Without these it is configured but inert.[/]")
+    if kind.params:
+        console.print("\n  [bold]Parameters:[/]")
+        for name, description in kind.params.items():
+            console.print(f"    [cyan]{name}[/]  [dim]{description}[/]")
+    if kind.example:
+        console.print("\n  [bold]Example:[/]")
+        for line in kind.example.splitlines():
+            console.print(f"    [dim]{line}[/]")
+    if kind.note:
+        console.print(f"\n  [dim]{kind.note}[/]")
+
+
+def suggest_cmd(
+    instruction: str = typer.Argument(..., help="A sentence from a policy document."),
+) -> None:
+    """Which guardrail kinds a written instruction probably needs.
+
+    Deterministic signal matching, not a model — a starting point an operator confirms,
+    so a wrong suggestion costs a glance rather than a silent misconfiguration.
+    """
+    from ..business.catalogue import suggest
+
+    matches = suggest(instruction, limit=4)
+    if not matches:
+        console.print("[yellow]No guardrail kind matched that wording.[/]")
+        console.print(
+            "  [dim]Browse them with `nometria guardrails catalogue`. "
+            "A policy we cannot express is worth knowing about early.[/]"
+        )
+        return
+    console.print(f'[dim]"{instruction[:76]}"[/]\n')
+    for kind, score in matches:
+        console.print(f"  [bold cyan]{kind.id}[/]  [dim]{score:.2f} · {kind.decides}[/]")
+    console.print(
+        f"\n  [dim]`nometria guardrails explain {matches[0][0].id}` "
+        "for parameters and an example.[/]"
+    )
+
+
+def graph() -> None:
+    """The decision path as it will actually run, stage by stage."""
+    from ..business import all_ladders, build_graph
+    from ..db import session_scope
+
+    with session_scope() as session:
+        ladders = all_ladders(session)
+    nodes = build_graph(ladders=ladders)
+
+    current = None
+    for node in nodes:
+        if node.stage != current:
+            current = node.stage
+            console.print(f"\n[bold]{current}[/]")
+        owner = f" [dim]{node.owner}[/]" if node.owner else ""
+        console.print(f"    {node.key:<28}[dim]{node.detail[:56]}[/]{owner}")
+    console.print(
+        f"\n  [dim]{len(nodes)} guardrail(s) across {len({n.stage for n in nodes})} stages.[/]"
+    )
+
+
+def register(app: typer.Typer) -> None:
+    guardrails_app = typer.Typer(
+        help="Business guardrails and the guardrail catalogue.", no_args_is_help=True
+    )
+    guardrails_app.command(name="apply")(rules_apply)
+    guardrails_app.command(name="show")(rules_show)
+    guardrails_app.command(name="check")(rules_check)
+    guardrails_app.command(name="test")(rules_test)
+    guardrails_app.command(name="catalogue")(catalogue)
+    guardrails_app.command(name="explain")(explain)
+    guardrails_app.command(name="suggest")(suggest_cmd)
+    guardrails_app.command(name="graph")(graph)
+    app.add_typer(guardrails_app, name="guardrails")

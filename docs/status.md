@@ -9,13 +9,13 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 
 | | |
 |---|---|
-| **Capabilities** | 38 tracked |
+| **Capabilities** | 39 tracked |
 | **Built** | 21 ✅ |
-| **Partial** | 11 ◐ |
+| **Partial** | 12 ◐ |
 | **Absent** | 6 ✗ |
-| **Weighted coverage** | **70%** *(partial counts half)* |
-| **Tests** | 704 |
-| **Lines** | 39,675 (src + tests) |
+| **Weighted coverage** | **69%** *(partial counts half)* |
+| **Tests** | 751 |
+| **Lines** | 42,133 (src + tests) |
 | **Failure modes covered** | **75%** — 42 of 57 outright, 1 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -25,13 +25,13 @@ in [traceability.md](traceability.md).
 | ID | Pillar | Capability | Status | Tests | Note |
 |---|---|---|---|---|---|
 | `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 8 | connector-based estate discovery (P1-8) absent |
-| `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 12 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
+| `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 13 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 8 | no live IdP; Entra/Okta integration (P2-8) absent |
-| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 39 | model-based detectors wired but need an opt-in weights download |
+| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 41 | model-based detectors wired but need an opt-in weights download |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 9 | idempotency keys (P9-8) absent |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 9 | OpenFGA adapter is a declared seam, not an implementation |
-| `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 36 |  |
-| `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 27 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
+| `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 43 |  |
+| `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 30 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ✗ absent | — |  |
 | `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 23 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
@@ -46,10 +46,11 @@ in [traceability.md](traceability.md).
 | `PL-5` | Platform | Async workers | ✗ absent | — |  |
 | `PL-6` | Platform | HA-ready persistence | ✗ absent | — | Postgres supported; scale-out untested |
 | `PL-7` | Platform | Service-level fail-open | ✗ absent | — |  |
-| `PL-9` | Platform | Authentication and operator tokens | ◐ partial | 31 | OIDC/SCIM absent; tokens and the dev-mode gate ship |
+| `PL-9` | Platform | Authentication and operator tokens | ◐ partial | 33 | OIDC/SCIM absent; tokens and the dev-mode gate ship |
 | `PL-8` | Platform | Tenant isolation enforced at the session | ✅ built | 13 |  |
 | `X-1` | Adoption | One-line auto-instrumentation | ◐ partial | 9 | LangChain/LiteLLM client patching absent |
 | `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 14 |  |
+| `P16` | 16 Business rules | Business-process guardrails and the guardrail catalogue | ◐ partial | 26 | natural-language policy compilation is a deterministic suggester only |
 | `X-4` | Adoption | Protective controls reachable without writing code | ✅ built | 5 |  |
 | `X-3` | Adoption | Control-plane onboarding and attention-first home | ✅ built | 6 |  |
 | `I-1` | Integration | LangGraph-native SDK | ✅ built | 2 |  |

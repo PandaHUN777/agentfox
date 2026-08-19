@@ -56,6 +56,11 @@ from .audit.trace import (
     end_trace,
     start_trace,
 )
+from .business.graph import BUSINESS_RANK
+from .business.graph import combine as combine_business
+from .business.ladder import LadderDecision
+from .business.ladder import evaluate as evaluate_ladder
+from .business.store import load_ladders
 from .config import get_settings
 from .entitlement import (
     aggregation_risk,
@@ -364,6 +369,13 @@ class Enforcer:
             if merged_issues:
                 evidence["evidence_issues"] = merged_issues
 
+        # --- Business ladders ---------------------------------------------
+        # Evaluated separately from policy and combined afterwards, because the two
+        # compose by different algebras: rules take the lattice maximum, ladders select
+        # exactly one band. Security dominates the combination, so a band that says
+        # auto-approve can never loosen a rule that says block.
+        ladder_decision = self._business_ladders(agent, surface, tool_key, arguments)
+
         # --- P9 action assurance ------------------------------------------
         # Argument-level containment governs *the call*; this governs *the artefact*.
         # An agent holding a legitimate `db.query` capability can pass `DROP TABLE` as
@@ -393,6 +405,7 @@ class Enforcer:
             "detector_degraded": bool(pipeline_result.degraded),
             "arguments_snapshot": arguments or {},
             "action": action,
+            "business": ladder_decision.to_json() if ladder_decision else {},
             **evidence,
         }
 
@@ -521,6 +534,26 @@ class Enforcer:
                     "fail_mode=closed",
                     "severity": "medium",
                     "controls": ["NOM-RTG-06"],
+                }
+            )
+
+        # The ladder outcome joins here rather than in the rule list, so that its
+        # `verify` and `allow` outcomes cannot be swept into the lattice maximum and
+        # silently promoted or ignored.
+        if ladder_decision is not None and ladder_decision.outcome != "allow":
+            combined = combine_business(effective, ladder_decision)
+            if combined.verdict != effective:
+                effective = combined.verdict
+                if mode == "enforce":
+                    verdict = combined.verdict
+            rules_fired.append(
+                {
+                    "rule_id": f"business.{ladder_decision.ladder_key}",
+                    "effect": ladder_decision.outcome,
+                    "reason": ladder_decision.reason,
+                    "severity": "medium",
+                    "controls": ["NOM-GOV-07"],
+                    "evidence": ladder_decision.to_json(),
                 }
             )
 
@@ -1061,6 +1094,44 @@ class Enforcer:
         if issues:
             out["evidence_issues"] = [*out.get("evidence_issues", []), *issues]
         return out
+
+    def _business_ladders(
+        self,
+        agent: Agent | None,
+        surface: str,
+        tool_key: str | None,
+        arguments: dict[str, Any] | None,
+    ) -> LadderDecision | None:
+        """Evaluate the business ladders that apply to this call.
+
+        Only on the tool-argument surface: a ladder bands a number the caller is about
+        to act on, and there is no such number on an input or an output. When several
+        apply, the strictest wins and the disagreement is a lint finding rather than a
+        silent precedence rule — two authors disagreeing is a fact about the
+        organisation, not a merge conflict.
+        """
+        if surface != "tool_args" or not arguments:
+            return None
+        try:
+            ladders = load_ladders(
+                self.session, tool=tool_key, agent_id=agent.id if agent else None
+            )
+        except Exception as exc:  # pragma: no cover - storage must not break the path
+            log.warning("business ladders unavailable: %s", exc)
+            return None
+        if not ladders:
+            return None
+
+        request = {"arguments": arguments, "tool": tool_key}
+        decisions = [
+            evaluate_ladder(ladder, request)
+            for ladder in ladders
+            if ladder.tool in (None, tool_key)
+        ]
+        decisions = [d for d in decisions if d.matched or d.undecidable]
+        if not decisions:
+            return None
+        return max(decisions, key=lambda d: BUSINESS_RANK.get(d.outcome, 0))
 
     # -- I-4/I-6 observability correlation -------------------------------
 

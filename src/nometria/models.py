@@ -386,6 +386,34 @@ class DetectionFinding(Base, TimestampMixin):
     atlas_id: Mapped[str | None] = mapped_column(String(32))
 
 
+class BusinessRule(Base, TimestampMixin):
+    """A stored business guardrail — today a threshold ladder, by kind for what comes next.
+
+    Kept beside policy documents rather than inside them because the two compose by
+    different algebras: security rules take the lattice maximum, ladders select exactly
+    one band. Flattening them into one list is what makes a refund threshold able to
+    silently weaken an injection control.
+    """
+
+    __tablename__ = "business_rules"
+    __table_args__ = (Index("ix_business_scope", "kind", "tool", "field_path"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("biz"))
+    key: Mapped[str] = mapped_column(String(120), index=True)
+    kind: Mapped[str] = mapped_column(String(40), default="threshold_ladder")
+    #: Who agreed it, so a disagreement has someone to resolve it.
+    owner: Mapped[str] = mapped_column(String(200), default="")
+    description: Mapped[str] = mapped_column(Text, default="")
+    agent_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    tool: Mapped[str | None] = mapped_column(String(160), index=True)
+    field_path: Mapped[str | None] = mapped_column(String(200))
+    #: The full authored definition, validated against the kind's schema on write.
+    definition_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    mode: Mapped[str] = mapped_column(String(16), default="observe")
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
 class EndUserPrincipal(Base, TimestampMixin):
     """P10-1 — the human the agent is acting for.
 

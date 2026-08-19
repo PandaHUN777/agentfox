@@ -431,6 +431,15 @@ PROBES: list[Probe] = [
         "scan|discovery|doctor|init_is_idempotent|quickstart|ungoverned",
     ),
     Probe(
+        "P16",
+        "Business-process guardrails and the guardrail catalogue",
+        "16 Business rules",
+        ["class Ladder", "def find_conflicts", "def run_verification", "CATALOGUE"],
+        ["def compile_from_document"],
+        "ladder|band|business|catalogue|guardrail_kind|conflict|verification",
+        "natural-language policy compilation is a deterministic suggester only",
+    ),
+    Probe(
         "X-4",
         "Protective controls reachable without writing code",
         "Adoption",
