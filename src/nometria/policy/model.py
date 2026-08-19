@@ -20,7 +20,7 @@ from typing import Any, Literal
 import yaml
 from pydantic import BaseModel, Field, field_validator
 
-Effect = Literal["allow", "redact", "mask", "tokenize", "block", "escalate"]
+Effect = Literal["allow", "redact", "mask", "tokenize", "abstain", "block", "escalate"]
 
 #: Effect precedence — a decision takes the strongest effect any rule produced.
 EFFECT_RANK: dict[str, int] = {
@@ -28,8 +28,12 @@ EFFECT_RANK: dict[str, int] = {
     "tokenize": 1,
     "mask": 2,
     "redact": 3,
-    "escalate": 4,
-    "block": 5,
+    # P7: `abstain` withholds the answer without treating the user as an adversary,
+    # which is strictly stronger than redacting part of one and strictly weaker than
+    # pulling a human in.
+    "abstain": 4,
+    "escalate": 5,
+    "block": 6,
 }
 
 COMPARATORS = {

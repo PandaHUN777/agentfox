@@ -44,7 +44,15 @@ def compile_to_rego(policy: PolicyDocument) -> str:
         "",
     ]
 
-    rank = {"allow": 0, "tokenize": 1, "mask": 2, "redact": 3, "escalate": 4, "block": 5}
+    rank = {
+        "allow": 0,
+        "tokenize": 1,
+        "mask": 2,
+        "redact": 3,
+        "abstain": 4,
+        "escalate": 5,
+        "block": 6,
+    }
     for rule in policy.rules:
         if not rule.enabled:
             continue

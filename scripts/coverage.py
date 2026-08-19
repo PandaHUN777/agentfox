@@ -262,9 +262,14 @@ PROBES: list[Probe] = [
         "P7",
         "Knowledge boundary, forced abstention",
         "7 Answerability",
-        ["class KnowledgeBoundary"],
+        [
+            "class KnowledgeBoundary",
+            "def classify_answerability",
+            "def detect_over_refusal",
+            "def verify_boundary",
+        ],
         [],
-        "answerab|abstain",
+        "answerab|abstain|boundary|refus|completeness|question_type|coverage_window",
     ),
     Probe(
         "P8",

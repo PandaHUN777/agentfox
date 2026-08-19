@@ -148,7 +148,15 @@ def simulate(
 
 def _effective_of(decision: Decision) -> str:
     """The verdict a decision would have had under enforcement."""
-    rank = {"allow": 0, "tokenize": 1, "mask": 2, "redact": 3, "escalate": 4, "block": 5}
+    rank = {
+        "allow": 0,
+        "tokenize": 1,
+        "mask": 2,
+        "redact": 3,
+        "abstain": 4,
+        "escalate": 5,
+        "block": 6,
+    }
     best = decision.verdict
     for rule in decision.rules_fired_json or []:
         effect = str(rule.get("effect", "allow"))

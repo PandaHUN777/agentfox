@@ -19,6 +19,7 @@ from typing import Any
 from sqlalchemy import (
     JSON,
     Boolean,
+    Date,
     DateTime,
     Float,
     ForeignKey,
@@ -357,6 +358,32 @@ class DetectionFinding(Base, TimestampMixin):
     action_taken: Mapped[str] = mapped_column(String(24), default="none")
     owasp_id: Mapped[str | None] = mapped_column(String(24))
     atlas_id: Mapped[str | None] = mapped_column(String(32))
+
+
+class KnowledgeBoundary(Base, TimestampMixin):
+    """P7-1 — what this agent can actually answer from.
+
+    Declared, not inferred. The fact that decides answerability — what the index behind
+    the agent contains — is invisible to the model and cannot be derived from the corpus
+    without the operator saying so.
+    """
+
+    __tablename__ = "knowledge_boundaries"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("kbd"))
+    agent_id: Mapped[str | None] = mapped_column(String(40), index=True, unique=True)
+    systems_of_record: Mapped[list[str]] = mapped_column(JSON, default=list)
+    #: Rolling window in months, or an absolute start date. Absolute wins.
+    coverage_months: Mapped[int | None] = mapped_column(Integer)
+    coverage_start: Mapped[dt.date | None] = mapped_column(Date)
+    entity_types: Mapped[list[str]] = mapped_column(JSON, default=list)
+    #: fact | aggregate | prediction | opinion | procedure
+    answerable_types: Mapped[list[str]] = mapped_column(JSON, default=list)
+    out_of_scope_topics: Mapped[list[str]] = mapped_column(JSON, default=list)
+    freshness_hours: Mapped[int | None] = mapped_column(Integer)
+    #: observe-first, deliberately: an over-refusing agent is uninstalled faster than a
+    #: hallucinating one, so enforcement is something an operator turns on knowingly.
+    mode: Mapped[str] = mapped_column(String(16), default="observe")
 
 
 class EscalationPolicy(Base, TimestampMixin):

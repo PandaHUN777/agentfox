@@ -411,6 +411,29 @@ controls:
       soc2: ["CC7.2"]
       owasp-llm: ["LLM05 Improper Output Handling"]
 
+  - key: NOM-RTG-11
+    title: Questions outside the declared knowledge boundary are refused, not answered
+    objective: >
+      Each agent declares the systems of record it reaches, the time range they cover,
+      the entity scopes in play and the question types it can answer. Questions outside
+      that boundary are answered from a template without reaching the model, answers are
+      verified against the boundary after generation, and refusals of answerable
+      questions are detected as a counter-metric.
+    family: NOM-RTG
+    pillar: 7
+    implemented_by: [P7-1, P7-2, P7-3, P7-4, P7-6, P7-7]
+    evidence_sources: [knowledge_boundaries, decisions]
+    status_rule:
+      kind: presence
+      requires: [knowledge_boundaries]
+      open_findings_degrade: [over_refusal, boundary_breach]
+    mappings:
+      eu-ai-act: ["Art. 13 — transparency", "Art. 15"]
+      nist-ai-rmf: ["MEASURE 2.3", "MANAGE 4.1"]
+      iso-42001: ["A.6"]
+      soc2: ["CC7.2"]
+      owasp-llm: ["LLM09 Misinformation"]
+
   - key: NOM-RTG-10
     title: Escalation to a human is governed, not merely available
     objective: >

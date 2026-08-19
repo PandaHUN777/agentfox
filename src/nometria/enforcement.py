@@ -37,6 +37,12 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .answerability import (
+    classify_answerability,
+    detect_over_refusal,
+    get_boundary,
+    verify_boundary,
+)
 from .audit import chain
 from .audit.trace import (
     ATTR_AGENT,
@@ -109,7 +115,7 @@ class ProviderUnavailable(RuntimeError):
 #: Verdict severity ordering, shared by every comparison in this module.
 log = logging.getLogger(__name__)
 
-_RANK = {"allow": 0, "tokenize": 1, "mask": 2, "redact": 3, "escalate": 4, "block": 5}
+_RANK = {"allow": 0, "tokenize": 1, "mask": 2, "redact": 3, "abstain": 4, "escalate": 5, "block": 6}
 
 
 @dataclass
@@ -765,6 +771,95 @@ class Enforcer:
     def _severity(self, result: EnforcementResult) -> tuple[int, int]:
         return (_RANK[result.verdict], _RANK[result.effective_verdict])
 
+    def _answerability_gate(
+        self,
+        agent: Agent | None,
+        trace: Trace,
+        messages: list[dict[str, Any]],
+        known_entities: list[str] | None = None,
+    ) -> EnforcementResult | None:
+        """P7-2/3 — refuse to generate when the question is outside the declared boundary.
+
+        Returns None when there is no boundary, when the question is answerable, or
+        when the boundary is in observe mode. The observe case still records the
+        counterfactual, so a team can see what enforcement *would* have refused before
+        turning it on — which is the only responsible way to ship a control whose
+        false positives are refusals.
+        """
+        boundary = get_boundary(self.session, agent.id if agent else None)
+        if boundary is None:
+            return None
+        question = next(
+            (
+                _flatten(m.get("content"))
+                for m in reversed(messages)
+                if str(m.get("role")) == "user"
+            ),
+            "",
+        )
+        if not question.strip():
+            return None
+
+        verdict = classify_answerability(question, boundary, known_entities=known_entities)
+        if verdict.answerable:
+            return None
+
+        rule = {
+            "rule_id": f"answerability.{verdict.abstention_kind}",
+            "effect": "abstain",
+            "reason": verdict.reasons[0].get("reason")
+            or f"question is {verdict.question_type}, outside the declared boundary",
+            "severity": "medium",
+            "controls": ["NOM-RTG-11"],
+        }
+        chain.append(
+            self.session,
+            action=f"answerability.{verdict.abstention_kind}",
+            actor_type="agent",
+            actor_id=agent.id if agent else None,
+            subject_type="trace",
+            subject_id=trace.id,
+            payload={"question_type": verdict.question_type, "reasons": verdict.reasons},
+        )
+        result = EnforcementResult(
+            # `abstain` sits between redact and escalate in the lattice: it withholds
+            # the answer without treating the user as an adversary.
+            verdict="abstain" if verdict.should_abstain else "allow",
+            effective_verdict="abstain",
+            mode=boundary.mode,
+            trace_id=trace.id,
+            rules_fired=[rule],
+            reason=rule["reason"],
+            content=verdict.response,
+        )
+        result.taint["answerability"] = verdict.to_json()
+        return result if verdict.should_abstain else None
+
+    def _answerability_postflight(self, agent: Agent | None, trace: Trace, answer: str) -> None:
+        boundary = get_boundary(self.session, agent.id if agent else None)
+        if boundary is None or not answer:
+            return
+        verdict = classify_answerability(answer, boundary)
+        for breach in verify_boundary(answer, verdict, boundary):
+            self.session.add(
+                Finding(
+                    type="boundary_breach",
+                    severity="medium",
+                    title=f"Answer exceeded the declared knowledge boundary: {breach['breach']}",
+                    subject_type="agent",
+                    subject_id=agent.id if agent else None,
+                    evidence_json={**breach, "trace_id": trace.id},
+                    control_keys=["NOM-RTG-11"],
+                )
+            )
+        detect_over_refusal(
+            self.session,
+            answer=answer,
+            verdict=verdict,
+            agent_id=agent.id if agent else None,
+            trace_id=trace.id,
+        )
+
     # -- I-4/I-6 observability correlation -------------------------------
 
     def _correlate(self, trace, correlation) -> None:
@@ -812,6 +907,7 @@ class Enforcer:
         intent: str | None = None,
         trust_map: dict[str, str] | None = None,
         correlation: dict[str, str] | list[Any] | None = None,
+        known_entities: list[str] | None = None,
     ) -> PreflightOutcome:
         """Steps 2-6 of the request path, shared by buffered and streaming calls.
 
@@ -865,6 +961,18 @@ class Enforcer:
             self._push_correlation(trace, budget, agent.slug if agent else agent_slug)
             return PreflightOutcome(
                 agent=agent, identity=identity, trace=trace, result=budget, stopped=True
+            )
+
+        # P7: answerability, before generation. Every competitor scores the answer
+        # after it exists, which cannot address F1 — by then the number has been
+        # invented, and a confident wrong number scored at 0.4 is still a confident
+        # wrong number in front of a user.
+        abstain = self._answerability_gate(agent, trace, messages, known_entities)
+        if abstain is not None:
+            end_trace(self.session, trace, verdict=abstain.verdict, status="abstained")
+            self._push_correlation(trace, abstain, agent.slug if agent else agent_slug)
+            return PreflightOutcome(
+                agent=agent, identity=identity, trace=trace, result=abstain, stopped=True
             )
 
         tracker = TaintTracker(trace_id=trace.id)
@@ -1138,6 +1246,11 @@ class Enforcer:
         final = outbound if rank(outbound) >= rank(worst) else worst
         final.trace_id = trace.id
 
+        # P7-4/P7-6: post-flight boundary verification and the counter-metric. Both
+        # produce findings and neither blocks — an over-refusing agent is uninstalled
+        # faster than a hallucinating one, so this side of the control never enforces.
+        self._answerability_postflight(agent, trace, response.text)
+
         self._charge_budget(agent, response)
         end_trace(
             self.session,
@@ -1163,6 +1276,7 @@ class Enforcer:
         intent: str | None = None,
         trust_map: dict[str, str] | None = None,
         correlation: dict[str, str] | list[Any] | None = None,
+        known_entities: list[str] | None = None,
         schema: dict[str, Any] | None = None,
         temperature: float = 0.0,
         max_tokens: int | None = None,
@@ -1179,6 +1293,7 @@ class Enforcer:
             intent=intent,
             trust_map=trust_map,
             correlation=correlation,
+            known_entities=known_entities,
         )
         if pre.stopped:
             return pre.result, None
@@ -1236,6 +1351,7 @@ class Enforcer:
         intent: str | None = None,
         trust_map: dict[str, str] | None = None,
         correlation: dict[str, str] | list[Any] | None = None,
+        known_entities: list[str] | None = None,
         schema: dict[str, Any] | None = None,
         temperature: float = 0.0,
         max_tokens: int | None = None,
@@ -1271,6 +1387,7 @@ class Enforcer:
             intent=intent,
             trust_map=trust_map,
             correlation=correlation,
+            known_entities=known_entities,
         )
         if pre.stopped:
             yield StreamEvent(kind="blocked", result=pre.result)
