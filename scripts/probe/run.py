@@ -1036,6 +1036,110 @@ def probe_memory_binding() -> Result:
 
 
 # ---------------------------------------------------------------------------
+# P13 failure attribution and handoff fidelity
+# ---------------------------------------------------------------------------
+#
+# Both of these failures make a trace look solved. The step that failed is where a bad
+# value was finally checked, not where it came from; and a handoff that drops a
+# constraint raises no exception anywhere. Each probe asserts the *misleading* reading
+# is not the one produced.
+
+_BRIEF = (
+    "Urgent: refund order #445120 for under £500. Do not contact the customer "
+    "directly. Requires approval from the finance team."
+)
+
+_TRACE = [
+    {"id": "1", "actor": "planner", "inputs": {"q": "what is owed?"},
+     "output": "need the balance"},
+    {"id": "3", "actor": "calculator", "inputs": {"rate": "0.04"},
+     "output": "total is 4500"},
+    {"id": "5", "actor": "summariser", "inputs": {"t": "total is 4500"},
+     "output": "the total is 4500"},
+    {"id": "8", "actor": "payer", "inputs": {"amount": "4500"},
+     "output": "transfer 4500 FAILED"},
+]
+
+
+def probe_handoff_fidelity() -> Result:
+    from nometria.attribution import handoff_fidelity
+
+    lossy = handoff_fidelity(_BRIEF, "Process this refund.")
+    faithful = handoff_fidelity(_BRIEF, _BRIEF)
+    return lossy.verdict == "block" and faithful.verdict == "allow", (
+        f"fidelity {lossy.fidelity:.2f} — {lossy.explain()[:110]}; "
+        f"an unchanged handoff scores {faithful.fidelity:.2f}"
+    )
+
+
+def probe_handoff_semantics() -> Result:
+    from nometria.attribution import handoff_fidelity
+
+    reworded = handoff_fidelity("Refund under £500", "Keep it under 500 pounds")
+    invented = handoff_fidelity("Refund the order.", "Refund the order, under $50.")
+    return reworded.fidelity == 1.0 and bool(invented.added), (
+        "a rephrased limit compares equal (fidelity 1.00); "
+        f"a limit nobody set is reported as invented: {invented.added[0].value}"
+    )
+
+
+def probe_goal_drift() -> Result:
+    from nometria.attribution import goal_drift
+
+    wandered = goal_drift(
+        "Refund under £500 urgently, and do not contact the customer.",
+        ["looked up the order", "emailed the customer", "issued a refund of £900"],
+    )
+    on_task = goal_drift(
+        "Refund under £500 urgently.",
+        ["urgent request received", "issued a refund under £500"],
+    )
+    return wandered.drifted and not on_task.drifted, (
+        f"retained {wandered.retained:.2f} of the brief, losing "
+        f"{[c.kind for c in wandered.lost]}; an on-task run retains "
+        f"{on_task.retained:.2f}"
+    )
+
+
+def probe_compounding_error() -> Result:
+    from nometria.attribution import attribute
+
+    result = attribute(_TRACE, value="4500", failed_step="8")
+    return result.origin_step == "3" and result.origin_step != result.failed_step, (
+        result.explain()
+    )
+
+
+def probe_blame_attribution() -> Result:
+    from nometria.attribution import attribute
+
+    named = attribute(_TRACE, value="4500", failed_step="8")
+    external = attribute(
+        [{"id": "1", "actor": "a", "inputs": {"seed": "999"}, "output": "carrying 999"},
+         {"id": "2", "actor": "b", "inputs": {"x": "999"}, "output": "999 FAILED"}],
+        value="999", failed_step="2",
+    )
+    return bool(named.origin_actor) and not external.confident, (
+        f"origin attributed to '{named.origin_actor}' at step {named.origin_step}; "
+        "a value entering from outside the trace is reported as unattributable "
+        "rather than pinned on step one"
+    )
+
+
+def probe_delegation_cycle() -> Result:
+    from nometria.attribution import delegation_graph
+
+    cyclic = delegation_graph([("A", "B"), ("B", "C"), ("C", "A")])
+    deep = delegation_graph([(f"a{i}", f"a{i + 1}") for i in range(8)], depth_limit=5)
+    fan_out = delegation_graph([("root", "a"), ("root", "b"), ("a", "c")])
+    caught = bool(cyclic.cycles) and deep.over_depth and not fan_out.cycles
+    return caught, (
+        f"cycle {cyclic.cycles[0] if cyclic.cycles else 'MISS'} detected; "
+        f"depth {deep.max_depth} over the limit; ordinary fan-out reports nothing"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Harness
 # ---------------------------------------------------------------------------
 

@@ -339,9 +339,15 @@ PROBES: list[Probe] = [
         "P13",
         "Failure attribution across handoffs",
         "13 Failure Attribution",
-        ["def attribute_failure"],
+        ["def attribute", "def handoff_fidelity", "def goal_drift",
+         "def delegation_graph"],
         [],
-        "attribution|handoff_fidelity",
+        "",
+        "attributes a failure to the step that originated the value and measures what "
+        "each handoff dropped. Both work on constraints that were written down — an "
+        "expectation the human held and never typed is invisible here, and no trace "
+        "analysis recovers it",
+        test_files=("test_attribution.py",),
     ),
     Probe(
         "P11",

@@ -9,7 +9,7 @@ what we set out to cover and say nothing about what we never thought of. This on
 walks the path a request actually travels and asks, at each layer, what can go
 wrong there.
 
-**103 scenarios · 74 verified by execution · 75% weighted coverage**
+**103 scenarios · 80 verified by execution · 80% weighted coverage**
 (partial counts half). The harness runs every executable claim against the real
 product and fails if any disagrees — so a row marked ✅ here has fired at least
 once in anger.
@@ -19,10 +19,10 @@ once in anger.
 | L0 model-intrinsic | 6/11 | `████████` |
 | L1 input and prompt | 7/9 | `████████████` |
 | L2 retrieval and context | 13.5/14 | `██████████████` |
-| L3 reasoning and planning | 2/5 | `██████` |
+| L3 reasoning and planning | 4/5 | `████████████` |
 | L4 tools and actions | 10.5/14 | `███████████` |
 | L5 output and disclosure | 13/18 | `███████████` |
-| L6 multi-agent | 3/6 | `████████` |
+| L6 multi-agent | 6/6 | `███████████████` |
 | L7 human interface | 7.5/8 | `██████████████` |
 | L8 operational lifecycle | 8.5/10 | `█████████████` |
 | L9 data governance | 6.5/8 | `████████████` |
@@ -68,9 +68,9 @@ once in anger.
 | L2.14 | Corrupt document ingested | ✅ covered | P14 document quality gate at ingestion | corrupt scored 0.40 (mojibake); clean prose scored 1.00 with no findings |
 | | **L3 reasoning and planning** | | | |
 | L3.1 | Runaway tool loop | ✅ covered | P3-10 loop containment + budgets | loop_detected=True |
-| L3.2 | Goal drift over a long run | ✗ absent | — | Intent is recorded but never compared against the trajectory. |
+| L3.2 | Goal drift over a long run | ✅ covered | P13 goal drift — trajectory measured against the recorded intent | retained 0.00 of the brief, losing ['limit', 'prohibition', 'urgency']; an on-task run retains 1.00 |
 | L3.3 | Premature termination | ◐ partial | P4 task-completion scorer | Requires a declared `expected.contains`. Without one, only incompletion markers are detected. |
-| L3.4 | Compounding error across steps | ✗ absent | — | P13 failure attribution — the strongest unclaimed capability in the evidence base, and not started. |
+| L3.4 | Compounding error across steps | ✅ covered | P13 failure attribution — data flow, not chronology | step 3 (calculator) originated '4500'; step 8 is where it was first checked. 1 step(s) carried it without chan |
 | L3.5 | Wrong tool selected | ◐ partial | P2 capability scoping | An ungranted tool is refused. A *granted* tool used inappropriately is not. |
 | | **L4 tools and actions** | | | |
 | L4.1 | Destructive SQL generated | ✅ covered | P9 action assurance | ['sql.unbounded_mutation'] / ['sql.destructive_ddl'] |
@@ -107,12 +107,12 @@ once in anger.
 | L5.17 | Hallucinated record match | ✅ covered | F7 unmatched records | ORD-99999 |
 | L5.18 | Timezone-ambiguous deadline | ✅ covered | F7 timezone check | bare deadline flagged, UTC deadline not |
 | | **L6 multi-agent** | | | |
-| L6.1 | Context lost across a handoff | ✗ absent | — | P13-2 handoff fidelity not built. Distinct from P11 human hand-off, which is covered. |
-| L6.2 | Semantic drift across a handoff | ✗ absent | — | P13-2. |
-| L6.3 | Blame ambiguity after a multi-agent failure | ◐ partial | execution traces | The path is recorded; attribution is not performed. P13-3. |
+| L6.1 | Context lost across a handoff | ✅ covered | P13 handoff fidelity | fidelity 0.00 — dropped limit: under 500 gbp, approval: approval, prohibition: contact the customer directly,  |
+| L6.2 | Semantic drift across a handoff | ✅ covered | P13 handoff fidelity — drops and inventions | a rephrased limit compares equal (fidelity 1.00); a limit nobody set is reported as invented: under 50 usd |
+| L6.3 | Blame ambiguity after a multi-agent failure | ✅ covered | P13 attribution over the execution trace | origin attributed to 'calculator' at step 3; a value entering from outside the trace is reported as unattribut |
 | L6.4 | Delegation widens privilege | ✅ covered | P2-5 delegation narrowing at write time | ValueError |
 | L6.5 | Subagent output trusted as if first-party | ✅ covered | taint source 'subagent' | subagent rank 4 (>=2 untrusted) |
-| L6.6 | Circular delegation or deadlock | ◐ partial | loop detection on prior tools | Tool loops are detected; agent-to-agent cycles are not modelled. |
+| L6.6 | Circular delegation or deadlock | ✅ covered | P13 delegation graph | cycle ['A', 'B', 'C', 'A'] detected; depth 9 over the limit; ordinary fan-out reports nothing |
 | | **L7 human interface** | | | |
 | L7.1 | Should have escalated and did not | ✅ covered | P11-2 missed-escalation detection | 1 missed of 1 |
 | L7.2 | Escalated with no context | ✅ covered | P11-6 handoff completeness | missing ['conversation_summary', 'attempted_actions', 'blocking_reason', 'customer_reference'] |
@@ -130,7 +130,7 @@ once in anger.
 | L8.5 | Model version changes underneath | ◐ partial | P4 drift + version recording | Versions are recorded per decision and drift is measured on scores. No alert on a version change itself. |
 | L8.6 | Prompt change regresses quality | ✅ covered | P4 CI gating with direction-aware scorers | passed=False, 1 absolute failure(s) |
 | L8.7 | Shadow agent in production | ✅ covered | P1-6 shadow detection | 1 shadow agent(s) |
-| L8.8 | Latency budget blown by the guardrails | ✅ covered | P3-13 request-level ledger + fast path | 32 KB document at p50 13.7 ms (budget 100 ms) |
+| L8.8 | Latency budget blown by the guardrails | ✅ covered | P3-13 request-level ledger + fast path | 32 KB document at p50 13.8 ms (budget 100 ms) |
 | L8.9 | Policy misconfiguration | ✅ covered | P12 lint with six codes | 3 finding(s): ['duplicate-id', 'illegal-loosening', 'unconditional'] |
 | L8.10 | Rate-limit or quota exhaustion | ✗ absent | — | No backpressure or queueing. P15-4 specified, not built. |
 | | **L9 data governance** | | | |

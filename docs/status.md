@@ -11,11 +11,11 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 |---|---|
 | **Capabilities** | 39 tracked |
 | **Built** | 21 ✅ |
-| **Partial** | 13 ◐ |
-| **Absent** | 5 ✗ |
-| **Weighted coverage** | **71%** *(partial counts half)* |
-| **Tests** | 805 |
-| **Lines** | 44,472 (src + tests) |
+| **Partial** | 14 ◐ |
+| **Absent** | 4 ✗ |
+| **Weighted coverage** | **72%** *(partial counts half)* |
+| **Tests** | 829 |
+| **Lines** | 45,178 (src + tests) |
 | **Failure modes covered** | **84%** — 47 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -26,17 +26,17 @@ in [traceability.md](traceability.md).
 |---|---|---|---|---|---|
 | `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 8 | connector-based estate discovery (P1-8) absent |
 | `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 14 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
-| `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 9 | no live IdP; Entra/Okta integration (P2-8) absent |
+| `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 11 | no live IdP; Entra/Okta integration (P2-8) absent |
 | `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 41 | model-based detectors wired but need an opt-in weights download |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 10 | idempotency keys (P9-8) absent |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 9 | OpenFGA adapter is a declared seam, not an implementation |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 47 |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 30 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ◐ partial | 27 | gates the ingestion and assembly path. Semantic chunk-boundary repair and automatic re-extraction of a corrupt document are not built — a finding is reported and the decision to drop the document belongs to the operator |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 26 | no Ragas adapter, model-based groundedness or annotation queue |
-| `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
-| `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 15 |  |
-| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 27 |  |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 29 | no Ragas adapter, model-based groundedness or annotation queue |
+| `P13` | 13 Failure Attribution | Failure attribution across handoffs | ◐ partial | 22 | attributes a failure to the step that originated the value and measures what each handoff dropped. Both work on constraints that were written down — an expectation the human held and never typed is invisible here, and no trace analysis recovers it |
+| `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 16 |  |
+| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 29 |  |
 | `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 13 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 14 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
@@ -54,7 +54,7 @@ in [traceability.md](traceability.md).
 | `X-4` | Adoption | Protective controls reachable without writing code | ✅ built | 5 |  |
 | `X-3` | Adoption | Control-plane onboarding and attention-first home | ✅ built | 6 |  |
 | `I-1` | Integration | LangGraph-native SDK | ✅ built | 2 |  |
-| `I-2` | Integration | MCP inline governance | ✅ built | 12 |  |
+| `I-2` | Integration | MCP inline governance | ✅ built | 14 |  |
 | `I-3` | Integration | FastAPI middleware and dependency | ✅ built | 7 |  |
 | `I-4` | Integration | LangSmith correlation | ✅ built | 7 |  |
 | `I-5` | Integration | OpenTelemetry | ✅ built | 1 |  |
