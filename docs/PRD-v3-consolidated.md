@@ -819,7 +819,7 @@ Built and tested end to end:
   evidence packages · SIEM export.
 - **Judge** — evaluation with direction-aware CI gating · silent-failure ensemble · red-team
   harness.
-- **Know/Prove** — registry with shadow-agent detection and observed lineage · 39 controls ×
+- **Know/Prove** — registry with shadow-agent detection and observed lineage · 41 controls ×
   7 frameworks with computed status · Next.js control plane.
 - **Tranche 0 (complete)** — `PL-1` streaming with inline enforcement in both OpenAI and
   Anthropic wire formats · `PL-2` Alembic migrations · `PL-3` kill switch and quarantine ·
