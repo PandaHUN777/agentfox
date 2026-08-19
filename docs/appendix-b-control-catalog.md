@@ -162,3 +162,4 @@ Before any mapping in this appendix is presented to a customer's auditor:
 | 2026-08-17 | 0.1.0-draft | Initial catalog — 36 controls, 7 frameworks. All mappings DRAFT. |
 | 2026-08-18 | 0.1.0-draft | Added NOM-RTG-09 (generated actions analysed before execution, P9) — 37 controls, 266 mappings. |
 | 2026-08-19 | 0.1.0-draft | Added NOM-RTG-10 (escalation governed, P11) and NOM-RTG-11 (knowledge boundary, P7) — 39 controls, 280 mappings. |
+| 2026-08-19 | 0.1.0-draft | Added NOM-RTG-12 (source authority, P8) and NOM-IAM-07 (entitlement, P10) — 41 controls, 300 mappings. |

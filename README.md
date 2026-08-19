@@ -150,7 +150,7 @@ Escalation maps to LangGraph's own `interrupt()` — one pause mechanism, not tw
 | **[Failure-mode analysis](docs/failure-modes.md)** | **How deployed agents actually fail** — 50 modes, 7 families, grounded in 10k+ catalogued incidents |
 | [Gap analysis](docs/gap-analysis.md) | Enterprise readiness & competitive position — audited, severity-ranked |
 | [Appendix A](docs/appendix-a-oss-register.md) | OSS dependency register — licence, health, verdict, our exposure |
-| [Appendix B](docs/appendix-b-control-catalog.md) | 39 controls mapped to EU AI Act, NIST AI RMF, ISO 42001, SOC 2, OWASP LLM & Agentic, MITRE ATLAS |
+| [Appendix B](docs/appendix-b-control-catalog.md) | 41 controls mapped to EU AI Act, NIST AI RMF, ISO 42001, SOC 2, OWASP LLM & Agentic, MITRE ATLAS |
 | [Appendix C](docs/appendix-c-api-spec.md) | API specification |
 | [Appendix D](docs/appendix-d-data-model.md) | Data model |
 | [Appendix E](docs/appendix-e-threat-model.md) | Threat model — threats to the customer's agents, and to us |

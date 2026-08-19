@@ -117,7 +117,7 @@ Working: runtime detectors (PII/injection/secrets), taint tracking, tool-scoped 
 delegation narrowing, hash-chained audit with an independent verifier, evaluation with CI gating,
 policy engine with simulation and hierarchical composition, circuit breaker and enforced budget caps,
 bidirectional LangSmith/Langfuse correlation, the guardrail tuning surface, MCP call-path
-governance, 39 controls mapped to 7 frameworks. Tranche 0 is complete: streaming, migrations, kill switch and the
+governance, 41 controls mapped to 7 frameworks. Tranche 0 is complete: streaming, migrations, kill switch and the
 LangGraph-native SDK all shipped.
 
 **Not working:** nine of fifteen pillars are partial or absent, and the three capabilities we
@@ -342,7 +342,7 @@ missing.
 |---|---|---|
 | Time to first enforcement | 4–8 engineer-weeks | an afternoon |
 | Hierarchical policy | rarely; Derrick's took real effort | built in |
-| Compliance mapping | never | 39 controls × 7 frameworks |
+| Compliance mapping | never | 41 controls × 7 frameworks |
 | Failure attribution | never | Pillar 13 |
 | Maintained as models/frameworks change | by whoever built it, until they leave | by us |
 | Cost | ~$150–300k of senior engineering | licence |
@@ -686,7 +686,7 @@ against *qualifying* conversations rather than all traffic, which would flatter 
 | **Commercial** | Credo AI (Policy Packs incl. NYC LL144), IBM watsonx.governance, OneTrust, ModelOp, Holistic AI, Monitaur, ServiceNow |
 | **Their gap** | They **collect attestations**. We **compute status from telemetry** — a claim only an inline platform can make. That is real and defensible. |
 
-**Our status.** ✅ 39 controls × 7 frameworks, computed status with 9 rule kinds, risk classification, obligations, board view, declared gaps per framework. **⚠ all 280 mappings are DRAFT** — excluded from evidence packages by our own gate until a qualified reviewer signs them.
+**Our status.** ✅ 41 controls × 7 frameworks, computed status with 9 rule kinds, risk classification, obligations, board view, declared gaps per framework. **⚠ all 300 mappings are DRAFT** — excluded from evidence packages by our own gate until a qualified reviewer signs them.
 
 **Requirements.** P6-1…P6-8 as v1. **New:** `P6-9` **dynamic risk scoring** (Gartner criterion, currently ✗ — static classification only) · `P6-10` **assessment/workflow engine** (Gartner criterion) · `P6-11` complete the mapping review gate with a qualified assessor.
 
