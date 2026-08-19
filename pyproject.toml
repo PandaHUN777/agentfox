@@ -39,6 +39,15 @@ langgraph = ["langgraph>=0.2.60"]
 # transitive surface. Kept optional only because action assurance is opt-in; without
 # it, SQL analysis fails closed rather than passing statements through unanalysed.
 sql = ["sqlglot>=25.0"]
+# I-11: enterprise provider auth. Neither adapter improvises request signing — without
+# these they report unavailable rather than pretending to a capability they lack.
+bedrock = ["boto3>=1.35"]
+vertex = ["google-auth>=2.35"]
+# I-7: Prometheus/Grafana is where 4 of 11 already look. The exporter is stdlib-only;
+# this extra is only needed for a push gateway.
+prometheus = ["prometheus-client>=0.21"]
+# I-8: Ragas speaks the vocabulary 3 of 11 already use for retrieval eval.
+ragas = ["ragas>=0.2"]
 otel = [
     "opentelemetry-api>=1.27",
     "opentelemetry-sdk>=1.27",
@@ -49,6 +58,8 @@ dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.7", "mypy>=1.13"]
 
 # Everything permissive, in one shot.
 all = ["nometria[pii,classifiers,rails,validators,redteam,otel,postgres,langgraph,sql]"]
+# Cloud provider SDKs are excluded from `all` on purpose: they are large, and most
+# deployments need exactly one of them.
 
 # NOT included in `all` on purpose (Appendix A.4): Llama Guard / ShieldGemma carry
 # non-OSI licences. Installing this extra is an explicit act, and the adapters

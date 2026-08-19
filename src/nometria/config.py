@@ -89,6 +89,22 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     anthropic_api_key: str | None = None
 
+    # I-11: the providers enterprises actually deploy on. 6 of 11 engineers run Azure
+    # OpenAI, 4 Bedrock, 3 Vertex — a governance product that only speaks to
+    # api.openai.com is unusable at exactly the companies that need governance.
+    azure_openai_endpoint: str | None = None
+    azure_openai_api_key: str | None = None
+    azure_openai_api_version: str = "2024-10-21"
+    azure_openai_deployment: str | None = None
+    aws_region: str | None = None
+    bedrock_model: str = "anthropic.claude-sonnet-4-20250514-v1:0"
+    vertex_project: str | None = None
+    vertex_location: str = "us-central1"
+    vertex_model: str = "gemini-2.0-flash"
+    # I-10: govern through the routing layer teams already run, rather than compete.
+    litellm_base_url: str | None = None
+    litellm_api_key: str | None = None
+
     # --- Observability correlation (I-4 / I-6) ---------------------------
     # Correlation itself needs none of these: the join key travels in-band on a
     # traceparent or vendor header, so a team gets the link with zero configuration.

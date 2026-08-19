@@ -13,6 +13,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
 from .. import __version__
@@ -193,6 +194,18 @@ def create_app() -> FastAPI:
             "budgets": budgets,
             "fallback_chain": get_settings().fallback_chain,
         }
+
+    @app.get("/metrics", tags=["platform"], response_class=PlainTextResponse)
+    def metrics(session: Session = Depends(db)) -> str:
+        """I-7 — Prometheus exposition.
+
+        Unauthenticated on purpose, like every other /metrics endpoint: a scrape job
+        that needs a bearer token is a scrape job nobody configures. It exposes counts
+        and rates, never content — no prompt, no finding detail, no identifier.
+        """
+        from ..integrations.prometheus import render_metrics
+
+        return render_metrics(session)
 
     @app.get("/api/providers", tags=["platform"])
     def providers(_u=Depends(current_user)) -> dict[str, Any]:

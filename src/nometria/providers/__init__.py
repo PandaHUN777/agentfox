@@ -14,10 +14,20 @@ from .base import (
     register_provider,
 )
 from .echo import EchoProvider, clear_scripts, script
+from .enterprise import (
+    AzureOpenAIProvider,
+    BedrockProvider,
+    LiteLLMProvider,
+    VertexProvider,
+)
 from .remote import AnthropicProvider, OpenAIProvider, estimate_cost
 
 __all__ = [
     "AnthropicProvider",
+    "AzureOpenAIProvider",
+    "BedrockProvider",
+    "LiteLLMProvider",
+    "VertexProvider",
     "CompletionRequest",
     "CompletionResponse",
     "EchoProvider",

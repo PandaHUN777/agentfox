@@ -10,6 +10,14 @@ from .adapters import PromptfooRunner, get_runner
 from .drift import DriftReport, evaluate_slos, ks_statistic, psi
 from .drift import compute as compute_drift
 from .gating import GateResult, Regression, gate, set_baseline, to_junit, to_sarif
+from .ragas_adapter import (
+    RAGAS_METRICS,
+    RagasSample,
+    RagasScores,
+    ragas_available,
+    score_dataset,
+    score_sample,
+)
 from .redteam import BUILTIN_PROBES, NativeRedTeamRunner, Probe, run_campaign
 from .runner import NativeEvalRunner, fit_envelope, sample_production
 from .scorers import ScoreContext, ScoreResult, all_scorers, get_scorer, register_scorer
@@ -22,6 +30,12 @@ from .silent_failure import (
 
 __all__ = [
     "BUILTIN_PROBES",
+    "RAGAS_METRICS",
+    "RagasSample",
+    "RagasScores",
+    "ragas_available",
+    "score_dataset",
+    "score_sample",
     "SILENT_FAILURE_SCORERS",
     "DriftReport",
     "Envelope",
