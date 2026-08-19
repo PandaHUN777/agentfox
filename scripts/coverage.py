@@ -42,6 +42,13 @@ class Probe:
     full: list[str] = field(default_factory=list)
     tests: str = ""
     note: str = ""
+    #: Restrict the test count to these files. Name-pattern matching runs across every
+    #: file under tests/, so a broad alternation quietly attributes other pillars' tests
+    #: to this row — "memory", "document" and "retrieval" alone pulled in nineteen. When
+    #: a pillar has its own test file, naming it is both accurate and cheaper to keep
+    #: right than an ever-growing pattern.
+    test_files: tuple[str, ...] = ()
+
 
 
 @dataclass
@@ -162,13 +169,21 @@ FAMILIES: dict[str, tuple[str, list[Mode]]] = {
     "F8": (
         "Context & retrieval integrity",
         [
+            # These markers were named when the PRD was written and no longer match
+            # the implementations, which are in `context_integrity`. Pointing them at
+            # the real functions is the difference between a scorecard that measures
+            # the product and one that measures a naming convention.
             Mode("F8.1", "Incoherent chunks", ["def chunk_quality"]),
-            Mode("F8.2", "Tokeniser / script boundary failures", ["def script_compatibility"]),
+            # Decoder and tokeniser damage is detected where it leaves a trace — U+FFFD,
+            # [UNK], latin-1 mojibake. A tokeniser that segments Thai or Khmer badly
+            # without emitting any of those is not detected, so this is partial.
+            Mode("F8.2", "Tokeniser / script boundary failures", ["_UNKNOWN_TOKEN"],
+                 partial=True),
             Mode("F8.3", "Stale index", ["def index_freshness"]),
-            Mode("F8.4", "Context-window truncation", ["def truncation_risk"]),
-            Mode("F8.5", "Memory contamination", ["def memory_contamination"]),
-            Mode("F8.6", "Retrieval quality drift", ["def retrieval_quality"]),
-            Mode("F8.7", "Ingestion corruption", ["def ingestion_gate"]),
+            Mode("F8.4", "Context-window truncation", ["def assemble_context"]),
+            Mode("F8.5", "Memory contamination", ["def memory_binding_breach"]),
+            Mode("F8.6", "Retrieval quality drift", ["def retrieval_drift"]),
+            Mode("F8.7", "Ingestion corruption", ["def document_quality"]),
         ],
     ),
 }
@@ -178,7 +193,15 @@ def _src_text() -> str:
     return "\n".join(p.read_text(errors="ignore") for p in SRC.rglob("*.py"))
 
 
-def _count_tests(pattern: str) -> int:
+def _count_tests(pattern: str, files: tuple[str, ...] = ()) -> int:
+    if files:
+        # Whole-file scoping: every test in a pillar's own file counts, and no test
+        # outside it does.
+        return sum(
+            len(re.findall(r"def test_\w+", (TESTS / name).read_text(errors="ignore")))
+            for name in files
+            if (TESTS / name).exists()
+        )
     if not pattern:
         return 0
     total = 0
@@ -293,9 +316,14 @@ PROBES: list[Probe] = [
         "P14",
         "Ingestion and retrieval quality gates",
         "14 Context Integrity",
-        ["def chunk_quality"],
+        ["def chunk_quality", "def document_quality", "def assemble_context",
+         "def retrieval_drift", "def memory_binding_breach"],
         [],
-        "chunk_quality|retrieval_metric",
+        "",
+        "gates the ingestion and assembly path. Semantic chunk-boundary repair and "
+        "automatic re-extraction of a corrupt document are not built — a finding is "
+        "reported and the decision to drop the document belongs to the operator",
+        test_files=("test_context_integrity.py",),
     ),
     # --- Layer D: Judge
     Probe(
@@ -536,7 +564,7 @@ PROBES: list[Probe] = [
 
 
 def evaluate(probe: Probe, blob: str) -> tuple[str, int]:
-    tests = _count_tests(probe.tests)
+    tests = _count_tests(probe.tests, probe.test_files)
     if not probe.needs or not all(n in blob for n in probe.needs):
         return ABSENT, tests
     if probe.full and not all(n in blob for n in probe.full):

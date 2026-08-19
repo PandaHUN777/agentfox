@@ -928,6 +928,114 @@ def probe_policy_version_recorded() -> Result:
 
 
 # ---------------------------------------------------------------------------
+# P14 context integrity — gates on the middle of the pipe
+# ---------------------------------------------------------------------------
+#
+# These probe a part of the pipeline nothing else in this file touches. Every other
+# scenario here asks whether a bad *output* is caught; these ask whether the context
+# the output was built from survived the journey.
+
+
+def probe_corrupt_document() -> Result:
+    from nometria.context_integrity import document_quality
+
+    corrupt = document_quality("The vendorâ€™s cafÃ© charge was Â£5.00 on the third.")
+    clean = document_quality(
+        "The vendor charged five pounds for the cafe order on the third of March."
+    )
+    caught = not corrupt.usable or bool(corrupt.findings)
+    return caught and not clean.findings, (
+        f"corrupt scored {corrupt.score:.2f} ({', '.join(f.code for f in corrupt.findings)}); "
+        f"clean prose scored {clean.score:.2f} with no findings"
+    )
+
+
+def probe_encoding_damage() -> Result:
+    from nometria.context_integrity import document_quality
+
+    damaged = document_quality("The customer name is ��� and the total is [UNK].")
+    languages = {
+        "German": "Der Kunde hat eine Rückerstattung über 200 € angefordert.",
+        "Russian": "Клиент запросил возврат средств в размере двухсот долларов.",
+        "Japanese": "顧客は三月三日に二百ドルの払い戻しを要求しました。",
+    }
+    false_positives = [name for name, text in languages.items() if document_quality(text).findings]
+    return "unknown-characters" in {f.code for f in damaged.findings} and not false_positives, (
+        f"decoder damage detected; {len(languages)} non-Latin languages pass clean"
+        + (f" — FALSE POSITIVES: {false_positives}" if false_positives else "")
+    )
+
+
+def probe_chunk_coherence() -> Result:
+    from nometria.context_integrity import chunk_quality
+
+    split = chunk_quality([
+        "Refunds are approved automatically unless the amount",
+        "exceeds $100, in which case the finance team signs off.",
+    ])
+    intact = chunk_quality([
+        "Refunds under $10 are auto-approved by the system without review.",
+        "Refunds over $100 require approval from the finance team before proceeding.",
+    ])
+    codes = {f.code for f in split}
+    return {"split-sentence-end", "split-sentence-start"} <= codes and not intact, (
+        f"split sentence reported as {sorted(codes)}; well-formed chunks report nothing"
+    )
+
+
+def probe_truncated_evidence() -> Result:
+    from nometria.context_integrity import assemble_context
+
+    chunks = [{"text": "x" * 400} for _ in range(8)]
+    starved = assemble_context(chunks, budget_tokens=50, required=[7])
+    roomy = assemble_context(chunks, budget_tokens=10_000)
+    finding = next((f for f in starved.findings if f.code == "required-evidence-truncated"), None)
+    return finding is not None and not roomy.dropped, (
+        f"cited evidence that cannot fit is a {finding.verdict if finding else 'MISS'}; "
+        f"a budget that fits drops {len(roomy.dropped)}"
+    )
+
+
+def probe_lost_in_middle() -> Result:
+    from nometria.context_integrity import assemble_context
+
+    chunks = [{"text": f"passage {i}. " * 5} for i in range(6)]
+    result = assemble_context(chunks, budget_tokens=10_000)
+    moved = result.order != result.kept
+    lossless = sorted(result.order) == result.kept
+    return moved and lossless and result.order[0] == 0, (
+        f"ranked order {result.kept} reordered to {result.order} — strongest at both edges"
+    )
+
+
+def probe_retrieval_drift() -> Result:
+    from nometria.context_integrity import evaluate_retrieval, retrieval_drift
+
+    baseline = evaluate_retrieval([(["t", "a", "b"], {"t"}), (["t", "c", "d"], {"t"})])
+    regressed = evaluate_retrieval([(["a", "b", "t"], {"t"}), (["c", "d", "t"], {"t"})])
+    drift = retrieval_drift(regressed, baseline)
+    stable = retrieval_drift(baseline, baseline)
+    return drift is not None and stable is None, (
+        f"nDCG {baseline['ndcg']} -> {regressed['ndcg']} reported as "
+        f"{drift.code if drift else 'MISS'}; an unchanged run reports nothing"
+    )
+
+
+def probe_memory_binding() -> Result:
+    from nometria.context_integrity import memory_binding_breach
+
+    leaked = memory_binding_breach([{"key": "pref", "subject": "bob"}], principal="alice")
+    unbound = memory_binding_breach([{"key": "note"}], principal="alice")
+    own = memory_binding_breach([{"key": "pref", "subject": "alice"}], principal="alice")
+    codes = {f.code for f in leaked} | {f.code for f in unbound}
+    return {"cross-subject-memory", "unbound-memory"} <= codes and not own, (
+        "memory about another end user is a "
+        f"{leaked[0].verdict if leaked else 'MISS'}; unbound memory is reported; "
+        "the principal's own memory passes clean"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Harness
 # ---------------------------------------------------------------------------
 
@@ -1002,7 +1110,44 @@ def main() -> int:
 
 
 def _markdown(rows) -> str:
-    out = ["| # | Scenario | Verdict | Control | Evidence |", "|---|---|---|---|---|"]
+    """The whole document, header included.
+
+    The header used to be hand-maintained above a generated table, in a file that says
+    "do not edit by hand" — so regenerating the table deleted it, and the layer scores
+    printed in it drifted from the ones the harness had just measured. Generating both
+    from the same run is the only version of this that stays true.
+    """
+    total = len(SCENARIOS)
+    executable = sum(1 for s in SCENARIOS if s.probe)
+    score = sum(VERDICT_ORDER[s.expect] for s in SCENARIOS)
+
+    out = [
+        "# Coverage map — what an agent can get wrong, and whether we catch it",
+        "",
+        "**Generated by `python scripts/probe/run.py --md > docs/coverage-map.md`. "
+        "Do not edit by hand.**",
+        "",
+        "This taxonomy is built from the *architecture* of an agentic request rather than",
+        "from [failure-modes.md](failure-modes.md). That catalogue and this codebase",
+        "co-evolved, so scoring ourselves against it is circular: it would confirm we cover",
+        "what we set out to cover and say nothing about what we never thought of. This one",
+        "walks the path a request actually travels and asks, at each layer, what can go",
+        "wrong there.",
+        "",
+        f"**{total} scenarios · {executable} verified by execution · "
+        f"{score / total:.0%} weighted coverage**",
+        "(partial counts half). The harness runs every executable claim against the real",
+        "product and fails if any disagrees — so a row marked ✅ here has fired at least",
+        "once in anger.",
+        "",
+        "| Layer | Score | |",
+        "|---|---|---|",
+    ]
+    for layer, scenarios in by_layer().items():
+        covered = sum(VERDICT_ORDER[s.expect] for s in scenarios)
+        bar = "█" * round(15 * covered / len(scenarios))
+        out.append(f"| {layer} | {covered:g}/{len(scenarios)} | `{bar}` |")
+    out += ["", "| # | Scenario | Verdict | Control | Evidence |", "|---|---|---|---|---|"]
     mark = {"covered": "✅", "partial": "◐", "absent": "✗", "by design": "—"}
     current = None
     for scenario, _observed, detail, _agrees in rows:

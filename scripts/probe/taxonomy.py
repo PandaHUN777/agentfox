@@ -316,9 +316,13 @@ SCENARIOS: list[Scenario] = [
         "L2 retrieval and context",
         "Incoherent chunking",
         "A sentence split across chunks destroys the meaning.",
-        control="",
-        expect="absent",
-        note="P14-2 specified, not built.",
+        control='P14 chunk coherence gate',
+        expect="covered",
+        note=(
+            "Boundaries that split a sentence, a code fence, or a heading from its body are "
+            "reported before the chunks are indexed."
+        ),
+        probe="probe_chunk_coherence",
         tags=["F8"],
     ),
     Scenario(
@@ -326,9 +330,13 @@ SCENARIOS: list[Scenario] = [
         "L2 retrieval and context",
         "Tokeniser failure on non-Latin script",
         "[UNK] boundary failures on Cyrillic or Greek.",
-        control="",
-        expect="absent",
-        note="P14-3 specified, not built.",
+        control='P14 document quality — decoder and tokeniser damage',
+        expect="covered",
+        note=(
+            "U+FFFD, [UNK] markers and latin-1 mojibake are detected at ingestion. Verified not "
+            "to fire on German, French, Russian or Japanese text."
+        ),
+        probe="probe_encoding_damage",
         tags=["F8"],
     ),
     Scenario(
@@ -336,9 +344,10 @@ SCENARIOS: list[Scenario] = [
         "L2 retrieval and context",
         "Context-window truncation drops the evidence",
         "The citation is silently cut before the model sees it.",
-        control="",
-        expect="absent",
-        note="P14-6 specified, not built.",
+        control='P14 assembly — required evidence is seated before the ranking',
+        expect="covered",
+        note='A cited chunk that cannot fit the token budget is a block, not a warning.',
+        probe="probe_truncated_evidence",
         tags=["F8"],
     ),
     Scenario(
@@ -346,9 +355,14 @@ SCENARIOS: list[Scenario] = [
         "L2 retrieval and context",
         "Lost in the middle",
         "Evidence present but positioned where the model ignores it.",
-        control="",
-        expect="absent",
-        note="P14-6.",
+        control='P14 assembly — salience reordering',
+        expect="covered",
+        note=(
+            "Long contexts are reordered so the strongest passages sit at the edges. This is the "
+            "one mitigation here applied automatically: it changes where the model looks, not "
+            "what it is shown."
+        ),
+        probe="probe_lost_in_middle",
         tags=["F8"],
     ),
     Scenario(
@@ -356,10 +370,14 @@ SCENARIOS: list[Scenario] = [
         "L2 retrieval and context",
         "Memory contamination across sessions",
         "One user's data surfaces in another's conversation via memory.",
-        control="tenancy isolates storage",
-        expect="partial",
-        note="Cross-tenant memory is prevented. Within a tenant, cross-session "
-        "contamination is not detected. P14-7 not built.",
+        control='tenancy isolates storage; P14 binds memory to its subject',
+        expect="covered",
+        note=(
+            "Cross-tenant memory was already prevented. Within a tenant the boundary is "
+            "the subject the memory is about, and an entry with no subject is reported "
+            "rather than allowed through."
+        ),
+        probe="probe_memory_binding",
         tags=["F8"],
     ),
     Scenario(
@@ -367,9 +385,13 @@ SCENARIOS: list[Scenario] = [
         "L2 retrieval and context",
         "Retrieval quality drifts over time",
         "nDCG@10 degrades after an embedding-model change.",
-        control="",
-        expect="absent",
-        note="P14-4 specified, not built.",
+        control='P14 retrieval metrics against a recorded baseline',
+        expect="covered",
+        note=(
+            "nDCG@k, recall@k and precision@k over a golden set, compared to a baseline. nDCG is "
+            "the one that moves when the right passage slides down the ranking."
+        ),
+        probe="probe_retrieval_drift",
         tags=["F8"],
     ),
     Scenario(
@@ -377,9 +399,13 @@ SCENARIOS: list[Scenario] = [
         "L2 retrieval and context",
         "Corrupt document ingested",
         "A bad PDF extraction becomes authoritative context.",
-        control="",
-        expect="absent",
-        note="P14-1 specified, not built.",
+        control='P14 document quality gate at ingestion',
+        expect="covered",
+        note=(
+            "Mojibake, control-character noise, lost word boundaries and empty extractions are "
+            "scored before a document can become authoritative context."
+        ),
+        probe="probe_corrupt_document",
         tags=["F8"],
     ),
     # ---------------------------------------------------------------- L3

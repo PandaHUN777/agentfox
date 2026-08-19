@@ -11,12 +11,12 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 |---|---|
 | **Capabilities** | 39 tracked |
 | **Built** | 21 ✅ |
-| **Partial** | 12 ◐ |
-| **Absent** | 6 ✗ |
-| **Weighted coverage** | **69%** *(partial counts half)* |
-| **Tests** | 775 |
-| **Lines** | 43,552 (src + tests) |
-| **Failure modes covered** | **75%** — 42 of 57 outright, 1 partial |
+| **Partial** | 13 ◐ |
+| **Absent** | 5 ✗ |
+| **Weighted coverage** | **71%** *(partial counts half)* |
+| **Tests** | 805 |
+| **Lines** | 44,472 (src + tests) |
+| **Failure modes covered** | **84%** — 47 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
@@ -28,15 +28,15 @@ in [traceability.md](traceability.md).
 | `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 14 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 9 | no live IdP; Entra/Okta integration (P2-8) absent |
 | `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 41 | model-based detectors wired but need an opt-in weights download |
-| `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 9 | idempotency keys (P9-8) absent |
+| `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 10 | idempotency keys (P9-8) absent |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 9 | OpenFGA adapter is a declared seam, not an implementation |
-| `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 45 |  |
+| `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 47 |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 30 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
-| `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ✗ absent | — |  |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 23 | no Ragas adapter, model-based groundedness or annotation queue |
+| `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ◐ partial | 27 | gates the ingestion and assembly path. Semantic chunk-boundary repair and automatic re-extraction of a corrupt document are not built — a finding is reported and the decision to drop the document belongs to the operator |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 26 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 15 |  |
-| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 25 |  |
+| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 27 |  |
 | `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 13 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 14 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
@@ -46,7 +46,7 @@ in [traceability.md](traceability.md).
 | `PL-5` | Platform | Async workers | ✗ absent | — |  |
 | `PL-6` | Platform | HA-ready persistence | ✗ absent | — | Postgres supported; scale-out untested |
 | `PL-7` | Platform | Service-level fail-open | ✗ absent | — |  |
-| `PL-9` | Platform | Authentication and operator tokens | ◐ partial | 33 | OIDC/SCIM absent; tokens and the dev-mode gate ship |
+| `PL-9` | Platform | Authentication and operator tokens | ◐ partial | 35 | OIDC/SCIM absent; tokens and the dev-mode gate ship |
 | `PL-8` | Platform | Tenant isolation enforced at the session | ✅ built | 13 |  |
 | `X-1` | Adoption | One-line auto-instrumentation | ◐ partial | 10 | LangChain/LiteLLM client patching absent |
 | `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 14 |  |
@@ -54,7 +54,7 @@ in [traceability.md](traceability.md).
 | `X-4` | Adoption | Protective controls reachable without writing code | ✅ built | 5 |  |
 | `X-3` | Adoption | Control-plane onboarding and attention-first home | ✅ built | 6 |  |
 | `I-1` | Integration | LangGraph-native SDK | ✅ built | 2 |  |
-| `I-2` | Integration | MCP inline governance | ✅ built | 11 |  |
+| `I-2` | Integration | MCP inline governance | ✅ built | 12 |  |
 | `I-3` | Integration | FastAPI middleware and dependency | ✅ built | 7 |  |
 | `I-4` | Integration | LangSmith correlation | ✅ built | 7 |  |
 | `I-5` | Integration | OpenTelemetry | ✅ built | 1 |  |
@@ -80,7 +80,7 @@ above. The 50 modes come from [failure-modes.md](failure-modes.md).
 | **F5** Escalation & resolution | 7 | 7 | 0 | ✅ 7/7 | — |
 | **F6** Commitment, advice & liability | 6 | 1 | 1 | ◐ 1.5/6 | F6.1, F6.3, F6.4, F6.5 |
 | **F7** Numeric, temporal & entity integrity | 7 | 7 | 0 | ✅ 7/7 | — |
-| **F8** Context & retrieval integrity | 7 | 0 | 0 | ✗ 0/7 | F8.1, F8.2, F8.3, F8.4, F8.5, F8.6, F8.7 |
+| **F8** Context & retrieval integrity | 7 | 5 | 1 | ◐ 5.5/7 | F8.3 |
 
 **Reading the gaps.** Absent rows are not oversights — they are the PRD v3 roadmap in
 tranche order. `P9`, `P13` and `P7` are the three genuinely unclaimed capabilities and
