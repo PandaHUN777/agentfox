@@ -360,6 +360,33 @@ class DetectionFinding(Base, TimestampMixin):
     atlas_id: Mapped[str | None] = mapped_column(String(32))
 
 
+class SourceRecord(Base, TimestampMixin):
+    """P8-1 — what a retrieved chunk came from, and whether that source may be trusted.
+
+    Our groundedness scorer checks the answer against the retrieved context and never
+    asks whether that context was authoritative. An agent that faithfully grounds an
+    answer in a deprecated 2019 wiki page scores 1.0, which is the whole of F2.
+    """
+
+    __tablename__ = "source_records"
+    __table_args__ = (Index("ix_sources_tier", "tier", "domain"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("src"))
+    #: Stable identifier the retriever emits — URI, doc id, table name.
+    key: Mapped[str] = mapped_column(String(500), unique=True, index=True)
+    title: Mapped[str] = mapped_column(String(300), default="")
+    # system_of_record | approved | unverified | external
+    tier: Mapped[str] = mapped_column(String(24), default="unverified")
+    owner: Mapped[str | None] = mapped_column(String(200))
+    #: The corpus this belongs to, so a support agent answering from the finance
+    #: corpus (F2.6) is detectable rather than merely unlikely.
+    domain: Mapped[str | None] = mapped_column(String(120), index=True)
+    updated_at_source: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    freshness_sla_hours: Mapped[int | None] = mapped_column(Integer)
+    deprecated: Mapped[bool] = mapped_column(Boolean, default=False)
+    metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+
+
 class KnowledgeBoundary(Base, TimestampMixin):
     """P7-1 — what this agent can actually answer from.
 

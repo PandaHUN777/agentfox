@@ -178,7 +178,7 @@ def test_mcp_scan_is_a_tool_not_a_dependency(session):
 
 def test_catalog_syncs_all_controls(session):
     summary = sync_catalog(session)
-    assert summary["controls_created"] == 39
+    assert summary["controls_created"] == 40
     assert summary["mappings"] > 200
     assert summary["review_status"] == "draft"
 
@@ -202,7 +202,7 @@ def test_review_status_survives_resync(seeded):
 
 def test_framework_coverage_declares_gaps(seeded):
     coverage = framework_coverage(seeded, "eu-ai-act")
-    assert coverage["controls_mapped"] == 39
+    assert coverage["controls_mapped"] == 40
     assert coverage["declared_gaps"], "coverage without declared gaps is a claim, not a fact"
     assert "not legal advice" in coverage["caveat"]
 
@@ -227,7 +227,7 @@ def test_status_is_computed_not_attested(seeded, enforcer):
     )
     compute_all(seeded)
     statuses = latest_statuses(seeded)
-    assert len(statuses) == 39
+    assert len(statuses) == 40
     injection = statuses["NOM-RTG-01"]
     assert injection.status in ("effective", "degraded", "failing")
     assert "coverage" in injection.evidence_json
@@ -277,8 +277,8 @@ def test_observe_only_enforcement_is_reported_as_degraded(seeded, enforcer):
 def test_posture_aggregates(seeded):
     compute_all(seeded)
     overall = posture(seeded)
-    assert overall["controls"] == 39
-    assert sum(overall["counts"].values()) == 39
+    assert overall["controls"] == 40
+    assert sum(overall["counts"].values()) == 40
 
 
 # ---------------------------------------------------------------------------

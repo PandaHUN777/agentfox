@@ -411,6 +411,29 @@ controls:
       soc2: ["CC7.2"]
       owasp-llm: ["LLM05 Improper Output Handling"]
 
+  - key: NOM-RTG-12
+    title: Answers are traceable to authoritative sources and numerically sound
+    objective: >
+      Retrieved sources carry a tier, an owner, a freshness SLA and a domain; answers
+      are checked for fabricated citations, silent source conflicts and uncited
+      material claims; and numeric, temporal and entity integrity is verified
+      deterministically against the evidence actually retrieved.
+    family: NOM-RTG
+    pillar: 8
+    implemented_by: [P8-1, P8-2, P8-3, P8-4, P8-5]
+    evidence_sources: [source_records, findings]
+    status_rule:
+      kind: presence
+      requires: [source_records]
+      open_findings_degrade:
+        [source_authority, fabricated_citation, source_conflict, integrity_error]
+    mappings:
+      eu-ai-act: ["Art. 13 — transparency", "Art. 15"]
+      nist-ai-rmf: ["MEASURE 2.5", "MEASURE 2.9"]
+      iso-42001: ["A.6", "A.7"]
+      soc2: ["PI1.1", "CC7.2"]
+      owasp-llm: ["LLM09 Misinformation", "LLM08 Vector and Embedding Weaknesses"]
+
   - key: NOM-RTG-11
     title: Questions outside the declared knowledge boundary are refused, not answered
     objective: >

@@ -80,6 +80,7 @@ from .integrations.correlation import (
     refs_from_env,
     refs_from_headers,
 )
+from .integrity import assess_integrity
 from .models import (
     Agent,
     Budget,
@@ -94,6 +95,7 @@ from .models import (
     utcnow,
 )
 from .policy import PolicyInput, active_policies, combine, get_engine
+from .provenance import assess_provenance
 from .providers import CompletionRequest, get_provider
 from .registry.service import observe_agent, record_edge
 from .reliability import (
@@ -211,6 +213,9 @@ class Enforcer:
         # P3-13: one ledger per request, not per call. Reset at the start of each
         # governed completion; a bare `evaluate()` gets a fresh one on demand.
         self._ledger: LatencyLedger | None = None
+        # F2/F7: the retrieval set, records and entities the answer was built from.
+        # Set by the caller (SDK, LangGraph guard, gateway) before a governed call.
+        self.evidence: dict[str, Any] = {}
 
     # ------------------------------------------------------------------
     # Identity & agent resolution
@@ -337,6 +342,13 @@ class Enforcer:
             )
             capability = decision.to_json()
 
+        # --- P8/F7 evidence integrity (output surface only) ----------------
+        # Groundedness asks whether the claim is supported by the text. It does not
+        # ask whether the text was authoritative (F2), nor whether 5 + 3 = 9 (F7).
+        # Both are properties of the answer's relationship to its evidence, so they
+        # run here, where the evidence is in hand.
+        evidence = self._evidence_checks(agent, surface, content, intent)
+
         # --- P9 action assurance ------------------------------------------
         # Argument-level containment governs *the call*; this governs *the artefact*.
         # An agent holding a legitimate `db.query` capability can pass `DROP TABLE` as
@@ -366,6 +378,7 @@ class Enforcer:
             "detector_degraded": bool(pipeline_result.degraded),
             "arguments_snapshot": arguments or {},
             "action": action,
+            **evidence,
         }
 
         # --- 5. policy decision (P6-1) -----------------------------------
@@ -442,6 +455,23 @@ class Enforcer:
                         "controls": ["NOM-IAM-03"],
                     }
                 )
+
+        # F2/F7: an unauthoritative or arithmetically wrong answer is a finding, not
+        # a block. Blocking here would withhold a mostly-correct answer over a
+        # currency mismatch, and the failure this addresses is *silent* wrongness —
+        # surfacing it is the control.
+        for issue in evidence.get("evidence_issues", []):
+            self.session.add(
+                Finding(
+                    type=issue["type"],
+                    severity=issue.get("severity", "medium"),
+                    title=issue["title"],
+                    subject_type="agent",
+                    subject_id=agent.id if agent else None,
+                    evidence_json={**issue, "trace_id": trace_id},
+                    control_keys=["NOM-RTG-12"],
+                )
+            )
 
         # P9: a critical action risk stands on its own, exactly as a capability denial
         # does. It is a fact about what the statement will do, not a policy opinion —
@@ -860,6 +890,83 @@ class Enforcer:
             trace_id=trace.id,
         )
 
+    def _evidence_checks(
+        self, agent: Agent | None, surface: str, content: str, intent: str | None
+    ) -> dict[str, Any]:
+        """F2 source authority and F7 numeric integrity, on the output surface.
+
+        Both need the evidence the answer was built from, which the caller supplies
+        via ``self.evidence``. When nothing is supplied they return quietly rather
+        than guessing: an integrity check that invents its own ground truth is worse
+        than none.
+        """
+        if surface != "output" or not content:
+            return {}
+        evidence = self.evidence or {}
+        chunks = evidence.get("chunks")
+        records = evidence.get("records")
+        entities = evidence.get("entities")
+        if not any((chunks, records, entities, evidence.get("components"))):
+            return {}
+
+        context_text = " ".join(str(c.get("text") or "") for c in (chunks or []))
+        provenance = assess_provenance(
+            self.session, content, chunks, agent_domain=evidence.get("domain")
+        )
+        integrity = assess_integrity(
+            question=intent or evidence.get("question", ""),
+            answer=content,
+            context=context_text,
+            records=records,
+            entities=entities,
+            components=evidence.get("components"),
+        )
+
+        issues: list[dict[str, Any]] = []
+        for breach in provenance.breaches:
+            issues.append(
+                {
+                    "type": "source_authority",
+                    "severity": "high" if breach["kind"] == "deprecated_source" else "medium",
+                    "title": breach["reason"],
+                    **breach,
+                }
+            )
+        for fabricated in provenance.fabricated:
+            issues.append(
+                {
+                    "type": "fabricated_citation",
+                    "severity": "high",
+                    "title": fabricated["reason"],
+                    **fabricated,
+                }
+            )
+        for conflict in provenance.conflicts:
+            issues.append(
+                {
+                    "type": "source_conflict",
+                    "severity": "medium",
+                    "title": conflict["reason"],
+                    **conflict,
+                }
+            )
+        for issue in integrity.issues:
+            issues.append(
+                {
+                    "type": "integrity_error",
+                    "severity": "high"
+                    if issue["kind"] in ("hallucinated_record", "entity_confusion")
+                    else "medium",
+                    "title": issue["reason"],
+                    **issue,
+                }
+            )
+        return {
+            "provenance": provenance.to_json(),
+            "integrity": integrity.to_json(),
+            "evidence_issues": issues,
+        }
+
     # -- I-4/I-6 observability correlation -------------------------------
 
     def _correlate(self, trace, correlation) -> None:
@@ -1277,6 +1384,7 @@ class Enforcer:
         trust_map: dict[str, str] | None = None,
         correlation: dict[str, str] | list[Any] | None = None,
         known_entities: list[str] | None = None,
+        evidence: dict[str, Any] | None = None,
         schema: dict[str, Any] | None = None,
         temperature: float = 0.0,
         max_tokens: int | None = None,
@@ -1295,6 +1403,8 @@ class Enforcer:
             correlation=correlation,
             known_entities=known_entities,
         )
+        if evidence is not None:
+            self.evidence = evidence
         if pre.stopped:
             return pre.result, None
 
@@ -1352,6 +1462,7 @@ class Enforcer:
         trust_map: dict[str, str] | None = None,
         correlation: dict[str, str] | list[Any] | None = None,
         known_entities: list[str] | None = None,
+        evidence: dict[str, Any] | None = None,
         schema: dict[str, Any] | None = None,
         temperature: float = 0.0,
         max_tokens: int | None = None,
@@ -1389,6 +1500,8 @@ class Enforcer:
             correlation=correlation,
             known_entities=known_entities,
         )
+        if evidence is not None:
+            self.evidence = evidence
         if pre.stopped:
             yield StreamEvent(kind="blocked", result=pre.result)
             return

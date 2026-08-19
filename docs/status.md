@@ -14,9 +14,9 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 8 ◐ |
 | **Absent** | 12 ✗ |
 | **Weighted coverage** | **50%** *(partial counts half)* |
-| **Tests** | 427 |
-| **Lines** | 29,515 (src + tests) |
-| **Failure modes covered** | **42%** — 23 of 57 outright, 2 partial |
+| **Tests** | 471 |
+| **Lines** | 30,841 (src + tests) |
+| **Failure modes covered** | **61%** — 34 of 57 outright, 2 partial |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
 in [traceability.md](traceability.md).
@@ -30,12 +30,12 @@ in [traceability.md](traceability.md).
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 6 | idempotency keys (P9-8) absent |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ✗ absent | — |  |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 23 |  |
-| `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 4 | lexical groundedness only; source authority absent |
+| `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 20 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ✗ absent | — |  |
 | `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 21 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 12 |  |
-| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 19 |  |
+| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 21 |  |
 | `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 9 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 13 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
@@ -66,12 +66,12 @@ above. The 50 modes come from [failure-modes.md](failure-modes.md).
 | Family | Modes | Covered | Partial | Score | Not yet covered |
 |---|---|---|---|---|---|
 | **F1** Answerability & abstention | 6 | 6 | 0 | ✅ 6/6 | — |
-| **F2** Source authority & provenance | 6 | 1 | 0 | ◐ 1/6 | F2.1, F2.2, F2.3, F2.4, F2.6 |
+| **F2** Source authority & provenance | 6 | 6 | 0 | ✅ 6/6 | — |
 | **F3** Destructive action | 10 | 7 | 0 | ◐ 7/10 | F3.7, F3.9, F3.10 |
 | **F4** Entitlement & disclosure | 8 | 0 | 1 | ◐ 0.5/8 | F4.1, F4.2, F4.3, F4.4, F4.5, F4.6, F4.7 |
 | **F5** Escalation & resolution | 7 | 7 | 0 | ✅ 7/7 | — |
 | **F6** Commitment, advice & liability | 6 | 1 | 1 | ◐ 1.5/6 | F6.1, F6.3, F6.4, F6.5 |
-| **F7** Numeric, temporal & entity integrity | 7 | 1 | 0 | ◐ 1/7 | F7.1, F7.2, F7.3, F7.4, F7.5, F7.6 |
+| **F7** Numeric, temporal & entity integrity | 7 | 7 | 0 | ✅ 7/7 | — |
 | **F8** Context & retrieval integrity | 7 | 0 | 0 | ✗ 0/7 | F8.1, F8.2, F8.3, F8.4, F8.5, F8.6, F8.7 |
 
 **Reading the gaps.** Absent rows are not oversights — they are the PRD v3 roadmap in
