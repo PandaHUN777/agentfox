@@ -444,6 +444,22 @@ PROBES: list[Probe] = [
         "OIDC/SCIM absent; tokens and the dev-mode gate ship",
     ),
     Probe(
+        "P18",
+        "Semantic contract: data access, result fidelity, register, source arbitration",
+        "18 Tool Contract",
+        ["def analyse_access", "def answers_request", "def check_register",
+         "def arbitrate", "class ConfirmationStep"],
+        [],
+        "",
+        "governs the gap between the request, the rows a tool touched and the answer. "
+        "Data-access scoping is exactly as good as the ScopeRule declarations it is "
+        "given — an undeclared table is reported, never assumed safe. Register checks "
+        "are lexical and licensed per domain; they judge standing, not content, and a "
+        "licensed operator turns them off deliberately",
+        test_files=("test_data_access.py", "test_tool_contract.py",
+                    "test_register.py", "test_arbitration.py"),
+    ),
+    Probe(
         "PL-10",
         "Operator actions recorded in the decision chain",
         "Platform",
