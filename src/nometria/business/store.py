@@ -15,6 +15,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import Agent, BusinessRule
+from ..operator_log import record
 from .ladder import Ladder
 
 log = logging.getLogger(__name__)
@@ -26,12 +27,18 @@ def save_ladder(
     *,
     agent_slug: str | None = None,
     enabled: bool = True,
+    actor: str = "",
+    reason: str = "",
 ) -> BusinessRule:
     """Upsert a ladder, bumping its version.
 
     Versions matter here for the same reason they matter for policy: an auditor asking
     why a refund was approved in March needs the thresholds that were in force in
     March, not the ones agreed since.
+
+    Changing a ladder changes what gets auto-approved, which makes it an operator
+    action rather than a configuration write — so it records who changed it, why, and
+    what the bands were before.
     """
     agent_id = None
     if agent_slug:
@@ -40,24 +47,37 @@ def save_ladder(
             raise ValueError(f"unknown agent '{agent_slug}'")
         agent_id = agent.id
 
-    record = session.scalar(select(BusinessRule).where(BusinessRule.key == ladder.key))
-    if record is None:
-        record = BusinessRule(key=ladder.key)
-        session.add(record)
+    rule = session.scalar(select(BusinessRule).where(BusinessRule.key == ladder.key))
+    previous = dict(rule.definition_json or {}) if rule is not None else None
+    if rule is None:
+        rule = BusinessRule(key=ladder.key)
+        session.add(rule)
     else:
-        record.version += 1
+        rule.version += 1
 
-    record.kind = "threshold_ladder"
-    record.owner = ladder.owner
-    record.description = ladder.description
-    record.agent_id = agent_id
-    record.tool = ladder.tool
-    record.field_path = ladder.field_path
-    record.definition_json = ladder.model_dump(by_alias=True, mode="json")
-    record.mode = ladder.mode
-    record.enabled = enabled
+    rule.kind = "threshold_ladder"
+    rule.owner = ladder.owner
+    rule.description = ladder.description
+    rule.agent_id = agent_id
+    rule.tool = ladder.tool
+    rule.field_path = ladder.field_path
+    rule.definition_json = ladder.model_dump(by_alias=True, mode="json")
+    rule.mode = ladder.mode
+    rule.enabled = enabled
     session.flush()
-    return record
+
+    record(
+        session,
+        "operator.business_rule.changed",
+        actor=actor or ladder.owner or "unknown",
+        reason=reason or ("rule created" if previous is None else "rule updated"),
+        subject_type="business_rule",
+        subject_id=ladder.key,
+        before={"bands": previous.get("bands")} if previous else None,
+        after={"bands": rule.definition_json.get("bands"), "mode": rule.mode,
+               "version": rule.version},
+    )
+    return rule
 
 
 def load_ladders(
@@ -76,14 +96,14 @@ def load_ladders(
         stmt = stmt.where((BusinessRule.agent_id == agent_id) | (BusinessRule.agent_id.is_(None)))
 
     out: list[Ladder] = []
-    for record in session.scalars(stmt):
-        if record.kind != "threshold_ladder":
+    for rule in session.scalars(stmt):
+        if rule.kind != "threshold_ladder":
             continue
         try:
-            out.append(Ladder.model_validate(record.definition_json))
+            out.append(Ladder.model_validate(rule.definition_json))
         except Exception as exc:
             log.warning(
-                "business rule '%s' no longer validates and was skipped: %s", record.key, exc
+                "business rule '%s' no longer validates and was skipped: %s", rule.key, exc
             )
     return out
 
@@ -92,18 +112,37 @@ def all_ladders(session: Session) -> list[Ladder]:
     return load_ladders(session)
 
 
-def set_mode(session: Session, key: str, mode: str) -> BusinessRule:
-    record = session.scalar(select(BusinessRule).where(BusinessRule.key == key))
-    if record is None:
+def set_mode(
+    session: Session, key: str, mode: str, *, actor: str = "", reason: str = ""
+) -> BusinessRule:
+    """Move a rule between observe and enforce.
+
+    The same rule with the opposite effect, which is why this is recorded separately
+    from a definition change: an investigation asking "was this rule live in March?"
+    is asking about the mode, not the bands.
+    """
+    rule = session.scalar(select(BusinessRule).where(BusinessRule.key == key))
+    if rule is None:
         raise ValueError(f"unknown business rule '{key}'")
     if mode not in ("observe", "enforce"):
         raise ValueError("mode must be 'observe' or 'enforce'")
-    record.mode = mode
-    definition = dict(record.definition_json or {})
+    previous = rule.mode
+    rule.mode = mode
+    definition = dict(rule.definition_json or {})
     definition["mode"] = mode
-    record.definition_json = definition
+    rule.definition_json = definition
     session.flush()
-    return record
+    record(
+        session,
+        "operator.business_rule.mode_changed",
+        actor=actor or "unknown",
+        reason=reason or f"mode set to {mode}",
+        subject_type="business_rule",
+        subject_id=key,
+        before={"mode": previous},
+        after={"mode": mode},
+    )
+    return rule
 
 
 def summary(session: Session) -> dict[str, Any]:

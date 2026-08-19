@@ -40,6 +40,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import Agent, ApiToken, Identity, User, utcnow
+from ..operator_log import record
 from ..tenancy import bind_session, system_scope
 
 log = logging.getLogger(__name__)
@@ -92,12 +93,19 @@ def issue_token(
     *,
     name: str = "",
     ttl_days: int | None = 365,
+    actor: str = "",
+    reason: str = "",
 ) -> tuple[ApiToken, str]:
     """Mint an operator token. The raw value is returned once and never stored.
 
     Only the argon2 hash is persisted, so a database disclosure does not hand over
     working credentials — which is the whole reason the audit log and the token store
     can sit in the same database.
+
+    Minting an identity is recorded. The credential is identified by the token id in
+    the entry's subject rather than by any part of the key — the chain's capture-time
+    redaction treats the key prefix as a secret and scrubs it, which is correct, and
+    recording a field that always reads `<redacted>` would only look like evidence.
     """
     raw = API_KEY_PREFIX + secrets.token_urlsafe(32).replace("-", "").replace("_", "")[:40]
     token = ApiToken(
@@ -110,15 +118,46 @@ def issue_token(
     )
     session.add(token)
     session.flush()
+    record(
+        session,
+        "operator.credential.issued",
+        actor=actor or user.email or user.id,
+        reason=reason or f"token '{token.name}' issued",
+        subject_type="api_token",
+        subject_id=token.id,
+        after={
+            "name": token.name,
+            "for_user": user.id,
+            "expires_at": token.expires_at.isoformat() if token.expires_at else None,
+        },
+    )
     return token, raw
 
 
-def revoke_token(session: Session, token_id: str) -> bool:
+def revoke_token(
+    session: Session, token_id: str, *, actor: str = "", reason: str = ""
+) -> bool:
+    """End a credential.
+
+    The window between issue and revoke is the exposure window, and it can only be
+    reconstructed if both ends are recorded.
+    """
     token = session.get(ApiToken, token_id)
     if token is None or token.revoked_at is not None:
         return False
     token.revoked_at = utcnow()
     session.flush()
+    record(
+        session,
+        "operator.credential.revoked",
+        actor=actor or "unknown",
+        reason=reason or "token revoked",
+        subject_type="api_token",
+        subject_id=token.id,
+        before={"name": token.name,
+                "issued_at": token.created_at.isoformat()
+                if getattr(token, "created_at", None) else None},
+    )
     return True
 
 

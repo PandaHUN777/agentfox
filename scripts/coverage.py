@@ -444,6 +444,19 @@ PROBES: list[Probe] = [
         "OIDC/SCIM absent; tokens and the dev-mode gate ship",
     ),
     Probe(
+        "PL-10",
+        "Operator actions recorded in the decision chain",
+        "Platform",
+        ["PRIVILEGED", "def unaudited", "class ReasonRequired"],
+        [],
+        "",
+        "the registry of privileged operations is declared and the check is structural, "
+        "so a new operator surface without an audit call fails the suite. system_scope "
+        "is the stated exception: it lifts tenant isolation and so has no tenant chain "
+        "to write to, which needs a separate system-level chain",
+        test_files=("test_operator_log.py",),
+    ),
+    Probe(
         "PL-8",
         "Tenant isolation enforced at the session",
         "Platform",

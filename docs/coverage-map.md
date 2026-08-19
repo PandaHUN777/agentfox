@@ -9,7 +9,7 @@ what we set out to cover and say nothing about what we never thought of. This on
 walks the path a request actually travels and asks, at each layer, what can go
 wrong there.
 
-**103 scenarios · 87 verified by execution · 87% weighted coverage**
+**103 scenarios · 88 verified by execution · 88% weighted coverage**
 (partial counts half). The harness runs every executable claim against the real
 product and fails if any disagrees — so a row marked ✅ here has fired at least
 once in anger.
@@ -25,7 +25,7 @@ once in anger.
 | L6 multi-agent | 6/6 | `███████████████` |
 | L7 human interface | 7.5/8 | `██████████████` |
 | L8 operational lifecycle | 8.5/10 | `█████████████` |
-| L9 data governance | 6.5/8 | `████████████` |
+| L9 data governance | 7.5/8 | `██████████████` |
 
 | # | Scenario | Verdict | Control | Evidence |
 |---|---|---|---|---|
@@ -130,7 +130,7 @@ once in anger.
 | L8.5 | Model version changes underneath | ◐ partial | P4 drift + version recording | Versions are recorded per decision and drift is measured on scores. No alert on a version change itself. |
 | L8.6 | Prompt change regresses quality | ✅ covered | P4 CI gating with direction-aware scorers | passed=False, 1 absolute failure(s) |
 | L8.7 | Shadow agent in production | ✅ covered | P1-6 shadow detection | 1 shadow agent(s) |
-| L8.8 | Latency budget blown by the guardrails | ✅ covered | P3-13 request-level ledger + fast path | 32 KB document at p50 14.0 ms (budget 100 ms) |
+| L8.8 | Latency budget blown by the guardrails | ✅ covered | P3-13 request-level ledger + fast path | 32 KB document at p50 14.1 ms (budget 100 ms) |
 | L8.9 | Policy misconfiguration | ✅ covered | P12 lint with six codes | 3 finding(s): ['duplicate-id', 'illegal-loosening', 'unconditional'] |
 | L8.10 | Rate-limit or quota exhaustion | ✗ absent | — | No backpressure or queueing. P15-4 specified, not built. |
 | | **L9 data governance** | | | |
@@ -141,4 +141,4 @@ once in anger.
 | L9.5 | The audit log becomes a PII liability | ✅ covered | P5-5 redaction at capture | stored as 'sk-p************************************' |
 | L9.6 | Right to erasure conflicts with the chain | ◐ partial | retention + legal hold | Retention policy and legal hold exist. Erasure against an append-only chain has no designed answer — a real an |
 | L9.7 | Nobody can prove what the policy was at decision time | ✅ covered | immutable policy versions recorded per decision | 3 policy version(s) recorded on the decision |
-| L9.8 | Operator action goes unrecorded | ✗ absent | — | The governance layer does not govern itself. Named in the audit and still open. |
+| L9.8 | Operator action goes unrecorded | ✅ covered | operator actions recorded in the same hash-chained log as the decisions | 6 privileged operations declared, 0 unaudited; promoting a rule to enforce recorded with actor and reason (['p |

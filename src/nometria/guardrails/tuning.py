@@ -44,6 +44,7 @@ from ..models import (
     Suppression,
     Trace,
 )
+from ..operator_log import record
 from .base import Detection
 
 LABELS = ("false_positive", "true_positive", "false_negative")
@@ -637,6 +638,24 @@ def apply_suppression(
     session.add(suppression)
     feedback.status = "applied"
     session.flush()
+
+    # Silencing a detector is the one operator action that can hide every other
+    # action, so it goes into the same chain as the decisions it will stop producing.
+    record(
+        session,
+        "operator.guardrail.suppressed",
+        actor=actor or feedback.actor or "unknown",
+        reason=reason or feedback.note or f"false positive reported on {feedback.detector_key}",
+        subject_type="detector",
+        subject_id=feedback.detector_key,
+        after={
+            "scope": scope,
+            "agent_id": suppression.agent_id,
+            "entity_type": feedback.entity_type,
+            "exact_sample": bool(hashed),
+            "expires_at": suppression.expires_at.isoformat(),
+        },
+    )
     return suppression
 
 
@@ -650,12 +669,33 @@ def active_suppressions(session: Session, agent_id: str | None) -> list[Suppress
     return [row for row in rows if row.active]
 
 
-def revoke_suppression(session: Session, suppression_id: str, *, actor: str | None = None) -> None:
+def revoke_suppression(
+    session: Session,
+    suppression_id: str,
+    *,
+    actor: str | None = None,
+    reason: str = "",
+) -> None:
+    """Restore a suppressed detector.
+
+    Recorded as deliberately as the suppression was: the pair is what lets an
+    investigation say which detector was unwatched, and for how long.
+    """
     suppression = session.get(Suppression, suppression_id)
     if suppression is None:
         raise ValueError("unknown suppression")
     suppression.revoked_at = dt.datetime.now(dt.UTC)
     session.flush()
+    record(
+        session,
+        "operator.guardrail.unsuppressed",
+        actor=actor or suppression.created_by or "unknown",
+        reason=reason or "suppression revoked",
+        subject_type="detector",
+        subject_id=suppression.detector_key,
+        before={"suppressed_since": suppression.created_at.isoformat()
+                if getattr(suppression, "created_at", None) else None},
+    )
 
 
 def _matches(suppression: Suppression, detection: Detection, surface: str) -> bool:

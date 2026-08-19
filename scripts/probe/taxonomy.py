@@ -1138,9 +1138,18 @@ SCENARIOS: list[Scenario] = [
         "L9 data governance",
         "Operator action goes unrecorded",
         "An admin disables a control and nothing captures it.",
-        control="",
-        expect="absent",
-        note="The governance layer does not govern itself. Named in the audit and still open.",
+        control=(
+            "operator actions recorded in the same hash-chained log as the decisions"
+        ),
+        expect="covered",
+        note=(
+            "Suppressing a detector, changing a business rule's thresholds or mode, and issuing or "
+            "revoking a credential all record who, why, and what changed. The registry is declared "
+            "and the check is structural, so a new privileged surface without an audit call fails "
+            "the suite. One gap stays open and is stated: system_scope lifts tenant isolation and "
+            "so has no tenant chain to write to."
+        ),
+        probe="probe_operator_log",
         tags=["known-gap"],
     ),
 ]

@@ -1288,6 +1288,40 @@ def probe_cascade() -> Result:
 
 
 # ---------------------------------------------------------------------------
+# The governance layer, governed
+# ---------------------------------------------------------------------------
+
+
+def probe_operator_log() -> Result:
+    """Every control watches the agent; the operator is who can turn them off."""
+    from nometria.business.ladder import Ladder
+    from nometria.business.store import save_ladder, set_mode
+    from nometria.db import session_scope
+    from nometria.operator_log import PRIVILEGED, operator_history, unaudited
+
+    gaps = unaudited()
+    ladder = {
+        "key": "probe-refunds", "tool": "payments.refund",
+        "field": "arguments.amount", "unit": "USD",
+        "bands": [{"upto": 10, "outcome": "allow"}, {"outcome": "escalate"}],
+    }
+    with session_scope() as session:
+        save_ladder(session, Ladder.model_validate(ladder), actor="ops", reason="probe")
+        set_mode(session, "probe-refunds", "enforce", actor="ops", reason="probe promote")
+        history = operator_history(session)
+
+    actions = {h["action"] for h in history}
+    caught = not gaps and {
+        "operator.business_rule.changed", "operator.business_rule.mode_changed"
+    } <= actions
+    return caught, (
+        f"{len(PRIVILEGED)} privileged operations declared, {len(gaps)} unaudited; "
+        f"promoting a rule to enforce recorded with actor and reason "
+        f"({[h['reason'] for h in history][:1]})"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Harness
 # ---------------------------------------------------------------------------
 
