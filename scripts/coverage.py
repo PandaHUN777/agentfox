@@ -427,6 +427,14 @@ PROBES: list[Probe] = [
         "scan|discovery|doctor|init_is_idempotent|quickstart|ungoverned",
     ),
     Probe(
+        "X-4",
+        "Protective controls reachable without writing code",
+        "Adoption",
+        ["def boundary_set", "def sources_add", "def escalation_set", "def _record_turn"],
+        [],
+        "reachab|boundary_can_be|corpus_can_be|one_liner_captures|protective_control",
+    ),
+    Probe(
         "X-3",
         "Control-plane onboarding and attention-first home",
         "Adoption",

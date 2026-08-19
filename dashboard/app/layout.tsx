@@ -20,13 +20,17 @@ const NAV: { group: string; items: [string, string][] }[] = [
   },
   {
     group: "What can it do",
-    items: [["Policies", "/policies"]],
+    items: [
+      ["Policies", "/policies"],
+      ["Guardrails", "/guardrails"],
+    ],
   },
   {
     group: "Does it work",
     items: [
       ["Evaluation", "/evals"],
       ["Escalation", "/escalation"],
+      ["Sources", "/sources"],
     ],
   },
   {

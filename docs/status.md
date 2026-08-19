@@ -9,13 +9,13 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 
 | | |
 |---|---|
-| **Capabilities** | 37 tracked |
-| **Built** | 20 ✅ |
+| **Capabilities** | 38 tracked |
+| **Built** | 21 ✅ |
 | **Partial** | 10 ◐ |
 | **Absent** | 7 ✗ |
 | **Weighted coverage** | **68%** *(partial counts half)* |
-| **Tests** | 658 |
-| **Lines** | 37,278 (src + tests) |
+| **Tests** | 676 |
+| **Lines** | 38,320 (src + tests) |
 | **Failure modes covered** | **61%** — 34 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -25,31 +25,32 @@ in [traceability.md](traceability.md).
 | ID | Pillar | Capability | Status | Tests | Note |
 |---|---|---|---|---|---|
 | `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 8 | connector-based estate discovery (P1-8) absent |
-| `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 11 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
+| `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 12 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 8 | no live IdP; Entra/Okta integration (P2-8) absent |
-| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 37 | model-based detectors wired but need an opt-in weights download |
-| `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 7 | idempotency keys (P9-8) absent |
+| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 38 | model-based detectors wired but need an opt-in weights download |
+| `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 9 | idempotency keys (P9-8) absent |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ✗ absent | — |  |
-| `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 30 |  |
-| `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 20 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
+| `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 35 |  |
+| `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 25 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ✗ absent | — |  |
 | `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 22 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
-| `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 13 |  |
+| `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 15 |  |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 25 |  |
-| `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 11 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
+| `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 12 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 14 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
 | `PL-2` | Platform | Database migrations | ✅ built | 2 |  |
-| `PL-3` | Platform | Kill switch and quarantine | ✅ built | 7 |  |
+| `PL-3` | Platform | Kill switch and quarantine | ✅ built | 8 |  |
 | `PL-4` | Platform | Agent loop governance | ✗ absent | — |  |
 | `PL-5` | Platform | Async workers | ✗ absent | — |  |
 | `PL-6` | Platform | HA-ready persistence | ✗ absent | — | Postgres supported; scale-out untested |
 | `PL-7` | Platform | Service-level fail-open | ✗ absent | — |  |
 | `PL-9` | Platform | Authentication and operator tokens | ◐ partial | 31 | OIDC/SCIM absent; tokens and the dev-mode gate ship |
 | `PL-8` | Platform | Tenant isolation enforced at the session | ✅ built | 13 |  |
-| `X-1` | Adoption | One-line auto-instrumentation | ◐ partial | 8 | LangChain/LiteLLM client patching absent |
-| `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 13 |  |
+| `X-1` | Adoption | One-line auto-instrumentation | ◐ partial | 9 | LangChain/LiteLLM client patching absent |
+| `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 14 |  |
+| `X-4` | Adoption | Protective controls reachable without writing code | ✅ built | 5 |  |
 | `X-3` | Adoption | Control-plane onboarding and attention-first home | ✅ built | 6 |  |
 | `I-1` | Integration | LangGraph-native SDK | ✅ built | 2 |  |
 | `I-2` | Integration | MCP inline governance | ✅ built | 11 |  |

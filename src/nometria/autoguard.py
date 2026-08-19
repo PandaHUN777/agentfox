@@ -83,6 +83,10 @@ class AutoState:
     frameworks: list[str] = field(default_factory=list)
     calls_governed: int = 0
     started: bool = False
+    #: Groups turns into a conversation. Without one every exchange looks like a
+    #: separate single-turn conversation, and turn-depth and repeated-failure
+    #: conditions can never fire.
+    session_id: str | None = None
 
     @property
     def active(self) -> bool:
@@ -210,6 +214,45 @@ def _text_of(response: Any) -> str:
     return ""
 
 
+def _record_turn(
+    state: AutoState, messages: list[dict[str, Any]], answer: str, trace_id: str
+) -> None:
+    """Record one exchange for missed-escalation detection. Never fails the request."""
+    try:
+        user_text = next(
+            (
+                str(m.get("content") or "")
+                for m in reversed(messages)
+                if str(m.get("role")) == "user"
+            ),
+            "",
+        )
+        if not user_text:
+            return
+        from .db import session_scope
+        from .escalation import record_turn
+        from .models import Agent
+
+        token = _IN_NOMETRIA.set(True)
+        try:
+            with session_scope() as session:
+                from sqlalchemy import select
+
+                agent = session.scalar(select(Agent).where(Agent.slug == state.agent))
+                record_turn(
+                    session,
+                    session_id=state.session_id or trace_id,
+                    agent_id=agent.id if agent else None,
+                    trace_id=trace_id,
+                    user_text=user_text,
+                    agent_text=answer,
+                )
+        finally:
+            _IN_NOMETRIA.reset(token)
+    except Exception as exc:  # pragma: no cover - observability must not break the call
+        log.debug("nometria: turn capture skipped: %s", exc)
+
+
 class Blocked(RuntimeError):
     """Raised in enforce mode when a governed call is refused."""
 
@@ -285,6 +328,19 @@ def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
         raise
     except Exception as exc:  # pragma: no cover - defensive
         log.warning("nometria: post-flight failed: %s", exc)
+
+    # P11: capture the exchange as a conversation turn. Escalation governance was
+    # complete and inert for anyone using the one-liner — the detector reads recorded
+    # turns, and nothing was recording them, so the largest failure family was covered
+    # in code and uncovered in practice. Session grouping falls back to the trace when
+    # the caller has no session concept, which at least keeps single-turn
+    # conversations attributable.
+    try:
+        _record_turn(state, messages, _text_of(response), trace_id)
+    except Exception as exc:  # pragma: no cover - defence in depth
+        # Guarded here as well as inside, so that a future change to turn capture
+        # cannot become a change to whether the caller's request succeeds.
+        log.debug("nometria: turn capture failed: %s", exc)
 
     state.calls_governed += 1
     if blocked and state.mode == "observe":
@@ -371,6 +427,7 @@ def auto(
     *,
     mode: str = "observe",
     environment: str | None = None,
+    session_id: str | None = None,
     register: bool = True,
     quiet: bool = False,
 ) -> AutoState:
@@ -398,6 +455,7 @@ def auto(
         mode=mode,
         environment=environment or settings.environment,
         frameworks=detect_frameworks(),
+        session_id=session_id,
     )
 
     try:
