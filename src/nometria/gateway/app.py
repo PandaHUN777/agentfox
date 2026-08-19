@@ -25,6 +25,7 @@ from ..providers import all_providers, available_providers
 from .deps import current_user, db
 from .routes import (
     answerability,
+    entitlement,
     escalation,
     evaluation,
     governance,
@@ -117,6 +118,7 @@ def create_app() -> FastAPI:
     app.include_router(answerability.router)
     app.include_router(onboarding.router)
     app.include_router(provenance.router)
+    app.include_router(entitlement.router)
 
     @app.get("/api/health", tags=["platform"])
     def health() -> dict[str, Any]:

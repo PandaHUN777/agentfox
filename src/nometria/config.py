@@ -69,6 +69,15 @@ class Settings(BaseSettings):
     accept_restricted_model_licenses: bool = False
     granite_guardian_model: str = "ibm-granite/granite-guardian-3.0-2b"
 
+    # --- Entitlement (P10) -----------------------------------------------
+    # native | openfga. The seam exists because no winner does: customers running
+    # OpenFGA or Cedar keep them, and the much larger group who express permissions as
+    # "this group can read this folder" get a control they can actually switch on.
+    entitlement_engine: str = "native"
+    openfga_url: str | None = None
+    openfga_store_id: str | None = None
+    k_anonymity_threshold: int = 5
+
     # --- Authentication --------------------------------------------------
     # auto | development | token | oidc
     #

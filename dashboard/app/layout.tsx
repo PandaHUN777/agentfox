@@ -23,6 +23,7 @@ const NAV: { group: string; items: [string, string][] }[] = [
     items: [
       ["Policies", "/policies"],
       ["Guardrails", "/guardrails"],
+      ["Entitlement", "/entitlement"],
     ],
   },
   {

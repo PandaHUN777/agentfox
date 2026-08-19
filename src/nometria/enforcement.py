@@ -57,6 +57,12 @@ from .audit.trace import (
     start_trace,
 )
 from .config import get_settings
+from .entitlement import (
+    aggregation_risk,
+    filter_retrieval,
+    inference_risk,
+    record_disclosure,
+)
 from .guardrails import (
     DetectionContext,
     DetectorPipeline,
@@ -348,6 +354,15 @@ class Enforcer:
         # Both are properties of the answer's relationship to its evidence, so they
         # run here, where the evidence is in hand.
         evidence = self._evidence_checks(agent, surface, content, intent)
+        disclosure = self._disclosure_checks(agent, surface, content, trace_id)
+        if disclosure:
+            merged_issues = [
+                *evidence.get("evidence_issues", []),
+                *disclosure.pop("evidence_issues", []),
+            ]
+            evidence.update(disclosure)
+            if merged_issues:
+                evidence["evidence_issues"] = merged_issues
 
         # --- P9 action assurance ------------------------------------------
         # Argument-level containment governs *the call*; this governs *the artefact*.
@@ -966,6 +981,86 @@ class Enforcer:
             "integrity": integrity.to_json(),
             "evidence_issues": issues,
         }
+
+    def _disclosure_checks(
+        self, agent: Agent | None, surface: str, content: str, trace_id: str | None
+    ) -> dict[str, Any]:
+        """P10 — what this human may see, and what the answer disclosed anyway.
+
+        The pre-filter belongs to whoever performs retrieval, so it is exposed
+        separately; this is the post-flight half, which catches the two disclosures no
+        access check can — an aggregate over too few people, and an attribute the model
+        inferred rather than retrieved.
+        """
+        if surface != "output" or not content:
+            return {}
+        evidence = self.evidence or {}
+        principal = evidence.get("principal")
+        chunks = evidence.get("chunks") or []
+        issues: list[dict[str, Any]] = []
+        out: dict[str, Any] = {}
+
+        if principal is not None:
+            decision = filter_retrieval(
+                self.session,
+                principal,
+                chunks,
+                purpose=evidence.get("purpose"),
+            )
+            record_disclosure(
+                self.session,
+                decision,
+                trace_id=trace_id,
+                agent_id=agent.id if agent else None,
+                stage="post",
+            )
+            out["disclosure"] = decision.to_json()
+            for withheld in decision.withheld:
+                # A chunk the principal could not see, quoted in the answer, is the
+                # oversharing failure itself rather than a near miss.
+                text = str(withheld.get("text") or "")
+                if text and text[:60] and text[:60] in content:
+                    issues.append(
+                        {
+                            "type": "entitlement_disclosure",
+                            "severity": "critical",
+                            "title": (
+                                f"the answer contains content from "
+                                f"'{withheld.get('source')}', which "
+                                f"'{decision.principal}' is not entitled to see"
+                            ),
+                        }
+                    )
+
+        aggregate = aggregation_risk(
+            content,
+            contributors=evidence.get("contributors"),
+            k=self.settings.k_anonymity_threshold,
+        )
+        if aggregate:
+            issues.append(
+                {
+                    "type": "aggregation_disclosure",
+                    "severity": "high",
+                    "title": aggregate["reason"],
+                    **aggregate,
+                }
+            )
+
+        inferred = inference_risk(content, " ".join(str(c.get("text") or "") for c in chunks))
+        if inferred:
+            issues.append(
+                {
+                    "type": "inference_disclosure",
+                    "severity": "high",
+                    "title": inferred["reason"],
+                    **inferred,
+                }
+            )
+
+        if issues:
+            out["evidence_issues"] = [*out.get("evidence_issues", []), *issues]
+        return out
 
     # -- I-4/I-6 observability correlation -------------------------------
 

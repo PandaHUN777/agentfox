@@ -411,6 +411,29 @@ controls:
       soc2: ["CC7.2"]
       owasp-llm: ["LLM05 Improper Output Handling"]
 
+  - key: NOM-IAM-07
+    title: Answers contain only what the requesting human may see
+    objective: >
+      The end-user principal is propagated through the agent into retrieval; content
+      the principal is not entitled to is withheld before generation and the
+      withholding is recorded; restricted classes require an explicit clearance rather
+      than a grant; and over-permissioned retrieval is measured continuously.
+    family: NOM-IAM
+    pillar: 10
+    implemented_by: [P10-1, P10-2, P10-3, P10-4, P10-6, P10-7, P10-8, P10-9]
+    evidence_sources: [disclosure_events, end_user_principals]
+    status_rule:
+      kind: presence
+      requires: [end_user_principals]
+      open_findings_degrade:
+        [entitlement_disclosure, aggregation_disclosure, inference_disclosure]
+    mappings:
+      eu-ai-act: ["Art. 10 — data governance", "Art. 15"]
+      nist-ai-rmf: ["MAP 4.1", "MANAGE 2.2"]
+      iso-42001: ["A.5", "A.8"]
+      soc2: ["CC6.1", "CC6.3"]
+      owasp-llm: ["LLM02 Sensitive Information Disclosure", "LLM06 Excessive Agency"]
+
   - key: NOM-RTG-12
     title: Answers are traceable to authoritative sources and numerically sound
     objective: >

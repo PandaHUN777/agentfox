@@ -11,12 +11,12 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 |---|---|
 | **Capabilities** | 38 tracked |
 | **Built** | 21 ✅ |
-| **Partial** | 10 ◐ |
-| **Absent** | 7 ✗ |
-| **Weighted coverage** | **68%** *(partial counts half)* |
-| **Tests** | 676 |
-| **Lines** | 38,320 (src + tests) |
-| **Failure modes covered** | **61%** — 34 of 57 outright, 2 partial |
+| **Partial** | 11 ◐ |
+| **Absent** | 6 ✗ |
+| **Weighted coverage** | **70%** *(partial counts half)* |
+| **Tests** | 704 |
+| **Lines** | 39,675 (src + tests) |
+| **Failure modes covered** | **75%** — 42 of 57 outright, 1 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
@@ -27,21 +27,21 @@ in [traceability.md](traceability.md).
 | `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 8 | connector-based estate discovery (P1-8) absent |
 | `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 12 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 8 | no live IdP; Entra/Okta integration (P2-8) absent |
-| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 38 | model-based detectors wired but need an opt-in weights download |
+| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 39 | model-based detectors wired but need an opt-in weights download |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 9 | idempotency keys (P9-8) absent |
-| `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ✗ absent | — |  |
-| `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 35 |  |
-| `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 25 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
+| `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 9 | OpenFGA adapter is a declared seam, not an implementation |
+| `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 36 |  |
+| `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 27 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ✗ absent | — |  |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 22 | no Ragas adapter, model-based groundedness or annotation queue |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 23 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 15 |  |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 25 |  |
-| `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 12 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
+| `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 13 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 14 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
 | `PL-2` | Platform | Database migrations | ✅ built | 2 |  |
-| `PL-3` | Platform | Kill switch and quarantine | ✅ built | 8 |  |
+| `PL-3` | Platform | Kill switch and quarantine | ✅ built | 9 |  |
 | `PL-4` | Platform | Agent loop governance | ✗ absent | — |  |
 | `PL-5` | Platform | Async workers | ✗ absent | — |  |
 | `PL-6` | Platform | HA-ready persistence | ✗ absent | — | Postgres supported; scale-out untested |
@@ -75,7 +75,7 @@ above. The 50 modes come from [failure-modes.md](failure-modes.md).
 | **F1** Answerability & abstention | 6 | 6 | 0 | ✅ 6/6 | — |
 | **F2** Source authority & provenance | 6 | 6 | 0 | ✅ 6/6 | — |
 | **F3** Destructive action | 10 | 7 | 0 | ◐ 7/10 | F3.7, F3.9, F3.10 |
-| **F4** Entitlement & disclosure | 8 | 0 | 1 | ◐ 0.5/8 | F4.1, F4.2, F4.3, F4.4, F4.5, F4.6, F4.7 |
+| **F4** Entitlement & disclosure | 8 | 8 | 0 | ✅ 8/8 | — |
 | **F5** Escalation & resolution | 7 | 7 | 0 | ✅ 7/7 | — |
 | **F6** Commitment, advice & liability | 6 | 1 | 1 | ◐ 1.5/6 | F6.1, F6.3, F6.4, F6.5 |
 | **F7** Numeric, temporal & entity integrity | 7 | 7 | 0 | ✅ 7/7 | — |

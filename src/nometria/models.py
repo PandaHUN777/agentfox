@@ -386,6 +386,80 @@ class DetectionFinding(Base, TimestampMixin):
     atlas_id: Mapped[str | None] = mapped_column(String(32))
 
 
+class EndUserPrincipal(Base, TimestampMixin):
+    """P10-1 — the human the agent is acting for.
+
+    Everything else in this pillar depends on this record existing. The Copilot-class
+    failure is precisely its absence: the agent runs under its own service identity
+    and inherits the union of everything that identity can reach, so every permission
+    check passes and the answer still contains what the *requester* was never entitled
+    to see.
+    """
+
+    __tablename__ = "end_user_principals"
+    __table_args__ = (Index("ix_principal_subject", "subject", "agent_id"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("prn"))
+    #: Stable identifier from the caller's IdP — an OIDC `sub`, an employee id.
+    subject: Mapped[str] = mapped_column(String(200), index=True)
+    display: Mapped[str] = mapped_column(String(200), default="")
+    agent_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    #: Group and role memberships the entitlement engine resolves against.
+    groups: Mapped[list[str]] = mapped_column(JSON, default=list)
+    #: Clearance labels: which restricted classes this person may see at all.
+    clearances: Mapped[list[str]] = mapped_column(JSON, default=list)
+    #: GDPR Art. 5(1)(b): what this data may be used for.
+    purposes: Mapped[list[str]] = mapped_column(JSON, default=list)
+    residency: Mapped[str | None] = mapped_column(String(16))
+    last_seen_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ResourceGrant(Base, TimestampMixin):
+    """P10-2 — who may see which resource, for the native entitlement engine.
+
+    Deliberately a thin ACL rather than a relationship model. Customers who already
+    run OpenFGA or Cedar should keep it; this exists so the control is usable by the
+    much larger group who have permissions expressed as "this group can read this
+    folder" and nothing more formal.
+    """
+
+    __tablename__ = "resource_grants"
+    __table_args__ = (Index("ix_grant_resource", "resource", "principal_kind", "principal"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("grt"))
+    #: Matches the `source` a retriever puts on a chunk, glob allowed.
+    resource: Mapped[str] = mapped_column(String(500), index=True)
+    principal_kind: Mapped[str] = mapped_column(String(16), default="group")  # group | subject
+    principal: Mapped[str] = mapped_column(String(200), index=True)
+    #: Restricted classes this resource carries: mnpi, legal_hold, blackout, pii.
+    classes: Mapped[list[str]] = mapped_column(JSON, default=list)
+    purposes: Mapped[list[str]] = mapped_column(JSON, default=list)
+    residency: Mapped[str | None] = mapped_column(String(16))
+
+
+class DisclosureEvent(Base, TimestampMixin):
+    """P10-3 — what was withheld, and why.
+
+    The drop count *is* the oversharing metric. A pre-filter that silently returns
+    fewer chunks tells nobody anything; the same filter recording what it removed turns
+    "our agent might be oversharing" into a number with examples attached.
+    """
+
+    __tablename__ = "disclosure_events"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("dsc"))
+    trace_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    agent_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    principal_subject: Mapped[str | None] = mapped_column(String(200), index=True)
+    stage: Mapped[str] = mapped_column(String(16), default="pre")  # pre | post
+    candidates: Mapped[int] = mapped_column(Integer, default=0)
+    withheld: Mapped[int] = mapped_column(Integer, default=0)
+    reasons_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    #: P10-4: the agent could reach more than the principal. The diagnostic that
+    #: motivates the whole exercise, and valuable before any model exists.
+    over_permission: Mapped[float] = mapped_column(Float, default=0.0)
+
+
 class SourceRecord(Base, TimestampMixin):
     """P8-1 — what a retrieved chunk came from, and whether that source may be trusted.
 

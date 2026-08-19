@@ -377,6 +377,109 @@ def escalation_scan(
         )
 
 
+# ---------------------------------------------------------------------------
+# P10 — entitlement
+# ---------------------------------------------------------------------------
+
+
+def principal_set(
+    subject: str = typer.Argument(..., help="IdP subject — an OIDC `sub` or employee id."),
+    groups: str = typer.Option("", "--groups", "-g", help="Comma-separated groups."),
+    clearances: str = typer.Option("", "--clearances", help="Restricted classes they may see."),
+    residency: str | None = typer.Option(None, "--residency"),
+    display: str = typer.Option("", "--display"),
+) -> None:
+    """Register the human an agent acts for (P10-1).
+
+    Everything else in this pillar depends on this. The Copilot failure is its absence:
+    the agent runs under its own identity, inherits everything that identity can reach,
+    and every permission check passes.
+    """
+    from ..db import session_scope
+    from ..entitlement import upsert_principal
+
+    with session_scope() as session:
+        upsert_principal(
+            session,
+            subject,
+            display=display,
+            groups=[g.strip() for g in groups.split(",") if g.strip()],
+            clearances=[c.strip() for c in clearances.split(",") if c.strip()],
+            residency=residency,
+        )
+    console.print(f"[green]✓[/] principal [bold]{subject}[/]")
+    if groups:
+        console.print(f"  groups: {groups}")
+    if clearances:
+        console.print(f"  clearances: {clearances}")
+
+
+def grant_add(
+    resource: str = typer.Argument(..., help="Resource pattern, e.g. 'hr/*'."),
+    principal: str = typer.Argument(..., help="Group or subject the grant is for."),
+    kind: str = typer.Option("group", "--kind", help="group | subject"),
+    classes: str = typer.Option("", "--classes", help="mnpi, legal_hold, pii_sensitive…"),
+    purposes: str = typer.Option("", "--purposes", help="GDPR Art. 5(1)(b) purposes."),
+) -> None:
+    """Grant access to a resource pattern (P10-2)."""
+    from ..db import session_scope
+    from ..entitlement import grant
+
+    with session_scope() as session:
+        grant(
+            session,
+            resource,
+            principal=principal,
+            principal_kind=kind,
+            classes=[c.strip() for c in classes.split(",") if c.strip()],
+            purposes=[p.strip() for p in purposes.split(",") if p.strip()],
+        )
+    console.print(f"[green]✓[/] [bold]{principal}[/] → {resource}")
+    if classes:
+        console.print(f"  [dim]carries {classes} — needs a matching clearance[/]")
+
+
+def entitlement_report(days: int = typer.Option(7, "--days")) -> None:
+    """How much more the agent can reach than its callers are entitled to (P10-4).
+
+    Worth running before any entitlement model exists — a ratio of 1.0 with no grants
+    configured is exactly the point.
+    """
+    from ..db import session_scope
+    from ..entitlement import over_permission_report
+
+    with session_scope() as session:
+        report = over_permission_report(session, days=days)
+
+    if not report["requests"]:
+        console.print(
+            Panel(
+                report["note"],
+                title="[bold]No entitlement decisions[/]",
+                title_align="left",
+                border_style="yellow",
+            )
+        )
+        console.print(
+            "  [dim]Register a principal with `nometria principal set`, then filter "
+            "retrieval through /api/entitlement/filter.[/]"
+        )
+        return
+
+    ratio = report["over_permission"]
+    colour = "red" if ratio > 0.2 else "yellow" if ratio else "green"
+    console.print(
+        f"[bold]{report['requests']}[/] request(s) · {report['principals']} principal(s) · "
+        f"[{colour}]{ratio:.1%}[/] of retrieved content was withheld"
+    )
+    for reason, count in report["reasons"].items():
+        console.print(f"  [dim]{reason:<22}{count}[/]")
+    console.print(
+        "\n  [dim]That share is what the agent could reach and the caller could "
+        "not. It is the oversharing number, not an error rate.[/]"
+    )
+
+
 def register(app: typer.Typer) -> None:
     boundary_app = typer.Typer(
         help="Knowledge boundaries and abstention (P7).", no_args_is_help=True
@@ -395,3 +498,11 @@ def register(app: typer.Typer) -> None:
     escalation_app.command(name="set")(escalation_set)
     escalation_app.command(name="scan")(escalation_scan)
     app.add_typer(escalation_app, name="escalation")
+
+    entitlement_app = typer.Typer(
+        help="End-user entitlement and disclosure control (P10).", no_args_is_help=True
+    )
+    entitlement_app.command(name="principal")(principal_set)
+    entitlement_app.command(name="grant")(grant_add)
+    entitlement_app.command(name="report")(entitlement_report)
+    app.add_typer(entitlement_app, name="entitlement")
