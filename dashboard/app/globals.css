@@ -214,3 +214,100 @@ pre {
 .span-tree .dur { color: var(--muted); margin-left: auto; }
 
 .scroll-x { overflow-x: auto; }
+
+/* --- Onboarding and attention -------------------------------------------
+   The first screen decides whether a governance tool is adopted or closed, so
+   "nothing connected" and "nothing wrong" must never render the same way. */
+
+.hero {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 26px 28px;
+  background: var(--panel);
+  max-width: 70ch;
+}
+.hero.empty { border-style: dashed; }
+.hero.ok { border-color: var(--ok); }
+.hero-title { font-size: 17px; font-weight: 620; margin-bottom: 8px; }
+.hero p { color: var(--muted); font-size: 13px; margin: 8px 0; }
+.hero-code {
+  display: block;
+  font-family: var(--mono);
+  font-size: 13px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 11px 14px;
+  margin: 14px 0;
+  color: var(--accent);
+}
+.cta {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--accent);
+  font-weight: 550;
+  font-size: 13px;
+}
+
+.progress-line { display: flex; align-items: center; gap: 12px; margin: 4px 0 22px; }
+.progress-track {
+  flex: 1;
+  height: 5px;
+  background: var(--dim-bg);
+  border-radius: 3px;
+  overflow: hidden;
+  max-width: 380px;
+}
+.progress-track span { display: block; height: 100%; background: var(--ok); }
+
+ol.steps { list-style: none; padding: 0; margin: 0 0 26px; max-width: 76ch; }
+ol.steps li {
+  display: flex;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+ol.steps li:last-child { border-bottom: 0; }
+ol.steps .marker {
+  flex: 0 0 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--dim-bg);
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+ol.steps li.done .marker { background: var(--ok-bg); color: var(--ok); }
+ol.steps li.now .marker { background: var(--accent); color: #fff; }
+ol.steps li.done .step-title { color: var(--muted); }
+.step-title { font-weight: 570; margin-bottom: 6px; display: flex; gap: 8px; align-items: center; }
+.step-cmd {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 3px 8px;
+  margin-bottom: 6px;
+}
+.tag.accent { background: var(--accent); color: #fff; }
+
+.card.empty .n { color: var(--muted); }
+.card.link { display: block; }
+.card.link:hover { border-color: var(--accent); text-decoration: none; }
+
+.note-panel {
+  margin-top: 24px;
+  padding: 13px 16px;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 7px;
+  background: var(--panel);
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 78ch;
+}
+.note-panel strong { color: var(--text); }

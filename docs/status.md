@@ -9,13 +9,13 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 
 | | |
 |---|---|
-| **Capabilities** | 34 tracked |
-| **Built** | 18 ✅ |
+| **Capabilities** | 35 tracked |
+| **Built** | 19 ✅ |
 | **Partial** | 9 ◐ |
 | **Absent** | 7 ✗ |
-| **Weighted coverage** | **66%** *(partial counts half)* |
-| **Tests** | 562 |
-| **Lines** | 34,361 (src + tests) |
+| **Weighted coverage** | **67%** *(partial counts half)* |
+| **Tests** | 569 |
+| **Lines** | 34,684 (src + tests) |
 | **Failure modes covered** | **61%** — 34 of 57 outright, 2 partial |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
@@ -34,7 +34,7 @@ in [traceability.md](traceability.md).
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ✗ absent | — |  |
 | `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 22 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
-| `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 12 |  |
+| `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 13 |  |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 23 |  |
 | `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 11 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 13 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
@@ -47,6 +47,7 @@ in [traceability.md](traceability.md).
 | `PL-7` | Platform | Service-level fail-open | ✗ absent | — |  |
 | `X-1` | Adoption | One-line auto-instrumentation | ◐ partial | 8 | LangChain/LiteLLM client patching absent |
 | `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 11 |  |
+| `X-3` | Adoption | Control-plane onboarding and attention-first home | ✅ built | 6 |  |
 | `I-1` | Integration | LangGraph-native SDK | ✅ built | 2 |  |
 | `I-2` | Integration | MCP inline governance | ✅ built | 11 |  |
 | `I-3` | Integration | FastAPI middleware and dependency | ✅ built | 7 |  |

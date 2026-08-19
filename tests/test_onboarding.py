@@ -16,6 +16,8 @@ from typer.testing import CliRunner
 from nometria.cli.main import app
 from nometria.discovery import ScanReport, Site, scan, scan_file
 
+from .conftest import as_user
+
 runner = CliRunner()
 
 
@@ -317,3 +319,90 @@ def test_the_onboarding_verbs_are_top_level(isolated_db):
     result = runner.invoke(app, ["--help"])
     for verb in ("init", "check", "doctor", "findings", "quickstart"):
         assert verb in flat(result.output)
+
+
+# ---------------------------------------------------------------------------
+# The control-plane entry experience
+# ---------------------------------------------------------------------------
+
+
+def test_the_checklist_is_computed_from_live_data(client):
+    """A checklist that can disagree with the system is worse than none, so no step
+    is ever a stored "completed" flag."""
+    body = client.get("/api/onboarding", headers=as_user("admin@example.com")).json()
+    assert body["total"] == 6
+    install = next(s for s in body["steps"] if s["id"] == "install")
+    assert install["done"] is True, "the seeded fixture has agents"
+    assert body["next"]["id"] == "instrument"
+
+
+def test_not_connected_and_nothing_wrong_are_distinguishable(client):
+    """Zero of everything looks identical whether nothing is wrong or nothing is
+    connected, and only one of those is good news."""
+    body = client.get("/api/onboarding", headers=as_user("admin@example.com")).json()
+    assert body["connected"] is False
+
+    from nometria.db import session_scope
+    from nometria.enforcement import Enforcer
+
+    with session_scope() as session:
+        Enforcer(session).run_completion(
+            agent_slug="support-triage",
+            messages=[{"role": "user", "content": "hi"}],
+            model="echo-1",
+        )
+    after = client.get("/api/onboarding", headers=as_user("admin@example.com")).json()
+    assert after["connected"] is True
+
+
+def test_enforcement_is_the_last_step(client):
+    """Everything before it is safe to run without reading further."""
+    body = client.get("/api/onboarding", headers=as_user("admin@example.com")).json()
+    assert body["steps"][-1]["id"] == "enforce"
+    assert "only step that blocks" in body["steps"][-1]["detail"]
+
+
+def test_attention_is_quiet_when_there_is_nothing_to_do(client):
+    body = client.get("/api/attention", headers=as_user("admin@example.com")).json()
+    assert body["quiet"] is True
+    assert body["items"] == []
+
+
+def test_attention_ranks_by_severity(client):
+    from nometria.db import session_scope
+    from nometria.models import Finding
+
+    with session_scope() as session:
+        session.add(
+            Finding(type="a", severity="medium", title="medium thing", subject_type="agent")
+        )
+        session.add(
+            Finding(type="b", severity="critical", title="critical thing", subject_type="agent")
+        )
+
+    body = client.get("/api/attention", headers=as_user("admin@example.com")).json()
+    assert body["items"][0]["severity"] == "critical"
+    assert body["counts"]["critical"] == 1
+
+
+def test_a_breached_handoff_outranks_most_findings(client):
+    """A hand-off past its SLA is a person waiting."""
+    from nometria.db import session_scope
+    from nometria.models import Handoff
+
+    with session_scope() as session:
+        session.add(Handoff(session_id="s-1", status="breached", owner_role="support", reason="x"))
+
+    body = client.get("/api/attention", headers=as_user("admin@example.com")).json()
+    assert any(i["type"] == "handoff_sla_breach" for i in body["items"])
+
+
+def test_every_attention_item_links_somewhere(client):
+    from nometria.db import session_scope
+    from nometria.models import Finding
+
+    with session_scope() as session:
+        session.add(Finding(type="a", severity="high", title="t", subject_type="agent"))
+
+    body = client.get("/api/attention", headers=as_user("admin@example.com")).json()
+    assert all(i["href"].startswith("/") for i in body["items"])

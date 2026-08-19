@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 /** Grouped by the four questions an enterprise asks about any agent (PRD §2.2). */
 const NAV: { group: string; items: [string, string][] }[] = [
-  { group: "", items: [["Overview", "/"]] },
+  { group: "", items: [["Overview", "/"], ["Start here", "/start"]] },
   {
     group: "What is it",
     items: [
@@ -24,7 +24,10 @@ const NAV: { group: string; items: [string, string][] }[] = [
   },
   {
     group: "Does it work",
-    items: [["Evaluation", "/evals"]],
+    items: [
+      ["Evaluation", "/evals"],
+      ["Escalation", "/escalation"],
+    ],
   },
   {
     group: "Can we prove it",

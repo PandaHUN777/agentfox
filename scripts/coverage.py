@@ -410,6 +410,14 @@ PROBES: list[Probe] = [
         "scan|discovery|doctor|init_is_idempotent|quickstart|ungoverned",
     ),
     Probe(
+        "X-3",
+        "Control-plane onboarding and attention-first home",
+        "Adoption",
+        ["def onboarding", "def attention"],
+        [],
+        "checklist|attention|connected|onboarding",
+    ),
+    Probe(
         "I-1",
         "LangGraph-native SDK",
         "Integration",
