@@ -359,6 +359,86 @@ class DetectionFinding(Base, TimestampMixin):
     atlas_id: Mapped[str | None] = mapped_column(String(32))
 
 
+class EscalationPolicy(Base, TimestampMixin):
+    """P11-1 — the conditions under which this agent *must* hand off to a human.
+
+    Declared per agent, and deliberately separate from the guardrail policy: a
+    guardrail decides whether an action may proceed, an escalation policy decides
+    whether a human must be involved. Conflating them means an agent that is behaving
+    within policy and still failing the user has nothing that notices.
+    """
+
+    __tablename__ = "escalation_policies"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("esc"))
+    agent_id: Mapped[str | None] = mapped_column(String(40), index=True)  # None = default
+    #: Condition thresholds. Absent keys are not evaluated.
+    conditions_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    owner_role: Mapped[str] = mapped_column(String(64), default="support")
+    #: F5.6 — an escalation nobody owns within an SLA is a dropped escalation.
+    sla_minutes: Mapped[int] = mapped_column(Integer, default=60)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    mode: Mapped[str] = mapped_column(String(16), default="observe")  # observe | enforce
+
+
+class Handoff(Base, TimestampMixin):
+    """P11-6/7 — one hand-off to a human, with its context package and its clock.
+
+    Distinct from `ApprovalRequest`, which asks a human to authorise an *action*. A
+    hand-off transfers the *conversation*, and the failure modes are different: an
+    approval that expires denies safely, whereas a hand-off that expires leaves a real
+    person waiting.
+    """
+
+    __tablename__ = "handoffs"
+    __table_args__ = (Index("ix_handoffs_status_due", "status", "due_at"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("hnd"))
+    agent_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    trace_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    session_id: Mapped[str | None] = mapped_column(String(120), index=True)
+    reason: Mapped[str] = mapped_column(Text, default="")
+    #: Which declared conditions triggered it — the audit answer to "why a human?".
+    triggers_json: Mapped[list[Any]] = mapped_column(JSON, default=list)
+    #: F5.2 — the context the human receives. A hand-off without it is a failure even
+    #: though the hand-off itself happened.
+    context_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    completeness: Mapped[float] = mapped_column(Float, default=0.0)
+    owner_role: Mapped[str] = mapped_column(String(64), default="support")
+    owner_user_id: Mapped[str | None] = mapped_column(String(40))
+    due_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    acknowledged_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    resolved_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    # pending | acknowledged | resolved | breached
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    #: Set when the hand-off was created retroactively by missed-escalation detection
+    #: rather than at the time it should have happened.
+    detected_retroactively: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class ConversationTurn(Base, TimestampMixin):
+    """P11-3/5 — the per-turn record missed-escalation detection reads back.
+
+    Traces record what the *agent* did. This records what the *conversation* looked
+    like, which is what the escalation conditions are written against.
+    """
+
+    __tablename__ = "conversation_turns"
+    __table_args__ = (Index("ix_turns_session_index", "session_id", "turn_index"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("trn"))
+    session_id: Mapped[str] = mapped_column(String(120), index=True)
+    agent_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    trace_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    turn_index: Mapped[int] = mapped_column(Integer, default=0)
+    user_text: Mapped[str] = mapped_column(Text, default="")
+    agent_text: Mapped[str] = mapped_column(Text, default="")
+    #: Signals extracted at capture time — sentiment, abstention, repetition, topic.
+    signals_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    resolved_claimed: Mapped[bool] = mapped_column(Boolean, default=False)
+    escalated: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
 class GuardrailFeedback(Base, TimestampMixin):
     """P3-14 — a human's verdict on our verdict.
 

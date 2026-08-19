@@ -111,8 +111,13 @@ FAMILIES: dict[str, tuple[str, list[Mode]]] = {
             Mode("F4.5", "Inference disclosure", ["def inference_risk"]),
             Mode("F4.6", "Purpose limitation breach", ["def purpose_breach"]),
             Mode("F4.7", "MNPI / blackout / legal hold", ["def restricted_window"]),
-            Mode("F4.8", "Residency violation", ["allow_egress"], partial=True,
-                 note="deployment-level only; no per-record residency"),
+            Mode(
+                "F4.8",
+                "Residency violation",
+                ["allow_egress"],
+                partial=True,
+                note="deployment-level only; no per-record residency",
+            ),
         ],
     ),
     "F5": (
@@ -131,8 +136,13 @@ FAMILIES: dict[str, tuple[str, list[Mode]]] = {
         "Commitment, advice & liability",
         [
             Mode("F6.1", "Binding commitment", ["def detect_commitments"]),
-            Mode("F6.2", "Unlicensed advice", ["class SafetyLexiconDetector"], partial=True,
-                 note="lexicon only; no licensed-advice classifier"),
+            Mode(
+                "F6.2",
+                "Unlicensed advice",
+                ["class SafetyLexiconDetector"],
+                partial=True,
+                note="lexicon only; no licensed-advice classifier",
+            ),
             Mode("F6.3", "Missing AI disclosure", ["def disclosure_required"]),
             Mode("F6.4", "Adverse action without reason", ["def adverse_action_risk"]),
             Mode("F6.5", "Discriminatory outcome", ["def fairness_probe"]),
@@ -295,10 +305,15 @@ PROBES: list[Probe] = [
         "P11",
         "Escalation policy and missed-escalation detection",
         "11 Escalation",
-        ["def request_approval"],
-        ["def detect_missed_escalation"],
-        "escalation",
-        "approvals exist; missed-escalation detection absent",
+        [
+            "def request_approval",
+            "def detect_missed_escalation",
+            "def handoff_completeness",
+            "def detect_false_resolution",
+            "def breached_handoffs",
+        ],
+        [],
+        "escalation|handoff|missed_escalation|false_resolution|sentiment|abstention|turn_depth",
     ),
     # --- Layer E: Prove
     Probe(

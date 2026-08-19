@@ -10,13 +10,13 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | | |
 |---|---|
 | **Capabilities** | 32 tracked |
-| **Built** | 10 ✅ |
-| **Partial** | 9 ◐ |
+| **Built** | 11 ✅ |
+| **Partial** | 8 ◐ |
 | **Absent** | 13 ✗ |
-| **Weighted coverage** | **45%** *(partial counts half)* |
-| **Tests** | 356 |
-| **Lines** | 26,539 (src + tests) |
-| **Failure modes covered** | **19%** — 10 of 57 outright, 2 partial |
+| **Weighted coverage** | **47%** *(partial counts half)* |
+| **Tests** | 391 |
+| **Lines** | 28,214 (src + tests) |
+| **Failure modes covered** | **32%** — 17 of 57 outright, 2 partial |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
 in [traceability.md](traceability.md).
@@ -24,7 +24,7 @@ in [traceability.md](traceability.md).
 | ID | Pillar | Capability | Status | Tests | Note |
 |---|---|---|---|---|---|
 | `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 8 | connector-based estate discovery (P1-8) absent |
-| `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 9 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
+| `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 11 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 8 | no live IdP; Entra/Okta integration (P2-8) absent |
 | `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 36 | model-based detectors wired but need an opt-in weights download |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 6 | idempotency keys (P9-8) absent |
@@ -34,7 +34,7 @@ in [traceability.md](traceability.md).
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ✗ absent | — |  |
 | `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 19 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
-| `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ◐ partial | 1 | approvals exist; missed-escalation detection absent |
+| `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 11 |  |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 18 |  |
 | `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 9 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 13 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
@@ -69,7 +69,7 @@ above. The 50 modes come from [failure-modes.md](failure-modes.md).
 | **F2** Source authority & provenance | 6 | 1 | 0 | ◐ 1/6 | F2.1, F2.2, F2.3, F2.4, F2.6 |
 | **F3** Destructive action | 10 | 7 | 0 | ◐ 7/10 | F3.7, F3.9, F3.10 |
 | **F4** Entitlement & disclosure | 8 | 0 | 1 | ◐ 0.5/8 | F4.1, F4.2, F4.3, F4.4, F4.5, F4.6, F4.7 |
-| **F5** Escalation & resolution | 7 | 0 | 0 | ✗ 0/7 | F5.1, F5.2, F5.3, F5.4, F5.5, F5.6, F5.7 |
+| **F5** Escalation & resolution | 7 | 7 | 0 | ✅ 7/7 | — |
 | **F6** Commitment, advice & liability | 6 | 1 | 1 | ◐ 1.5/6 | F6.1, F6.3, F6.4, F6.5 |
 | **F7** Numeric, temporal & entity integrity | 7 | 1 | 0 | ◐ 1/7 | F7.1, F7.2, F7.3, F7.4, F7.5, F7.6 |
 | **F8** Context & retrieval integrity | 7 | 0 | 0 | ✗ 0/7 | F8.1, F8.2, F8.3, F8.4, F8.5, F8.6, F8.7 |

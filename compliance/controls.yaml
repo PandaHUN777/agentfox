@@ -411,6 +411,28 @@ controls:
       soc2: ["CC7.2"]
       owasp-llm: ["LLM05 Improper Output Handling"]
 
+  - key: NOM-RTG-10
+    title: Escalation to a human is governed, not merely available
+    objective: >
+      Each agent declares the conditions under which it must hand off to a human;
+      conversations that met a condition and did not escalate are detected after the
+      fact; hand-offs carry complete context, have a named owner and an SLA, and
+      resolution claims are checked against what the conversation actually shows.
+    family: NOM-RTG
+    pillar: 11
+    implemented_by: [P11-1, P11-2, P11-3, P11-4, P11-5, P11-6, P11-7]
+    evidence_sources: [handoffs, findings]
+    status_rule:
+      kind: presence
+      requires: [handoffs]
+      open_findings_degrade: [missed_escalation, handoff_sla_breach, false_resolution]
+    mappings:
+      eu-ai-act: ["Art. 14 — human oversight", "Art. 50"]
+      nist-ai-rmf: ["MANAGE 4.1", "GOVERN 3.2"]
+      iso-42001: ["A.9"]
+      soc2: ["CC2.2"]
+      owasp-llm: ["LLM06 Excessive Agency"]
+
   - key: NOM-RTG-09
     title: Generated actions are analysed before execution
     objective: >
