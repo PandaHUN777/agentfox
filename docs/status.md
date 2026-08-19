@@ -14,9 +14,9 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 14 ◐ |
 | **Absent** | 4 ✗ |
 | **Weighted coverage** | **72%** *(partial counts half)* |
-| **Tests** | 829 |
-| **Lines** | 45,178 (src + tests) |
-| **Failure modes covered** | **84%** — 47 of 57 outright, 2 partial |
+| **Tests** | 864 |
+| **Lines** | 45,924 (src + tests) |
+| **Failure modes covered** | **91%** — 51 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
@@ -29,11 +29,11 @@ in [traceability.md](traceability.md).
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 11 | no live IdP; Entra/Okta integration (P2-8) absent |
 | `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 41 | model-based detectors wired but need an opt-in weights download |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 10 | idempotency keys (P9-8) absent |
-| `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 9 | OpenFGA adapter is a declared seam, not an implementation |
+| `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 12 | OpenFGA adapter is a declared seam, not an implementation |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 47 |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 30 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ◐ partial | 27 | gates the ingestion and assembly path. Semantic chunk-boundary repair and automatic re-extraction of a corrupt document are not built — a finding is reported and the decision to drop the document belongs to the operator |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 29 | no Ragas adapter, model-based groundedness or annotation queue |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 31 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ◐ partial | 22 | attributes a failure to the step that originated the value and measures what each handoff dropped. Both work on constraints that were written down — an expectation the human held and never typed is invisible here, and no trace analysis recovers it |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 16 |  |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 29 |  |
@@ -46,7 +46,7 @@ in [traceability.md](traceability.md).
 | `PL-5` | Platform | Async workers | ✗ absent | — |  |
 | `PL-6` | Platform | HA-ready persistence | ✗ absent | — | Postgres supported; scale-out untested |
 | `PL-7` | Platform | Service-level fail-open | ✗ absent | — |  |
-| `PL-9` | Platform | Authentication and operator tokens | ◐ partial | 35 | OIDC/SCIM absent; tokens and the dev-mode gate ship |
+| `PL-9` | Platform | Authentication and operator tokens | ◐ partial | 36 | OIDC/SCIM absent; tokens and the dev-mode gate ship |
 | `PL-8` | Platform | Tenant isolation enforced at the session | ✅ built | 13 |  |
 | `X-1` | Adoption | One-line auto-instrumentation | ◐ partial | 10 | LangChain/LiteLLM client patching absent |
 | `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 14 |  |
@@ -78,7 +78,7 @@ above. The 50 modes come from [failure-modes.md](failure-modes.md).
 | **F3** Destructive action | 10 | 7 | 0 | ◐ 7/10 | F3.7, F3.9, F3.10 |
 | **F4** Entitlement & disclosure | 8 | 8 | 0 | ✅ 8/8 | — |
 | **F5** Escalation & resolution | 7 | 7 | 0 | ✅ 7/7 | — |
-| **F6** Commitment, advice & liability | 6 | 1 | 1 | ◐ 1.5/6 | F6.1, F6.3, F6.4, F6.5 |
+| **F6** Commitment, advice & liability | 6 | 5 | 1 | ◐ 5.5/6 | — |
 | **F7** Numeric, temporal & entity integrity | 7 | 7 | 0 | ✅ 7/7 | — |
 | **F8** Context & retrieval integrity | 7 | 5 | 1 | ◐ 5.5/7 | F8.3 |
 

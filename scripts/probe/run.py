@@ -1140,6 +1140,75 @@ def probe_delegation_cycle() -> Result:
 
 
 # ---------------------------------------------------------------------------
+# F6 commitment, disclosure and liability
+# ---------------------------------------------------------------------------
+#
+# Every probe here pairs the binding form with its near-identical hedged twin, because
+# the difficulty is not detecting a promise — it is not flagging the sentence next to
+# it. A check that cannot tell them apart gets switched off.
+
+
+def probe_binding_commitment() -> Result:
+    from nometria.commitments import detect_commitments
+
+    binding = detect_commitments("Your refund has been approved and we'll credit you today.")
+    hedged = detect_commitments("Refunds are usually approved within two days.")
+    buried = detect_commitments(
+        "Please note that outcomes are generally subject to review. "
+        "Your refund has been approved."
+    )
+    return bool(binding) and not hedged and bool(buried), (
+        f"'{binding[0].text}' detected as a {binding[0].kind}; the hedged twin is not "
+        "flagged; a promise behind a disclaimer sentence is still caught"
+    )
+
+
+def probe_ai_disclosure() -> Result:
+    from nometria.commitments import check_disclosure, disclosure_required
+
+    silent = check_disclosure("Hi! How can I help?", channel="chat")
+    stated = check_disclosure("Hi, I'm an AI assistant — how can I help?", channel="chat")
+    machine = disclosure_required(channel="batch", counterparty="service")
+    return silent.breach and not stated.breach and not machine.required, (
+        "an undisclosed human-facing reply breaches Article 50; saying so satisfies it; "
+        f"a service counterparty is exempt ({machine.reason})"
+    )
+
+
+def probe_adverse_action() -> Result:
+    from nometria.commitments import adverse_action_risk
+
+    silent = adverse_action_risk("declined", reasons=[], domain="lending")
+    boilerplate = adverse_action_risk(
+        "declined", reasons=["does not meet our criteria"], domain="lending"
+    )
+    proper = adverse_action_risk(
+        "declined",
+        reasons=["debt-to-income ratio above 45 percent"],
+        domain="lending",
+        text="Your application was declined because your debt-to-income ratio is above "
+             "our limit of 45 percent.",
+    )
+    return not silent.compliant and not boilerplate.compliant and proper.compliant, (
+        f"a reasonless decline in a statutory domain is a {silent.verdict}; "
+        "boilerplate counts as no reason; a specific communicated reason passes"
+    )
+
+
+def probe_fairness() -> Result:
+    from nometria.commitments import fairness_probe
+
+    disparate = fairness_probe({"a": (80, 100), "b": (40, 100)})
+    comparable = fairness_probe({"a": (80, 100), "b": (75, 100)})
+    tiny = fairness_probe({"a": (8, 10), "b": (4, 10)})
+    caught = disparate.investigate and not comparable.investigate and not tiny.investigate
+    return caught, (
+        f"ratio {disparate.ratio:.2f} flagged for investigation, {comparable.ratio:.2f} "
+        f"not; the same disparity on ten observations is withheld as underpowered"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Harness
 # ---------------------------------------------------------------------------
 
