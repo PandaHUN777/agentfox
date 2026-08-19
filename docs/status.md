@@ -14,9 +14,10 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 9 ◐ |
 | **Absent** | 7 ✗ |
 | **Weighted coverage** | **68%** *(partial counts half)* |
-| **Tests** | 592 |
-| **Lines** | 35,402 (src + tests) |
+| **Tests** | 636 |
+| **Lines** | 36,403 (src + tests) |
 | **Failure modes covered** | **61%** — 34 of 57 outright, 2 partial |
+| **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
 in [traceability.md](traceability.md).
@@ -26,7 +27,7 @@ in [traceability.md](traceability.md).
 | `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 8 | connector-based estate discovery (P1-8) absent |
 | `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 11 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 8 | no live IdP; Entra/Okta integration (P2-8) absent |
-| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 36 | model-based detectors wired but need an opt-in weights download |
+| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 37 | model-based detectors wired but need an opt-in weights download |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 7 | idempotency keys (P9-8) absent |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ✗ absent | — |  |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 27 |  |
@@ -35,9 +36,9 @@ in [traceability.md](traceability.md).
 | `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 22 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ✗ absent | — |  |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 13 |  |
-| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 24 |  |
+| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 25 |  |
 | `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 11 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
-| `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 13 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
+| `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 14 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
 | `PL-2` | Platform | Database migrations | ✅ built | 2 |  |
 | `PL-3` | Platform | Kill switch and quarantine | ✅ built | 7 |  |
@@ -47,7 +48,7 @@ in [traceability.md](traceability.md).
 | `PL-7` | Platform | Service-level fail-open | ✗ absent | — |  |
 | `PL-8` | Platform | Tenant isolation enforced at the session | ✅ built | 11 |  |
 | `X-1` | Adoption | One-line auto-instrumentation | ◐ partial | 8 | LangChain/LiteLLM client patching absent |
-| `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 11 |  |
+| `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 12 |  |
 | `X-3` | Adoption | Control-plane onboarding and attention-first home | ✅ built | 6 |  |
 | `I-1` | Integration | LangGraph-native SDK | ✅ built | 2 |  |
 | `I-2` | Integration | MCP inline governance | ✅ built | 11 |  |

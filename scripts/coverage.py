@@ -512,6 +512,34 @@ def evaluate(probe: Probe, blob: str) -> tuple[str, int]:
     return BUILT, tests
 
 
+def evasion_score_line() -> str:
+    """Measured recall against the adversarial corpus, not asserted.
+
+    A detector's quality is the one thing a probe genuinely cannot see — `grep` finds
+    the class, not whether it works — so this runs the corpus.
+    """
+    try:
+        sys.path.insert(0, str(ROOT))
+        from nometria.guardrails import all_detectors
+        from nometria.guardrails.base import DetectionContext
+        from tests.corpus.injection import ATTACKS, BENIGN
+
+        detector = all_detectors()["injection.heuristic"]
+        context = DetectionContext(surface="tool_result", taint_source="tool_result")
+
+        def fires(text: str) -> bool:
+            return bool(detector.detect(text, context).detections)
+
+        caught = sum(1 for case in ATTACKS if fires(case.text))
+        false_positives = sum(1 for case in BENIGN if fires(case.text))
+        return (
+            f"| **Injection recall** | **{caught / len(ATTACKS):.0%}** — {caught}/{len(ATTACKS)} "
+            f"adversarial, {false_positives} false positive(s) on {len(BENIGN)} benign |"
+        )
+    except Exception as exc:  # pragma: no cover - reporting must not break the report
+        return f"| **Injection recall** | not measured ({exc}) |"
+
+
 def family_rows(blob: str) -> tuple[list[str], int, int, int]:
     """Score the 50 catalogued failure modes. This is the scorecard that matters."""
     rows: list[str] = []
@@ -565,6 +593,7 @@ def render() -> str:
 
     pct = round(100 * (tally[BUILT] + 0.5 * tally[PARTIAL]) / total)
     frows, fcovered, fpartial, ftotal = family_rows(blob)
+    evasion = evasion_score_line()
     fpct = round(100 * (fcovered + 0.5 * fpartial) / ftotal)
     return f"""# Implementation status
 
@@ -585,6 +614,7 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Tests** | {test_total} |
 | **Lines** | {loc:,} (src + tests) |
 | **Failure modes covered** | **{fpct}%** — {fcovered} of {ftotal} outright, {fpartial} partial |
+{evasion}
 
 Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
 in [traceability.md](traceability.md).

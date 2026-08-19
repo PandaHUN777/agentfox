@@ -22,10 +22,104 @@ import base64
 import re
 
 from ..base import BaseDetector, Detection, DetectionContext, redact_sample, snippet, taint_rank
+from ..normalize import evasion_score, normalize
 
 OWASP = "LLM01"
 ATLAS = "AML.T0051"
 ATLAS_JAILBREAK = "AML.T0054"
+
+# --- 1b. Paraphrase and non-English -----------------------------------------
+# The corpus showed the original table caught canonical English and nothing else: an
+# attacker who rewrites the sentence, or writes it in French, walked straight through.
+# Neither is a sophisticated attack — non-English content is not an attack at all, it
+# is Tuesday at any multinational.
+
+_PARAPHRASE: list[tuple[str, str, float]] = [
+    # The instruction-override *concept* without its canonical wording.
+    (
+        r"\b(?:rules?|instructions?|guidelines?|constraints?)\s+(?:you\s+were\s+given\s+)?"
+        r"(?:earlier|before|previously|above)?\s*(?:no\s+longer\s+(?:apply|applies)|"
+        r"are\s+(?:now\s+)?(?:void|cancelled|canceled|suspended|revoked))\b",
+        "OVERRIDE",
+        0.8,
+    ),
+    (
+        r"\bset\s+aside\s+(?:your|the|all)\s+(?:earlier|previous|prior|original)\s+"
+        r"(?:instruction|guidance|rule|direction)s?\b",
+        "OVERRIDE",
+        0.8,
+    ),
+    (r"\bforget\s+what\s+you\s+(?:were|have\s+been)\s+told\b", "OVERRIDE", 0.8),
+    (r"\bwhatever\s+(?:rules?|instructions?)\s+you\s+(?:were\s+given|have)\b", "OVERRIDE", 0.75),
+    (
+        r"\b(?:here\s+are\s+the\s+new|new)\s+(?:instruction|rule|directive)s?\s*[:.]",
+        "OVERRIDE",
+        0.7,
+    ),
+    (r"\btreat\s+the\s+following\s+as\s+your\s+only\s+(?:task|instruction)\b", "OVERRIDE", 0.8),
+    (r"\byour\s+(?:only|real|actual|true)\s+(?:task|job|purpose)\s+is\b", "OVERRIDE", 0.65),
+    # Persona replacement. The named jailbreaks churn constantly, so this matches the
+    # *shape* — "you are now X, and X has no limits" — rather than the roster.
+    (
+        r"\byou\s+are\s+now\s+\w+\b.{0,60}?\b(?:no|without|free\s+from)\s+"
+        r"(?:restrictions?|limits?|rules?|filters?|guidelines?)\b",
+        "PERSONA",
+        0.8,
+    ),
+    (
+        r"\bpretend\s+(?:to\s+be|you\s+are)\s+.{0,40}?\bno\s+(?:restrictions?|limits?)\b",
+        "PERSONA",
+        0.8,
+    ),
+    (r"\bact\s+as\s+(?:if\s+you\s+(?:have|had)\s+no|an?\s+unrestricted)\b", "PERSONA", 0.75),
+]
+
+#: The same concept across the languages an enterprise agent actually meets. Each
+#: requires the *verb* (ignore/forget) as well as the object, so ordinary sentences
+#: that merely contain the word "instructions" do not match.
+_MULTILINGUAL: list[tuple[str, str, float]] = [
+    # French
+    (
+        r"\b(?:ignorez?|oubliez?)\s+(?:toutes?\s+)?les\s+instructions?\s+"
+        r"(?:pr[ée]c[ée]dentes?|ant[ée]rieures?)\b",
+        "OVERRIDE",
+        0.85,
+    ),
+    # German
+    (
+        r"\b(?:ignoriere?|vergiss|missachte)\s+(?:alle\s+)?(?:vorherigen?|bisherigen?|"
+        r"vorangegangenen?)\s+(?:Anweisungen|Anleitungen|Regeln)\b",
+        "OVERRIDE",
+        0.85,
+    ),
+    # Spanish / Portuguese
+    (
+        r"\b(?:ignora|olvida|ignore|esque[çc]a)\s+(?:todas?\s+)?(?:las?|as)\s+"
+        r"(?:instrucciones|instru[çc][õo]es)\s+(?:anteriores|previas|pr[ée]vias)\b",
+        "OVERRIDE",
+        0.85,
+    ),
+    # Italian
+    (r"\bignora\s+(?:tutte\s+)?le\s+istruzioni\s+precedenti\b", "OVERRIDE", 0.85),
+    # Russian
+    (r"(?:игнорируй|забудь|проигнорируй)\s+(?:все\s+)?предыдущие\s+инструкции", "OVERRIDE", 0.85),
+    # Japanese
+    (
+        r"(?:以前|これまで|上記)の(?:指示|命令)(?:を|は)?\s*(?:すべて|全て)?\s*無視",
+        "OVERRIDE",
+        0.85,
+    ),
+    # Chinese
+    (r"忽略(?:所有)?(?:之前|先前|以上)的(?:指令|指示|规则)", "OVERRIDE", 0.85),
+    # Korean
+    (r"이전\s*지시(?:사항)?(?:을|를)?\s*무시", "OVERRIDE", 0.85),
+]
+
+_EXTRA_LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
+    (re.compile(pattern, re.I | re.UNICODE), f"INJECTION.INSTRUCTION_{kind}", score)
+    for pattern, kind, score in (_PARAPHRASE + _MULTILINGUAL)
+]
+
 
 # --- 1. Lexical signals ----------------------------------------------------
 # (pattern, entity, base_score). Scores are calibrated so that a single weak
@@ -33,7 +127,7 @@ ATLAS_JAILBREAK = "AML.T0054"
 _LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
     (
         re.compile(
-            r"\bignore\s+(?:all\s+)?(?:the\s+)?(?:previous|prior|above|earlier)\s+"
+            r"\bignore\s*(?:all\s*)?(?:the\s*)?(?:previous|prior|above|earlier)\s*"
             r"(?:instruction|prompt|rule|direction|message)s?\b",
             re.I,
         ),
@@ -42,7 +136,7 @@ _LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
     ),
     (
         re.compile(
-            r"\bdisregard\s+(?:all\s+)?(?:previous|prior|the\s+above|your)\s+"
+            r"\bdisregard\s*(?:all\s*)?(?:previous|prior|the\s*above|your)\s*"
             r"(?:instruction|rule|guideline|training)s?\b",
             re.I,
         ),
@@ -51,7 +145,7 @@ _LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
     ),
     (
         re.compile(
-            r"\bforget\s+(?:everything|all)\s+(?:you\s+)?(?:were\s+told|know|above)\b", re.I
+            r"\bforget\s*(?:everything|all)\s*(?:you\s*)?(?:were\s*told|know|above)\b", re.I
         ),
         "INJECTION.INSTRUCTION_OVERRIDE",
         0.8,
@@ -176,6 +270,9 @@ def _decodes_to_suspicious_text(blob: str) -> str | None:
 
 
 class InjectionHeuristicDetector(BaseDetector):
+    # This detector iterates the views itself, so that it can raise the score for
+    # content that only matched after de-obfuscation and flag the obfuscation alone.
+    handles_views = True
     key = "injection.heuristic"
     version = "1.2"
     surfaces = ("input", "retrieved", "tool_result", "output")
@@ -192,22 +289,70 @@ class InjectionHeuristicDetector(BaseDetector):
         surface_boost = 0.1 if context.surface in ("retrieved", "tool_result") else 0.0
         boost = provenance_boost + surface_boost
 
-        for pattern, entity, base_score in _LEXICAL:
-            for m in pattern.finditer(content):
+        # Every lexical pattern is matched against every normalised reading of the
+        # content, not just the raw bytes. The corpus is unambiguous about why: the
+        # misses were separators, homoglyphs, fullwidth, base64 and percent-encoding —
+        # none of them an attack on the pattern, all of them an attack on the
+        # assumption that what the detector reads is what the model reads.
+        normalised = normalize(content)
+        seen: set[tuple[str, int, int]] = set()
+
+        for pattern, entity, base_score in _LEXICAL + _EXTRA_LEXICAL:
+            for view in normalised.views:
+                match = pattern.search(view.text)
+                if match is None:
+                    continue
+                start, end = view.origin(match.start(), match.end())
+                key = (entity, start, end)
+                if key in seen:
+                    continue
+                seen.add(key)
                 atlas = ATLAS_JAILBREAK if "JAILBREAK" in entity or "PERSONA" in entity else ATLAS
+                # Content that had to be de-obfuscated before it matched is more
+                # suspicious than content that matched as written, not less.
+                obfuscation_boost = 0.1 if view.kind != "normalized" else 0.0
                 out.append(
                     Detection(
                         entity_type=entity,
-                        score=min(1.0, base_score + boost),
-                        start=m.start(),
-                        end=m.end(),
-                        sample=snippet(content, m.start(), m.end()),
+                        score=min(1.0, base_score + boost + obfuscation_boost),
+                        start=start,
+                        end=end,
+                        sample=snippet(content, start, end),
                         owasp_id="LLM07" if "SYSTEM_PROMPT_LEAK" in entity else OWASP,
                         atlas_id=atlas,
-                        detail={"signal": "lexical", "taint": context.taint_source},
+                        detail={
+                            "signal": "lexical",
+                            "taint": context.taint_source,
+                            "view": view.kind,
+                            "transforms": normalised.transforms,
+                        },
                     )
                 )
-                break  # one hit per pattern is enough; keeps the finding list readable
+                break  # one view is enough; the rest would report the same thing
+
+        # Obfuscation is evidence in its own right. Ordinary content is occasionally
+        # fullwidth or occasionally base64; it is rarely both and almost never
+        # zero-width. Content that went to lengths not to be read is worth a finding
+        # even when nothing inside it matched — that is the case where a pattern set
+        # is about to be one technique behind.
+        evasion = evasion_score(normalised)
+        if evasion >= 0.5 and taint_rank(context.taint_source) >= 2:
+            out.append(
+                Detection(
+                    entity_type="INJECTION.OBFUSCATED_CONTENT",
+                    score=min(1.0, evasion + boost),
+                    start=0,
+                    end=min(len(content), 120),
+                    sample=snippet(content, 0, min(len(content), 120)),
+                    owasp_id=OWASP,
+                    atlas_id=ATLAS,
+                    detail={
+                        "signal": "evasion",
+                        "techniques": [e.get("kind") for e in normalised.evasion],
+                        "taint": context.taint_source,
+                    },
+                )
+            )
 
         # Structural: fabricated role turns inside content that should be plain data.
         for pattern, entity in (

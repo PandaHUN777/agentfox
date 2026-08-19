@@ -101,11 +101,16 @@ class BaseDetector:
     version: str = "1"
     surfaces: tuple[str, ...] = SURFACES
 
+    #: Set by detectors that normalise internally, so this class does not do it twice.
+    handles_views: bool = False
+
     def available(self) -> bool:  # pragma: no cover - overridden by adapters
         return True
 
     def detect(self, content: str, context: DetectionContext) -> DetectorResult:
         detections = self._detect(content or "", context)
+        if not self.handles_views:
+            detections.extend(self._detect_obfuscated(content or "", context, detections))
         score = max((d.score for d in detections), default=0.0)
         return DetectorResult(
             detector_key=self.key,
@@ -113,6 +118,51 @@ class BaseDetector:
             score=score,
             detections=detections,
         )
+
+    def _detect_obfuscated(
+        self, content: str, context: DetectionContext, already: list[Detection]
+    ) -> list[Detection]:
+        """Re-run this detector over de-obfuscated readings of the same content.
+
+        Every detector inherits evasion resistance here rather than implementing it,
+        which matters because the blindness was not confined to injection: a
+        base64-encoded API key or a zero-width-salted SSN passed the DLP detectors
+        untouched, which is an exfiltration path with a governance layer watching.
+
+        Ordinary content normalises to a single view, so this costs nothing on the
+        common path. Spans are mapped back to the original text, because a detection
+        reported at coordinates in a decoded string would point at characters the user
+        never sent — and redaction would then corrupt the payload.
+        """
+        from .normalize import normalize
+
+        normalised = normalize(content)
+        if len(normalised.views) <= 1:
+            return []
+
+        seen = {(d.entity_type, d.start, d.end) for d in already}
+        extra: list[Detection] = []
+        # Every view whose text differs from what `_detect` already saw. Skipping the
+        # primary view was wrong: it is the *cleaned* one, so zero-width-salted content
+        # was normalised and then never re-scanned.
+        for view in normalised.views:
+            if view.text == content:
+                continue
+            for found in self._detect(view.text, context):
+                start, end = view.origin(found.start, found.end)
+                key = (found.entity_type, start, end)
+                if key in seen:
+                    continue
+                seen.add(key)
+                found.start, found.end = start, end
+                found.sample = redact_sample(content[start:end])
+                found.detail = {**found.detail, "view": view.kind, "obfuscated": True}
+                # Content that had to be decoded before it matched is worse than
+                # content that matched as written: nobody base64-encodes a credential
+                # they intend to handle correctly.
+                found.score = min(1.0, found.score + 0.1)
+                extra.append(found)
+        return extra
 
     def _detect(self, content: str, context: DetectionContext) -> list[Detection]:
         raise NotImplementedError
