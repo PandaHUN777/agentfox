@@ -36,6 +36,7 @@ from ..models import (
     DelegationEdge,
     Finding,
     Identity,
+    as_aware,
     utcnow,
 )
 from ..policy.model import COMPARATORS
@@ -444,7 +445,8 @@ def resolve_approval(
     request = session.get(ApprovalRequest, approval_id)
     if request is None or request.status != "pending":
         return request
-    if request.expires_at and request.expires_at < utcnow():
+    expires = as_aware(request.expires_at)
+    if expires and expires < utcnow():
         request.status = "expired"
         session.flush()
         return request

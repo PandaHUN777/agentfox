@@ -11,12 +11,12 @@ from collections.abc import Iterator
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, Request
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_session
-from ..models import ApiToken, User
-from ..tenancy import bind_session, system_scope
+from ..models import User
+from ..tenancy import bind_session
+from .auth import AuthenticationRequired, authenticate, resolve_agent
 
 # Route family -> roles permitted to mutate. Everyone listed in READ_ROLES may read.
 WRITE_ROLES: dict[str, set[str]] = {
@@ -49,63 +49,17 @@ def current_user(
     authorization: Annotated[str | None, Header()] = None,
     x_nometria_user: Annotated[str | None, Header()] = None,
 ) -> User:
-    """Resolve the control-plane caller.
+    """Resolve the control-plane caller and bind their tenant.
 
-    In the MVP self-host deployment there is no IdP wired (PRD §6.3), so a
-    development identity header is accepted. That shortcut is confined to this one
-    function precisely so that wiring OIDC later touches nothing else.
+    All of the reasoning lives in :mod:`nometria.gateway.auth`, so there is exactly one
+    place that decides who a caller is — the previous arrangement documented the
+    development shortcut as "confined to this function", which was true and did not
+    stop it being live in production.
     """
-    token = None
-    if authorization and authorization.lower().startswith("bearer "):
-        token = authorization.split(" ", 1)[1]
-
-    # Authentication is the one lookup that legitimately precedes tenancy: we cannot
-    # know which tenant to filter by until we know who is calling. It runs in system
-    # scope for exactly that reason, and binds the tenant immediately afterwards so
-    # nothing downstream is unscoped.
-    if token and token.startswith("nom_api_"):
-        prefix = token[:16]
-        with system_scope("resolving an API token to its user"):
-            candidates = list(
-                session.scalars(select(ApiToken).where(ApiToken.key_prefix == prefix))
-            )
-        for row in candidates:
-            if row.revoked_at:
-                continue
-            from argon2 import PasswordHasher
-            from argon2.exceptions import VerifyMismatchError
-
-            try:
-                PasswordHasher().verify(row.key_hash, token)
-            except VerifyMismatchError:
-                continue
-            with system_scope("resolving an API token to its user"):
-                user = session.get(User, row.user_id)
-            if user and user.active:
-                return _bind(request, session, user)
-        raise HTTPException(status_code=401, detail="invalid API token")
-
-    email = x_nometria_user or "admin@example.com"
-    with system_scope("resolving a development identity header to its user"):
-        user = session.scalar(select(User).where(User.email == email))
-    if user is None or not user.active:
-        raise HTTPException(
-            status_code=401,
-            detail=f"unknown user '{email}'. Send X-Nometria-User or a nom_api_ bearer token.",
-        )
-    return _bind(request, session, user)
-
-
-def _bind(request: Request, session: Session, user: User) -> User:
-    """Bind the caller's tenant to the request's session.
-
-    Bound to the session rather than to a context variable because FastAPI resolves
-    dependencies and runs handlers in different threadpool contexts — a context
-    variable set here is simply not visible to the route, for sync and async endpoints
-    alike. The session is the one object both reliably share, and the tenant is a
-    property of the unit of work anyway.
-    """
-    bind_session(session, user.org_id)
+    try:
+        user = authenticate(session, authorization=authorization, header_user=x_nometria_user)
+    except AuthenticationRequired as exc:
+        raise HTTPException(status_code=401, detail=exc.detail) from exc
     request.state.user = user
     request.state.org_id = user.org_id
     return user
@@ -129,14 +83,30 @@ def require(family: str):
 
 
 def agent_credential(
+    session: Session = Depends(get_session),
     authorization: Annotated[str | None, Header()] = None,
 ) -> str | None:
-    """Extract an agent key (``nom_agt_…``) from the inline request."""
-    if authorization and authorization.lower().startswith("bearer "):
-        token = authorization.split(" ", 1)[1]
-        if token.startswith("nom_agt_"):
-            return token
-    return None
+    """Extract an agent key from the inline request, and bind that agent's tenant.
+
+    The binding is the part that was missing. Without it every governed completion ran
+    in the deployment's default org whatever the agent's owner — and once isolation
+    was in place the credential lookup was itself filtered to that org, so an agent in
+    any other tenant could not authenticate at all.
+
+    An absent or unrecognised credential is not an error here: the inline path
+    deliberately serves unregistered agents so that shadow traffic is *observed*
+    rather than turned away (P1-6). It simply stays in the default tenant.
+    """
+    if not (authorization and authorization.lower().startswith("bearer ")):
+        return None
+    token = authorization.split(" ", 1)[1]
+    if not token.startswith("nom_agt_"):
+        return None
+    resolved = resolve_agent(session, token)
+    if resolved is not None:
+        _identity, org_id = resolved
+        bind_session(session, org_id)
+    return token
 
 
 def session_iter() -> Iterator[Session]:

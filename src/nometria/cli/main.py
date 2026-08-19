@@ -55,9 +55,11 @@ app.add_typer(db_app, name="db")
 # The three commands a new user runs, registered as top-level verbs. The rest of this
 # CLI is right for an operator running a governance programme and wrong for the first
 # ten minutes.
+from .auth_cli import register as _register_auth  # noqa: E402
 from .onboarding import register as _register_onboarding  # noqa: E402
 
 _register_onboarding(app)
+_register_auth(app)
 
 
 def _session():

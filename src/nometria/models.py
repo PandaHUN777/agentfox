@@ -34,6 +34,19 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from . import ids
 
 
+def as_aware(value: dt.datetime | None) -> dt.datetime | None:
+    """Attach UTC to a datetime that lost its timezone in storage.
+
+    SQLite has no timezone type, so a value written as aware comes back naive and
+    comparing it to :func:`utcnow` raises. That turned every credential *with an
+    expiry* into a 500 on the inline path — invisible until agent credentials were
+    actually resolved there, because nothing else read the field.
+    """
+    if value is None or value.tzinfo is not None:
+        return value
+    return value.replace(tzinfo=dt.UTC)
+
+
 def utcnow() -> dt.datetime:
     return dt.datetime.now(dt.UTC)
 
@@ -250,7 +263,8 @@ class Credential(Base, TimestampMixin):
     def active(self) -> bool:
         if self.revoked_at:
             return False
-        if self.expires_at and self.expires_at < utcnow():
+        expires = as_aware(self.expires_at)
+        if expires and expires < utcnow():
             return False
         return True
 

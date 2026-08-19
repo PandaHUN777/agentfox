@@ -69,6 +69,14 @@ class Settings(BaseSettings):
     accept_restricted_model_licenses: bool = False
     granite_guardian_model: str = "ibm-granite/granite-guardian-3.0-2b"
 
+    # --- Authentication --------------------------------------------------
+    # auto | development | token | oidc
+    #
+    # `auto` follows `environment`: the unverified identity header is accepted in
+    # development and refused everywhere else, including in any environment name we do
+    # not recognise. A typo in a deployment variable must not silently open the door.
+    auth_mode: str = "auto"
+
     # --- Action assurance (P9) -------------------------------------------
     # The dialect artefacts are parsed against. Wrong dialect means wrong parse, and
     # a wrong parse fails closed rather than passing through.

@@ -148,16 +148,24 @@ def set_current_org(org_id: str) -> None:
 
 
 @contextmanager
-def system_scope(reason: str) -> Iterator[None]:
+def system_scope(reason: str, *, routine: bool = False) -> Iterator[None]:
     """Read across every tenant. Requires a reason, and says so in the log.
 
-    There are a handful of legitimate uses — schema migration, chain verification over
-    the whole log, operator tooling. All of them are rare, none is on a request path,
-    and each is a place where a mistake is a data breach. Requiring a reason makes the
-    grep for "who bypasses tenancy" return a list of answers rather than a list of call
-    sites.
+    Legitimate uses fall into two groups. Most are rare and off the request path —
+    schema migration, chain verification over the whole log, operator tooling — and
+    each is a place where a mistake is a data breach, so they log at warning level.
+
+    The exception is authentication, which is unavoidably cross-tenant: you cannot
+    filter by tenant until you know whose tenant it is. That happens on every single
+    request, and warning about it would bury the warnings that matter under one line
+    per request until nobody reads any of them. Those pass ``routine=True`` and log at
+    debug — still greppable, no longer noise.
     """
-    log.warning("tenancy: cross-tenant scope entered — %s", reason)
+    log.log(
+        logging.DEBUG if routine else logging.WARNING,
+        "tenancy: cross-tenant scope entered — %s",
+        reason,
+    )
     token = _SYSTEM_SCOPE.set(True)
     try:
         yield

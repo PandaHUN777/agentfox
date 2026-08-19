@@ -9,13 +9,13 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 
 | | |
 |---|---|
-| **Capabilities** | 36 tracked |
+| **Capabilities** | 37 tracked |
 | **Built** | 20 ✅ |
-| **Partial** | 9 ◐ |
+| **Partial** | 10 ◐ |
 | **Absent** | 7 ✗ |
 | **Weighted coverage** | **68%** *(partial counts half)* |
-| **Tests** | 636 |
-| **Lines** | 36,403 (src + tests) |
+| **Tests** | 658 |
+| **Lines** | 37,278 (src + tests) |
 | **Failure modes covered** | **61%** — 34 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -30,7 +30,7 @@ in [traceability.md](traceability.md).
 | `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 37 | model-based detectors wired but need an opt-in weights download |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 7 | idempotency keys (P9-8) absent |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ✗ absent | — |  |
-| `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 27 |  |
+| `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 30 |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 20 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ✗ absent | — |  |
 | `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 22 | no Ragas adapter, model-based groundedness or annotation queue |
@@ -46,9 +46,10 @@ in [traceability.md](traceability.md).
 | `PL-5` | Platform | Async workers | ✗ absent | — |  |
 | `PL-6` | Platform | HA-ready persistence | ✗ absent | — | Postgres supported; scale-out untested |
 | `PL-7` | Platform | Service-level fail-open | ✗ absent | — |  |
-| `PL-8` | Platform | Tenant isolation enforced at the session | ✅ built | 11 |  |
+| `PL-9` | Platform | Authentication and operator tokens | ◐ partial | 31 | OIDC/SCIM absent; tokens and the dev-mode gate ship |
+| `PL-8` | Platform | Tenant isolation enforced at the session | ✅ built | 13 |  |
 | `X-1` | Adoption | One-line auto-instrumentation | ◐ partial | 8 | LangChain/LiteLLM client patching absent |
-| `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 12 |  |
+| `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 13 |  |
 | `X-3` | Adoption | Control-plane onboarding and attention-first home | ✅ built | 6 |  |
 | `I-1` | Integration | LangGraph-native SDK | ✅ built | 2 |  |
 | `I-2` | Integration | MCP inline governance | ✅ built | 11 |  |

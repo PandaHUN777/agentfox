@@ -247,6 +247,23 @@ def doctor(as_json: bool = typer.Option(False, "--json")) -> None:
     else:
         add("ok", "enforcement", f"{enforcing} of {decisions} decisions enforced")
 
+    # Authentication first: it is the check most likely to be wrong and most costly
+    # when it is, and a deployment that fails it does not need to read the rest.
+    from ..gateway.auth import header_identity_allowed
+
+    if header_identity_allowed():
+        add(
+            "warn"
+            if settings.environment.lower() in ("development", "dev", "test", "local")
+            else "bad",
+            "authentication",
+            f"the X-Nometria-User header is accepted (environment={settings.environment}, "
+            f"auth_mode={settings.auth_mode}) — anyone who can reach this port is any "
+            "user they name. Fine locally, unacceptable anywhere else.",
+        )
+    else:
+        add("ok", "authentication", "API tokens required; the identity header is refused")
+
     detectors = available_detectors()
     add(
         "ok" if detectors else "bad",

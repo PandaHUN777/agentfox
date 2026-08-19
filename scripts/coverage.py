@@ -393,6 +393,15 @@ PROBES: list[Probe] = [
     # --- Integrations
     # --- Adoption surface: the reason any of the above gets installed at all.
     Probe(
+        "PL-9",
+        "Authentication and operator tokens",
+        "Platform",
+        ["def authenticate", "def issue_token", "def header_identity_allowed"],
+        ["def resolve_oidc"],
+        "auth|token|credential|header_identity|production_refuses",
+        "OIDC/SCIM absent; tokens and the dev-mode gate ship",
+    ),
+    Probe(
         "PL-8",
         "Tenant isolation enforced at the session",
         "Platform",
