@@ -1491,6 +1491,115 @@ def probe_source_disagreement() -> Result:
 
 
 # ---------------------------------------------------------------------------
+# Platform: what the governance layer does when it cannot do its job
+# ---------------------------------------------------------------------------
+
+
+def probe_fail_open_bounded() -> Result:
+    """A control failing open silently is indistinguishable from one that works."""
+    import datetime as dt
+
+    from nometria.availability import (
+        CLOSED,
+        OPEN,
+        DegradationLedger,
+        FailPolicy,
+        UnsafeFailMode,
+        health,
+        service_fallback,
+    )
+
+    t0 = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
+    ledger = DegradationLedger()
+    for _ in range(100):
+        ledger.observe_request(t0)
+
+    policy = FailPolicy("pii_detection", OPEN, max_open_seconds=120)
+    first = service_fallback("pii_detection", "timeout", policy=policy,
+                             ledger=ledger, now=t0)
+    later = t0 + dt.timedelta(seconds=300)
+    ledger.observe_request(later)
+    expired = service_fallback("pii_detection", "timeout", policy=policy,
+                               ledger=ledger, now=later)
+    shut = service_fallback("secret_detection", "timeout",
+                            policy=FailPolicy("secret_detection", CLOSED),
+                            ledger=ledger, now=t0)
+
+    refused = False
+    try:
+        FailPolicy("tenant_isolation", OPEN)
+    except UnsafeFailMode:
+        refused = True
+
+    caught = (
+        first.verdict == "allow"
+        and ledger.history("pii_detection")
+        and expired.verdict == "block" and expired.escalated
+        and shut.verdict == "block"
+        and refused
+        and not health(ledger, now=later)["healthy"]
+    )
+    return caught, (
+        "a fail-open request is allowed and recorded so it can be re-examined; after "
+        "300s past a 120s budget it converts to blocking; tenant_isolation cannot be "
+        "declared fail-open at all; health reports the control as degraded"
+    )
+
+
+def probe_backpressure() -> Result:
+    import datetime as dt
+
+    from nometria.availability import AdmissionController
+
+    t0 = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
+    controller = AdmissionController(rate_per_second=1, burst=1, max_concurrent=1)
+    controller.admit(priority="batch", now=t0)
+    batch = controller.admit(priority="batch", now=t0)
+    controller.enter()
+    interactive = controller.admit(priority="interactive", now=t0)
+    operator = controller.admit(priority="operator", now=t0)
+
+    healthy = AdmissionController(rate_per_second=50, burst=100, max_concurrent=64)
+    ordinary = all(healthy.admit(now=t0).admitted for _ in range(100))
+
+    caught = (
+        not batch.admitted and batch.verdict == "shed"
+        and not interactive.admitted and operator.admitted and ordinary
+    )
+    return caught, (
+        "over-limit traffic is refused rather than admitted unchecked, batch is shed "
+        "before interactive, operator traffic survives saturation so the kill switch "
+        "still works, and 100 ordinary requests are all admitted"
+    )
+
+
+def probe_loop_shape() -> Result:
+    from nometria.agent_loop import govern_loop
+
+    def run(seq):
+        return govern_loop([{"tool": t, "arguments": a, "observation": o}
+                            for t, a, o in seq])
+
+    cycle = run([(t, {"n": i}, i) for i, t in enumerate(["a", "b"] * 3)])
+    repeat = run([("crm.lookup", {"id": 1}, "x")] * 4)
+    stuck = run([(f"t{i}", {"i": i}, "unchanged") for i in range(7)])
+    healthy = run([(f"t{i}", {"i": i}, i) for i in range(8)])
+    paging = run([("search", {"page": i}, i) for i in range(5)])
+
+    caught = (
+        cycle.decision == "stop" and repeat.decision == "stop"
+        and stuck.decision == "escalate"
+        and healthy.decision == "continue" and paging.decision == "continue"
+    )
+    return caught, (
+        f"an alternating {cycle.evidence.get('cycle')} pair is caught where per-tool "
+        "counting cannot see it; an identical re-issued call stops the run; steps "
+        f"{stuck.evidence.get('from_step')}-{stuck.evidence.get('to_step')} producing "
+        "nothing new escalate; paging and varied work continue"
+    )
+
+
+# ---------------------------------------------------------------------------
 # Harness
 # ---------------------------------------------------------------------------
 

@@ -420,8 +420,23 @@ PROBES: list[Probe] = [
         [],
         "kill|quarantine|control_",
     ),
-    Probe("PL-4", "Agent loop governance", "Platform", ["def govern_loop"], [], ""),
-    Probe("PL-5", "Async workers", "Platform", ["class JobQueue"], [], ""),
+    Probe(
+        "PL-4", "Agent loop governance", "Platform",
+        ["def govern_loop", "class LoopGovernor"], [], "",
+        "governs the run rather than the step: identical re-issued calls, alternating "
+        "cycles, and steps producing no new observation. All three are visible without "
+        "understanding the task, which is what keeps it deterministic — an agent that "
+        "is wrong but varied still looks like an agent working",
+        test_files=("test_platform_runtime.py",),
+    ),
+    Probe(
+        "PL-5", "Async workers", "Platform",
+        ["class JobQueue", "def run_pending"], [], "",
+        "in-process with retries and a dead letter that is public state rather than a "
+        "log line. The interface is the deliverable; a Redis or SQS implementation "
+        "belongs behind it, and building that before anyone runs this at that scale "
+        "would be committing to infrastructure early",
+    ),
     Probe(
         "PL-6",
         "HA-ready persistence",
@@ -429,9 +444,19 @@ PROBES: list[Probe] = [
         ["def configure_pool"],
         [],
         "",
-        "Postgres supported; scale-out untested",
+        "pooling and pre-ping ship, and SQLite is refused at startup for a multi-worker "
+        "deployment rather than surfacing as intermittent latency. Actual scale-out "
+        "under load is still untested",
     ),
-    Probe("PL-7", "Service-level fail-open", "Platform", ["def service_fallback"], [], ""),
+    Probe(
+        "PL-7", "Service-level fail-open", "Platform",
+        ["def service_fallback", "class FailPolicy", "class AdmissionController"], [], "",
+        "fail-open is legitimate and must be visible, bounded and impossible for some "
+        "controls. Admission control sheds work rather than governance. What is not "
+        "built: distributed state, so the fail-open budget and the rate limit are "
+        "per-process and a multi-worker deployment gets N times the declared budget",
+        test_files=("test_availability.py",),
+    ),
     # --- Integrations
     # --- Adoption surface: the reason any of the above gets installed at all.
     Probe(

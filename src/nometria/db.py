@@ -20,12 +20,41 @@ _engine: Engine | None = None
 _SessionLocal: sessionmaker[Session] | None = None
 
 
+def configure_pool(url: str, *, workers: int = 1) -> dict:
+    """Connection-pool settings for the deployment, and a refusal to misconfigure it.
+
+    SQLite is a single-writer database. It is a fine default for a single-process
+    install and it cannot back a multi-worker deployment: the second worker does not
+    fail loudly, it takes a write lock and the first one waits, which surfaces as the
+    governance layer being intermittently slow — and a governance layer that is
+    intermittently slow gets its timeout raised until it fails open. So the
+    misconfiguration is raised at startup rather than discovered as latency.
+
+    For Postgres the pool is sized per worker, with ``pool_pre_ping`` because the
+    connection this layer needs is the one it needs during an incident, and a stale
+    handle then costs a request that mattered.
+    """
+    if url.startswith("sqlite"):
+        if workers > 1:
+            raise RuntimeError(
+                f"SQLite cannot back {workers} workers — it is single-writer, and the "
+                "contention surfaces as intermittent latency rather than an error. "
+                "Use PostgreSQL for a multi-worker deployment, or run one worker."
+            )
+        return {"connect_args": {"check_same_thread": False}}
+    return {
+        "pool_size": 5,
+        "max_overflow": 10,
+        "pool_pre_ping": True,
+        "pool_recycle": 1800,
+    }
+
+
 def _build_engine() -> Engine:
     settings = get_settings()
     url = settings.database_url
     kwargs: dict = {"echo": settings.sql_echo, "future": True}
-    if url.startswith("sqlite"):
-        kwargs["connect_args"] = {"check_same_thread": False}
+    kwargs.update(configure_pool(url, workers=getattr(settings, "workers", 1) or 1))
     engine = create_engine(url, **kwargs)
 
     if url.startswith("sqlite"):
