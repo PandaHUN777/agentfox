@@ -159,9 +159,15 @@ class Settings(BaseSettings):
     redact_at_capture: bool = True
     evidence_dir: Path = REPO_ROOT / "var" / "evidence"
 
-    # --- Content paths ---------------------------------------------------
-    compliance_dir: Path = REPO_ROOT / "compliance"
-    policies_dir: Path = REPO_ROOT / "policies"
+    # --- Content paths -----------------------------------------------------
+    # Packaged *inside* nometria/ (not at the repo root) so `packages =
+    # ["src/nometria"]` in pyproject.toml bundles them into the wheel automatically —
+    # a repo-root-relative path resolves fine from a source checkout but silently
+    # finds nothing once installed (e.g. the Vercel deployment installs from the
+    # vendored wheel, not the source tree), which is why the control catalog and
+    # baseline policy pack were empty in production despite syncing without error.
+    compliance_dir: Path = Path(__file__).resolve().parent / "compliance_data"
+    policies_dir: Path = Path(__file__).resolve().parent / "policies_data"
 
     @property
     def restricted_models_allowed(self) -> bool:
