@@ -15,7 +15,7 @@ parent directory from inside this one is more moving parts than the problem need
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 
 from nometria.gateway.app import app  # noqa: E402
 
