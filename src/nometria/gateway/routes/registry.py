@@ -151,6 +151,7 @@ class AgentUpdate(BaseModel):
     owner_email: str | None = None
     owner_team: str | None = None
     risk_tier: str | None = None
+    purpose: str | None = None
 
 
 @router.patch("/agents/{slug}")
@@ -441,6 +442,8 @@ def get_finding(
         "evidence": finding.evidence_json,
         "suppression_reason": finding.suppression_reason,
         "suppressed_by": finding.suppressed_by,
+        "resolution_note": finding.resolution_note,
+        "resolved_by": finding.resolved_by,
         "created_at": _iso(finding.created_at),
         "resolved_at": _iso(finding.resolved_at),
     }
@@ -449,6 +452,9 @@ def get_finding(
 class FindingPatch(BaseModel):
     status: str
     suppression_reason: str | None = None
+    # What was actually done to fix it — required for "resolved", same discipline
+    # "suppressed" already has via suppression_reason. See migration a3f7c9e1b204.
+    note: str | None = None
 
 
 @router.patch("/findings/{finding_id}")
@@ -465,11 +471,18 @@ def patch_finding(
         # Suppression without a recorded justification is how a finding queue becomes
         # meaningless; the reason is the control, not the button.
         raise HTTPException(400, "suppression requires a justification")
+    if payload.status == "resolved" and not payload.note:
+        # Same reasoning as suppression: a one-click "resolved" with nothing recorded
+        # is how a still-broken critical finding vanishes from the executive view
+        # without anyone having actually fixed it.
+        raise HTTPException(400, "resolving requires a note describing what was fixed")
     finding.status = payload.status
     finding.suppression_reason = payload.suppression_reason
     finding.suppressed_by = user.email if payload.status == "suppressed" else None
     if payload.status == "resolved":
         finding.resolved_at = utcnow()
+        finding.resolution_note = payload.note
+        finding.resolved_by = user.email
     chain.append(
         session,
         f"finding.{payload.status}",
@@ -477,7 +490,7 @@ def patch_finding(
         actor_id=user.email,
         subject_type="finding",
         subject_id=finding.id,
-        payload={"type": finding.type, "reason": payload.suppression_reason},
+        payload={"type": finding.type, "reason": payload.suppression_reason or payload.note},
     )
     return {"id": finding.id, "status": finding.status}
 

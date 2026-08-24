@@ -83,13 +83,23 @@ export default async function Integrations({
           </div>
         </Panel>
       ) : (
-        <Panel title={`Repositories — ${repos.github_login}`} note={<a href="/api/auth/github/login">reconnect</a>}>
-          {repos.repos.length === 0 ? (
-            <Empty>No repositories visible to this GitHub account.</Empty>
-          ) : (
-            <RepoTable repos={repos.repos} />
-          )}
-        </Panel>
+        <>
+          <p className="small muted" style={{ maxWidth: "70ch" }}>
+            This is every repository the GitHub account <strong>{repos.github_login}</strong> can
+            see — your own projects and anything shared with you, personal or your
+            company's. We only read code structure to guess what AI frameworks you're
+            using; we never run, execute, or modify anything in it. Look for the{" "}
+            <span className="tag ok">company account</span> tag to spot your
+            organization's repos among personal ones.
+          </p>
+          <Panel title={`Repositories — ${repos.github_login}`} note={<a href="/api/auth/github/login">reconnect</a>}>
+            {repos.repos.length === 0 ? (
+              <Empty>No repositories visible to this GitHub account.</Empty>
+            ) : (
+              <RepoTable repos={repos.repos} />
+            )}
+          </Panel>
+        </>
       )}
     </>
   );

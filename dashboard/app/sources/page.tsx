@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import { ApiDown, Empty } from "@/components/ui";
+import { ApiDown, Panel } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -9,6 +9,77 @@ const TIER_TONE: Record<string, string> = {
   unverified: "warn",
   external: "bad",
 };
+
+const TIER_OPTIONS: { value: string; label: string }[] = [
+  { value: "system_of_record", label: "Official company data, kept up to date" },
+  { value: "approved", label: "Reviewed and approved, but not the master copy" },
+  { value: "unverified", label: "Reference material — may be outdated" },
+  { value: "external", label: "Someone's personal notes, or an outside source" },
+];
+
+const FRESHNESS_OPTIONS: { value: string; label: string }[] = [
+  { value: "24", label: "Daily" },
+  { value: "168", label: "Weekly" },
+  { value: "720", label: "Monthly" },
+  { value: "", label: "Rarely / no schedule" },
+];
+
+const inputStyle = {
+  width: "100%",
+  padding: "6px 9px",
+  borderRadius: 6,
+  border: "1px solid var(--border)",
+  background: "var(--panel-2)",
+  color: "var(--text)",
+  fontSize: 13,
+  fontFamily: "inherit",
+} as const;
+
+function AddSourceForm() {
+  return (
+    <Panel title="Add a source">
+      <form action="/api/sources" method="POST" className="body stack">
+        <div>
+          <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+            Name this source (what your team calls it)
+          </label>
+          <input type="text" name="key" required placeholder="e.g. price-book, help-center-articles" style={inputStyle} />
+        </div>
+        <div>
+          <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+            What kind of source is it?
+          </label>
+          <select name="tier" defaultValue="unverified" style={inputStyle}>
+            {TIER_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+        </div>
+        <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              Who owns it? (email)
+            </label>
+            <input type="email" name="owner" placeholder="finance@yourcompany.com" style={inputStyle} />
+          </div>
+          <div style={{ flex: 1, minWidth: 160 }}>
+            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              How often is it updated?
+            </label>
+            <select name="freshness_sla_hours" defaultValue="" style={inputStyle}>
+              {FRESHNESS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div>
+          <button type="submit" className="btn-approve">Add source</button>
+        </div>
+      </form>
+    </Panel>
+  );
+}
 
 /**
  * P8 — source authority.
@@ -42,19 +113,17 @@ export default async function Sources() {
       </p>
 
       {sources.sources.length === 0 ? (
-        <div className="hero empty">
-          <div className="hero-title">No sources tiered yet</div>
-          <p>
-            Until a source has a tier, every retrieved chunk is treated as unverified —
-            which is the safe default and tells you nothing.
-          </p>
-          <code className="hero-code">
-            nometria sources add price-book --tier system_of_record --owner finance@acme.com
-          </code>
-          <p className="small muted">
-            Or import a corpus in one go with <code>nometria sources import sources.json</code>.
-          </p>
-        </div>
+        <>
+          <div className="hero empty" style={{ marginBottom: 20 }}>
+            <div className="hero-title">No sources tiered yet</div>
+            <p>
+              Until a source has a tier, every retrieved chunk is treated as unverified —
+              which is the safe default and tells you nothing. Add one below, or import a
+              whole corpus at once with <code className="mono">nometria sources import sources.json</code>.
+            </p>
+          </div>
+          <AddSourceForm />
+        </>
       ) : (
         <>
           <div className="cards">
@@ -86,6 +155,10 @@ export default async function Sources() {
               )}
             </div>
           )}
+
+          <div style={{ marginBottom: 20 }}>
+            <AddSourceForm />
+          </div>
 
           <h2>Registered sources</h2>
           <div className="panel">

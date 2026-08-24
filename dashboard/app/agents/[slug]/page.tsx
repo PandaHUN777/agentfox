@@ -46,6 +46,24 @@ export default async function AgentDetail({
 
       {review_error && <div className="error">{review_error}</div>}
 
+      <form
+        action={`/api/agents/${a.slug}/owner`}
+        method="POST"
+        className="row"
+        style={{ gap: 6, marginBottom: 20, alignItems: "center" }}
+      >
+        <label className="small muted" htmlFor="purpose-input">What does this agent do?</label>
+        <input
+          id="purpose-input"
+          type="text"
+          name="purpose"
+          placeholder="e.g. answers customer support questions from our help center"
+          defaultValue={a.purpose || ""}
+          style={{ flex: 1, minWidth: 260, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+        />
+        <button type="submit" className="btn-scan">Save</button>
+      </form>
+
       <div className="cards">
         <Stat n={posture.traces} label="execution paths" />
         <Stat n={posture.decisions} label="decisions" />

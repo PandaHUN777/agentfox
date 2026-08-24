@@ -457,6 +457,34 @@ def test_suppressing_a_finding_requires_a_justification(client):
     assert good.status_code == 200
 
 
+def test_resolving_a_finding_requires_a_note(client):
+    """A one-click 'resolved' with nothing recorded is how a still-broken critical
+    finding disappears from the executive view without anyone fixing it — same
+    discipline as suppression's justification requirement."""
+    client.post("/api/discovery/scan", headers=as_user("admin@example.com"))
+    findings = client.get("/api/findings", headers=as_user("admin@example.com")).json()
+    assert findings["findings"]
+    finding_id = findings["findings"][0]["id"]
+
+    bad = client.patch(
+        f"/api/findings/{finding_id}",
+        json={"status": "resolved"},
+        headers=as_user("admin@example.com"),
+    )
+    assert bad.status_code == 400
+
+    good = client.patch(
+        f"/api/findings/{finding_id}",
+        json={"status": "resolved", "note": "registered the agent and assigned an owner"},
+        headers=as_user("admin@example.com"),
+    )
+    assert good.status_code == 200
+
+    detail = client.get(f"/api/findings/{finding_id}", headers=as_user("admin@example.com")).json()
+    assert detail["resolution_note"] == "registered the agent and assigned an owner"
+    assert detail["resolved_by"] == "admin@example.com"
+
+
 def test_get_finding_returns_the_full_evidence(client):
     # The Findings page linked a title to nothing and rendered control_keys as plain
     # text — this is the detail route that backs the drill-down fixing that.

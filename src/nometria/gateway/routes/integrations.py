@@ -230,6 +230,8 @@ def list_repos(
         resp.raise_for_status()
     except httpx.HTTPError as exc:
         raise HTTPException(502, f"GitHub repo list failed: {exc}") from exc
+
+    already_scanned = set(session.scalars(select(ScanRun.repo_full_name)))
     repos = [
         {
             "full_name": r["full_name"],
@@ -237,6 +239,11 @@ def list_repos(
             "default_branch": r["default_branch"],
             "description": r.get("description") or "",
             "updated_at": r.get("updated_at"),
+            # "User" (someone's personal account) vs "Organization" (a company/team
+            # account) — a non-technical reader can't otherwise tell which of a long
+            # list is their company's code vs a personal project.
+            "owner_type": (r.get("owner") or {}).get("type", "User"),
+            "scanned": r["full_name"] in already_scanned,
         }
         for r in resp.json()
     ]

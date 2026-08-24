@@ -28,6 +28,14 @@ export default async function Agents({
   const inv = agents.inventory;
   const drafts = agents.agents.filter((a: any) => a.status === "draft");
 
+  // A repo scan registers one "agent" per directory with governable code in it,
+  // including test suites and utility scripts — those aren't things that talk to
+  // customers, and listing them next to real production agents with no distinction
+  // makes it impossible to tell which of N rows is the one that actually matters.
+  const looksLikeTestOrScript = (slug: string) => /(^|-)(tests?|specs?|scripts?|examples?|demo|fixtures?)($|-)/i.test(slug);
+  const realAgents = agents.agents.filter((a: any) => !looksLikeTestOrScript(a.slug));
+  const testLikeAgents = agents.agents.filter((a: any) => looksLikeTestOrScript(a.slug));
+
   return (
     <>
       <h1>Agent registry</h1>
@@ -131,50 +139,83 @@ export default async function Agents({
       )}
 
       <h2>All agents</h2>
-      <div className="panel scroll-x">
-        <table>
-          <thead>
-            <tr>
-              <th>agent</th>
-              <th>purpose</th>
-              <th>owner</th>
-              <th>env</th>
-              <th>risk</th>
-              <th>framework</th>
-              <th>last seen</th>
-            </tr>
-          </thead>
-          <tbody>
-            {agents.agents.map((a: any) => (
-              <tr key={a.id}>
-                <td>
-                  <Link href={`/agents/${a.slug}`} className="mono">{a.slug}</Link>
-                  {a.status === "shadow" && <div><span className="tag bad">shadow</span></div>}
-                  {a.status === "draft" && <div><span className="tag warn">draft</span></div>}
-                </td>
-                <td className="small wrap muted" style={{ maxWidth: 320 }}>
-                  {a.purpose || "—"}
-                </td>
-                <td className="small">
-                  {a.owner_email || (
-                    <Link href={`/agents/${a.slug}`} className="tag warn">
-                      unowned — assign
-                    </Link>
-                  )}
-                </td>
-                <td className="small">{a.environment}</td>
-                <td>
-                  <span className={`tag ${a.risk_tier === "high" || a.risk_tier === "prohibited" ? "bad" : ""}`}>
-                    {a.risk_tier}
-                  </span>
-                </td>
-                <td className="small muted">{a.framework || "—"}</td>
-                <td className="small muted">{ts(a.last_seen_at)}</td>
+      {realAgents.length === 0 ? (
+        <div className="body muted small" style={{ marginBottom: 8 }}>
+          No agents that look like real, customer-facing code yet.
+        </div>
+      ) : (
+        <div className="panel scroll-x">
+          <table>
+            <thead>
+              <tr>
+                <th>agent</th>
+                <th>purpose</th>
+                <th>owner</th>
+                <th>env</th>
+                <th>risk</th>
+                <th>framework</th>
+                <th>last seen</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {realAgents.map((a: any) => (
+                <tr key={a.id}>
+                  <td>
+                    <Link href={`/agents/${a.slug}`} className="mono">{a.slug}</Link>
+                    {a.status === "shadow" && <div><span className="tag bad">shadow</span></div>}
+                    {a.status === "draft" && <div><span className="tag warn">draft</span></div>}
+                  </td>
+                  <td className="small wrap muted" style={{ maxWidth: 320 }}>
+                    {a.purpose || "—"}
+                  </td>
+                  <td className="small">
+                    {a.owner_email || (
+                      <Link href={`/agents/${a.slug}`} className="tag warn">
+                        unowned — assign
+                      </Link>
+                    )}
+                  </td>
+                  <td className="small">{a.environment}</td>
+                  <td>
+                    <span className={`tag ${a.risk_tier === "high" || a.risk_tier === "prohibited" ? "bad" : ""}`}>
+                      {a.risk_tier}
+                    </span>
+                  </td>
+                  <td className="small muted">{a.framework || "—"}</td>
+                  <td className="small muted">{ts(a.last_seen_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {testLikeAgents.length > 0 && (
+        <details style={{ marginTop: 16 }}>
+          <summary className="small muted" style={{ cursor: "pointer" }}>
+            {testLikeAgents.length} more that look like internal code (tests, scripts,
+            examples) rather than real agents — click to show
+          </summary>
+          <div className="panel scroll-x" style={{ marginTop: 10 }}>
+            <table>
+              <thead>
+                <tr><th>agent</th><th>owner</th><th>env</th><th>framework</th><th>last seen</th></tr>
+              </thead>
+              <tbody>
+                {testLikeAgents.map((a: any) => (
+                  <tr key={a.id}>
+                    <td><Link href={`/agents/${a.slug}`} className="mono small">{a.slug}</Link></td>
+                    <td className="small muted">{a.owner_email || "unowned"}</td>
+                    <td className="small muted">{a.environment}</td>
+                    <td className="small muted">{a.framework || "—"}</td>
+                    <td className="small muted">{ts(a.last_seen_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      )}
     </>
   );
 }

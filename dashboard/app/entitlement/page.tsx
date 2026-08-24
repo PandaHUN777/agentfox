@@ -1,7 +1,26 @@
 import { api } from "@/lib/api";
-import { ApiDown, Empty } from "@/components/ui";
+import { ApiDown, Empty, Panel } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
+
+const CLASS_OPTIONS: { value: string; label: string }[] = [
+  { value: "pii_sensitive", label: "Sensitive personal data" },
+  { value: "mnpi", label: "Insider financial information" },
+  { value: "legal_hold", label: "Under legal hold" },
+  { value: "blackout", label: "Blackout-period restricted" },
+  { value: "insider", label: "Insider-only" },
+];
+
+const inputStyle = {
+  width: "100%",
+  padding: "6px 9px",
+  borderRadius: 6,
+  border: "1px solid var(--border)",
+  background: "var(--panel-2)",
+  color: "var(--text)",
+  fontSize: 13,
+  fontFamily: "inherit",
+} as const;
 
 /**
  * P10 — the highest commercial-value gap, and the reason Copilot-class rollouts stall.
@@ -42,11 +61,12 @@ export default async function Entitlement() {
         <div className="hero empty">
           <div className="hero-title">Nobody is being checked yet</div>
           <p>{report.note}</p>
-          <code className="hero-code">
-            nometria entitlement principal alice@acme.com --groups all-staff
-          </code>
           <p className="small muted">
-            Then filter retrieval through <code>POST /api/entitlement/filter</code> before
+            Add a person or team and a grant below to get started — this number fills in
+            automatically once real requests are being filtered.
+          </p>
+          <p className="small muted">
+            Filtering happens through <code className="mono">POST /api/entitlement/filter</code> before
             generation. Filtering afterwards means the answer already contains what it
             should not.
           </p>
@@ -142,6 +162,40 @@ export default async function Entitlement() {
         )}
       </div>
 
+      <div style={{ marginTop: 16, marginBottom: 24 }}>
+        <Panel title="Add a person or group">
+          <form action="/api/entitlement/principals" method="POST" className="body stack">
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                Email or team name
+              </label>
+              <input type="text" name="subject" required placeholder="alice@yourcompany.com" style={inputStyle} />
+            </div>
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                Display name (optional)
+              </label>
+              <input type="text" name="display" placeholder="Alice from Support" style={inputStyle} />
+            </div>
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                Teams they belong to (comma-separated)
+              </label>
+              <input type="text" name="groups" placeholder="support-team, all-staff" style={inputStyle} />
+            </div>
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                Sensitive categories they're cleared to see (comma-separated, leave blank if none)
+              </label>
+              <input type="text" name="clearances" placeholder="pii_sensitive" style={inputStyle} />
+            </div>
+            <div>
+              <button type="submit" className="btn-approve">Add person or group</button>
+            </div>
+          </form>
+        </Panel>
+      </div>
+
       <h2>Grants</h2>
       <p className="sub">
         Default-deny: a resource with no grant is invisible. A grant does not open a
@@ -181,6 +235,44 @@ export default async function Entitlement() {
         ) : (
           <Empty>No grants. Every resource is currently invisible to every caller.</Empty>
         )}
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        <Panel title="Add a grant" note="give a person or team access to a source">
+          <form action="/api/entitlement/grants" method="POST" className="body stack">
+            <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                  Which source can they see?
+                </label>
+                <input type="text" name="resource" required placeholder="price-book" style={inputStyle} />
+              </div>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                  Person or team (must match a name above)
+                </label>
+                <input type="text" name="principal" required placeholder="support-team" style={inputStyle} />
+              </div>
+            </div>
+            <input type="hidden" name="principal_kind" value="group" />
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                Only needed if the source contains sensitive data (they still need a matching clearance above)
+              </label>
+              <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+                {CLASS_OPTIONS.map((c) => (
+                  <label key={c.value} className="small" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                    <input type="checkbox" name="classes" value={c.value} />
+                    {c.label}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <button type="submit" className="btn-approve">Add grant</button>
+            </div>
+          </form>
+        </Panel>
       </div>
     </>
   );

@@ -119,6 +119,45 @@ export async function proxyFormPost(
 }
 
 /**
+ * Same plain-HTML-form-POST-no-client-JS pattern as proxyFormPost, but for a PUT
+ * (upsert) — the sources form needs this because the gateway's register/re-tier
+ * route is PUT, not POST.
+ */
+export async function proxyFormPut(
+  req: NextRequest,
+  gatewayPath: string,
+  redirectTo: string,
+): Promise<NextResponse> {
+  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const target = new URL(redirectTo, req.nextUrl.origin);
+  if (!token) {
+    target.searchParams.set("review_error", "not signed in");
+    return NextResponse.redirect(target);
+  }
+
+  const form = await req.formData();
+  const body: Record<string, string> = {};
+  for (const [key, value] of form.entries()) {
+    if (typeof value === "string" && value.trim()) body[key] = value.trim();
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}${gatewayPath}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const resBody = await res.json().catch(() => ({}));
+      target.searchParams.set("review_error", resBody.detail || res.statusText);
+    }
+  } catch (e: any) {
+    target.searchParams.set("review_error", String(e?.message || e));
+  }
+  return NextResponse.redirect(target);
+}
+
+/**
  * For client components that need a live response rather than a redirect (the
  * policy YAML editor validates and saves interactively) — same authenticated
  * server-side forward as the two above, but returns the gateway's JSON body (and

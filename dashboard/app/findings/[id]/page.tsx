@@ -5,6 +5,16 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
+/** True when the evidence attached to this finding still shows the underlying
+ * problem — used to warn before letting someone mark it resolved without the
+ * numbers actually having changed. */
+function stillLooksUnresolved(finding: any): boolean {
+  const ev = finding.evidence || {};
+  if (typeof ev.posture_score === "number" && ev.posture_score < 1) return true;
+  if (typeof ev.attacks_succeeded === "number" && ev.attacks_succeeded > 0) return true;
+  return false;
+}
+
 function RedteamEvidence({ evidence }: { evidence: any }) {
   const byCategory = evidence.by_category || {};
   return (
@@ -134,28 +144,57 @@ export default async function FindingDetail({
       </div>
 
       {finding.status === "open" && (
-        <div className="row" style={{ gap: 8, marginBottom: 20 }}>
-          <form action={`/api/findings/${id}`} method="POST">
-            <input type="hidden" name="status" value="resolved" />
-            <button type="submit" className="btn-approve">Mark resolved</button>
-          </form>
-          <form action={`/api/findings/${id}`} method="POST" className="row" style={{ gap: 6 }}>
-            <input type="hidden" name="status" value="suppressed" />
-            <input
-              type="text"
-              name="suppression_reason"
-              placeholder="reason for suppressing (required)"
-              required
-              style={{ minWidth: 260, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
-            />
-            <button type="submit" className="btn-reject">Suppress</button>
-          </form>
-        </div>
+        <>
+          {stillLooksUnresolved(finding) && (
+            <div className="caveat" style={{ marginBottom: 14 }}>
+              <strong>The evidence below still shows the problem.</strong>
+              This finding's own numbers (blocked/succeeded, posture) haven't changed
+              since it was raised. If you haven't actually fixed the underlying issue,
+              use <em>Suppress</em> instead — marking this resolved will make it
+              disappear from dashboards as if it were fixed.
+            </div>
+          )}
+          <div className="row" style={{ gap: 8, marginBottom: 20, alignItems: "flex-start" }}>
+            <form action={`/api/findings/${id}`} method="POST" className="row" style={{ gap: 6 }}>
+              <input type="hidden" name="status" value="resolved" />
+              <input
+                type="text"
+                name="note"
+                placeholder="what did you do to fix this? (required)"
+                required
+                style={{ minWidth: 260, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+              />
+              <button type="submit" className="btn-approve">Mark resolved</button>
+            </form>
+            <form action={`/api/findings/${id}`} method="POST" className="row" style={{ gap: 6 }}>
+              <input type="hidden" name="status" value="suppressed" />
+              <input
+                type="text"
+                name="suppression_reason"
+                placeholder="reason for suppressing (required)"
+                required
+                style={{ minWidth: 260, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+              />
+              <button type="submit" className="btn-reject">Suppress</button>
+            </form>
+          </div>
+          <p className="small muted" style={{ marginTop: -12, marginBottom: 20 }}>
+            <strong>Resolved</strong> means the underlying problem is actually fixed.{" "}
+            <strong>Suppressed</strong> means you've decided not to act on it right now —
+            it stays flagged as a known, accepted issue rather than looking fixed.
+          </p>
+        </>
       )}
       {finding.status === "suppressed" && (
         <div className="note-panel" style={{ marginBottom: 20 }}>
-          <strong>Suppressed by {finding.suppressed_by}</strong>
+          <strong>Suppressed (not fixed) by {finding.suppressed_by}</strong>
           {finding.suppression_reason}
+        </div>
+      )}
+      {finding.status === "resolved" && (
+        <div className="note-panel" style={{ marginBottom: 20 }}>
+          <strong>Resolved by {finding.resolved_by}</strong>
+          {finding.resolution_note}
         </div>
       )}
 

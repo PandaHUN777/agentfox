@@ -227,6 +227,11 @@ class Finding(Base, TimestampMixin):
     suppression_reason: Mapped[str | None] = mapped_column(Text)
     suppressed_by: Mapped[str | None] = mapped_column(String(120))
     resolved_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    # A one-click, no-justification "resolved" is how a still-open critical finding
+    # disappears from the executive view without anyone actually fixing it — this
+    # pair makes resolving carry the same accountability suppressing already does.
+    resolution_note: Mapped[str | None] = mapped_column(Text)
+    resolved_by: Mapped[str | None] = mapped_column(String(120))
 
 
 # ---------------------------------------------------------------------------
