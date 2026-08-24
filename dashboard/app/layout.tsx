@@ -18,7 +18,13 @@ export const metadata: Metadata = {
     "See every agent, control what it can do, prove it works, and demonstrate compliance.",
 };
 
-/** Grouped by the four questions an enterprise asks about any agent (PRD §2.2). */
+/**
+ * Plain, predictable category nouns rather than a rhetorical-question framing
+ * ("What is it" / "Does it work") — a newcomer scanning the sidebar once should
+ * be able to guess which group a page lives in before clicking it. Ordered as
+ * the natural pipeline: see what's running and what's wrong, configure what's
+ * allowed, test whether it holds up, report on it.
+ */
 const NAV: { group: string; items: [string, string][] }[] = [
   {
     group: "",
@@ -29,14 +35,15 @@ const NAV: { group: string; items: [string, string][] }[] = [
     ],
   },
   {
-    group: "What is it",
+    group: "Monitor",
     items: [
       ["Agents", "/agents"],
       ["Findings", "/findings"],
+      ["Traces", "/traces"],
     ],
   },
   {
-    group: "What can it do",
+    group: "Govern",
     items: [
       ["Policies", "/policies"],
       ["Guardrails", "/guardrails"],
@@ -44,7 +51,7 @@ const NAV: { group: string; items: [string, string][] }[] = [
     ],
   },
   {
-    group: "Does it work",
+    group: "Quality",
     items: [
       ["Evaluation", "/evals"],
       ["Escalation", "/escalation"],
@@ -52,9 +59,8 @@ const NAV: { group: string; items: [string, string][] }[] = [
     ],
   },
   {
-    group: "Can we prove it",
+    group: "Reporting",
     items: [
-      ["Traces", "/traces"],
       ["Compliance", "/compliance"],
       ["Board view", "/board"],
     ],

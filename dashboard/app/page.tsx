@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { ApiDown, Severity, ts } from "@/components/ui";
+import { ApiDown, Severity, findingTypeInfo, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -107,19 +107,22 @@ export default async function Overview() {
                 </tr>
               </thead>
               <tbody>
-                {attention.items.map((item: any, i: number) => (
-                  <tr key={i}>
-                    <td>
-                      <Severity value={item.severity} />
-                    </td>
-                    <td>
-                      <Link href={item.href}>{item.title}</Link>
-                      <div className="small muted mono">{item.type}</div>
-                    </td>
-                    <td className="mono small">{item.subject}</td>
-                    <td className="small muted">{ts(item.at)}</td>
-                  </tr>
-                ))}
+                {attention.items.map((item: any, i: number) => {
+                  const typeInfo = findingTypeInfo(item.type);
+                  return (
+                    <tr key={i}>
+                      <td>
+                        <Severity value={item.severity} />
+                      </td>
+                      <td>
+                        <Link href={item.href}>{item.title}</Link>
+                        <div className="small muted">{typeInfo.blurb || typeInfo.label}</div>
+                      </td>
+                      <td className="mono small">{item.subject}</td>
+                      <td className="small muted">{ts(item.at)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
             {attention.total > attention.items.length && (

@@ -343,7 +343,7 @@ def run_campaign(
             Finding(
                 type="redteam",
                 severity="critical" if campaign.summary_json["critical_breaches"] else "high",
-                title=f"{breaches}/{total} red-team probes were not blocked for {agent_slug}",
+                title=f"Agent '{agent_slug}' did not block {breaches} of {total} simulated attacks",
                 subject_type="agent",
                 subject_id=agent_slug,
                 evidence_json=campaign.summary_json,

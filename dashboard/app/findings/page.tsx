@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { ApiDown, Severity, ts } from "@/components/ui";
+import { ApiDown, Severity, findingTypeInfo, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -29,9 +29,9 @@ export default async function Findings({
     <>
       <h1>Findings</h1>
       <p className="sub">
-        The cross-pillar queue: shadow agents, tool poisoning, stale credentials,
-        degraded detectors, drift, silent failures, red-team breaches, chain breaks.
-        Everything that needs a human eventually lands here.
+        Every problem this product detected, ranked by severity — security failures,
+        missing owners, drifted models, broken hand-offs, and more. See what kind of
+        problem each one is in the type column below.
       </p>
 
       <div className="chipbar">
@@ -68,23 +68,27 @@ export default async function Findings({
               <tr><th>severity</th><th>type</th><th>finding</th><th>controls</th><th>raised</th></tr>
             </thead>
             <tbody>
-              {data.findings.map((f: any) => (
-                <tr key={f.id}>
-                  <td><Severity value={f.severity} /></td>
-                  <td className="mono small">{f.type}</td>
-                  <td className="small wrap">
-                    <Link href={`/findings/${f.id}`}>{f.title}</Link>
-                  </td>
-                  <td className="small mono">
-                    {(f.controls || []).map((c: string) => (
-                      <Link key={c} href={`/compliance#${c}`} className="muted" style={{ marginRight: 6 }}>
-                        {c}
-                      </Link>
-                    ))}
-                  </td>
-                  <td className="small muted">{ts(f.created_at)}</td>
-                </tr>
-              ))}
+              {data.findings.map((f: any) => {
+                const typeInfo = findingTypeInfo(f.type);
+                return (
+                  <tr key={f.id}>
+                    <td><Severity value={f.severity} /></td>
+                    <td className="small">{typeInfo.label}</td>
+                    <td className="small wrap">
+                      <Link href={`/findings/${f.id}`}>{f.title}</Link>
+                      {typeInfo.blurb && <div className="small muted">{typeInfo.blurb}</div>}
+                    </td>
+                    <td className="small mono">
+                      {(f.controls || []).map((c: string) => (
+                        <Link key={c} href={`/compliance#${c}`} className="muted" style={{ marginRight: 6 }}>
+                          {c}
+                        </Link>
+                      ))}
+                    </td>
+                    <td className="small muted">{ts(f.created_at)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}

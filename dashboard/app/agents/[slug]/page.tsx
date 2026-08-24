@@ -132,7 +132,7 @@ export default async function AgentDetail({
               type="text"
               name="systems_of_record"
               defaultValue={boundary?.systems_of_record?.join(", ") || ""}
-              placeholder={a.purpose ? `e.g. the data ${a.purpose.replace(/^Detected by scanning /, "")} works with` : "e.g. price-book, ticket-history"}
+              placeholder="e.g. price-book, ticket-history"
               style={{ width: "100%", maxWidth: 480, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
             />
           </div>

@@ -348,7 +348,13 @@ def trigger_scan(
             session,
             slug=slug,
             name=f"{payload.repo_full_name}/{group_key}",
-            purpose=f"Detected by scanning {payload.repo_full_name} ({len(sites)} governable site(s)).",
+            # A static scan can count code sites, not know what the agent is
+            # *for* — a fabricated-sounding purpose repeated identically across
+            # every scanned agent read as noise, not information. Left blank
+            # and surfaced honestly ("no purpose recorded") until a human sets
+            # one; the site count and framework are already shown elsewhere
+            # (the framework column, the scan run, the agent's own registration).
+            purpose="",
             framework=framework,
             draft=True,
             source_scan_run_id=run.id,
@@ -359,11 +365,15 @@ def trigger_scan(
     for framework in report.frameworks:
         doc = PolicyDocument(
             key=f"scan-{run.id}-{slugify(framework)}",
-            name=f"Baseline guardrails for {framework} ({payload.repo_full_name})",
+            # Short and framework-specific — the repo name and the "proposed,
+            # observe mode, add rules" workflow explanation are already shown
+            # once by the surrounding UI (scan link, proposed badge, mode
+            # column, review panel note), so repeating all of that in every
+            # row's name/description was the noise, not the information.
+            name=f"{framework} guardrails",
             description=(
-                f"Proposed after scanning {payload.repo_full_name}: {framework} usage "
-                f"detected. Starts empty and in observe mode (blocks nothing) — add "
-                f"rules and promote to enforce once reviewed."
+                f"Detects {framework} usage in {payload.repo_full_name} — prompt "
+                f"injection, PII/secret leaks, and unsafe tool actions."
             ),
             mode="observe",
             scope={"agents": [f"{repo_short}-*"]},

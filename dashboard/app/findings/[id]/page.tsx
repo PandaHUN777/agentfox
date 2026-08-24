@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { ApiDown, Panel, Severity, ts } from "@/components/ui";
+import { ApiDown, Panel, Severity, findingTypeInfo, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
@@ -95,9 +95,14 @@ export default async function FindingDetail({
       <h1 className="wrap">{finding.title}</h1>
       <p className="sub">
         <Severity value={finding.severity} />{" "}
-        <span className="mono small muted">{finding.type}</span>{" "}
+        <span className="small muted">{findingTypeInfo(finding.type).label}</span>{" "}
         <span className="small muted">raised {ts(finding.created_at)}</span>
       </p>
+      {findingTypeInfo(finding.type).blurb && (
+        <p className="small muted" style={{ marginTop: -16, marginBottom: 18 }}>
+          {findingTypeInfo(finding.type).blurb}
+        </p>
+      )}
 
       {review_error && <div className="error">{review_error}</div>}
 
