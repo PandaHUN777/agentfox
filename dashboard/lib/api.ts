@@ -10,9 +10,14 @@
 const BASE = process.env.NOMETRIA_API_URL || "http://127.0.0.1:8080";
 
 // In MVP self-host there is no IdP wired (PRD §6.3); the control plane accepts a
-// development identity header. Swap for a session cookie or OIDC token when the
-// SSO seam in P2-4 is connected.
+// development identity header when NOMETRIA_ENVIRONMENT is a dev environment, or a
+// bearer token everywhere else (auth_mode=token). Both paths are supported here
+// because the value of a demo of a governance product is undercut by the demo itself
+// running with authentication turned off — a live deployment sets NOMETRIA_API_TOKEN
+// and gets the real path; local dev with no token set keeps working exactly as before.
+// Swap for a session cookie or OIDC token when the SSO seam in P2-4 is connected.
 const USER = process.env.NOMETRIA_USER || "admin@example.com";
+const TOKEN = process.env.NOMETRIA_API_TOKEN;
 
 export class ApiError extends Error {
   constructor(
@@ -29,7 +34,9 @@ export async function api<T = any>(path: string, init?: RequestInit): Promise<T>
     ...init,
     headers: {
       "Content-Type": "application/json",
-      "X-Nometria-User": USER,
+      ...(TOKEN
+        ? { Authorization: `Bearer ${TOKEN}` }
+        : { "X-Nometria-User": USER }),
       ...(init?.headers || {}),
     },
     // Governance data is live data; a cached control status is a wrong control status.
