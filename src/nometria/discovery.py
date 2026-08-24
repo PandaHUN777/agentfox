@@ -94,6 +94,21 @@ _FRAMEWORK_IMPORTS = {
 #: not anyone registered it, and an unregistered tool is the F-family blind spot.
 _TOOL_DECORATORS = ("tool", "function_tool", "mcp.tool", "agent.tool", "register_tool")
 
+#: Framework orchestration entrypoints — CrewAI's `Crew(...).kickoff()` and
+#: LangGraph's `StateGraph(...).compile()` wrap the model call rather than making it
+#: directly, so a repo built on either framework can show zero `_MODEL_CALLS` matches
+#: while clearly running an agent (confirmed against a real crewAI-examples clone:
+#: framework detected, 17 tools found, `model_calls: 0` — a false "nothing to govern"
+#: read on the exact frameworks the report says it found). Requires the defining
+#: file to have actually imported the framework (checked in `scan_file`), since
+#: `compile` and `Crew`/`Agent`-shaped names are too common to trust on their own.
+_AGENT_DEFINITIONS = {
+    "kickoff": "CrewAI",
+    "compile": "LangGraph",
+    "Crew": "CrewAI",
+    "StateGraph": "LangGraph",
+}
+
 #: Executable-artefact shapes worth flagging even without a model call nearby: these
 #: are what P9 governs, and a repo that builds SQL from an f-string is where the
 #: 1.9M-row incident starts.
@@ -116,7 +131,7 @@ _HARDCODED_SECRET = re.compile(
 class Site:
     """One place in the codebase worth governing."""
 
-    kind: str  # model_call | tool | mcp_server | sql_build | shell_call | secret
+    kind: str  # model_call | agent_definition | tool | mcp_server | sql_build | shell_call | secret
     file: str
     line: int
     detail: str
@@ -150,12 +165,26 @@ class ScanReport:
         return [s for s in self.sites if s.kind == "model_call"]
 
     @property
+    def agent_definitions(self) -> list[Site]:
+        return [s for s in self.sites if s.kind == "agent_definition"]
+
+    @property
+    def governable(self) -> list[Site]:
+        """`model_call` sites plus framework orchestration entrypoints (P9/CrewAI gap).
+
+        A pure `model_call` count is vacuous on a CrewAI/LangGraph repo that never
+        calls the provider SDK directly — this is what makes coverage mean something
+        on exactly the frameworks the report says it found.
+        """
+        return self.model_calls + self.agent_definitions
+
+    @property
     def ungoverned(self) -> list[Site]:
-        return [s for s in self.model_calls if not s.governed]
+        return [s for s in self.governable if not s.governed]
 
     @property
     def coverage(self) -> float:
-        calls = self.model_calls
+        calls = self.governable
         if not calls:
             return 1.0
         return sum(1 for s in calls if s.governed) / len(calls)
@@ -181,7 +210,12 @@ class ScanReport:
             "files_scanned": self.files_scanned,
             "frameworks": self.frameworks,
             "model_calls": len(self.model_calls),
-            "ungoverned_model_calls": len(self.ungoverned),
+            "agent_definitions": len(self.agent_definitions),
+            # Kept as the literal model-call-only count for anyone already reading this
+            # key; `ungoverned` (and the coverage it drives) also count framework
+            # orchestration entrypoints — see `governable`.
+            "ungoverned_model_calls": len([s for s in self.model_calls if not s.governed]),
+            "ungoverned_governable": len(self.ungoverned),
             "coverage": round(self.coverage, 3),
             "counts": self.by_kind(),
             "sites": [s.to_json() for s in self.sites],
@@ -194,7 +228,7 @@ class ScanReport:
         A report that ends without a next action makes the reader do the synthesis,
         and most readers will not.
         """
-        if not self.model_calls:
+        if not self.governable:
             return (
                 "No model calls found. If this repo calls a model through a wrapper we "
                 "don't recognise, govern it explicitly with the SDK."
@@ -231,6 +265,9 @@ class _Visitor(ast.NodeVisitor):
         self.sites: list[Site] = []
         self.frameworks: set[str] = set()
         self.governed = False
+        # Framework-gated until the full file is visited (see scan_file) — the import
+        # may appear anywhere relative to the call in an unusual layout.
+        self._pending_agent_defs: list[tuple[Site, str]] = []
 
     def visit_Import(self, node: ast.Import) -> None:
         for alias in node.names:
@@ -272,6 +309,22 @@ class _Visitor(ast.NodeVisitor):
                         detail=f"{path}(...)",
                         provider=provider,
                         severity="high",
+                    )
+                )
+                break
+        for suffix, fw in _AGENT_DEFINITIONS.items():
+            if path == suffix or path.endswith(f".{suffix}"):
+                self._pending_agent_defs.append(
+                    (
+                        Site(
+                            kind="agent_definition",
+                            file=self.path,
+                            line=node.lineno,
+                            detail=f"{path}(...)",
+                            provider=fw.lower(),
+                            severity="high",
+                        ),
+                        fw,
                     )
                 )
                 break
@@ -322,6 +375,9 @@ def scan_file(path: Path, root: Path) -> tuple[list[Site], set[str], bool]:
         visitor = _Visitor(rel)
         visitor.visit(tree)
         sites.extend(visitor.sites)
+        sites.extend(
+            site for site, fw in visitor._pending_agent_defs if fw in visitor.frameworks
+        )
         frameworks |= visitor.frameworks
         governed = visitor.governed
 
@@ -387,7 +443,7 @@ def scan(root: str | Path = ".", *, include_config: bool = True) -> ScanReport:
             if governed:
                 report.governed_files.append(str(path.relative_to(root_path)))
             for site in sites:
-                if site.kind == "model_call" and governed:
+                if site.kind in ("model_call", "agent_definition") and governed:
                     site.governed = True
                     site.severity = "info"
                 report.sites.append(site)

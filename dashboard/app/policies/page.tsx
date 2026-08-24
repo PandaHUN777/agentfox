@@ -3,7 +3,12 @@ import { ApiDown, Panel, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function Policies() {
+export default async function Policies({
+  searchParams,
+}: {
+  searchParams: Promise<{ review_error?: string }>;
+}) {
+  const { review_error } = await searchParams;
   let policies: any, detectors: any, probes: any;
   try {
     [policies, detectors, probes] = await Promise.all([
@@ -20,6 +25,8 @@ export default async function Policies() {
     );
   }
 
+  const proposed = policies.policies.filter((p: any) => p.proposed);
+
   return (
     <>
       <h1>Policy</h1>
@@ -31,6 +38,53 @@ export default async function Policies() {
         block is how a guardrail gets switched off for good.
       </p>
 
+      {review_error && <div className="error">{review_error}</div>}
+
+      {proposed.length > 0 && (
+        <>
+          <h2>Pending review</h2>
+          <Panel
+            title="Proposed by a repo scan"
+            note="already in observe mode (blocks nothing) — approve to acknowledge, reject to discard"
+          >
+            <table>
+              <thead>
+                <tr>
+                  <th>policy</th>
+                  <th>description</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {proposed.map((p: any) => (
+                  <tr key={p.id}>
+                    <td className="mono">{p.key}</td>
+                    <td className="small wrap muted" style={{ maxWidth: 420 }}>
+                      {p.description}
+                    </td>
+                    <td>
+                      <div className="review-actions">
+                        <form action={`/api/policies/${p.id}/approve`} method="POST">
+                          <button type="submit" className="btn-approve">
+                            Approve
+                          </button>
+                        </form>
+                        <form action={`/api/policies/${p.id}/reject`} method="POST">
+                          <button type="submit" className="btn-reject">
+                            Reject
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel>
+        </>
+      )}
+
+      <h2>All policies</h2>
       <div className="panel scroll-x">
         <table>
           <thead>
@@ -39,7 +93,10 @@ export default async function Policies() {
           <tbody>
             {policies.policies.map((p: any) => (
               <tr key={p.key}>
-                <td className="mono">{p.key}</td>
+                <td>
+                  <span className="mono">{p.key}</span>
+                  {p.proposed && <div><span className="tag warn">proposed</span></div>}
+                </td>
                 <td className="small wrap muted" style={{ maxWidth: 420 }}>{p.description}</td>
                 <td className="small">v{p.latest_version}</td>
                 <td>

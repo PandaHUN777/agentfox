@@ -86,6 +86,15 @@ class Settings(BaseSettings):
     # not recognise. A typo in a deployment variable must not silently open the door.
     auth_mode: str = "auto"
 
+    # --- GitHub connect flow (dashboard "Sign in with GitHub" + repo scan) -----
+    # The dashboard's OAuth callback runs the one privileged "find-or-create user and
+    # mint a token" call before any user token exists — it authenticates with this
+    # shared secret instead. Must match the dashboard's own copy of the same value.
+    service_auth_secret: str = "dev-insecure-service-secret"
+    # Fernet key encrypting stored GitHub access tokens at rest. `None` means "not
+    # configured" — connecting a repo fails closed rather than storing a raw token.
+    token_encryption_key: str | None = None
+
     # --- Action assurance (P9) -------------------------------------------
     # The dialect artefacts are parsed against. Wrong dialect means wrong parse, and
     # a wrong parse fails closed rather than passing through.

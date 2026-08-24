@@ -9,7 +9,7 @@ See every agent, control what it can do, prove it works, and demonstrate complia
 ## Thirty seconds
 
 ```bash
-pip install nometria
+pip install git+https://github.com/architsharm/guardrails.git   # not on PyPI yet
 nometria init          # database, controls, baseline policy — offline, idempotent
 nometria check         # scan this repo: what talks to a model, and what is ungoverned
 ```

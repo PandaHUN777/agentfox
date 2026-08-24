@@ -1,0 +1,34 @@
+/**
+ * The UX gate, not the security boundary — the gateway still 401s a missing, bad,
+ * expired or revoked token on every request regardless of what happens here. This
+ * just sends someone straight to /login instead of making them discover that from
+ * an error on every page.
+ *
+ * Also stamps the request path onto a header so the root layout (a Server
+ * Component) can tell it's rendering /login and skip the app chrome — Next.js has
+ * no server-only "what page am I on" otherwise, short of a client component.
+ */
+
+import { NextRequest, NextResponse } from "next/server";
+import { SESSION_COOKIE } from "@/lib/api";
+
+const PUBLIC_PATHS = ["/login", "/api/auth"];
+
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  const headers = new Headers(req.headers);
+  headers.set("x-pathname", pathname);
+
+  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const signedIn = Boolean(req.cookies.get(SESSION_COOKIE)?.value);
+
+  if (!isPublic && !signedIn) {
+    const url = new URL("/login", req.url);
+    return NextResponse.redirect(url);
+  }
+  return NextResponse.next({ request: { headers } });
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};

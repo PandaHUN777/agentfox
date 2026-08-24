@@ -98,6 +98,11 @@ class Agent(Base, TimestampMixin):
     framework: Mapped[str | None] = mapped_column(String(64))  # P1-6, auto-detected
     status: Mapped[str] = mapped_column(String(24), default="active")
     registered: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Set when a repo scan proposed this agent (status="draft") rather than it being
+    # registered directly — lets the review UI show why it showed up.
+    source_scan_run_id: Mapped[str | None] = mapped_column(
+        String(40), ForeignKey("scan_runs.id"), index=True
+    )
     declared_models: Mapped[list[str]] = mapped_column(JSON, default=list)
     declared_tools: Mapped[list[str]] = mapped_column(JSON, default=list)
     data_classes: Mapped[list[str]] = mapped_column(JSON, default=list)
@@ -343,6 +348,40 @@ class ApiToken(Base, TimestampMixin):
     key_hash: Mapped[str] = mapped_column(String(256))
     expires_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class GithubConnection(Base, TimestampMixin):
+    """A stored, encrypted GitHub OAuth grant.
+
+    The gateway is what lists and fetches an org's repos — the raw GitHub access
+    token never reaches the browser, only this record's org-scoped id does.
+    """
+
+    __tablename__ = "github_connections"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("ghc"))
+    github_user_id: Mapped[str] = mapped_column(String(64), index=True)
+    github_login: Mapped[str] = mapped_column(String(200), default="")
+    access_token_encrypted: Mapped[str] = mapped_column(Text)
+    connected_by_user_id: Mapped[str] = mapped_column(String(40), ForeignKey("users.id"))
+
+
+class ScanRun(Base, TimestampMixin):
+    """One repo scan. Links `discovery.py`'s static findings to the draft agents and
+    policies it proposed, so a reviewer can see why something showed up."""
+
+    __tablename__ = "scan_runs"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("scn"))
+    connection_id: Mapped[str] = mapped_column(
+        String(40), ForeignKey("github_connections.id"), index=True
+    )
+    repo_full_name: Mapped[str] = mapped_column(String(300))
+    ref: Mapped[str] = mapped_column(String(120), default="")
+    status: Mapped[str] = mapped_column(String(16), default="running")  # running|completed|failed
+    started_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    completed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    summary_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -1012,6 +1051,12 @@ class Policy(Base, TimestampMixin):
     description: Mapped[str] = mapped_column(Text, default="")
     kind: Mapped[str] = mapped_column(String(24), default="declarative")  # declarative | rego
     owner: Mapped[str | None] = mapped_column(String(120))
+    # A scan-proposed policy: exists with a version but deliberately unbound (inert)
+    # until a human approves it (see routes/integrations.py). Cleared on approval.
+    proposed: Mapped[bool] = mapped_column(Boolean, default=False)
+    source_scan_run_id: Mapped[str | None] = mapped_column(
+        String(40), ForeignKey("scan_runs.id"), index=True
+    )
 
 
 class PolicyVersion(Base, TimestampMixin):

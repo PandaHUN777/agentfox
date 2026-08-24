@@ -60,6 +60,7 @@ def list_policies(
         )
         out.append(
             {
+                "id": policy.id,
                 "key": policy.key,
                 "name": policy.name,
                 "description": policy.description,
@@ -67,6 +68,10 @@ def list_policies(
                 "latest_version": latest.version if latest else None,
                 "mode": binding.mode if binding else None,
                 "rules": len((latest.compiled_json or {}).get("rules", [])) if latest else 0,
+                # A repo-scan proposal (routes/integrations.py) awaiting human review —
+                # already created in `observe` mode (never blocks), just not
+                # acknowledged yet.
+                "proposed": policy.proposed,
             }
         )
     return {"policies": out}

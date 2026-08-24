@@ -64,7 +64,16 @@ def register_agent(
     declared_tools: list[str] | None = None,
     data_classes: list[str] | None = None,
     framework: str | None = None,
+    draft: bool = False,
+    source_scan_run_id: str | None = None,
 ) -> Agent:
+    """Register (or upsert) an agent.
+
+    ``draft=True`` is the repo-scan path (routes/integrations.py): the agent is
+    created inert — ``status="draft"``, ``registered=False`` — so nothing treats it
+    as live until a human approves it. Approval just flips those two fields, it does
+    not re-run this function.
+    """
     slug = slugify(slug)
     agent = session.scalar(select(Agent).where(Agent.slug == slug))
     if agent is None:
@@ -81,8 +90,14 @@ def register_agent(
     agent.declared_models = declared_models or agent.declared_models or []
     agent.declared_tools = declared_tools or agent.declared_tools or []
     agent.data_classes = data_classes or agent.data_classes or []
-    agent.registered = True
-    agent.status = "active"
+    if source_scan_run_id:
+        agent.source_scan_run_id = source_scan_run_id
+    if draft:
+        agent.registered = False
+        agent.status = "draft"
+    else:
+        agent.registered = True
+        agent.status = "active"
     if agent.first_seen_at is None:
         agent.first_seen_at = utcnow()
     session.flush()
@@ -159,10 +174,19 @@ def observe_agent(
 
 
 def detect_shadow_agents(session: Session, window_days: int = 30) -> list[dict[str, Any]]:
-    """Report every unregistered agent with the evidence to act on it."""
+    """Report every unregistered agent with the evidence to act on it.
+
+    Excludes "draft" (proposed by a repo scan, never ran) and "rejected" (a draft a
+    human already declined) — both are unregistered, but neither is what "shadow"
+    means here: traffic that ran without anyone registering it first.
+    """
     since = utcnow() - dt.timedelta(days=window_days)
     out: list[dict[str, Any]] = []
-    for agent in session.scalars(select(Agent).where(Agent.registered.is_(False))):
+    for agent in session.scalars(
+        select(Agent).where(
+            Agent.registered.is_(False), Agent.status.notin_(("draft", "rejected"))
+        )
+    ):
         traces = list(
             session.scalars(
                 select(Trace).where(Trace.agent_slug == agent.slug, Trace.started_at >= since)
@@ -570,7 +594,10 @@ def inventory(session: Session) -> dict[str, Any]:
     return {
         "agents": len(agents),
         "registered": sum(1 for a in agents if a.registered),
-        "shadow": sum(1 for a in agents if not a.registered),
+        # "draft"/"rejected" are unregistered but were never observed running — see
+        # detect_shadow_agents for why they don't belong in the same count as a
+        # genuine shadow agent (traffic nobody registered first).
+        "shadow": sum(1 for a in agents if not a.registered and a.status not in ("draft", "rejected")),
         "unowned": sum(1 for a in agents if not a.is_owned),
         "by_risk_tier": by_tier,
         "by_environment": by_env,

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { ApiDown } from "@/components/ui";
 
@@ -30,8 +31,10 @@ export default async function Start() {
     <>
       <h1>Start here</h1>
       <p className="sub">
-        Six steps from nothing to governed. Only the last one blocks anything — every
-        step before it is safe to run without reading further.
+        Fastest path: <Link href="/settings/integrations">connect a GitHub repo</Link> and
+        let a static scan propose what to govern — or instrument your own code with the
+        SDK, whichever fits. Only the last step below blocks anything; everything before
+        it is safe to run without reading further.
       </p>
 
       <div className="progress-line">
@@ -53,7 +56,13 @@ export default async function Start() {
                 {step.title}
                 {next?.id === step.id && <span className="tag accent">next</span>}
               </div>
-              <code className="step-cmd">{step.command}</code>
+              {step.id === "connect" ? (
+                <Link href="/settings/integrations" className="btn-github" style={{ display: "inline-block", marginBottom: 6 }}>
+                  {step.done ? "Manage connection" : "Connect GitHub →"}
+                </Link>
+              ) : (
+                <code className="step-cmd">{step.command}</code>
+              )}
               <div className="small muted">{step.detail}</div>
             </div>
           </li>
@@ -62,6 +71,7 @@ export default async function Start() {
 
       <h2>What is connected</h2>
       <div className="cards">
+        <Mini n={counts.github_connections} label="github accounts" />
         <Mini n={counts.agents} label="agents" />
         <Mini n={counts.traces} label="traces" />
         <Mini n={counts.decisions} label="decisions" />

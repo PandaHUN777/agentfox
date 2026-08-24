@@ -7,6 +7,8 @@
  * fetch.
  */
 
+import { cookies } from "next/headers";
+
 const BASE = process.env.NOMETRIA_API_URL || "http://127.0.0.1:8080";
 
 // In MVP self-host there is no IdP wired (PRD §6.3); the control plane accepts a
@@ -15,9 +17,13 @@ const BASE = process.env.NOMETRIA_API_URL || "http://127.0.0.1:8080";
 // because the value of a demo of a governance product is undercut by the demo itself
 // running with authentication turned off — a live deployment sets NOMETRIA_API_TOKEN
 // and gets the real path; local dev with no token set keeps working exactly as before.
-// Swap for a session cookie or OIDC token when the SSO seam in P2-4 is connected.
 const USER = process.env.NOMETRIA_USER || "admin@example.com";
 const TOKEN = process.env.NOMETRIA_API_TOKEN;
+//: This is the P2-4 SSO seam, connected: app/api/auth/github/callback/route.ts mints
+//: a real per-user token on sign-in and sets it here. Checked ahead of the static
+//: env var, so a signed-in user's own token — not a shared service token — is what
+//: the gateway sees, and its tenant scoping applies to everything the UI shows them.
+export const SESSION_COOKIE = "nometria_session";
 
 export class ApiError extends Error {
   constructor(
@@ -29,14 +35,19 @@ export class ApiError extends Error {
   }
 }
 
+async function authHeaders(): Promise<Record<string, string>> {
+  const sessionToken = (await cookies()).get(SESSION_COOKIE)?.value;
+  if (sessionToken) return { Authorization: `Bearer ${sessionToken}` };
+  if (TOKEN) return { Authorization: `Bearer ${TOKEN}` };
+  return { "X-Nometria-User": USER };
+}
+
 export async function api<T = any>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
-      ...(TOKEN
-        ? { Authorization: `Bearer ${TOKEN}` }
-        : { "X-Nometria-User": USER }),
+      ...(await authHeaders()),
       ...(init?.headers || {}),
     },
     // Governance data is live data; a cached control status is a wrong control status.

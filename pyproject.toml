@@ -23,6 +23,9 @@ dependencies = [
     # PL-2: migrations are core, not optional. A deployment that cannot be upgraded
     # is not a deployment.
     "alembic>=1.14",
+    # Encrypts a connected GitHub account's access token at rest (routes/integrations.py)
+    # — core, not optional, the same reasoning as argon2-cffi for password hashing.
+    "cryptography>=43",
 ]
 
 [project.optional-dependencies]

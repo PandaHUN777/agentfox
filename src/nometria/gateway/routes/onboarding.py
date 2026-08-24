@@ -24,6 +24,7 @@ from ...models import (
     Agent,
     Decision,
     Finding,
+    GithubConnection,
     Handoff,
     KnowledgeBoundary,
     SourceRecord,
@@ -56,14 +57,26 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
         session.scalar(select(func.count()).select_from(Finding).where(Finding.status == "open"))
         or 0
     )
+    connections = session.scalar(select(func.count()).select_from(GithubConnection)) or 0
 
     steps = [
         {
             "id": "install",
             "title": "Install and initialise",
             "done": agents > 0,
-            "command": "pip install nometria && nometria init",
+            "command": "pip install git+https://github.com/architsharm/guardrails.git && nometria init",
             "detail": "Database, controls and the baseline policy pack, offline and idempotent.",
+        },
+        {
+            "id": "connect",
+            "title": "Connect a repo, or instrument it — whichever is faster",
+            "done": connections > 0,
+            "command": "Connect → pick a repo → Scan",
+            "detail": (
+                "Scans a repo statically (no import, no execution) for LangChain/LangGraph/"
+                "CrewAI/AutoGen usage and proposes draft agents and policies for review — "
+                "nothing is created live until you approve it."
+            ),
         },
         {
             "id": "instrument",
@@ -132,6 +145,7 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "sources": sources,
             "handoffs": handoffs,
             "open_findings": open_findings,
+            "github_connections": connections,
         },
     }
 

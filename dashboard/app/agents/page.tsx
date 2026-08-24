@@ -4,7 +4,12 @@ import { ApiDown, Panel, Stat, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function Agents() {
+export default async function Agents({
+  searchParams,
+}: {
+  searchParams: Promise<{ review_error?: string }>;
+}) {
+  const { review_error } = await searchParams;
   let agents: any, shadow: any;
   try {
     [agents, shadow] = await Promise.all([
@@ -21,6 +26,7 @@ export default async function Agents() {
   }
 
   const inv = agents.inventory;
+  const drafts = agents.agents.filter((a: any) => a.status === "draft");
 
   return (
     <>
@@ -40,6 +46,54 @@ export default async function Agents() {
         <Stat n={inv.tools} label="tools" />
         <Stat n={inv.lineage_edges} label="lineage edges" />
       </div>
+
+      {review_error && <div className="error">{review_error}</div>}
+
+      {drafts.length > 0 && (
+        <>
+          <h2>Pending review</h2>
+          <Panel
+            title="Proposed by a repo scan"
+            note="inert until approved — see /settings/integrations"
+          >
+            <table>
+              <thead>
+                <tr>
+                  <th>agent</th>
+                  <th>purpose</th>
+                  <th>framework</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {drafts.map((a: any) => (
+                  <tr key={a.id}>
+                    <td className="mono">{a.slug}</td>
+                    <td className="small wrap muted" style={{ maxWidth: 360 }}>
+                      {a.purpose || "—"}
+                    </td>
+                    <td className="small muted">{a.framework || "—"}</td>
+                    <td>
+                      <div className="review-actions">
+                        <form action={`/api/agents/${a.id}/approve`} method="POST">
+                          <button type="submit" className="btn-approve">
+                            Approve
+                          </button>
+                        </form>
+                        <form action={`/api/agents/${a.id}/reject`} method="POST">
+                          <button type="submit" className="btn-reject">
+                            Reject
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Panel>
+        </>
+      )}
 
       {shadow.shadow_agents.length > 0 && (
         <>
@@ -95,7 +149,8 @@ export default async function Agents() {
               <tr key={a.id}>
                 <td>
                   <Link href={`/agents/${a.slug}`} className="mono">{a.slug}</Link>
-                  {!a.registered && <div><span className="tag bad">shadow</span></div>}
+                  {a.status === "shadow" && <div><span className="tag bad">shadow</span></div>}
+                  {a.status === "draft" && <div><span className="tag warn">draft</span></div>}
                 </td>
                 <td className="small wrap muted" style={{ maxWidth: 320 }}>
                   {a.purpose || "—"}

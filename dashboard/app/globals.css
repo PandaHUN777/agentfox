@@ -53,6 +53,63 @@ a:hover { text-decoration: underline; }
 
 .shell { display: flex; min-height: 100vh; }
 
+.login-main { display: block; width: 100%; }
+.login-shell {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.login-card {
+  width: 100%;
+  max-width: 360px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 28px 26px;
+  text-align: center;
+}
+.login-card .brand { font-weight: 700; font-size: 17px; margin-bottom: 4px; }
+.login-card .brand small {
+  display: block;
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.login-card .sub { margin: 14px 0 20px; max-width: none; }
+.login-card .error { text-align: left; margin-bottom: 16px; }
+.btn-github {
+  display: block;
+  padding: 10px 16px;
+  background: var(--text);
+  color: var(--bg);
+  border-radius: 7px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.btn-github:hover { opacity: 0.88; text-decoration: none; }
+
+.btn-scan,
+.btn-approve,
+.btn-reject {
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.btn-scan:hover { border-color: var(--accent); color: var(--accent); }
+.btn-approve { border-color: var(--ok); color: var(--ok); }
+.btn-approve:hover { background: var(--ok-bg); }
+.btn-reject { border-color: var(--bad); color: var(--bad); margin-left: 6px; }
+.btn-reject:hover { background: var(--bad-bg); }
+.review-actions { display: flex; gap: 0; }
+
 nav.side {
   width: 208px;
   flex: 0 0 208px;
@@ -91,6 +148,24 @@ nav.side a {
   font-size: 13.5px;
 }
 nav.side a:hover { color: var(--text); background: var(--panel-2); text-decoration: none; }
+nav.side .nav-signout {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+nav.side .nav-signout button {
+  display: block;
+  width: 100%;
+  padding: 7px 20px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+nav.side .nav-signout button:hover { color: var(--text); background: var(--panel-2); }
 
 main { flex: 1; padding: 28px 32px 64px; max-width: 1400px; min-width: 0; }
 
