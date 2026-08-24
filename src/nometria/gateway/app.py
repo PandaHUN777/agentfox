@@ -238,6 +238,23 @@ def create_app() -> FastAPI:
             "fallback_chain": get_settings().fallback_chain,
         }
 
+    @app.post("/api/_migrate_finding_resolution_note", tags=["platform"])
+    def migrate_finding_resolution_note(
+        session: Session = Depends(db), _u=Depends(current_user)
+    ) -> dict[str, Any]:
+        """One-off: apply migration a3f7c9e1b204 directly — the deployed wheel does
+        not bundle migrations/ (PL-2's alembic upgrade path needs a filesystem this
+        environment doesn't have), so this stands in for `alembic upgrade head` for
+        this single column pair. Idempotent (IF NOT EXISTS); safe to remove once run."""
+        from sqlalchemy import text
+
+        session.execute(text("ALTER TABLE findings ADD COLUMN IF NOT EXISTS resolution_note TEXT"))
+        session.execute(
+            text("ALTER TABLE findings ADD COLUMN IF NOT EXISTS resolved_by VARCHAR(120)")
+        )
+        session.commit()
+        return {"migrated": True}
+
     @app.get("/metrics", tags=["platform"], response_class=PlainTextResponse)
     def metrics(session: Session = Depends(db)) -> str:
         """I-7 — Prometheus exposition.
