@@ -457,6 +457,22 @@ def test_suppressing_a_finding_requires_a_justification(client):
     assert good.status_code == 200
 
 
+def test_get_finding_returns_the_full_evidence(client):
+    # The Findings page linked a title to nothing and rendered control_keys as plain
+    # text — this is the detail route that backs the drill-down fixing that.
+    client.post("/api/discovery/scan", headers=as_user("admin@example.com"))
+    findings = client.get("/api/findings", headers=as_user("admin@example.com")).json()
+    assert findings["findings"]
+    finding_id = findings["findings"][0]["id"]
+
+    detail = client.get(f"/api/findings/{finding_id}", headers=as_user("admin@example.com")).json()
+    assert detail["id"] == finding_id
+    assert detail["evidence"] == findings["findings"][0]["evidence"]
+    assert "controls" in detail and "status" in detail
+
+    assert client.get("/api/findings/no-such-finding", headers=as_user("admin@example.com")).status_code == 404
+
+
 def test_unknown_user_is_rejected(client):
     assert client.get("/api/agents", headers=as_user("nobody@example.com")).status_code == 401
 
@@ -548,6 +564,48 @@ def test_sdk_check_returns_a_decision(seeded):
     )
     assert result["effective_verdict"] in ("block", "escalate")
     assert result["entities"]
+
+
+def test_get_eval_suite_returns_its_cases(client):
+    # seed.py creates "support-quality" with real cases — the dashboard's suite
+    # detail page needs this route to show them, which no GET previously did
+    # (list_suites only returned a case count).
+    detail = client.get("/api/eval/suites/support-quality", headers=as_user("admin@example.com")).json()
+    assert detail["key"] == "support-quality"
+    assert detail["cases"], "seeded suite should have cases"
+    assert "input" in detail["cases"][0] and "expected" in detail["cases"][0]
+
+    assert client.get("/api/eval/suites/no-such-suite", headers=as_user("admin@example.com")).status_code == 404
+
+
+def test_create_suite_add_case_and_run_it(client):
+    created = client.post(
+        "/api/eval/suites",
+        json={"key": "dashboard-created", "name": "Dashboard created", "description": "test"},
+        headers=as_user("admin@example.com"),
+    )
+    assert created.status_code == 201
+
+    case = client.post(
+        "/api/eval/suites/dashboard-created/cases",
+        json={"input": {"prompt": "What is our refund policy?"}, "expected": {"goal": "cite the policy"}},
+        headers=as_user("admin@example.com"),
+    )
+    assert case.status_code == 201
+
+    detail = client.get("/api/eval/suites/dashboard-created", headers=as_user("admin@example.com")).json()
+    assert len(detail["cases"]) == 1
+
+    run = client.post(
+        "/api/eval/runs",
+        json={"suite": "dashboard-created", "target": {"provider": "echo", "model": "echo-1"}},
+        headers=as_user("admin@example.com"),
+    )
+    assert run.status_code == 201
+    run_id = run.json()["id"]
+
+    run_detail = client.get(f"/api/eval/runs/{run_id}", headers=as_user("admin@example.com")).json()
+    assert run_detail["results"], "the run should have scored the one case"
 
 
 def test_sdk_decorator_authorises_before_running(seeded):

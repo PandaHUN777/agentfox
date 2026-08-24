@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
 import { ApiDown, Panel, ts } from "@/components/ui";
 
@@ -59,7 +60,7 @@ export default async function Policies({
                 {proposed.map((p: any) => (
                   <tr key={p.id}>
                     <td>
-                      {p.name}
+                      <Link href={`/policies/${p.key}`}>{p.name}</Link>
                       <div className="small muted mono">{p.key}</div>
                     </td>
                     <td className="small wrap muted" style={{ maxWidth: 420 }}>
@@ -97,7 +98,7 @@ export default async function Policies({
             {policies.policies.map((p: any) => (
               <tr key={p.key}>
                 <td>
-                  {p.name}
+                  <Link href={`/policies/${p.key}`}>{p.name}</Link>
                   <div className="small muted mono">{p.key}</div>
                   {p.proposed && <div><span className="tag warn">proposed</span></div>}
                 </td>

@@ -1,9 +1,15 @@
+import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
 import { ApiDown, Panel, Stat, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
-export default async function Evals() {
+export default async function Evals({
+  searchParams,
+}: {
+  searchParams: Promise<{ review_error?: string }>;
+}) {
+  const { review_error } = await searchParams;
   let suites: any, runs: any, scorers: any, campaigns: any;
   try {
     [suites, runs, scorers, campaigns] = await Promise.all([
@@ -38,6 +44,8 @@ export default async function Evals() {
         <Stat n={scorers.scorers.length} label="scorers" />
         <Stat n={campaigns.campaigns.length} label="red-team campaigns" />
       </div>
+
+      {review_error && <div className="error">{review_error}</div>}
 
       {latest?.summary?.scorers && (
         <>
@@ -82,13 +90,20 @@ export default async function Evals() {
       )}
 
       <h2>Suites</h2>
+      {suites.suites.length === 0 && (
+        <p className="small muted" style={{ marginTop: -8 }}>
+          No suite has ever been created for this org — that's why this reads 0, not
+          because evaluation is broken. Create one below, or promote a real production
+          trace into it once it exists.
+        </p>
+      )}
       <div className="panel">
         <table>
           <thead><tr><th>suite</th><th>description</th><th>tags</th><th className="num">cases</th></tr></thead>
           <tbody>
             {suites.suites.map((s: any) => (
               <tr key={s.id}>
-                <td className="mono small">{s.key}</td>
+                <td className="mono small"><Link href={`/evals/${s.key}`}>{s.key}</Link></td>
                 <td className="small wrap muted" style={{ maxWidth: 460 }}>{s.description}</td>
                 <td className="small muted">{(s.tags || []).join(", ")}</td>
                 <td className="num">{s.cases}</td>
@@ -96,6 +111,23 @@ export default async function Evals() {
             ))}
           </tbody>
         </table>
+        <div className="body" style={{ borderTop: "1px solid var(--border)" }}>
+          <form action="/api/eval/suites" method="POST" className="row" style={{ gap: 6 }}>
+            <input
+              type="text" name="key" placeholder="key, e.g. support-quality" required
+              style={{ width: 200, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            />
+            <input
+              type="text" name="name" placeholder="name (optional)"
+              style={{ width: 200, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            />
+            <input
+              type="text" name="description" placeholder="description (optional)"
+              style={{ flex: 1, minWidth: 200, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            />
+            <button type="submit" className="btn-approve">Create suite</button>
+          </form>
+        </div>
       </div>
 
       <h2>Red-team posture</h2>

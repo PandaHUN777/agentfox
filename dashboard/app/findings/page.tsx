@@ -58,8 +58,16 @@ export default async function Findings({
                 <tr key={f.id}>
                   <td><Severity value={f.severity} /></td>
                   <td className="mono small">{f.type}</td>
-                  <td className="small wrap">{f.title}</td>
-                  <td className="small mono muted">{(f.controls || []).join(" ")}</td>
+                  <td className="small wrap">
+                    <Link href={`/findings/${f.id}`}>{f.title}</Link>
+                  </td>
+                  <td className="small mono">
+                    {(f.controls || []).map((c: string) => (
+                      <Link key={c} href={`/compliance#${c}`} className="muted" style={{ marginRight: 6 }}>
+                        {c}
+                      </Link>
+                    ))}
+                  </td>
                   <td className="small muted">{ts(f.created_at)}</td>
                 </tr>
               ))}

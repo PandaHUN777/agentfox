@@ -130,7 +130,7 @@ export default async function Compliance({
           </thead>
           <tbody>
             {controls.controls.map((c: any) => (
-              <tr key={c.key}>
+              <tr key={c.key} id={c.key}>
                 <td>
                   <div className="mono small">{c.key}</div>
                   <div className="small muted">{c.title}</div>

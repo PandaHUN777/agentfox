@@ -422,6 +422,30 @@ def list_findings(
     }
 
 
+@router.get("/findings/{finding_id}")
+def get_finding(
+    finding_id: str, session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    finding = session.get(Finding, finding_id)
+    if finding is None:
+        raise HTTPException(404, "unknown finding")
+    return {
+        "id": finding.id,
+        "type": finding.type,
+        "severity": finding.severity,
+        "status": finding.status,
+        "title": finding.title,
+        "subject_type": finding.subject_type,
+        "subject_id": finding.subject_id,
+        "controls": finding.control_keys,
+        "evidence": finding.evidence_json,
+        "suppression_reason": finding.suppression_reason,
+        "suppressed_by": finding.suppressed_by,
+        "created_at": _iso(finding.created_at),
+        "resolved_at": _iso(finding.resolved_at),
+    }
+
+
 class FindingPatch(BaseModel):
     status: str
     suppression_reason: str | None = None

@@ -85,6 +85,35 @@ def list_suites(
     return {"suites": out}
 
 
+@router.get("/eval/suites/{key}")
+def get_suite(
+    key: str, session: Session = Depends(db), _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    suite = _suite(session, key)
+    cases = session.scalars(
+        select(EvalCase).where(EvalCase.suite_id == suite.id).order_by(EvalCase.created_at)
+    ).all()
+    return {
+        "id": suite.id,
+        "key": suite.key,
+        "name": suite.name,
+        "description": suite.description,
+        "tags": suite.tags,
+        "cases": [
+            {
+                "id": c.id,
+                "input": c.input_json,
+                "expected": c.expected_json,
+                "context": c.context_json,
+                "labels": c.labels,
+                "split": c.split,
+                "source_trace_id": c.source_trace_id,
+            }
+            for c in cases
+        ],
+    }
+
+
 @router.post("/eval/suites", status_code=201)
 def create_suite(
     payload: SuiteIn, session: Session = Depends(db), _user: User = Depends(require("eval"))
