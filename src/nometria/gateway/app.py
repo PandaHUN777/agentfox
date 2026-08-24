@@ -238,33 +238,6 @@ def create_app() -> FastAPI:
             "fallback_chain": get_settings().fallback_chain,
         }
 
-    @app.post("/api/_migrate_hosted_api_integration", tags=["platform"])
-    def migrate_hosted_api_integration(
-        session: Session = Depends(db), _u=Depends(current_user)
-    ) -> dict[str, Any]:
-        """One-off: apply migration b6e2d4f1a933 directly — the deployed wheel does
-        not bundle migrations/, so this stands in for `alembic upgrade head` for
-        these columns. Idempotent (IF NOT EXISTS / conditional ALTER); safe to
-        remove once run."""
-        from sqlalchemy import text
-
-        session.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS endpoint_url VARCHAR(500)"))
-        session.execute(text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS docs_url VARCHAR(500)"))
-        session.execute(
-            text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS openapi_spec_url VARCHAR(500)")
-        )
-        session.execute(
-            text(
-                "ALTER TABLE scan_runs ADD COLUMN IF NOT EXISTS source_kind VARCHAR(16) "
-                "NOT NULL DEFAULT 'github'"
-            )
-        )
-        session.execute(text("ALTER TABLE scan_runs ADD COLUMN IF NOT EXISTS target_url VARCHAR(500)"))
-        session.execute(text("ALTER TABLE scan_runs ALTER COLUMN connection_id DROP NOT NULL"))
-        session.execute(text("ALTER TABLE scan_runs ALTER COLUMN repo_full_name SET DEFAULT ''"))
-        session.commit()
-        return {"migrated": True}
-
     @app.get("/metrics", tags=["platform"], response_class=PlainTextResponse)
     def metrics(session: Session = Depends(db)) -> str:
         """I-7 — Prometheus exposition.
