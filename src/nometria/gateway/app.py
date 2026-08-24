@@ -127,53 +127,6 @@ def create_app() -> FastAPI:
     def health() -> dict[str, Any]:
         return {"status": "ok", "version": __version__}
 
-    @app.post("/api/_migrate_control_key_uniqueness", tags=["platform"])
-    def _migrate_control_key_uniqueness(
-        session: Session = Depends(db), user=Depends(current_user)
-    ) -> dict[str, Any]:
-        """TEMPORARY, run-once — applies migration 06f58cbd4fad by hand.
-
-        Root cause: Control inherits TimestampMixin -> TenantScoped like every mapped
-        class (assert_tenant_safe requires it), so it's tenant-filtered on every ORM
-        read — but its DB-level unique index was on `key` alone, not `(org_id, key)`.
-        The first org to sync the reference catalog claimed every key globally; every
-        other org's sync then hit a UniqueViolation while its own (correctly
-        tenant-filtered) SELECT reported the row absent — which read as "the catalog
-        silently refuses to load" rather than what it was: a schema bug.
-
-        This deployment's alembic.ini/migrations/ aren't bundled into the wheel
-        (same class of gap the compliance/policy YAML packaging fix closed), so
-        `nometria db upgrade` can't run against this environment without the raw DB
-        connection string, which isn't available outside Vercel's env var store.
-        Running the DDL directly, from inside the process that already holds that
-        connection, sidesteps that without needing the string. Idempotent — safe to
-        call again; a second call is a no-op. Owner/admin only. Remove this route
-        once applied and confirmed.
-        """
-        if user.role not in {"owner", "admin"}:
-            from fastapi import HTTPException
-
-            raise HTTPException(403, "owner or admin required")
-        from sqlalchemy import text
-
-        already = session.execute(
-            text("SELECT 1 FROM pg_constraint WHERE conname = 'ux_controls_org_key'")
-        ).first()
-        if already:
-            return {"status": "already applied"}
-        session.execute(text("DROP INDEX IF EXISTS ix_controls_key"))
-        session.execute(
-            text("CREATE INDEX IF NOT EXISTS ix_controls_key ON controls (key)")
-        )
-        session.execute(
-            text(
-                "ALTER TABLE controls ADD CONSTRAINT ux_controls_org_key "
-                "UNIQUE (org_id, key)"
-            )
-        )
-        session.commit()
-        return {"status": "migrated"}
-
     @app.get("/api/version", tags=["platform"])
     def version() -> dict[str, Any]:
         """Every version that participates in a decision (X-4 determinism)."""
