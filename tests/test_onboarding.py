@@ -408,3 +408,29 @@ def test_every_attention_item_links_somewhere(client):
 
     body = client.get("/api/attention", headers=as_user("admin@example.com")).json()
     assert all(i["href"].startswith("/") for i in body["items"])
+
+
+def test_a_finding_alert_links_to_its_own_detail_page_not_the_general_queue(client):
+    """A homepage alert that links to the generic list makes the reader re-find the
+    exact thing they just clicked on among identical-looking rows."""
+    from nometria.db import session_scope
+    from nometria.models import Finding
+
+    with session_scope() as session:
+        finding = Finding(type="a", severity="critical", title="t", subject_type="agent")
+        session.add(finding)
+        session.flush()
+        finding_id = finding.id
+
+    body = client.get("/api/attention", headers=as_user("admin@example.com")).json()
+    item = next(i for i in body["items"] if i["type"] == "a")
+    assert item["href"] == f"/findings/{finding_id}"
+
+
+def test_me_returns_the_signed_in_identity(client):
+    """The account menu needs a real answer to 'who am I, whose data is this' —
+    not just a bare 'Sign out' link."""
+    body = client.get("/api/me", headers=as_user("admin@example.com")).json()
+    assert body["email"] == "admin@example.com"
+    assert body["org_id"]
+    assert "workspace" in body

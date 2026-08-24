@@ -29,21 +29,21 @@ export default async function Traces({
 
   return (
     <>
-      <h1>Execution paths</h1>
+      <h1>Traces</h1>
       <p className="sub">
-        Every prompt, retrieval, tool call, delegation and guardrail decision, correlated
-        into one auditable object. This is the record an auditor reads and the substrate
-        policy simulation replays against.
+        Execution paths: every prompt, retrieval, tool call, delegation and guardrail
+        decision, correlated into one auditable object. This is the record an auditor
+        reads and the substrate policy simulation replays against.
       </p>
 
-      <div className="row small" style={{ marginBottom: 14 }}>
-        <span className="muted">filter:</span>
-        <Link href="/traces">all</Link>
-        <Link href="/traces?verdict=block">blocked</Link>
-        <Link href="/traces?verdict=escalate">escalated</Link>
-        <Link href="/traces?entity_type=INJECTION">injection</Link>
-        <Link href="/traces?entity_type=PII">PII</Link>
-        <Link href="/traces?entity_type=SECRET">secrets</Link>
+      <div className="chipbar">
+        <span className="chipbar-label">filter:</span>
+        <Link href="/traces" className={`chip${!sp.verdict && !sp.entity_type ? " active" : ""}`}>all</Link>
+        <Link href="/traces?verdict=block" className={`chip${sp.verdict === "block" ? " active" : ""}`}>blocked</Link>
+        <Link href="/traces?verdict=escalate" className={`chip${sp.verdict === "escalate" ? " active" : ""}`}>escalated</Link>
+        <Link href="/traces?entity_type=INJECTION" className={`chip${sp.entity_type === "INJECTION" ? " active" : ""}`}>injection</Link>
+        <Link href="/traces?entity_type=PII" className={`chip${sp.entity_type === "PII" ? " active" : ""}`}>PII</Link>
+        <Link href="/traces?entity_type=SECRET" className={`chip${sp.entity_type === "SECRET" ? " active" : ""}`}>secrets</Link>
       </div>
 
       <div className="panel scroll-x">

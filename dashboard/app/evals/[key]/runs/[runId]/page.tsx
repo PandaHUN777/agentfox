@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { ApiDown, Panel, ts } from "@/components/ui";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,12 @@ export default async function RunDetail({
 
   return (
     <>
+      <Breadcrumbs
+        crumbs={[
+          { label: "Evaluation", href: "/evals" },
+          { label: key, href: `/evals/${key}` },
+        ]}
+      />
       <h1 className="mono">{run.id}</h1>
       <p className="sub">
         <Link href={`/evals/${key}`}>{key}</Link>{" "}

@@ -15,15 +15,21 @@ export function PolicyEditor({
   policyKey,
   initialBody,
   canEnforce,
+  isTemplate,
 }: {
   policyKey: string;
   initialBody: string;
   canEnforce: boolean;
+  /** True when `initialBody` is a suggested starting point we generated, not what
+   * is actually saved — the "rules" count shown elsewhere reflects the real saved
+   * version and will legitimately read 0 until this is edited and saved. */
+  isTemplate?: boolean;
 }) {
   const [body, setBody] = useState(initialBody);
   const [validation, setValidation] = useState<any>(null);
   const [saveResult, setSaveResult] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [dismissedTemplate, setDismissedTemplate] = useState(false);
 
   async function validate() {
     setBusy(true);
@@ -76,6 +82,22 @@ export function PolicyEditor({
 
   return (
     <div className="stack">
+      {isTemplate && !dismissedTemplate && (
+        <div className="template-banner">
+          <strong>Showing a suggested starting rule — nothing is saved yet.</strong>
+          This policy currently has 0 saved rules; the rule below is a starting
+          point to edit, not something already in force. Click{" "}
+          <em>Save new version</em> to make it real, or{" "}
+          <button
+            type="button"
+            onClick={() => setDismissedTemplate(true)}
+            style={{ background: "none", border: "none", color: "var(--accent)", cursor: "pointer", padding: 0, font: "inherit" }}
+          >
+            dismiss
+          </button>
+          .
+        </div>
+      )}
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}

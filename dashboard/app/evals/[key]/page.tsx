@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
 import { ApiDown, Panel, ts } from "@/components/ui";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export default async function SuiteDetail({
 
   return (
     <>
+      <Breadcrumbs crumbs={[{ label: "Evaluation", href: "/evals" }]} />
       <h1>{suite.name || suite.key}</h1>
       <p className="sub">{suite.description || "No description."}</p>
       {review_error && <div className="error">{review_error}</div>}

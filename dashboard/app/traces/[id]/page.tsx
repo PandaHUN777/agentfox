@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { ApiDown, Panel, Verdict, ts } from "@/components/ui";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ export default async function TraceDetail({
 
   return (
     <>
+      <Breadcrumbs crumbs={[{ label: "Traces", href: "/traces" }]} />
       <h1 className="mono" style={{ fontSize: 17 }}>{t.id}</h1>
       <p className="sub">
         <Link href={`/agents/${t.agent}`} className="mono">{t.agent}</Link> ·{" "}

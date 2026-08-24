@@ -147,6 +147,7 @@ export default async function Overview() {
           n={`${Math.round((posture.effectiveness || 0) * 100)}%`}
           label="control effectiveness"
           href="/compliance"
+          hint="Of assessed controls only (effective ÷ effective+degraded+failing) — click through for the full breakdown, including not-yet-implemented controls."
         />
       </div>
 
@@ -165,14 +166,16 @@ function Card({
   label,
   tone,
   href,
+  hint,
 }: {
   n: number | string;
   label: string;
   tone?: string;
   href: string;
+  hint?: string;
 }) {
   return (
-    <Link href={href} className={`card link ${tone || ""}`}>
+    <Link href={href} className={`card link ${tone || ""}`} title={hint}>
       <div className="n">{n}</div>
       <div className="l">{label}</div>
     </Link>

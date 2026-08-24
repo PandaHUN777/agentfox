@@ -36,6 +36,29 @@ from ..deps import current_user, db
 router = APIRouter(prefix="/api", tags=["platform"])
 
 
+@router.get("/me")
+def me(session: Session = Depends(db), user=Depends(current_user)) -> dict[str, Any]:
+    """The signed-in identity, for the account menu.
+
+    A bare 'Sign out' link with nothing else in the account area leaves a multi-user
+    product with no visible answer to "who am I, and whose data is this" — this backs
+    that answer. `workspace` is the connected GitHub login when there is one (the
+    thing a solo/team GitHub account actually reads as a workspace name to a user),
+    falling back to the raw org id.
+    """
+    connection = session.scalar(
+        select(GithubConnection).order_by(GithubConnection.created_at.desc())
+    )
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": user.role,
+        "org_id": user.org_id,
+        "workspace": connection.github_login if connection else user.org_id,
+    }
+
+
 @router.get("/onboarding")
 def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> dict[str, Any]:
     """Install state as a checklist, computed live.
@@ -183,7 +206,7 @@ def attention(
                 "type": finding.type,
                 "subject": agents.get(finding.subject_id or "", finding.subject_type),
                 "at": finding.created_at.isoformat(),
-                "href": "/findings",
+                "href": f"/findings/{finding.id}",
             }
         )
 

@@ -168,24 +168,6 @@ nav.side a {
   font-size: 13.5px;
 }
 nav.side a:hover { color: var(--text); background: var(--panel-2); text-decoration: none; }
-nav.side .nav-signout {
-  margin-top: 14px;
-  padding-top: 14px;
-  border-top: 1px solid var(--border);
-}
-nav.side .nav-signout button {
-  display: block;
-  width: 100%;
-  padding: 7px 20px;
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-size: 13.5px;
-  text-align: left;
-  cursor: pointer;
-  font-family: inherit;
-}
-nav.side .nav-signout button:hover { color: var(--text); background: var(--panel-2); }
 
 .theme-toggle {
   margin: 14px 20px 0;
@@ -427,3 +409,270 @@ ol.steps li.done .step-title { color: var(--muted); }
   max-width: 78ch;
 }
 .note-panel strong { color: var(--text); }
+
+/* --- Brand ---------------------------------------------------------------- */
+
+.wordmark { display: inline-flex; align-items: center; gap: 8px; }
+.wordmark svg { flex: 0 0 auto; }
+
+/* --- Top bar: search + notifications + account ----------------------------- */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 32px 0;
+  max-width: 1400px;
+}
+
+.cmdk-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12.5px;
+  font-family: inherit;
+  cursor: pointer;
+  width: 220px;
+}
+.cmdk-trigger:hover { border-color: var(--accent); color: var(--text); }
+.cmdk-trigger span:nth-child(2) { flex: 1; text-align: left; }
+.cmdk-kbd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--muted);
+}
+
+.cmdk-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 11, 13, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 12vh;
+  z-index: 100;
+}
+.cmdk-panel {
+  width: 100%;
+  max-width: 560px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.cmdk-input {
+  width: 100%;
+  padding: 14px 16px;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+}
+.cmdk-list { max-height: 340px; overflow-y: auto; padding: 6px; }
+.cmdk-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  color: var(--text);
+}
+.cmdk-item.active { background: var(--panel-2); }
+.cmdk-empty { padding: 14px 16px; }
+
+.notif-bell, .account-menu { position: relative; }
+.notif-bell summary, .account-menu summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+.notif-bell summary::-webkit-details-marker,
+.account-menu summary::-webkit-details-marker { display: none; }
+
+.notif-bell summary {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  justify-content: center;
+}
+.notif-bell summary:hover { color: var(--text); border-color: var(--accent); }
+.notif-count {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: var(--bad);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 3px 4px;
+  border-radius: 20px;
+  min-width: 15px;
+  text-align: center;
+}
+.notif-body, .account-menu-body {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 320px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+  z-index: 90;
+  overflow: hidden;
+}
+.notif-head {
+  padding: 10px 14px;
+  font-weight: 600;
+  font-size: 12.5px;
+  border-bottom: 1px solid var(--border);
+}
+.notif-empty { padding: 16px 14px; }
+.notif-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  align-items: flex-start;
+}
+.notif-item:hover { background: var(--panel-2); text-decoration: none; }
+.notif-item-body { display: flex; flex-direction: column; gap: 2px; }
+.notif-more { display: block; padding: 9px 14px; text-align: center; }
+.notif-more:hover { background: var(--panel-2); text-decoration: none; }
+
+.account-menu summary {
+  gap: 8px;
+  padding: 4px 8px 4px 4px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+}
+.account-menu summary:hover { background: var(--panel-2); }
+.avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  flex: 0 0 24px;
+}
+.account-summary { display: flex; flex-direction: column; line-height: 1.25; max-width: 150px; }
+.account-email { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-workspace { font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.account-menu-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.account-menu-signout {
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  text-align: left;
+  color: var(--bad);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.account-menu-signout:hover { background: var(--bad-bg); }
+
+/* --- Breadcrumbs ------------------------------------------------------------ */
+
+.breadcrumbs { display: flex; gap: 6px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.breadcrumbs a { color: var(--muted); }
+.breadcrumbs a:hover { color: var(--accent); text-decoration: none; }
+.breadcrumbs .sep { margin-left: 6px; color: var(--border); }
+
+/* --- Filter chips (was: plain unstyled links with no active state) --------- */
+
+.chipbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.chipbar .chipbar-label { color: var(--muted); font-size: 12px; margin-right: 4px; }
+.chip {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--muted);
+}
+.chip:hover { color: var(--text); border-color: var(--accent); text-decoration: none; }
+.chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+/* --- Legend ------------------------------------------------------------- */
+
+.legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 18px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.legend-swatch { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+.legend-swatch.ok { background: var(--ok); }
+.legend-swatch.warn { background: var(--warn); }
+.legend-swatch.bad { background: var(--bad); }
+.legend-swatch.dim { background: var(--muted); opacity: 0.5; }
+
+/* --- Tabs (query-param driven, server-rendered, no client JS) -------------- */
+
+.tabbar { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+.tabbar a {
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.tabbar a:hover { color: var(--text); text-decoration: none; }
+.tabbar a.active { color: var(--text); border-bottom-color: var(--accent); font-weight: 600; }
+.tabbar a .tab-count {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: 20px;
+  background: var(--dim-bg);
+  color: var(--muted);
+  font-size: 10.5px;
+}
+.tabbar a.active .tab-count { background: var(--accent); color: #fff; }
+
+/* --- Template-not-saved banner (policy editor) ------------------------------ */
+
+.template-banner {
+  border-left: 3px solid var(--accent);
+  background: var(--panel-2);
+  color: var(--text);
+  padding: 10px 14px;
+  border-radius: 0 7px 7px 0;
+  font-size: 12.5px;
+  margin-bottom: 12px;
+}
+.template-banner strong { display: block; margin-bottom: 3px; }

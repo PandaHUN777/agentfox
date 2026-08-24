@@ -30,7 +30,7 @@ export default async function Policies({
 
   return (
     <>
-      <h1>Policy</h1>
+      <h1>Policies</h1>
       <p className="sub">
         One authored artefact drives both runtime enforcement and compliance
         reporting. Policies ship in <strong>observe</strong> mode: they record what

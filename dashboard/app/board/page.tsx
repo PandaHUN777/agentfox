@@ -21,10 +21,11 @@ export default async function Board() {
 
   return (
     <>
-      <h1>AI risk posture</h1>
+      <h1>Board view</h1>
       <p className="sub">
-        The up-and-out view: agent population by risk class, control effectiveness,
-        open findings, and the regulatory clock. Generated {v.generated_at?.slice(0, 19)}.
+        AI risk posture — the up-and-out view: agent population by risk class,
+        control effectiveness, open findings, and the regulatory clock. Generated{" "}
+        {v.generated_at?.slice(0, 19)}.
       </p>
 
       <div className="cards">
@@ -33,7 +34,11 @@ export default async function Board() {
         <Stat n={inv.shadow} label="ungoverned" tone={inv.shadow ? "bad" : "ok"} />
         <Stat n={v.unassessed_agents.length} label="unassessed" tone={v.unassessed_agents.length ? "warn" : "ok"} />
         <Stat n={f.total} label="open findings" tone={f.by_severity?.critical ? "bad" : f.total ? "warn" : "ok"} />
-        <Stat n={pct(v.overall_posture.effectiveness)} label="control effectiveness" />
+        <Stat
+          n={pct(v.overall_posture.effectiveness)}
+          label="control effectiveness"
+          hint="Effective ÷ (effective + degraded + failing) among assessed controls — excludes not-yet-implemented controls from the ratio. See the framework table below for the full breakdown."
+        />
       </div>
 
       <div className="grid2" style={{ marginTop: 22 }}>

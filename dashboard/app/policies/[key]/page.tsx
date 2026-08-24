@@ -1,6 +1,7 @@
 import { api, safeApi } from "@/lib/api";
 import { ApiDown, Panel, ts } from "@/components/ui";
 import { PolicyEditor } from "@/components/PolicyEditor";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -60,12 +61,13 @@ export default async function PolicyDetail({ params }: { params: Promise<{ key: 
   }
 
   const binding = bindings.policies?.find((p: any) => p.key === key);
-  const body = policy.body?.trim()
-    ? withExampleRuleIfEmpty(policy.body)
-    : starterTemplate(key, policy.name, policy.description);
+  const savedBody = policy.body?.trim() || "";
+  const body = savedBody ? withExampleRuleIfEmpty(savedBody) : starterTemplate(key, policy.name, policy.description);
+  const isTemplate = body !== savedBody;
 
   return (
     <>
+      <Breadcrumbs crumbs={[{ label: "Policies", href: "/policies" }]} />
       <h1>{policy.name || key}</h1>
       <p className="sub">{policy.description || "No description."}</p>
 
@@ -89,7 +91,7 @@ export default async function PolicyDetail({ params }: { params: Promise<{ key: 
         Saving creates a new immutable version; nothing currently in force changes
         until you promote it.
       </p>
-      <PolicyEditor policyKey={key} initialBody={body} canEnforce={true} />
+      <PolicyEditor policyKey={key} initialBody={body} canEnforce={true} isTemplate={isTemplate} />
 
       {policy.versions?.length > 0 && (
         <>

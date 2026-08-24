@@ -4,13 +4,17 @@ export function Stat({
   n,
   label,
   tone,
+  hint,
 }: {
   n: React.ReactNode;
   label: string;
   tone?: "ok" | "warn" | "bad";
+  /** Explains a number whose formula isn't obvious from the label alone — shown as
+   * a native tooltip so the card stays compact. */
+  hint?: string;
 }) {
   return (
-    <div className={`card${tone ? " " + tone : ""}`}>
+    <div className={`card${tone ? " " + tone : ""}`} title={hint}>
       <div className="n">{n}</div>
       <div className="l">{label}</div>
     </div>

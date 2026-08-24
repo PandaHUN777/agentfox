@@ -31,11 +31,11 @@ export default async function Evals({
 
   return (
     <>
-      <h1>Evaluation & reliability</h1>
+      <h1>Evaluation</h1>
       <p className="sub">
-        The widest solved-vs-unsolved gap in the stack: teams can see their agents but
-        cannot judge them. This is the pillar that governs whether the agent{" "}
-        <em>worked</em>, not only whether it was safe.
+        Evaluation and reliability: the widest solved-vs-unsolved gap in the stack —
+        teams can see their agents but cannot judge them. This is the pillar that
+        governs whether the agent <em>worked</em>, not only whether it was safe.
       </p>
 
       <div className="cards">

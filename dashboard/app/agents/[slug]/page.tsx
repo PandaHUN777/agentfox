@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
 import { ApiDown, Panel, Severity, Stat, ts } from "@/components/ui";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,7 @@ export default async function AgentDetail({
 
   return (
     <>
+      <Breadcrumbs crumbs={[{ label: "Agents", href: "/agents" }]} />
       <h1 className="mono">{a.slug}</h1>
       <p className="sub">{a.purpose || "No business purpose recorded."}</p>
 

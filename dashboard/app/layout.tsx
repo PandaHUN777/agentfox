@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
-import { SESSION_COOKIE } from "@/lib/api";
+import { SESSION_COOKIE, safeApi } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Wordmark } from "@/components/Logo";
+import { AccountMenu } from "@/components/AccountMenu";
+import { NotificationsBell } from "@/components/NotificationsBell";
+import { CommandSearch } from "@/components/CommandSearch";
 import "./globals.css";
 
 // Runs before paint so a stored theme choice never flashes the wrong colors on load.
@@ -57,6 +61,10 @@ const NAV: { group: string; items: [string, string][] }[] = [
   },
 ];
 
+const NAV_FLAT = NAV.flatMap(({ group, items }) =>
+  items.map(([label, href]) => ({ label, href, group: group || "Home" })),
+);
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const signedIn = Boolean((await cookies()).get(SESSION_COOKIE)?.value);
   // Set by middleware.ts. Falls back to showing the chrome — an unset header means
@@ -64,6 +72,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // default on an edge case is the wrong failure direction.
   const pathname = (await headers()).get("x-pathname") || "";
   const isLoginPage = pathname === "/login";
+
+  let me: any = null;
+  let attention: any = null;
+  if (signedIn && !isLoginPage) {
+    [me, attention] = await Promise.all([
+      safeApi("/api/me", null),
+      safeApi("/api/attention", { items: [], total: 0 }),
+    ]);
+  }
 
   return (
     <html lang="en">
@@ -77,7 +94,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="shell">
             <nav className="side">
               <div className="brand">
-                Nometria
+                <Wordmark />
                 <small>agent governance control plane</small>
               </div>
               {NAV.map(({ group, items }) => (
@@ -91,13 +108,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 </div>
               ))}
               <ThemeToggle />
-              {signedIn && (
-                <form action="/api/auth/logout" method="POST" className="nav-signout">
-                  <button type="submit">Sign out</button>
-                </form>
-              )}
             </nav>
-            <main>{children}</main>
+            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+              {signedIn && (
+                <div className="topbar">
+                  <CommandSearch nav={NAV_FLAT} />
+                  <NotificationsBell items={attention?.items?.slice(0, 6) || []} total={attention?.total || 0} />
+                  {me && <AccountMenu email={me.email} workspace={me.workspace} role={me.role} />}
+                </div>
+              )}
+              <main>{children}</main>
+            </div>
           </div>
         )}
       </body>

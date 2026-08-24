@@ -34,15 +34,29 @@ export default async function Findings({
         Everything that needs a human eventually lands here.
       </p>
 
-      <div className="row small" style={{ marginBottom: 14 }}>
-        <span className="muted">status:</span>
-        <Link href="/findings?status=open">open</Link>
-        <Link href="/findings?status=resolved">resolved</Link>
-        <Link href="/findings?status=suppressed">suppressed</Link>
-        <span className="muted" style={{ marginLeft: 12 }}>severity:</span>
-        <Link href="/findings?severity=critical">critical</Link>
-        <Link href="/findings?severity=high">high</Link>
-        <Link href="/findings?severity=medium">medium</Link>
+      <div className="chipbar">
+        <span className="chipbar-label">status:</span>
+        {["open", "resolved", "suppressed"].map((s) => (
+          <Link key={s} href={`/findings?status=${s}${sp.severity ? `&severity=${sp.severity}` : ""}`} className={`chip${(sp.status ?? "open") === s ? " active" : ""}`}>
+            {s}
+          </Link>
+        ))}
+        <span className="chipbar-label" style={{ marginLeft: 10 }}>severity:</span>
+        {["critical", "high", "medium"].map((s) => (
+          <Link key={s} href={`/findings?status=${sp.status ?? "open"}&severity=${s}`} className={`chip${sp.severity === s ? " active" : ""}`}>
+            {s}
+          </Link>
+        ))}
+        {sp.severity && (
+          <Link href={`/findings?status=${sp.status ?? "open"}`} className="chip">
+            clear severity ×
+          </Link>
+        )}
+      </div>
+      <div className="legend">
+        <span className="legend-item"><span className="legend-swatch bad" /> critical / high severity</span>
+        <span className="legend-item"><span className="legend-swatch warn" /> medium severity</span>
+        <span className="legend-item"><span className="legend-swatch dim" /> low severity</span>
       </div>
 
       <div className="panel scroll-x">

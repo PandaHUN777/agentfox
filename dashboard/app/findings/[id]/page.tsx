@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { ApiDown, Panel, Severity, ts } from "@/components/ui";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,7 @@ export default async function FindingDetail({
 
   return (
     <>
+      <Breadcrumbs crumbs={[{ label: "Findings", href: "/findings" }]} />
       <h1 className="wrap">{finding.title}</h1>
       <p className="sub">
         <Severity value={finding.severity} />{" "}
