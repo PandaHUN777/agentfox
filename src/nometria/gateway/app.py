@@ -126,6 +126,31 @@ def create_app() -> FastAPI:
     def health() -> dict[str, Any]:
         return {"status": "ok", "version": __version__}
 
+    @app.get("/api/_debug_controls", tags=["platform"])
+    def _debug_controls(session: Session = Depends(db), _u=Depends(current_user)) -> dict[str, Any]:
+        """TEMPORARY — diagnosing a UniqueViolation on ix_controls_key that a plain
+        SELECT via the ORM can't see. Remove once resolved."""
+        from sqlalchemy import text
+
+        db_name = session.execute(text("select current_database()")).scalar()
+        schema = session.execute(text("select current_schema()")).scalar()
+        count = session.execute(text("select count(*) from controls")).scalar()
+        rows = session.execute(
+            text("select key, title from controls order by key limit 5")
+        ).all()
+        one = session.execute(
+            text("select key, title, created_at from controls where key = 'NOM-DSC-01'")
+        ).all()
+        search_path = session.execute(text("show search_path")).scalar()
+        return {
+            "database": db_name,
+            "schema": schema,
+            "search_path": search_path,
+            "count": count,
+            "sample": [dict(r._mapping) for r in rows],
+            "nom_dsc_01": [dict(r._mapping) for r in one],
+        }
+
     @app.get("/api/version", tags=["platform"])
     def version() -> dict[str, Any]:
         """Every version that participates in a decision (X-4 determinism)."""
