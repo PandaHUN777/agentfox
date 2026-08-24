@@ -127,6 +127,36 @@ def create_app() -> FastAPI:
     def health() -> dict[str, Any]:
         return {"status": "ok", "version": __version__}
 
+    @app.post("/api/_issue_agent_credential", tags=["platform"])
+    def _issue_agent_credential(
+        agent_slug: str,
+        session: Session = Depends(db),
+        user=Depends(current_user),
+    ) -> dict[str, Any]:
+        """TEMPORARY — issues a real nom_agt_ credential for a scan-discovered agent
+        so inline traffic can be sent under this org (the inline route only binds a
+        session's tenant from a nom_agt_ credential — see agent_credential() in
+        deps.py — a nom_api_ user token is silently ignored there and the request
+        proceeds unbound, in the deployment's default org). Scan-discovered agents
+        never get an Identity/Credential automatically, only ones created via
+        `nometria auth issue` or seed.py do. Remove once no longer needed."""
+        if user.role not in {"owner", "admin", "security"}:
+            from fastapi import HTTPException
+
+            raise HTTPException(403, "owner, admin or security required")
+        from ..identity.service import ensure_identity, issue_credential
+        from ..models import Agent
+
+        agent = session.scalar(select(Agent).where(Agent.slug == agent_slug))
+        if agent is None:
+            from fastapi import HTTPException
+
+            raise HTTPException(404, f"unknown agent '{agent_slug}'")
+        identity = ensure_identity(session, agent)
+        _credential, raw = issue_credential(session, identity)
+        session.commit()
+        return {"agent": agent_slug, "identity_id": identity.id, "credential": raw}
+
     @app.get("/api/version", tags=["platform"])
     def version() -> dict[str, Any]:
         """Every version that participates in a decision (X-4 determinism)."""
