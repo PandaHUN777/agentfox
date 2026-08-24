@@ -93,6 +93,114 @@ def fake_openai():
             sys.modules[key] = value
 
 
+def _install_fake_litellm(reply: str = "hello back", explode: bool = False):
+    litellm = types.ModuleType("litellm")
+    litellm.__version__ = "1.50.0"
+
+    class _Msg:
+        def __init__(self, content):
+            self.content = content
+
+    class _Choice:
+        def __init__(self, content):
+            self.message = _Msg(content)
+
+    class _Resp:
+        def __init__(self, content):
+            self.choices = [_Choice(content)]
+
+    calls: list[dict] = []
+
+    def completion(**kwargs):
+        calls.append(kwargs)
+        if explode:
+            raise RuntimeError("provider is down")
+        return _Resp(reply)
+
+    litellm.completion = completion
+    sys.modules["litellm"] = litellm
+    return litellm, calls
+
+
+@pytest.fixture
+def fake_litellm():
+    saved = sys.modules.get("litellm")
+    module, calls = _install_fake_litellm()
+    yield module, calls
+    off()
+    del sys.modules["litellm"]
+    if saved is not None:
+        sys.modules["litellm"] = saved
+
+
+def _install_fake_langchain(reply: str = "hello back", explode: bool = False):
+    langchain_core = types.ModuleType("langchain_core")
+    langchain_core.__version__ = "0.3.0"
+    language_models = types.ModuleType("langchain_core.language_models")
+    chat_models = types.ModuleType("langchain_core.language_models.chat_models")
+    messages_mod = types.ModuleType("langchain_core.messages")
+
+    class BaseMessage:
+        def __init__(self, content, type_="human"):
+            self.content = content
+            self.type = type_
+
+    class HumanMessage(BaseMessage):
+        def __init__(self, content):
+            super().__init__(content, "human")
+
+    class SystemMessage(BaseMessage):
+        def __init__(self, content):
+            super().__init__(content, "system")
+
+    class AIMessage(BaseMessage):
+        def __init__(self, content):
+            super().__init__(content, "ai")
+
+    calls: list[dict] = []
+
+    class BaseChatModel:
+        model_name = "fake-model"
+
+        def invoke(self, chat_input, config=None, *, stop=None, **kwargs):
+            calls.append({"input": chat_input, "config": config, "stop": stop, **kwargs})
+            if explode:
+                raise RuntimeError("provider is down")
+            return AIMessage(reply)
+
+    messages_mod.BaseMessage = BaseMessage
+    messages_mod.HumanMessage = HumanMessage
+    messages_mod.SystemMessage = SystemMessage
+    messages_mod.AIMessage = AIMessage
+    chat_models.BaseChatModel = BaseChatModel
+    language_models.chat_models = chat_models
+    langchain_core.language_models = language_models
+    langchain_core.messages = messages_mod
+
+    sys.modules.update(
+        {
+            "langchain_core": langchain_core,
+            "langchain_core.language_models": language_models,
+            "langchain_core.language_models.chat_models": chat_models,
+            "langchain_core.messages": messages_mod,
+        }
+    )
+    return messages_mod, calls
+
+
+@pytest.fixture
+def fake_langchain():
+    saved = {k: sys.modules.get(k) for k in list(sys.modules) if k.startswith("langchain_core")}
+    messages_mod, calls = _install_fake_langchain()
+    yield messages_mod, calls
+    off()
+    for key in [k for k in list(sys.modules) if k.startswith("langchain_core")]:
+        del sys.modules[key]
+    for key, value in saved.items():
+        if value is not None:
+            sys.modules[key] = value
+
+
 @pytest.fixture
 def app_db(isolated_db):
     """Seeded and closed.
@@ -411,3 +519,117 @@ def test_blocked_carries_the_decision():
     error = Blocked(_Result())
     assert "pii" in str(error)
     assert error.result.reason
+
+
+# ---------------------------------------------------------------------------
+# LiteLLM and LangChain: same promise, different client shape
+# ---------------------------------------------------------------------------
+
+
+def test_litellm_completion_is_patched_and_governed(app_db, fake_litellm):
+    module, calls = fake_litellm
+    auto(agent="support-triage", quiet=True)
+
+    response = module.completion(model="gpt-4o", messages=[{"role": "user", "content": "hi"}])
+    assert response.choices[0].message.content == "hello back"
+    assert len(calls) == 1
+    assert state().calls_governed == 1
+
+
+def test_litellm_a_provider_error_still_reaches_the_caller(app_db):
+    saved = sys.modules.get("litellm")
+    module, _calls = _install_fake_litellm(explode=True)
+    try:
+        auto(agent="support-triage", quiet=True)
+        with pytest.raises(RuntimeError, match="provider is down"):
+            module.completion(model="gpt-4o", messages=[{"role": "user", "content": "hi"}])
+    finally:
+        off()
+        del sys.modules["litellm"]
+        if saved is not None:
+            sys.modules["litellm"] = saved
+
+
+def test_langchain_chat_model_with_a_bare_string_is_governed(app_db, fake_langchain):
+    messages_mod, calls = fake_langchain
+    auto(agent="support-triage", quiet=True)
+
+    model = messages_mod.__dict__  # unused, just to keep the fixture referenced
+    from langchain_core.language_models.chat_models import BaseChatModel
+
+    result = BaseChatModel().invoke("hi")
+    assert result.content == "hello back"
+    assert len(calls) == 1
+    assert state().calls_governed == 1
+
+
+def test_langchain_message_objects_are_normalised(app_db, fake_langchain):
+    messages_mod, calls = fake_langchain
+    auto(agent="support-triage", quiet=True)
+
+    from langchain_core.language_models.chat_models import BaseChatModel
+
+    chat_input = [
+        messages_mod.SystemMessage("be terse"),
+        messages_mod.HumanMessage("hi"),
+    ]
+    BaseChatModel().invoke(chat_input)
+    assert calls[0]["input"] == chat_input
+
+    from nometria.db import session_scope
+    from nometria.models import Decision
+
+    with session_scope() as session:
+        assert session.query(Decision).count() >= 2, "one per surface"
+
+
+def test_langchain_a_provider_error_still_reaches_the_caller(app_db):
+    saved = {k: sys.modules.get(k) for k in list(sys.modules) if k.startswith("langchain_core")}
+    _install_fake_langchain(explode=True)
+    try:
+        auto(agent="support-triage", quiet=True)
+        from langchain_core.language_models.chat_models import BaseChatModel
+
+        with pytest.raises(RuntimeError, match="provider is down"):
+            BaseChatModel().invoke("hi")
+    finally:
+        off()
+        for key in [k for k in list(sys.modules) if k.startswith("langchain_core")]:
+            del sys.modules[key]
+        for key, value in saved.items():
+            if value is not None:
+                sys.modules[key] = value
+
+
+def test_missing_litellm_and_langchain_are_reported_not_hidden(app_db, fake_openai):
+    result = auto(agent="support-triage", quiet=True)
+    litellm_result = next(p for p in result.patches if p.library == "litellm")
+    langchain_result = next(p for p in result.patches if p.library == "langchain")
+    assert not litellm_result.patched and "not installed" in litellm_result.detail
+    assert not langchain_result.patched and "not installed" in langchain_result.detail
+
+
+def test_litellm_and_langchain_patching_is_reversible(app_db, fake_litellm, fake_langchain):
+    auto(agent="support-triage", quiet=True)
+    restored = off()
+    assert "litellm" in restored
+    assert "langchain" in restored
+
+
+def test_lc_messages_from_reads_a_bare_string():
+    from nometria.autoguard import _lc_messages_from
+
+    assert _lc_messages_from("hi") == [{"role": "user", "content": "hi"}]
+
+
+def test_lc_messages_from_maps_message_types_to_roles(fake_langchain):
+    from nometria.autoguard import _lc_messages_from
+
+    messages_mod, _calls = fake_langchain
+    result = _lc_messages_from(
+        [messages_mod.SystemMessage("be terse"), messages_mod.HumanMessage("hi")]
+    )
+    assert result == [
+        {"role": "system", "content": "be terse"},
+        {"role": "user", "content": "hi"},
+    ]

@@ -10,12 +10,12 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | | |
 |---|---|
 | **Capabilities** | 41 tracked |
-| **Built** | 21 ✅ |
-| **Partial** | 20 ◐ |
+| **Built** | 22 ✅ |
+| **Partial** | 19 ◐ |
 | **Absent** | 0 ✗ |
-| **Weighted coverage** | **76%** *(partial counts half)* |
-| **Tests** | 1006 |
-| **Lines** | 50,242 (src + tests) |
+| **Weighted coverage** | **77%** *(partial counts half)* |
+| **Tests** | 1023 |
+| **Lines** | 51,675 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -33,15 +33,15 @@ in [traceability.md](traceability.md).
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 52 |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 36 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ◐ partial | 27 | gates the ingestion and assembly path. Semantic chunk-boundary repair and automatic re-extraction of a corrupt document are not built — a finding is reported and the decision to drop the document belongs to the operator |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 34 | no Ragas adapter, model-based groundedness or annotation queue |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 35 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ◐ partial | 22 | attributes a failure to the step that originated the value and measures what each handoff dropped. Both work on constraints that were written down — an expectation the human held and never typed is invisible here, and no trace analysis recovers it |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 17 |  |
-| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 30 |  |
-| `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 18 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
+| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 36 |  |
+| `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 20 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 16 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
 | `PL-2` | Platform | Database migrations | ✅ built | 2 |  |
-| `PL-3` | Platform | Kill switch and quarantine | ✅ built | 12 |  |
+| `PL-3` | Platform | Kill switch and quarantine | ✅ built | 14 |  |
 | `PL-4` | Platform | Agent loop governance | ◐ partial | 18 | governs the run rather than the step: identical re-issued calls, alternating cycles, and steps producing no new observation. All three are visible without understanding the task, which is what keeps it deterministic — an agent that is wrong but varied still looks like an agent working |
 | `PL-5` | Platform | Async workers | ◐ partial | — | in-process with retries and a dead letter that is public state rather than a log line. The interface is the deliverable; a Redis or SQS implementation belongs behind it, and building that before anyone runs this at that scale would be committing to infrastructure early |
 | `PL-6` | Platform | HA-ready persistence | ◐ partial | — | pooling and pre-ping ship, and SQLite is refused at startup for a multi-worker deployment rather than surfacing as intermittent latency. Actual scale-out under load is still untested |
@@ -49,8 +49,8 @@ in [traceability.md](traceability.md).
 | `PL-9` | Platform | Authentication and operator tokens | ◐ partial | 38 | OIDC/SCIM absent; tokens and the dev-mode gate ship |
 | `P18` | 18 Tool Contract | Semantic contract: data access, result fidelity, register, source arbitration | ◐ partial | 60 | governs the gap between the request, the rows a tool touched and the answer. Data-access scoping is exactly as good as the ScopeRule declarations it is given — an undeclared table is reported, never assumed safe. Register checks are lexical and licensed per domain; they judge standing, not content, and a licensed operator turns them off deliberately |
 | `PL-10` | Platform | Operator actions recorded in the decision chain | ◐ partial | 11 | the registry of privileged operations is declared and the check is structural, so a new operator surface without an audit call fails the suite. system_scope is the stated exception: it lifts tenant isolation and so has no tenant chain to write to, which needs a separate system-level chain |
-| `PL-8` | Platform | Tenant isolation enforced at the session | ✅ built | 14 |  |
-| `X-1` | Adoption | One-line auto-instrumentation | ◐ partial | 10 | LangChain/LiteLLM client patching absent |
+| `PL-8` | Platform | Tenant isolation enforced at the session | ✅ built | 15 |  |
+| `X-1` | Adoption | One-line auto-instrumentation | ✅ built | 12 |  |
 | `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 14 |  |
 | `P16` | 16 Business rules | Business-process guardrails and the guardrail catalogue | ◐ partial | 32 | policy compilation is deterministic: 86% of a tuned document and 64% of a held-out one compile with no question. Prose with no parseable structure ("be courteous") is reported as inexpressible rather than guessed at; a model-assisted path for those sentences is not built |
 | `X-4` | Adoption | Protective controls reachable without writing code | ✅ built | 6 |  |
@@ -63,7 +63,7 @@ in [traceability.md](traceability.md).
 | `I-6` | Integration | Langfuse correlation | ✅ built | 7 |  |
 | `I-7` | Integration | Prometheus export | ✅ built | 6 |  |
 | `I-8` | Integration | Ragas scorer adapter | ✅ built | 4 |  |
-| `I-10` | Integration | LiteLLM routing | ✅ built | 1 |  |
+| `I-10` | Integration | LiteLLM routing | ✅ built | 5 |  |
 | `I-11` | Integration | Azure / Bedrock / Vertex providers | ✅ built | 7 |  |
 
 ## Failure-family coverage
@@ -84,6 +84,4 @@ above. The 50 modes come from [failure-modes.md](failure-modes.md).
 | **F7** Numeric, temporal & entity integrity | 7 | 7 | 0 | ✅ 7/7 | — |
 | **F8** Context & retrieval integrity | 7 | 5 | 1 | ◐ 5.5/7 | F8.3 |
 
-**Reading the gaps.** Absent rows are not oversights — they are the PRD v3 roadmap in
-tranche order. `P9`, `P13` and `P7` are the three genuinely unclaimed capabilities and
-sit in Tranche 2; `P10` is the highest commercial value and sits in Tranche 3.
+**Reading the gaps.** Nothing is untouched — every tracked capability has at least a foundation. What remains is 19 partial capabilities, each with a specific, named piece left rather than a blank slate: `P1`, `P12`, `P2`, `P9`, `P10`, `P8`, `P14`, `P4`, `P13`, `P6`, `P15`, `PL-4`, `PL-5`, `PL-6`, `PL-7`, `PL-9`, `P18`, `PL-10`, `P16`. See each row's note for what that piece is.

@@ -209,9 +209,44 @@ def _text_of(response: Any) -> str:
         content = getattr(response, "content", None)
         if isinstance(content, list):
             return "".join(getattr(block, "text", "") or "" for block in content)
+        if isinstance(content, str):  # LangChain's AIMessage.content is a plain string
+            return content
     except Exception:  # pragma: no cover - defensive against SDK shape drift
         pass
     return ""
+
+
+#: LangChain message `.type` -> our role vocabulary.
+_LC_ROLES = {"human": "user", "ai": "assistant", "system": "system", "tool": "tool"}
+
+
+def _lc_messages_from(chat_input: Any) -> list[dict[str, Any]]:
+    """Normalise whatever `BaseChatModel.invoke` was given into our message list.
+
+    LangChain accepts a bare string, a `PromptValue`, or a sequence of `BaseMessage`
+    (or plain dicts). Whichever shape arrives, the point is the same as
+    `_messages_from`: evaluate on the same surface regardless of how the caller built
+    the input.
+    """
+    if isinstance(chat_input, str):
+        return [{"role": "user", "content": chat_input}]
+
+    if hasattr(chat_input, "to_messages"):  # a PromptValue
+        chat_input = chat_input.to_messages()
+
+    sequence = chat_input if isinstance(chat_input, (list, tuple)) else [chat_input]
+    messages: list[dict[str, Any]] = []
+    for item in sequence:
+        if isinstance(item, dict):
+            messages.append({"role": str(item.get("role", "user")), "content": item.get("content")})
+            continue
+        content = getattr(item, "content", None)
+        msg_type = getattr(item, "type", None)
+        if content is None and msg_type is None:
+            continue
+        role = _LC_ROLES.get(str(msg_type), str(msg_type or "user"))
+        messages.append({"role": role, "content": content if isinstance(content, str) else str(content)})
+    return messages
 
 
 def _record_turn(
@@ -414,7 +449,83 @@ def _patch_anthropic(state: AutoState) -> PatchResult:
     )
 
 
-_PATCHERS = (_patch_openai, _patch_anthropic)
+def _patch_litellm(state: AutoState) -> PatchResult:
+    try:
+        import litellm
+    except ImportError:
+        return PatchResult("litellm", False, "not installed")
+    except Exception as exc:  # pragma: no cover
+        return PatchResult("litellm", False, f"import failed: {exc}")
+
+    if not hasattr(litellm, "completion"):  # pragma: no cover - SDK shape drift
+        return PatchResult(
+            "litellm",
+            False,
+            "this litellm version has no top-level completion; leaving it alone rather than guessing",
+        )
+    if getattr(litellm.completion, "__nometria__", False):
+        return PatchResult(
+            "litellm", True, "already patched", getattr(litellm, "__version__", None)
+        )
+
+    original = litellm.completion
+
+    @functools.wraps(original)
+    def governed(*args: Any, **kwargs: Any) -> Any:
+        return _govern(state, kwargs, lambda: original(*args, **kwargs))
+
+    governed.__nometria__ = True  # type: ignore[attr-defined]
+    governed.__nometria_original__ = original  # type: ignore[attr-defined]
+    litellm.completion = governed
+    return PatchResult("litellm", True, "litellm.completion", getattr(litellm, "__version__", None))
+
+
+def _patch_langchain(state: AutoState) -> PatchResult:
+    try:
+        import langchain_core
+        from langchain_core.language_models.chat_models import BaseChatModel
+    except ImportError:
+        return PatchResult("langchain", False, "not installed")
+    except Exception as exc:  # pragma: no cover
+        return PatchResult("langchain", False, f"import failed: {exc}")
+
+    target = BaseChatModel
+    if not hasattr(target, "invoke"):  # pragma: no cover - SDK shape drift
+        return PatchResult(
+            "langchain",
+            False,
+            "this langchain-core version has no BaseChatModel.invoke; leaving it alone "
+            "rather than guessing",
+        )
+    if getattr(target.invoke, "__nometria__", False):
+        return PatchResult(
+            "langchain", True, "already patched", getattr(langchain_core, "__version__", None)
+        )
+
+    original = target.invoke
+
+    @functools.wraps(original)
+    def governed(self: Any, chat_input: Any, config: Any = None, *, stop: Any = None, **kwargs: Any) -> Any:
+        messages = _lc_messages_from(chat_input)
+        model_name = getattr(self, "model_name", None) or getattr(self, "model", None) or ""
+        govern_kwargs = {"messages": messages, "model": str(model_name)}
+
+        def call() -> Any:
+            if config is not None:
+                return original(self, chat_input, config, stop=stop, **kwargs)
+            return original(self, chat_input, stop=stop, **kwargs)
+
+        return _govern(state, govern_kwargs, call)
+
+    governed.__nometria__ = True  # type: ignore[attr-defined]
+    governed.__nometria_original__ = original  # type: ignore[attr-defined]
+    target.invoke = governed
+    return PatchResult(
+        "langchain", True, "BaseChatModel.invoke", getattr(langchain_core, "__version__", None)
+    )
+
+
+_PATCHERS = (_patch_openai, _patch_anthropic, _patch_litellm, _patch_langchain)
 
 
 # ---------------------------------------------------------------------------
@@ -520,6 +631,24 @@ def off() -> list[str]:
         if original is not None:
             messages_module.Messages.create = original
             restored.append("anthropic")
+    except Exception:
+        pass
+    try:
+        import litellm
+
+        original = getattr(litellm.completion, "__nometria_original__", None)
+        if original is not None:
+            litellm.completion = original
+            restored.append("litellm")
+    except Exception:
+        pass
+    try:
+        from langchain_core.language_models.chat_models import BaseChatModel
+
+        original = getattr(BaseChatModel.invoke, "__nometria_original__", None)
+        if original is not None:
+            BaseChatModel.invoke = original
+            restored.append("langchain")
     except Exception:
         pass
     _STATE = None
