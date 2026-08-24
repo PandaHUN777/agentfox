@@ -12,10 +12,20 @@ for why it isn't the repo-root pyproject.toml), and resolving an editable instal
 parent directory from inside this one is more moving parts than the problem needs.
 """
 
+import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+_here = Path(__file__).resolve().parent
+sys.path.insert(0, str(_here / "src"))
+
+print(f"DEBUG cwd={os.getcwd()!r} here={_here!r}", file=sys.stderr)
+print(f"DEBUG listdir(here)={os.listdir(_here)!r}", file=sys.stderr)
+print(f"DEBUG listdir(/var/task)={os.listdir('/var/task')!r}", file=sys.stderr)
+if (_here / "src").exists():
+    print(f"DEBUG listdir(here/src)={os.listdir(_here / 'src')!r}", file=sys.stderr)
+else:
+    print(f"DEBUG src NOT FOUND at {_here / 'src'!r}", file=sys.stderr)
 
 from nometria.gateway.app import app  # noqa: E402
 
