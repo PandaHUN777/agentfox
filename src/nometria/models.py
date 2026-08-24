@@ -84,9 +84,10 @@ class Agent(Base, TimestampMixin):
     """P1-1, P1-4. Created by explicit registration or on first observation."""
 
     __tablename__ = "agents"
+    __table_args__ = (UniqueConstraint("org_id", "slug", name="ux_agents_org_slug"),)
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.agent_id)
-    slug: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    slug: Mapped[str] = mapped_column(String(120), index=True)
     name: Mapped[str] = mapped_column(String(200), default="")
     description: Mapped[str] = mapped_column(Text, default="")
     purpose: Mapped[str] = mapped_column(Text, default="")
@@ -152,9 +153,10 @@ class AgentControl(Base, TimestampMixin):
 
 class Tool(Base, TimestampMixin):
     __tablename__ = "tools"
+    __table_args__ = (UniqueConstraint("org_id", "key", name="ux_tools_org_key"),)
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.tool_id)
-    key: Mapped[str] = mapped_column(String(160), unique=True, index=True)
+    key: Mapped[str] = mapped_column(String(160), index=True)
     name: Mapped[str] = mapped_column(String(200), default="")
     kind: Mapped[str] = mapped_column(String(32), default="function")
     # The axis policy reasons over. `irreversible` is the class that warrants HITL.
@@ -166,9 +168,10 @@ class Tool(Base, TimestampMixin):
 
 class McpServer(Base, TimestampMixin):
     __tablename__ = "mcp_servers"
+    __table_args__ = (UniqueConstraint("org_id", "name", name="ux_mcp_servers_org_name"),)
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.mcp_id)
-    name: Mapped[str] = mapped_column(String(160), unique=True)
+    name: Mapped[str] = mapped_column(String(160))
     url: Mapped[str] = mapped_column(String(500), default="")
     transport: Mapped[str] = mapped_column(String(32), default="stdio")
     pinned_version: Mapped[str | None] = mapped_column(String(64))
@@ -235,10 +238,11 @@ class Identity(Base, TimestampMixin):
     """P2-1. The governed non-human identity."""
 
     __tablename__ = "identities"
+    __table_args__ = (UniqueConstraint("org_id", "principal", name="ux_identities_org_principal"),)
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.identity_id)
     agent_id: Mapped[str | None] = mapped_column(String(40), ForeignKey("agents.id"), index=True)
-    principal: Mapped[str] = mapped_column(String(160), unique=True, index=True)
+    principal: Mapped[str] = mapped_column(String(160), index=True)
     kind: Mapped[str] = mapped_column(String(24), default="agent")
     status: Mapped[str] = mapped_column(String(24), default="active")
     last_used_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
@@ -536,11 +540,14 @@ class SourceRecord(Base, TimestampMixin):
     """
 
     __tablename__ = "source_records"
-    __table_args__ = (Index("ix_sources_tier", "tier", "domain"),)
+    __table_args__ = (
+        Index("ix_sources_tier", "tier", "domain"),
+        UniqueConstraint("org_id", "key", name="ux_source_records_org_key"),
+    )
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("src"))
     #: Stable identifier the retriever emits — URI, doc id, table name.
-    key: Mapped[str] = mapped_column(String(500), unique=True, index=True)
+    key: Mapped[str] = mapped_column(String(500), index=True)
     title: Mapped[str] = mapped_column(String(300), default="")
     # system_of_record | approved | unverified | external
     tier: Mapped[str] = mapped_column(String(24), default="unverified")
@@ -764,9 +771,10 @@ class Budget(Base, TimestampMixin):
 
 class EvalSuite(Base, TimestampMixin):
     __tablename__ = "eval_suites"
+    __table_args__ = (UniqueConstraint("org_id", "key", name="ux_eval_suites_org_key"),)
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.eval_id)
-    key: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    key: Mapped[str] = mapped_column(String(120), index=True)
     name: Mapped[str] = mapped_column(String(200), default="")
     description: Mapped[str] = mapped_column(Text, default="")
     version: Mapped[int] = mapped_column(Integer, default=1)
@@ -1019,9 +1027,12 @@ class EvidencePackage(Base, TimestampMixin):
 
 class RetentionPolicy(Base, TimestampMixin):
     __tablename__ = "retention_policies"
+    __table_args__ = (
+        UniqueConstraint("org_id", "data_class", name="ux_retention_policies_org_data_class"),
+    )
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("ret"))
-    data_class: Mapped[str] = mapped_column(String(64), unique=True)
+    data_class: Mapped[str] = mapped_column(String(64))
     retain_days: Mapped[int] = mapped_column(Integer, default=365)
     redact_fields: Mapped[list[str]] = mapped_column(JSON, default=list)
 
@@ -1044,9 +1055,10 @@ class LegalHold(Base, TimestampMixin):
 
 class Policy(Base, TimestampMixin):
     __tablename__ = "policies"
+    __table_args__ = (UniqueConstraint("org_id", "key", name="ux_policies_org_key"),)
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.policy_id)
-    key: Mapped[str] = mapped_column(String(120), unique=True, index=True)
+    key: Mapped[str] = mapped_column(String(120), index=True)
     name: Mapped[str] = mapped_column(String(200), default="")
     description: Mapped[str] = mapped_column(Text, default="")
     kind: Mapped[str] = mapped_column(String(24), default="declarative")  # declarative | rego

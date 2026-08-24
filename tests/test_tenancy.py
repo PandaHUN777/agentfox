@@ -15,6 +15,7 @@ from __future__ import annotations
 import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
+import sqlalchemy as sa
 from sqlalchemy import String, delete, func, select, update
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -391,6 +392,75 @@ def test_shared_reference_catalog_syncs_independently_per_org(isolated_db):
         total = session.scalar(select(func.count()).select_from(Control))
         assert acme_count > 0 and acme_count == globex_count
         assert total == acme_count + globex_count, "no rows should exist outside the two tenants"
+
+
+def test_no_tenant_scoped_model_has_a_globally_unique_column(isolated_db):
+    """Regression, generalized: Control.key and Agent.slug both had a plain unique
+    index while inheriting TenantScoped — the first org to claim a value locked it
+    out for every other org, with a UniqueViolation on write and a correctly-filtered
+    (and therefore misleadingly empty) SELECT on read. That is a schema mistake a
+    reviewer has to notice column-by-column; this makes it impossible to add a new
+    one unnoticed by scanning every unique constraint on every tenant-scoped table
+    and requiring org_id to be part of it — the same "structural, not diligent"
+    guarantee assert_tenant_safe already gives cross-tenant reads.
+
+    A unique constraint is exempt when at least one of its columns is either a real
+    foreign key to another table's primary key, or a column that references one by
+    naming convention without a declared FK (this codebase stores several polymorphic
+    id references — LineageEdge.src_id/dst_id, EvalResult.run_id/case_id,
+    KnowledgeBoundary.agent_id — as plain strings rather than FKs, but they still hold
+    globally-unique ULIDs). One such column is enough: it already scopes the
+    constraint to a single tenant's row (e.g. PolicyVersion's (policy_id, version) —
+    policy_id alone pins it to one org's Policy, so two orgs can never collide on
+    the pair regardless of what version is), so no cross-tenant collision is
+    possible on the constraint as a whole. User.email is exempt by design: it is the
+    platform-wide login lookup key, used to resolve which org a request belongs to
+    before any org is known.
+    """
+    from nometria.models import Base, TenantScoped, User
+
+    exempt_columns = {(User.__tablename__, "email")}
+    # (table, column) pairs that hold a globally-unique id by convention, without a
+    # declared ForeignKey — audited safe individually; add to this list only with the
+    # same audit, not to silence a real collision.
+    id_like_by_convention = {
+        ("lineage_edges", "src_id"),
+        ("lineage_edges", "dst_id"),
+        ("eval_results", "run_id"),
+        ("eval_results", "case_id"),
+        ("knowledge_boundaries", "agent_id"),
+    }
+    offenders = []
+
+    for mapper in Base.registry.mappers:
+        cls = mapper.class_
+        if not issubclass(cls, TenantScoped):
+            continue
+        table = cls.__table__
+        unique_column_sets = [
+            tuple(c.name for c in constraint.columns)
+            for constraint in table.constraints
+            if isinstance(constraint, sa.UniqueConstraint)
+        ]
+        unique_column_sets += [
+            tuple(c.name for c in index.columns) for index in table.indexes if index.unique
+        ]
+        for columns in unique_column_sets:
+            if "org_id" in columns:
+                continue
+            if len(columns) == 1 and (table.name, columns[0]) in exempt_columns:
+                continue
+            if any(
+                table.columns[name].foreign_keys or (table.name, name) in id_like_by_convention
+                for name in columns
+            ):
+                continue
+            offenders.append(f"{cls.__name__}.{columns}")
+
+    assert not offenders, (
+        "these tenant-scoped models have a unique constraint without org_id, so "
+        f"the first org to use a value locks out every other org: {sorted(offenders)}"
+    )
 
 
 def test_migrations_do_not_switch_off_platform_logging(isolated_db):
