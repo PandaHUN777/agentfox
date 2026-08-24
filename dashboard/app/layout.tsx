@@ -7,6 +7,7 @@ import { Wordmark } from "@/components/Logo";
 import { AccountMenu } from "@/components/AccountMenu";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandSearch } from "@/components/CommandSearch";
+import { NavIcon } from "@/components/NavIcons";
 import "./globals.css";
 
 // Runs before paint so a stored theme choice never flashes the wrong colors on load.
@@ -106,11 +107,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {NAV.map(({ group, items }) => (
                 <div key={group || "root"}>
                   {group && <div className="group">{group}</div>}
-                  {items.map(([label, href]) => (
-                    <Link key={href} href={href}>
-                      {label}
-                    </Link>
-                  ))}
+                  {items.map(([label, href]) => {
+                    const isActive = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+                    return (
+                      <Link key={href} href={href} className={isActive ? "active" : ""}>
+                        <NavIcon href={href} />
+                        <span>{label}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               ))}
               <ThemeToggle />
