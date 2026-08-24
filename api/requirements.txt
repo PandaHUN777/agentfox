@@ -24,6 +24,9 @@ rich>=13.9
 psycopg>=3.2
 psycopg-binary>=3.2
 sqlglot>=25.0
-# The local `nometria` package itself is NOT installed here — api/index.py adds
-# ../src to sys.path directly, which is simpler and faster than resolving an
-# editable install of a parent directory from inside this one.
+# The local `nometria` package: Root Directory is "api", so Vercel's Python builder
+# only ships what actually lands in site-packages — a sys.path trick pointing at
+# ../src does nothing, since ../src is never bundled. Installing the repo root as a
+# regular (non-editable) local dependency copies its files into site-packages instead,
+# so it ships the same way fastapi/sqlalchemy do.
+..
