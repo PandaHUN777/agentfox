@@ -127,6 +127,11 @@ def provision(payload: ProvisionIn, session: Session = Depends(db)) -> dict[str,
                 name=payload.name or payload.github_login,
                 external_id=payload.github_user_id,
                 org_id=ids.new_id("org"),
+                # First (and, absent an invite flow, only) member of a brand-new org —
+                # "developer" (the model default) can't issue credentials, bind policy
+                # to enforce, or manage users, which would make a fresh signup unable
+                # to finish governing anything they just registered.
+                role="owner",
             )
             session.add(user)
             session.flush()
