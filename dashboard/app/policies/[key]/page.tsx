@@ -4,6 +4,16 @@ import { PolicyEditor } from "@/components/PolicyEditor";
 
 export const dynamic = "force-dynamic";
 
+const EXAMPLE_RULE = `  - id: injection.direct
+    description: Block high-confidence prompt injection or jailbreak in user input.
+    when:
+      surface: [input]
+      detection: {entity_prefix: INJECTION, min_score: 0.85}
+    effect: block
+    severity: high
+    reason: "Prompt-injection or jailbreak attempt detected in user input."
+    controls: [NOM-RTG-01]`;
+
 function starterTemplate(key: string, name: string, description: string): string {
   return `# ${name || key} — starts empty; here's a real rule to build from.
 key: ${key}
@@ -17,16 +27,19 @@ scope:
   agents: ["*"]
 
 rules:
-  - id: injection.direct
-    description: Block high-confidence prompt injection or jailbreak in user input.
-    when:
-      surface: [input]
-      detection: {entity_prefix: INJECTION, min_score: 0.85}
-    effect: block
-    severity: high
-    reason: "Prompt-injection or jailbreak attempt detected in user input."
-    controls: [NOM-RTG-01]
+${EXAMPLE_RULE}
 `;
+}
+
+/** A scan-proposed policy already has a saved body — just with `rules: []` — so
+ * the blank-body starter template above never triggers for it. This fills the
+ * SAME gap for that case: swap the empty rules line (yaml.safe_dump's flow-style
+ * rendering of an empty list) for one real example rule, keeping everything else
+ * (key, name, description) exactly as scanned. */
+function withExampleRuleIfEmpty(body: string): string {
+  return /^rules:\s*\[\s*\]\s*$/m.test(body)
+    ? body.replace(/^rules:\s*\[\s*\]\s*$/m, `rules:\n${EXAMPLE_RULE}`)
+    : body;
 }
 
 export default async function PolicyDetail({ params }: { params: Promise<{ key: string }> }) {
@@ -48,7 +61,7 @@ export default async function PolicyDetail({ params }: { params: Promise<{ key: 
 
   const binding = bindings.policies?.find((p: any) => p.key === key);
   const body = policy.body?.trim()
-    ? policy.body
+    ? withExampleRuleIfEmpty(policy.body)
     : starterTemplate(key, policy.name, policy.description);
 
   return (
