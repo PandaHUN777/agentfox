@@ -319,7 +319,7 @@ def test_kill_switch_api_and_rbac(client):
     assert killed.status_code == 200
     assert killed.json()["state"] == "killed"
 
-    listed = client.get("/api/controls", headers=as_user("aisha@example.com")).json()
+    listed = client.get("/api/agent-controls", headers=as_user("aisha@example.com")).json()
     assert listed["controls"][0]["state"] == "killed"
 
     agent = client.get("/api/agents/support-triage", headers=as_user("aisha@example.com")).json()

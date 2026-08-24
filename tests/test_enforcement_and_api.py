@@ -321,6 +321,7 @@ def test_control_plane_reads(client):
         "/api/traces",
         "/api/policies",
         "/api/controls",
+        "/api/agent-controls",
         "/api/frameworks",
         "/api/obligations",
         "/api/board",
@@ -332,6 +333,20 @@ def test_control_plane_reads(client):
         "/api/retention",
     ):
         assert client.get(path, headers=as_user("admin@example.com")).status_code == 200, path
+
+
+def test_controls_endpoint_is_the_compliance_one_not_the_kill_switch_one(client):
+    """Regression test for a route collision: registry.py and governance.py once both
+    registered a handler on GET /api/controls — same path, unrelated response shapes
+    (compliance-control posture vs. agent kill-switch state) — and whichever router
+    app.py included first silently ate every request to the other, with no error
+    anywhere except the dashboard's compliance page crashing on a missing `posture`
+    key. Kill-switch state now lives at /api/agent-controls instead."""
+    body = client.get("/api/controls", headers=as_user("admin@example.com")).json()
+    assert "posture" in body
+    assert "controls" in body
+    if body["controls"]:
+        assert "objective" in body["controls"][0]
 
 
 def test_siem_export_formats(client):

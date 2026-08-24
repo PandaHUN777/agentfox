@@ -762,10 +762,19 @@ class ControlIn(BaseModel):
     reason: str = ""
 
 
-@router.get("/controls")
-def list_controls(
+@router.get("/agent-controls")
+def list_agent_controls(
     session: Session = Depends(db), _user: User = Depends(current_user)
 ) -> dict[str, Any]:
+    """Kill-switch/quarantine state per agent (PL-3).
+
+    Deliberately not `/api/controls` — that path collided with governance.py's
+    compliance-control listing (NIST/EU-AI-Act style controls), and since both
+    routers registered a handler on the identical path, whichever was included
+    first in app.py silently ate every request to the other. This one was
+    winning, which meant the compliance page's `posture` field was never in the
+    response it actually got back — the crash that surfaced it.
+    """
     return {"controls": all_controls(session)}
 
 
