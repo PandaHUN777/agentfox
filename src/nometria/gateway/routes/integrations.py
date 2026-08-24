@@ -29,6 +29,7 @@ import tempfile
 from collections import defaultdict
 from pathlib import Path
 from typing import Annotated, Any
+from urllib.parse import urlparse
 
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
@@ -40,7 +41,9 @@ from sqlalchemy.orm import Session
 from ... import ids
 from ...audit import chain
 from ...config import get_settings
+from ...discovery import ScanReport
 from ...discovery import scan as discovery_scan
+from ...discovery_openapi import SpecFetchError, fetch_spec, scan_spec
 from ...models import GithubConnection, Policy, PolicyVersion, ScanRun, User, utcnow
 from ...policy import PolicyDocument, save_policy
 from ...registry.service import register_agent, slugify
@@ -432,6 +435,116 @@ def get_scan(
         "started_at": run.started_at.isoformat() if run.started_at else None,
         "completed_at": run.completed_at.isoformat() if run.completed_at else None,
         "summary": run.summary_json,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Hosted-API connect — the second onboarding path, for a team whose AI system is a
+# live endpoint they call rather than code they'd hand over. No source access and
+# no stored credential: we fetch the *spec document* once (never an operation on
+# the live API — the same "never execute" guarantee discovery.scan makes for a
+# repo) and propose from that. Nothing to hold between calls, so unlike GitHub
+# there's no separate "connection" — connect and scan collapse into one request.
+# ---------------------------------------------------------------------------
+
+
+class HostedApiScanIn(BaseModel):
+    endpoint_url: str
+    docs_url: str | None = None
+    openapi_spec_url: str | None = None
+    purpose: str = ""
+
+
+@router.post("/api/integrations/hosted-api/scan")
+def scan_hosted_api(
+    payload: HostedApiScanIn, session: Session = Depends(db), user: User = Depends(require("registry"))
+) -> dict[str, Any]:
+    host = urlparse(payload.endpoint_url).hostname or payload.endpoint_url
+
+    run = ScanRun(
+        source_kind="hosted_api",
+        target_url=payload.openapi_spec_url or payload.endpoint_url,
+        status="running",
+    )
+    session.add(run)
+    session.flush()
+
+    if payload.openapi_spec_url:
+        try:
+            spec = fetch_spec(payload.openapi_spec_url)
+            report = scan_spec(spec, source_label=host)
+        except SpecFetchError as exc:
+            run.status = "failed"
+            run.completed_at = utcnow()
+            run.summary_json = {"error": str(exc)}
+            session.commit()
+            raise HTTPException(422, str(exc)) from exc
+    else:
+        # No spec given — still register the endpoint for review rather than
+        # refusing outright. There's nothing to enumerate, so no sites are
+        # proposed and the reviewer sees an agent with zero known operations.
+        report = ScanReport(root=host)
+
+    slug = slugify(host)
+    agent = register_agent(
+        session,
+        slug=slug,
+        name=host,
+        purpose=payload.purpose,
+        framework="hosted_api",
+        draft=True,
+        source_scan_run_id=run.id,
+    )
+    agent.endpoint_url = payload.endpoint_url
+    agent.docs_url = payload.docs_url
+    agent.openapi_spec_url = payload.openapi_spec_url
+    session.flush()
+
+    created_policies: list[str] = []
+    if report.sites:
+        doc = PolicyDocument(
+            key=f"scan-{run.id}-hosted-api",
+            name="Hosted API guardrails",
+            description=(
+                f"Detects unsafe tool actions against {host} — prompt injection, "
+                f"PII/secret leaks, and unsafe tool actions."
+            ),
+            mode="observe",
+            scope={"agents": [slug]},
+            rules=[],
+        )
+        policy, _version = save_policy(
+            session, doc, author=user.email or user.id, notes=f"Proposed by scan {run.id}",
+            bind_mode="observe",
+        )
+        policy.proposed = True
+        policy.source_scan_run_id = run.id
+        created_policies.append(policy.key)
+
+    run.status = "completed"
+    run.completed_at = utcnow()
+    run.summary_json = {
+        "endpoint_url": payload.endpoint_url,
+        "sites": report.by_kind(),
+        "agents_proposed": [agent.slug],
+        "policies_proposed": created_policies,
+    }
+    session.flush()
+    chain.append(
+        session,
+        "integration.hosted_api.scanned",
+        actor_type="user",
+        actor_id=user.email or user.id,
+        subject_type="scan_run",
+        subject_id=run.id,
+        payload={"endpoint": payload.endpoint_url, **run.summary_json},
+    )
+    session.commit()
+    return {
+        "scan_run_id": run.id,
+        "status": run.status,
+        "summary": run.summary_json,
+        "agent": agent.slug,
     }
 
 

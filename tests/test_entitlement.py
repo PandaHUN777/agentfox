@@ -314,6 +314,43 @@ def test_no_principal_supplied_means_no_disclosure_checks(seeded, enforcer):
 # ---------------------------------------------------------------------------
 
 
+def test_gateway_completion_with_a_principal_records_a_disclosure_event(client):
+    """Before this, `principal`/`retrieved` had nowhere to go: `run_completion`
+    accepted an `evidence=` kwarg but nothing in the HTTP path ever populated it, so a
+    real integrator calling the gateway directly could never make the Entitlement page
+    non-empty. This is the fix, exercised end to end through the actual route."""
+    headers = as_user("marcus@example.com")
+    client.post(
+        "/api/entitlement/grants",
+        json={"resource": "kb/*", "principal": "all-staff"},
+        headers=headers,
+    )
+    client.put(
+        "/api/entitlement/principals",
+        json={"subject": "alice@acme.com", "groups": ["all-staff"]},
+        headers=headers,
+    )
+    response = client.post(
+        "/v1/chat/completions",
+        json={
+            "model": "echo-1",
+            "messages": [{"role": "user", "content": "hello"}],
+            "principal": {"subject": "alice@acme.com"},
+            "retrieved": [
+                {"source": "kb/faq", "text": "Refunds within 30 days."},
+                {"source": "hr/salaries-2026", "text": "Head of Eng: 210,000."},
+            ],
+        },
+        headers={"X-Nometria-Agent": "support-triage"},
+    )
+    assert response.status_code == 200
+    with session_scope() as session:
+        event = session.query(DisclosureEvent).one()
+    assert event.principal_subject == "alice@acme.com"
+    assert event.candidates == 2
+    assert event.withheld == 1
+
+
 def test_the_filter_endpoint_returns_only_what_the_caller_may_see(client):
     headers = as_user("marcus@example.com")
     client.post(

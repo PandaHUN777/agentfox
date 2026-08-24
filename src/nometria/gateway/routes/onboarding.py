@@ -27,6 +27,7 @@ from ...models import (
     GithubConnection,
     Handoff,
     KnowledgeBoundary,
+    ScanRun,
     SourceRecord,
     Trace,
     utcnow,
@@ -81,6 +82,12 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
         or 0
     )
     connections = session.scalar(select(func.count()).select_from(GithubConnection)) or 0
+    hosted_api_scans = (
+        session.scalar(
+            select(func.count()).select_from(ScanRun).where(ScanRun.source_kind == "hosted_api")
+        )
+        or 0
+    )
 
     steps = [
         {
@@ -92,13 +99,14 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
         },
         {
             "id": "connect",
-            "title": "Connect a repo, or instrument it — whichever is faster",
-            "done": connections > 0,
-            "command": "Connect → pick a repo → Scan",
+            "title": "Connect a repo, point at a hosted API, or instrument it — whichever fits",
+            "done": connections > 0 or hosted_api_scans > 0,
+            "command": "Connect → repo or hosted API → Scan",
             "detail": (
-                "Scans a repo statically (no import, no execution) for LangChain/LangGraph/"
-                "CrewAI/AutoGen usage and proposes draft agents and policies for review — "
-                "nothing is created live until you approve it."
+                "A repo is scanned statically (no import, no execution) for LangChain/"
+                "LangGraph/CrewAI/AutoGen usage; a hosted API is read from its OpenAPI spec "
+                "document only — never called. Either proposes draft agents and policies for "
+                "review — nothing is created live until you approve it."
             ),
         },
         {

@@ -45,6 +45,32 @@ STATUSES = ("effective", "degraded", "failing", "not_implemented", "not_applicab
 #: Tables a `presence` / `freshness` rule can name, mapped to their model.
 _TABLES: dict[str, Any] = {}
 
+#: A raw table name ("end_user_principals") means nothing to someone reading a
+#: rationale on the Compliance page — this is the difference between "not
+#: implemented" as a dead end and "not implemented, go here to fix it" as a next
+#: step. Deliberately only covers tables a human actually fills in from a
+#: dashboard page or CLI command; tables that only ever populate from real traffic
+#: (traces, decisions, audit_entries, ...) are left unmapped rather than repeating
+#: "send traffic through it", which the rationale already implies.
+_TABLE_HINTS: dict[str, str] = {
+    "end_user_principals": "Register a caller on the Entitlement page.",
+    "resource_grants": "Add a grant on the Entitlement page.",
+    "source_records": "Tier a source on the Sources page.",
+    "knowledge_boundaries": "Declare what an agent may answer, from that agent's page.",
+    "handoffs": "Raise or detect a hand-off on the Escalation page.",
+    "retention_policies": "Set one with `nometria retention set`.",
+    "redteam_campaigns": "Run a red-team campaign on the Evaluation page.",
+    "eval_runs": "Create and run an eval suite on the Evaluation page.",
+    "budgets": "Set one with `nometria budget set`.",
+    "slos": "Declare one with `nometria slo set`.",
+    "mcp_tool_snapshots": "Connect an MCP server on the Connect page.",
+}
+
+
+def _hint(tables: list[str]) -> str:
+    hints = sorted({_TABLE_HINTS[t] for t in tables if t in _TABLE_HINTS})
+    return (" " + " ".join(hints)) if hints else ""
+
 
 def _table(name: str):
     global _TABLES
@@ -145,7 +171,7 @@ def _rule_presence(session, control, rule, since) -> tuple[str, str, dict]:
     if missing:
         return (
             "not_implemented" if len(missing) == len(counts) else "degraded",
-            f"No records in {missing}; the control cannot be evidenced.",
+            f"No records in {missing}; the control cannot be evidenced.{_hint(missing)}",
             {"counts": counts, "missing": missing},
         )
     return "effective", f"Evidence present in {sorted(counts)}.", {"counts": counts}
@@ -178,7 +204,11 @@ def _rule_freshness(session, control, rule, since) -> tuple[str, str, dict]:
         return "not_implemented", f"Unknown evidence table '{table}'.", {}
     total = _count(session, table)
     if total == 0:
-        return "not_implemented", f"No records in '{table}' — the control has never run.", {}
+        return (
+            "not_implemented",
+            f"No records in '{table}' — the control has never run.{_hint([table])}",
+            {},
+        )
     recent = _count(session, table, utcnow() - dt.timedelta(days=max_age))
     if recent == 0:
         return (

@@ -104,6 +104,11 @@ class Agent(Base, TimestampMixin):
     source_scan_run_id: Mapped[str | None] = mapped_column(
         String(40), ForeignKey("scan_runs.id"), index=True
     )
+    # Set for agents onboarded via the hosted-API path rather than a repo scan —
+    # a live endpoint we point at instead of source we're given.
+    endpoint_url: Mapped[str | None] = mapped_column(String(500))
+    docs_url: Mapped[str | None] = mapped_column(String(500))
+    openapi_spec_url: Mapped[str | None] = mapped_column(String(500))
     declared_models: Mapped[list[str]] = mapped_column(JSON, default=list)
     declared_tools: Mapped[list[str]] = mapped_column(JSON, default=list)
     data_classes: Mapped[list[str]] = mapped_column(JSON, default=list)
@@ -382,10 +387,16 @@ class ScanRun(Base, TimestampMixin):
     __tablename__ = "scan_runs"
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("scn"))
-    connection_id: Mapped[str] = mapped_column(
+    # Null for a hosted-API scan — there's no stored connection to point at, since
+    # unlike GitHub we hold no credential to fetch the spec on the user's behalf.
+    connection_id: Mapped[str | None] = mapped_column(
         String(40), ForeignKey("github_connections.id"), index=True
     )
-    repo_full_name: Mapped[str] = mapped_column(String(300))
+    # "github" (default, repo scan) or "hosted_api" (OpenAPI spec scan).
+    source_kind: Mapped[str] = mapped_column(String(16), default="github")
+    repo_full_name: Mapped[str] = mapped_column(String(300), default="")
+    # The endpoint or spec URL, for a hosted-API scan. Unused for a github scan.
+    target_url: Mapped[str | None] = mapped_column(String(500))
     ref: Mapped[str] = mapped_column(String(120), default="")
     status: Mapped[str] = mapped_column(String(16), default="running")  # running|completed|failed
     started_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

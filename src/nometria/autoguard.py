@@ -298,6 +298,16 @@ class Blocked(RuntimeError):
 
 def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
     """Pre-flight, call, post-flight. The whole patch, in one place."""
+    # P10 — the caller's end-user identity and retrieved context, if it supplied
+    # them. Popped before anything else so they never leak to the real provider
+    # call, which sees these as unrecognised kwargs otherwise. A subject that
+    # doesn't resolve to a registered principal still gets recorded correctly
+    # downstream (as "declared but unregistered" — see entitlement.filter_retrieval),
+    # so no lookup happens here.
+    principal_ref = kwargs.pop("nometria_principal", None)
+    retrieved_chunks = kwargs.pop("nometria_chunks", None)
+    purpose = kwargs.pop("nometria_purpose", None)
+
     if _IN_NOMETRIA.get():
         return call()
 
@@ -347,6 +357,25 @@ def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
                     enforcer = Enforcer(session)
                     agent, identity, _shadow = enforcer.resolve(state.agent)
                     from .models import Trace
+
+                    if principal_ref is not None:
+                        from sqlalchemy import select
+
+                        from .models import EndUserPrincipal
+
+                        subject = (
+                            principal_ref.get("subject")
+                            if isinstance(principal_ref, dict)
+                            else str(principal_ref)
+                        )
+                        principal_obj = session.scalar(
+                            select(EndUserPrincipal).where(EndUserPrincipal.subject == subject)
+                        )
+                        enforcer.evidence = {
+                            "principal": principal_obj,
+                            "chunks": retrieved_chunks or [],
+                            "purpose": purpose,
+                        }
 
                     outbound = enforcer.evaluate(
                         agent=agent,

@@ -1,14 +1,27 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { ApiDown, ControlStatus, DraftCaveat, Stat, pct } from "@/components/ui";
+import { ApiDown, ControlStatus, DraftCaveat, Stat, pct, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
+
+const inputStyle = {
+  width: "100%",
+  padding: "6px 9px",
+  borderRadius: 6,
+  border: "1px solid var(--border)",
+  background: "var(--panel-2)",
+  color: "var(--text)",
+  fontSize: 13,
+  fontFamily: "inherit",
+  marginTop: 4,
+} as const;
 
 const TABS: { key: string; label: string }[] = [
   { key: "controls", label: "Controls" },
   { key: "frameworks", label: "Frameworks" },
   { key: "obligations", label: "Obligations" },
   { key: "risk", label: "Risk register" },
+  { key: "evidence", label: "Evidence & reports" },
 ];
 
 export default async function Compliance({
@@ -22,13 +35,14 @@ export default async function Compliance({
   // never scrolls into view, so the tab that owns those anchors has to be first.
   const tab = TABS.some((t) => t.key === rawTab) ? rawTab! : "controls";
 
-  let controls: any, frameworks: any, obligations: any, register: any;
+  let controls: any, frameworks: any, obligations: any, register: any, evidencePackages: any;
   try {
-    [controls, frameworks, obligations, register] = await Promise.all([
+    [controls, frameworks, obligations, register, evidencePackages] = await Promise.all([
       api("/api/controls"),
       api("/api/frameworks"),
       api("/api/obligations"),
       api("/api/risk/register"),
+      api("/api/evidence"),
     ]);
   } catch (e: any) {
     return (
@@ -107,6 +121,7 @@ export default async function Compliance({
               {t.key === "frameworks" && frameworks.frameworks.length}
               {t.key === "obligations" && obligations.obligations.length}
               {t.key === "risk" && register.register.length}
+              {t.key === "evidence" && evidencePackages.packages.length}
             </span>
           </Link>
         ))}
@@ -164,7 +179,7 @@ export default async function Compliance({
               <thead>
                 <tr>
                   <th>framework</th><th className="num">controls mapped</th>
-                  <th className="num">mappings</th><th className="num">reviewed</th><th>status</th>
+                  <th className="num">mappings</th><th className="num">reviewed</th><th>status</th><th></th>
                 </tr>
               </thead>
               <tbody>
@@ -181,6 +196,11 @@ export default async function Compliance({
                       <span className={`tag ${f.review_status === "reviewed" ? "ok" : "warn"}`}>
                         {f.review_status}
                       </span>
+                    </td>
+                    <td>
+                      <Link href={`/compliance/frameworks/${f.framework}`} className="small">
+                        Review mappings →
+                      </Link>
                     </td>
                   </tr>
                 ))}
@@ -237,10 +257,14 @@ export default async function Compliance({
       {tab === "risk" && (
         <>
           <h2>Risk register</h2>
+          <p className="small muted" style={{ marginTop: -6, marginBottom: 14 }}>
+            An unassessed agent isn't a data gap you fix by waiting — someone has to
+            look at it and record a class and a residual risk. Expand a row to do that.
+          </p>
           <div className="panel scroll-x">
             <table>
               <thead>
-                <tr><th>agent</th><th>risk tier</th><th>EU class</th><th>residual</th><th>assessor</th><th>next review</th></tr>
+                <tr><th>agent</th><th>risk tier</th><th>EU class</th><th>residual</th><th>assessor</th><th>next review</th><th></th></tr>
               </thead>
               <tbody>
                 {register.register.map((r: any) => (
@@ -257,11 +281,141 @@ export default async function Compliance({
                         <span className="tag bad">overdue</span>
                       ) : (r.next_review_at || "—").slice(0, 10)}
                     </td>
+                    <td>
+                      <details>
+                        <summary className="small">{r.eu_ai_act_class ? "Reassess" : "Assess"}</summary>
+                        <form
+                          action={`/api/risk/assessments/${r.agent}`}
+                          method="POST"
+                          className="stack"
+                          style={{ marginTop: 8, minWidth: 220 }}
+                        >
+                          <label className="small muted" style={{ display: "block" }}>
+                            EU AI Act class
+                            <select name="eu_ai_act_class" defaultValue="" style={inputStyle}>
+                              <option value="">Let the platform propose one</option>
+                              <option value="minimal">Minimal</option>
+                              <option value="limited">Limited</option>
+                              <option value="high">High</option>
+                              <option value="prohibited">Prohibited</option>
+                            </select>
+                          </label>
+                          <label className="small muted" style={{ display: "block" }}>
+                            Residual risk
+                            <select name="residual_risk" defaultValue="low" style={inputStyle}>
+                              <option value="low">Low</option>
+                              <option value="medium">Medium</option>
+                              <option value="high">High</option>
+                            </select>
+                          </label>
+                          <label className="small muted" style={{ display: "block" }}>
+                            Signed off by
+                            <input
+                              type="email"
+                              name="signed_off_by"
+                              placeholder="you@yourcompany.com"
+                              style={inputStyle}
+                            />
+                          </label>
+                          <button type="submit" className="btn-approve" style={{ fontSize: 12 }}>
+                            Record assessment
+                          </button>
+                        </form>
+                      </details>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
+        </>
+      )}
+
+      {tab === "evidence" && (
+        <>
+          <h2>Evidence & reports</h2>
+          <p className="small muted" style={{ marginTop: -6, marginBottom: 14 }}>
+            An auditor-ready zip: what was in scope, what the agent actually did, which
+            policy version was in force, and a standalone script that re-derives the
+            audit-chain hash without trusting this platform or calling its API. Draft
+            (unreviewed) framework mappings are always excluded — reviewed on the{" "}
+            <a href="/compliance?tab=frameworks">Frameworks tab</a>.
+          </p>
+
+          <div className="panel" style={{ marginBottom: 20 }}>
+            <div className="head"><span>Build a package</span></div>
+            <form action="/api/evidence" method="POST" className="body stack">
+              <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                    Agents (comma-separated slugs, blank = all)
+                  </label>
+                  <input type="text" name="agents" placeholder="support-triage, refund-bot" style={inputStyle} />
+                </div>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                    Controls (comma-separated keys, blank = all)
+                  </label>
+                  <input type="text" name="controls" placeholder="NOM-RTG-01" style={inputStyle} />
+                </div>
+              </div>
+              <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                    Period from (blank = unbounded)
+                  </label>
+                  <input type="date" name="period_from" style={inputStyle} />
+                </div>
+                <div style={{ flex: 1, minWidth: 160 }}>
+                  <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                    Period to (blank = now)
+                  </label>
+                  <input type="date" name="period_to" style={inputStyle} />
+                </div>
+              </div>
+              <button type="submit" className="btn-approve">Build evidence package</button>
+            </form>
+          </div>
+
+          {evidencePackages.packages.length === 0 ? (
+            <div className="hero empty">
+              <div className="hero-title">No evidence packages built yet</div>
+              <p>Build one above — it takes a few seconds and nothing is deleted by building another.</p>
+            </div>
+          ) : (
+            <div className="panel scroll-x">
+              <table>
+                <thead>
+                  <tr>
+                    <th>built</th><th>requested by</th><th>scope</th>
+                    <th>chain</th><th>counts</th><th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evidencePackages.packages.map((p: any) => (
+                    <tr key={p.id}>
+                      <td className="small muted">{ts(p.built_at)}</td>
+                      <td className="small muted">{p.requested_by}</td>
+                      <td className="small muted">
+                        {(p.scope?.agents || ["*"]).join(", ")} / {(p.scope?.controls || ["*"]).join(", ")}
+                      </td>
+                      <td>
+                        <span className={`tag ${p.chain_valid ? "ok" : "bad"}`}>
+                          {p.chain_valid ? "verified" : "broken"}
+                        </span>
+                      </td>
+                      <td className="small muted">
+                        {Object.entries(p.counts || {}).map(([k, v]) => `${k}: ${v}`).join(", ") || "—"}
+                      </td>
+                      <td>
+                        <a href={`/api/evidence/${p.id}/download`} className="small">Download →</a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </>
       )}
     </>

@@ -18,6 +18,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ...audit.otel import ingest_otlp
@@ -35,6 +36,32 @@ def _trust_map(header: str | None) -> dict[str, str] | None:
         return {str(k): str(v) for k, v in json.loads(header).items()}
     except Exception:
         return None
+
+
+def _evidence_from_body(session: Session, body: dict[str, Any]) -> dict[str, Any] | None:
+    """P10 over HTTP — the caller declares who's asking and what was retrieved.
+
+    Without this, ``run_completion``'s ``evidence=`` kwarg (which entitlement
+    checking reads) is never populated by ordinary gateway traffic, so a real
+    integrator has no way to make disclosure checks run short of calling
+    ``/api/entitlement/filter`` directly and separately. ``principal`` and
+    ``retrieved`` are optional body fields; either one is enough to build evidence
+    — a subject with no registered principal still records correctly as
+    "declared but unregistered" downstream (see entitlement.filter_retrieval).
+    """
+    principal_ref = body.get("principal")
+    chunks = body.get("retrieved") or body.get("chunks")
+    if principal_ref is None and not chunks:
+        return None
+    from ...models import EndUserPrincipal
+
+    principal = None
+    if principal_ref is not None:
+        subject = (
+            principal_ref.get("subject") if isinstance(principal_ref, dict) else str(principal_ref)
+        )
+        principal = session.scalar(select(EndUserPrincipal).where(EndUserPrincipal.subject == subject))
+    return {"principal": principal, "chunks": chunks or [], "purpose": body.get("purpose")}
 
 
 def _blocked_response(result, status: int = 403) -> JSONResponse:
@@ -218,6 +245,7 @@ async def chat_completions(
 ) -> Any:
     body = await request.json()
     enforcer = Enforcer(session)
+    evidence = _evidence_from_body(session, body)
 
     if body.get("stream"):
         # PL-1: honour the caller's protocol. Previously this flag was silently
@@ -237,6 +265,7 @@ async def chat_completions(
             temperature=float(body.get("temperature", 0.0)),
             max_tokens=body.get("max_tokens"),
             mode=x_nometria_stream_mode,
+            evidence=evidence,
         )
         return StreamingResponse(
             _stream_openai(events, body.get("model", "")),
@@ -257,6 +286,7 @@ async def chat_completions(
         correlation=dict(request.headers),
         temperature=float(body.get("temperature", 0.0)),
         max_tokens=body.get("max_tokens"),
+        evidence=evidence,
     )
     if result.blocked:
         return _blocked_response(result)
@@ -294,6 +324,7 @@ async def messages(
         payload = [{"role": "system", "content": body["system"]}, *payload]
 
     enforcer = Enforcer(session)
+    evidence = _evidence_from_body(session, body)
     if body.get("stream"):
         events = enforcer.run_completion_stream(
             agent_slug=x_nometria_agent,
@@ -309,6 +340,7 @@ async def messages(
             temperature=float(body.get("temperature", 0.0)),
             max_tokens=body.get("max_tokens"),
             mode=x_nometria_stream_mode,
+            evidence=evidence,
         )
         return StreamingResponse(
             _stream_anthropic(events, body.get("model", "")),
@@ -329,6 +361,7 @@ async def messages(
         correlation=dict(request.headers),
         temperature=float(body.get("temperature", 0.0)),
         max_tokens=body.get("max_tokens"),
+        evidence=evidence,
     )
     if result.blocked:
         return _blocked_response(result)

@@ -250,6 +250,42 @@ def test_the_governed_call_leaves_a_trace_and_decisions(app_db, fake_openai):
         assert session.query(Decision).count() >= 2, "one per surface"
 
 
+def test_reserved_evidence_kwargs_record_disclosure_and_never_reach_the_provider(
+    app_db, fake_openai
+):
+    """`nometria_principal`/`nometria_chunks` are the SDK's answer to the same gap the
+    gateway HTTP path had: `enforcer.evidence` was never populated by real traffic, so
+    entitlement checking could never fire for anyone using the one-liner. They must
+    also never leak into the real provider call as unrecognised kwargs."""
+    from nometria.db import session_scope
+    from nometria.entitlement import grant, upsert_principal
+    from nometria.models import DisclosureEvent
+
+    with session_scope() as session:
+        grant(session, "kb/*", principal="all-staff")
+        upsert_principal(session, "alice@acme.com", groups=["all-staff"])
+
+    client, calls = fake_openai
+    auto(agent="support-triage", quiet=True)
+    client().create(
+        model="gpt-4o",
+        messages=[{"role": "user", "content": "hi"}],
+        nometria_principal={"subject": "alice@acme.com"},
+        nometria_chunks=[
+            {"source": "kb/faq", "text": "Refunds within 30 days."},
+            {"source": "hr/salaries-2026", "text": "Head of Eng: 210,000."},
+        ],
+    )
+
+    assert "nometria_principal" not in calls[0]
+    assert "nometria_chunks" not in calls[0]
+    with session_scope() as session:
+        event = session.query(DisclosureEvent).one()
+    assert event.principal_subject == "alice@acme.com"
+    assert event.candidates == 2
+    assert event.withheld == 1
+
+
 def test_detections_in_the_response_are_recorded(app_db):
     saved = {k: sys.modules.get(k) for k in list(sys.modules) if k.startswith("openai")}
     client, _calls = _install_fake_openai("Contact jane.doe@example.com, SSN 123-45-6789.")

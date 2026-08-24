@@ -31,10 +31,10 @@ export default async function Start() {
     <>
       <h1>Start here</h1>
       <p className="sub">
-        Fastest path: <Link href="/settings/integrations">connect a GitHub repo</Link> and
-        let a static scan propose what to govern — or instrument your own code with the
-        SDK, whichever fits. Only the last step below blocks anything; everything before
-        it is safe to run without reading further.
+        Fastest path: <Link href="/settings/integrations">connect a GitHub repo, or just
+        point us at a hosted API</Link> and let a static scan propose what to govern — or
+        instrument your own code with the SDK, whichever fits. Only the last step below
+        blocks anything; everything before it is safe to run without reading further.
       </p>
 
       <div className="progress-line">
@@ -58,7 +58,7 @@ export default async function Start() {
               </div>
               {step.id === "connect" ? (
                 <Link href="/settings/integrations" className="btn-github" style={{ display: "inline-block", marginBottom: 6 }}>
-                  {step.done ? "Manage connection" : "Connect GitHub →"}
+                  {step.done ? "Manage connection" : "Connect →"}
                 </Link>
               ) : step.id === "boundary" ? (
                 <Link href="/agents" className="cta" style={{ display: "inline-block", marginBottom: 6 }}>
