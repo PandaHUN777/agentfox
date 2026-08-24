@@ -6,17 +6,21 @@ export const dynamic = "force-dynamic";
 
 export default async function AgentDetail({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ review_error?: string }>;
 }) {
   const { slug } = await params;
-  let posture: any, lineage: any, traces: any, classification: any;
+  const { review_error } = await searchParams;
+  let posture: any, lineage: any, traces: any, classification: any, boundaries: any;
   try {
-    [posture, lineage, traces, classification] = await Promise.all([
+    [posture, lineage, traces, classification, boundaries] = await Promise.all([
       api(`/api/agents/${slug}/posture`),
       safeApi(`/api/agents/${slug}/lineage?depth=2`, { nodes: [], links: [], blast_radius: 0 }),
       safeApi(`/api/traces?agent=${slug}&limit=15`, { traces: [] }),
       safeApi(`/api/risk/classify/${slug}`, null),
+      safeApi(`/api/answerability/boundaries`, { boundaries: [], question_types: [] }),
     ]);
   } catch (e: any) {
     return (
@@ -28,11 +32,17 @@ export default async function AgentDetail({
   }
 
   const a = posture.agent;
+  const boundary = boundaries.boundaries.find((b: any) => b.agent === a.slug) || null;
+  const questionTypes: string[] = boundaries.question_types?.length
+    ? boundaries.question_types
+    : ["fact", "aggregate", "prediction", "opinion", "procedure"];
 
   return (
     <>
       <h1 className="mono">{a.slug}</h1>
       <p className="sub">{a.purpose || "No business purpose recorded."}</p>
+
+      {review_error && <div className="error">{review_error}</div>}
 
       <div className="cards">
         <Stat n={posture.traces} label="execution paths" />
@@ -47,6 +57,26 @@ export default async function AgentDetail({
           <table>
             <tbody>
               <tr><td className="muted">owner</td><td>{a.owner_email || <span className="tag warn">unowned</span>}</td></tr>
+              <tr><td className="muted"></td><td className="small">
+                <form action={`/api/agents/${a.slug}/owner`} method="POST" className="row" style={{ gap: 6 }}>
+                  <input
+                    type="email"
+                    name="owner_email"
+                    placeholder="owner@company.com"
+                    defaultValue={a.owner_email || ""}
+                    required
+                    style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 12, fontFamily: "inherit" }}
+                  />
+                  <input
+                    type="text"
+                    name="owner_team"
+                    placeholder="team (optional)"
+                    defaultValue={a.owner_team || ""}
+                    style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 12, fontFamily: "inherit", width: 130 }}
+                  />
+                  <button type="submit" className="btn-approve">{a.owner_email ? "Update" : "Assign owner"}</button>
+                </form>
+              </td></tr>
               <tr><td className="muted">team</td><td>{a.owner_team || "—"}</td></tr>
               <tr><td className="muted">environment</td><td>{a.environment}</td></tr>
               <tr><td className="muted">risk tier</td><td><span className="tag">{a.risk_tier}</span></td></tr>
@@ -85,6 +115,82 @@ export default async function AgentDetail({
           )}
         </Panel>
       </div>
+
+      <h2>Knowledge boundary</h2>
+      <Panel
+        title={boundary ? "Declared" : "Not declared"}
+        note="without one, nothing stops the agent inventing an answer it has no data for (P7)"
+      >
+        <form action={`/api/agents/${a.slug}/boundary`} method="POST" className="body stack">
+          <div>
+            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              Systems of record it may answer from (comma-separated)
+            </label>
+            <input
+              type="text"
+              name="systems_of_record"
+              defaultValue={boundary?.systems_of_record?.join(", ") || ""}
+              placeholder={a.purpose ? `e.g. the data ${a.purpose.replace(/^Detected by scanning /, "")} works with` : "e.g. price-book, ticket-history"}
+              style={{ width: "100%", maxWidth: 480, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            />
+          </div>
+          <div className="row">
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Coverage (months of history)</label>
+              <input type="number" name="coverage_months" min={0} defaultValue={boundary?.coverage_months ?? ""} style={{ width: 100, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
+            </div>
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Freshness (hours)</label>
+              <input type="number" name="freshness_hours" min={0} defaultValue={boundary?.freshness_hours ?? ""} style={{ width: 100, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
+            </div>
+          </div>
+          <div>
+            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              Entity types it knows about (comma-separated)
+            </label>
+            <input
+              type="text"
+              name="entity_types"
+              defaultValue={boundary?.entity_types?.join(", ") || ""}
+              placeholder="e.g. customer, order, invoice"
+              style={{ width: "100%", maxWidth: 480, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            />
+          </div>
+          <div>
+            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              Topics it must refuse even if it has data (comma-separated)
+            </label>
+            <input
+              type="text"
+              name="out_of_scope_topics"
+              defaultValue={boundary?.out_of_scope_topics?.join(", ") || ""}
+              placeholder="e.g. legal advice, medical diagnosis"
+              style={{ width: "100%", maxWidth: 480, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            />
+          </div>
+          <div>
+            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Question types it may answer</label>
+            <div className="row" style={{ gap: 14 }}>
+              {questionTypes.map((qt) => (
+                <label key={qt} className="small" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <input
+                    type="checkbox"
+                    name="answerable_types"
+                    value={qt}
+                    defaultChecked={boundary ? boundary.answerable_types?.includes(qt) : true}
+                  />
+                  {qt}
+                </label>
+              ))}
+            </div>
+          </div>
+          <div>
+            <button type="submit" className="btn-approve">
+              {boundary ? "Update boundary" : "Declare boundary"}
+            </button>
+          </div>
+        </form>
+      </Panel>
 
       {classification && (
         <>

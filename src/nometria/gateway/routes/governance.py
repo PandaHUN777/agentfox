@@ -411,6 +411,31 @@ def list_controls(
     return {"controls": out, "posture": posture(session)}
 
 
+@router.post("/controls/sync")
+def sync_controls(
+    session: Session = Depends(db),
+    user: User = Depends(require("compliance")),
+) -> dict[str, Any]:
+    """Load the static control catalog and obligation calendar from YAML into this
+    tenant's control-plane DB (P6-2). `nometria compliance sync` does the same thing
+    from the CLI against whatever DB it's pointed at — this is the same idempotent
+    upsert, reachable without shell access to the deployment, so a freshly provisioned
+    org isn't stuck at "0 controls, mapped to seven frameworks" with no way to fix it
+    from the product itself."""
+    from ...compliance.catalog import sync_catalog, sync_obligations
+
+    catalog = sync_catalog(session)
+    obligations = sync_obligations(session)
+    chain.append(
+        session,
+        "compliance.catalog_synced",
+        actor_type="user",
+        actor_id=user.email,
+        payload={**catalog, "obligations": obligations},
+    )
+    return {"catalog": catalog, "obligations": obligations, "posture": posture(session)}
+
+
 @router.post("/controls/compute")
 def compute_controls(
     window_days: int = 30,

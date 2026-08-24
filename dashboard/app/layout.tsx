@@ -2,7 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { SESSION_COOKIE } from "@/lib/api";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import "./globals.css";
+
+// Runs before paint so a stored theme choice never flashes the wrong colors on load.
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("nometria-theme");if(t&&t!=="system")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
 export const metadata: Metadata = {
   title: "Nometria Control Plane",
@@ -63,6 +67,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en">
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body>
         {isLoginPage ? (
           <main className="login-main">{children}</main>
@@ -83,6 +90,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                   ))}
                 </div>
               ))}
+              <ThemeToggle />
               {signedIn && (
                 <form action="/api/auth/logout" method="POST" className="nav-signout">
                   <button type="submit">Sign out</button>

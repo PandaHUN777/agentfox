@@ -156,7 +156,11 @@ export default async function Agents({
                   {a.purpose || "—"}
                 </td>
                 <td className="small">
-                  {a.owner_email || <span className="tag warn">unowned</span>}
+                  {a.owner_email || (
+                    <Link href={`/agents/${a.slug}`} className="tag warn">
+                      unowned — assign
+                    </Link>
+                  )}
                 </td>
                 <td className="small">{a.environment}</td>
                 <td>

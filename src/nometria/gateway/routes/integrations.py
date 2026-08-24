@@ -327,9 +327,15 @@ def trigger_scan(
     for group_key, sites in groups.items():
         providers = [s.provider for s in sites if s.provider]
         framework = providers[0] if providers else (report.frameworks[0] if report.frameworks else None)
+        # A monorepo's top-level directory is often named after the repo itself
+        # (e.g. gpt-researcher/gpt-researcher/) — slugifying both halves would
+        # produce "gpt-researcher-gpt-researcher", which reads as a typo rather
+        # than two distinct things.
+        group_slug = slugify(group_key)
+        slug = repo_short if group_slug == repo_short else f"{repo_short}-{group_slug}"
         agent = register_agent(
             session,
-            slug=f"{repo_short}-{group_key}",
+            slug=slug,
             name=f"{payload.repo_full_name}/{group_key}",
             purpose=f"Detected by scanning {payload.repo_full_name} ({len(sites)} governable site(s)).",
             framework=framework,

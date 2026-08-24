@@ -147,6 +147,38 @@ def get_agent(
     return _agent_json(agent, session)
 
 
+class AgentUpdate(BaseModel):
+    owner_email: str | None = None
+    owner_team: str | None = None
+    risk_tier: str | None = None
+
+
+@router.patch("/agents/{slug}")
+def update_agent(
+    slug: str,
+    payload: AgentUpdate,
+    session: Session = Depends(db),
+    user: User = Depends(require("registry")),
+) -> dict[str, Any]:
+    agent = session.scalar(select(Agent).where(Agent.slug == slug))
+    if agent is None:
+        raise HTTPException(404, f"unknown agent '{slug}'")
+    changes = payload.model_dump(exclude_unset=True)
+    for field, value in changes.items():
+        setattr(agent, field, value)
+    session.flush()
+    chain.append(
+        session,
+        "agent.updated",
+        actor_type="user",
+        actor_id=user.email,
+        subject_type="agent",
+        subject_id=agent.id,
+        payload=changes,
+    )
+    return _agent_json(agent, session)
+
+
 @router.get("/agents/{slug}/lineage")
 def agent_lineage(
     slug: str, depth: int = 2, session: Session = Depends(db), _user: User = Depends(current_user)

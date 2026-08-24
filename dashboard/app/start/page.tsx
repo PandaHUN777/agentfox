@@ -60,6 +60,10 @@ export default async function Start() {
                 <Link href="/settings/integrations" className="btn-github" style={{ display: "inline-block", marginBottom: 6 }}>
                   {step.done ? "Manage connection" : "Connect GitHub →"}
                 </Link>
+              ) : step.id === "boundary" ? (
+                <Link href="/agents" className="cta" style={{ display: "inline-block", marginBottom: 6 }}>
+                  {step.done ? "Manage knowledge boundaries →" : "Pick an agent to declare a boundary for →"}
+                </Link>
               ) : (
                 <code className="step-cmd">{step.command}</code>
               )}

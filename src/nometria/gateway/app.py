@@ -168,6 +168,39 @@ def create_app() -> FastAPI:
             }
 
         available = available_detectors()
+        # Why the OSS-wrapped and licence-restricted detectors aren't live here —
+        # shown in the UI so "not installed" doesn't read as a bug. The native
+        # detectors (injection.heuristic, pii.native, safety.lexicon, schema.json,
+        # secrets.native) need none of this and are always available.
+        unavailable_reason = {
+            "pii.presidio": (
+                "Wrapped Microsoft Presidio, pulled in with spaCy and numpy — "
+                "~170MB, which doesn't fit this deployment's Vercel serverless "
+                "function size budget alongside the rest of the app. Available in "
+                "the self-hosted docker-compose deployment: pip install "
+                "'nometria[presidio]'."
+            ),
+            "rails.guardrails_ai": (
+                "Wrapped Guardrails AI. Core is Apache-2.0, but individual Guardrails "
+                "Hub validators carry their own licences that must be checked before "
+                "shipping, so none is enabled by default in any deployment."
+            ),
+            "rails.nemo": (
+                "Wrapped NVIDIA NeMo Guardrails — needs both the nemoguardrails "
+                "package and a Colang rails config, neither shipped by default."
+            ),
+            "safety.granite": (
+                "Wrapped IBM Granite Guardian, via transformers — needs the model "
+                "weights downloaded ahead of time (never fetched at request time); "
+                "not present in this deployment's function image."
+            ),
+            "safety.restricted": (
+                "Meta Llama Guard / Google ShieldGemma — capable, but their licences "
+                "aren't OSI-approved (usage restrictions, a MAU clause), so this stays "
+                "opt-in only via NOMETRIA_ACCEPT_RESTRICTED_MODEL_LICENSES=1, "
+                "regardless of deployment."
+            ),
+        }
         return {
             "detectors": [
                 {
@@ -176,6 +209,7 @@ def create_app() -> FastAPI:
                     "surfaces": list(detector.surfaces),
                     "available": key in available,
                     "enabled": key in get_settings().enabled_detectors,
+                    "unavailable_reason": None if key in available else unavailable_reason.get(key),
                     "stats": stats.get(key, {}),
                 }
                 for key, detector in sorted(all_detectors().items())

@@ -58,7 +58,10 @@ export default async function Policies({
               <tbody>
                 {proposed.map((p: any) => (
                   <tr key={p.id}>
-                    <td className="mono">{p.key}</td>
+                    <td>
+                      {p.name}
+                      <div className="small muted mono">{p.key}</div>
+                    </td>
                     <td className="small wrap muted" style={{ maxWidth: 420 }}>
                       {p.description}
                     </td>
@@ -94,7 +97,8 @@ export default async function Policies({
             {policies.policies.map((p: any) => (
               <tr key={p.key}>
                 <td>
-                  <span className="mono">{p.key}</span>
+                  {p.name}
+                  <div className="small muted mono">{p.key}</div>
                   {p.proposed && <div><span className="tag warn">proposed</span></div>}
                 </td>
                 <td className="small wrap muted" style={{ maxWidth: 420 }}>{p.description}</td>
@@ -142,6 +146,11 @@ export default async function Policies({
                     <span className="tag">available</span>
                   ) : (
                     <span className="tag warn">not installed</span>
+                  )}
+                  {d.unavailable_reason && (
+                    <div className="small muted wrap" style={{ maxWidth: 280, marginTop: 3 }}>
+                      {d.unavailable_reason}
+                    </div>
                   )}
                 </td>
                 <td className="num small">{d.stats?.runs ?? "—"}</td>

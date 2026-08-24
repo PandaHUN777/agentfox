@@ -91,6 +91,11 @@ export default async function Guardrails() {
                     <span className="mono">{d.key}</span>
                     {!d.available && <span className="tag warn">unavailable</span>}
                     {!d.enabled && <span className="tag">off</span>}
+                    {d.unavailable_reason && (
+                      <div className="small muted wrap" style={{ maxWidth: 340, marginTop: 3 }}>
+                        {d.unavailable_reason}
+                      </div>
+                    )}
                   </td>
                   <td className="small muted">{d.version}</td>
                   <td className="mono small">{stats.runs ?? 0}</td>

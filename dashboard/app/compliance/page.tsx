@@ -3,7 +3,12 @@ import { ApiDown, ControlStatus, DraftCaveat, Gaps, Panel, Stat, pct } from "@/c
 
 export const dynamic = "force-dynamic";
 
-export default async function Compliance() {
+export default async function Compliance({
+  searchParams,
+}: {
+  searchParams: Promise<{ review_error?: string }>;
+}) {
+  const { review_error } = await searchParams;
   let controls: any, frameworks: any, obligations: any, register: any;
   try {
     [controls, frameworks, obligations, register] = await Promise.all([
@@ -22,16 +27,40 @@ export default async function Compliance() {
   }
 
   const counts = controls.posture.counts || {};
+  const catalogLoaded = controls.controls.length > 0;
 
   return (
     <>
       <h1>Compliance</h1>
       <p className="sub">
-        One control set mapped to seven frameworks. Control status is{" "}
+        {catalogLoaded
+          ? "One control set mapped to seven frameworks. Control status is "
+          : "One control set maps to seven frameworks, once the catalog below is loaded. Control status is "}
         <strong>computed from telemetry</strong> — detector coverage, decision coverage,
         audit-chain verification — not attested on a form. That is a claim only an
         inline, agent-native platform can make.
       </p>
+
+      {review_error && <div className="error">{review_error}</div>}
+
+      {!catalogLoaded && (
+        <div className="hero empty" style={{ marginBottom: 20 }}>
+          <div className="hero-title">Control catalog not loaded</div>
+          <p>
+            This deployment has never loaded the reference control catalog — the
+            fixed set of ~40 controls and their mappings to EU AI Act, NIST AI RMF,
+            ISO/IEC 42001 and the rest. Until it is, every count below reads zero,
+            which looks like a broken product rather than a missing one-time setup
+            step. Loading it is idempotent — safe to run again later when the
+            catalog version changes.
+          </p>
+          <form action="/api/compliance/sync" method="POST">
+            <button type="submit" className="btn-approve">
+              Load control catalog
+            </button>
+          </form>
+        </div>
+      )}
 
       <DraftCaveat />
 
@@ -84,7 +113,16 @@ export default async function Compliance() {
         ) : null,
       )}
 
-      <h2>Controls</h2>
+      <h2 style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <span>Controls</span>
+        {catalogLoaded && (
+          <form action="/api/compliance/compute" method="POST">
+            <button type="submit" className="btn-scan" style={{ fontWeight: 400 }}>
+              Recompute status from telemetry
+            </button>
+          </form>
+        )}
+      </h2>
       <div className="panel scroll-x">
         <table>
           <thead>

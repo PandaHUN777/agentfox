@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api, safeApi, ApiError } from "@/lib/api";
-import { ApiDown, Panel, Empty, ts } from "@/components/ui";
+import { ApiDown, Panel, Empty } from "@/components/ui";
+import { RepoTable } from "@/components/RepoTable";
 
 export const dynamic = "force-dynamic";
 
@@ -86,37 +87,7 @@ export default async function Integrations({
           {repos.repos.length === 0 ? (
             <Empty>No repositories visible to this GitHub account.</Empty>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Repository</th>
-                  <th>Branch</th>
-                  <th>Updated</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {repos.repos.map((r) => (
-                  <tr key={r.full_name}>
-                    <td>
-                      <div>{r.full_name}</div>
-                      {r.description && <div className="small muted">{r.description}</div>}
-                    </td>
-                    <td className="mono small">{r.default_branch}</td>
-                    <td className="small muted">{ts(r.updated_at)}</td>
-                    <td>
-                      <form action="/api/integrations/github/scan" method="POST">
-                        <input type="hidden" name="repo_full_name" value={r.full_name} />
-                        <input type="hidden" name="ref" value={r.default_branch} />
-                        <button type="submit" className="btn-scan">
-                          Scan
-                        </button>
-                      </form>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <RepoTable repos={repos.repos} />
           )}
         </Panel>
       )}

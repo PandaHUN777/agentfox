@@ -461,6 +461,57 @@ def test_unknown_user_is_rejected(client):
     assert client.get("/api/agents", headers=as_user("nobody@example.com")).status_code == 401
 
 
+def test_assigning_an_owner_updates_the_agent_and_is_role_gated(client):
+    # hr-screening is deliberately seeded unowned (see seed.py) — the case the
+    # dashboard's agent-detail "Assign owner" form exists to fix.
+    denied = client.patch(
+        "/api/agents/hr-screening",
+        json={"owner_email": "grace@example.com"},
+        headers=as_user("aisha@example.com"),  # auditor — read-only
+    )
+    assert denied.status_code == 403
+
+    updated = client.patch(
+        "/api/agents/hr-screening",
+        json={"owner_email": "grace@example.com", "owner_team": "Talent"},
+        headers=as_user("admin@example.com"),
+    ).json()
+    assert updated["owner_email"] == "grace@example.com"
+    assert updated["owner_team"] == "Talent"
+    assert updated["owned"] is True
+
+    # A partial update (owner_team only) must not clobber the owner_email just set.
+    again = client.patch(
+        "/api/agents/hr-screening",
+        json={"owner_team": "People Ops"},
+        headers=as_user("admin@example.com"),
+    ).json()
+    assert again["owner_email"] == "grace@example.com"
+    assert again["owner_team"] == "People Ops"
+
+    assert client.patch("/api/agents/no-such-agent", json={}, headers=as_user("admin@example.com")).status_code == 404
+
+
+def test_control_catalog_sync_populates_controls_and_is_idempotent(client):
+    # A freshly seeded environment already syncs the catalog (see seed.py), so this
+    # asserts idempotency — the real-world case is a deployment that seeded users and
+    # agents via a different path (e.g. GitHub OAuth provisioning) without ever
+    # running `nometria compliance sync`, which is what /api/controls/sync exists to
+    # fix from the product itself instead of requiring shell access to the DB.
+    before = client.get("/api/controls", headers=as_user("admin@example.com")).json()
+    assert before["controls"], "seeded environment should already have a synced catalog"
+
+    denied = client.post("/api/controls/sync", headers=as_user("priya@example.com"))  # developer
+    assert denied.status_code == 403
+
+    synced = client.post("/api/controls/sync", headers=as_user("admin@example.com")).json()
+    assert synced["catalog"]["controls_created"] == 0  # idempotent — nothing new to create
+    assert synced["catalog"]["mappings"] > 0
+
+    after = client.get("/api/controls", headers=as_user("admin@example.com")).json()
+    assert len(after["controls"]) == len(before["controls"])
+
+
 # ---------------------------------------------------------------------------
 # SDK (X-1b)
 # ---------------------------------------------------------------------------
