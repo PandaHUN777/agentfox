@@ -1,4 +1,8 @@
 # Vercel Python function entrypoint (api/index.py) installs from this file.
+# Placed inside api/ deliberately: a requirements.txt at the repo root is ignored
+# in favour of the root pyproject.toml, whose core [project.dependencies] excludes
+# the postgres and sql extras by design (pip install nometria stays offline-light).
+# This file is scoped to what the deployed function actually needs.
 # Core runtime deps mirror pyproject.toml's [project.dependencies]; the ML/PII/redteam
 # extras are intentionally excluded — the enabled-by-default detectors are all
 # lexical/heuristic (config.py's enabled_detectors), so nothing at runtime needs them,
@@ -20,5 +24,6 @@ rich>=13.9
 psycopg>=3.2
 psycopg-binary>=3.2
 sqlglot>=25.0
-# Installs the local `nometria` package itself (src-layout, hatchling build backend).
-.
+# The local `nometria` package itself is NOT installed here — api/index.py adds
+# ../src to sys.path directly, which is simpler and faster than resolving an
+# editable install of a parent directory from inside this one.
