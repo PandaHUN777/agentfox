@@ -119,6 +119,7 @@ def provision(payload: ProvisionIn, session: Session = Depends(db)) -> dict[str,
     GitHub login gets a brand new org: there is no invite flow yet, so "new GitHub
     identity" and "new tenant" are the same event.
     """
+    is_new_org = False
     with system_scope("resolving a GitHub identity for provisioning", routine=True):
         user = session.scalar(select(User).where(User.external_id == payload.github_user_id))
         if user is None:
@@ -135,7 +136,17 @@ def provision(payload: ProvisionIn, session: Session = Depends(db)) -> dict[str,
             )
             session.add(user)
             session.flush()
+            is_new_org = True
     bind_session(session, user.org_id)
+    if is_new_org:
+        # Control/FrameworkMapping/Obligation are tenant-scoped like every mapped
+        # class (assert_tenant_safe), so the shared reference catalog has to be
+        # synced into each new org rather than assumed to exist — otherwise
+        # Compliance shows 0 controls until someone finds the manual sync action.
+        from ...compliance.catalog import sync_catalog, sync_obligations
+
+        sync_catalog(session)
+        sync_obligations(session)
     _token, raw = issue_token(
         session,
         user,

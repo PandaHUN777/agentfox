@@ -359,6 +359,40 @@ def test_a_context_variable_set_in_a_dependency_does_not_reach_the_handler():
     assert client.get("/async").json()["seen"] == "UNSET"
 
 
+def test_shared_reference_catalog_syncs_independently_per_org(isolated_db):
+    """Regression: Control/FrameworkMapping inherit TimestampMixin like every mapped
+    class (assert_tenant_safe requires it), so a plain unique index on Control.key
+    alone meant the first org to sync the reference catalog claimed every key —
+    every other org's sync then failed with a UniqueViolation while its own
+    (correctly tenant-filtered) SELECT reported the row as absent. That looked like a
+    catalog that silently refused to load, not a modeling bug; this proves two
+    tenants can each hold their own synced copy of the same catalog content.
+    """
+    from nometria.compliance.catalog import sync_catalog
+    from nometria.models import Control
+
+    for org in (ACME, GLOBEX):
+        with tenant(org), session_scope() as session:
+            result = sync_catalog(session)
+            assert result["controls_created"] > 0, f"{org} sync inserted nothing"
+
+    for org in (ACME, GLOBEX):
+        with tenant(org), session_scope() as session:
+            keys = set(session.scalars(select(Control.key)))
+            assert "NOM-DSC-01" in keys, f"{org} cannot see its own synced catalog"
+
+    with system_scope("counting rows across both tenants", routine=True), session_scope() as session:
+        acme_count = session.scalar(
+            select(func.count()).select_from(Control).where(Control.org_id == ACME)
+        )
+        globex_count = session.scalar(
+            select(func.count()).select_from(Control).where(Control.org_id == GLOBEX)
+        )
+        total = session.scalar(select(func.count()).select_from(Control))
+        assert acme_count > 0 and acme_count == globex_count
+        assert total == acme_count + globex_count, "no rows should exist outside the two tenants"
+
+
 def test_migrations_do_not_switch_off_platform_logging(isolated_db):
     """Regression: Alembic's `fileConfig` defaults to disabling every existing logger.
 

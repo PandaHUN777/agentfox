@@ -1133,10 +1133,18 @@ class SimulationRun(Base, TimestampMixin):
 
 
 class Control(Base, TimestampMixin):
+    """The reference control catalog. Conceptually one shared, versioned set (the
+    "one control set mapped to seven frameworks" claim on the Compliance page) — but
+    every mapped class must be tenant-scoped (`assert_tenant_safe`), so each org gets
+    its own copy, synced from the same YAML. That's why `key` alone can't be globally
+    unique: two orgs syncing the same catalog would collide on each other's rows. The
+    real uniqueness is (org_id, key)."""
+
     __tablename__ = "controls"
+    __table_args__ = (UniqueConstraint("org_id", "key", name="ux_controls_org_key"),)
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("ctl"))
-    key: Mapped[str] = mapped_column(String(32), unique=True, index=True)
+    key: Mapped[str] = mapped_column(String(32), index=True)
     title: Mapped[str] = mapped_column(String(300))
     objective: Mapped[str] = mapped_column(Text, default="")
     family: Mapped[str] = mapped_column(String(16))
