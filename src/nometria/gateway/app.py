@@ -238,6 +238,41 @@ def create_app() -> FastAPI:
             "fallback_chain": get_settings().fallback_chain,
         }
 
+    @app.post("/api/_backfill_scan_copy", tags=["platform"])
+    def backfill_scan_copy(session: Session = Depends(db), _u=Depends(current_user)) -> dict[str, Any]:
+        """One-off: rewrite pre-existing scan-generated name/description/purpose text
+        to the shorter, non-repetitive wording — new scans already produce it, this
+        catches rows created before that fix. Idempotent (only touches rows still
+        matching the old pattern); safe to remove once run in each environment."""
+        import re
+
+        from ..models import Agent, Policy
+
+        name_re = re.compile(r"^Baseline guardrails for (?P<framework>.+) \((?P<repo>.+)\)$")
+        purpose_re = re.compile(r"^Detected by scanning (?P<repo>.+) \(\d+ governable site\(s\)\)\.$")
+
+        policies_fixed = 0
+        for p in session.scalars(select(Policy).where(Policy.key.like("scan-%"))):
+            m = name_re.match(p.name)
+            if not m:
+                continue
+            framework, repo = m.group("framework"), m.group("repo")
+            p.name = f"{framework} guardrails"
+            p.description = (
+                f"Detects {framework} usage in {repo} — prompt injection, PII/secret "
+                f"leaks, and unsafe tool actions."
+            )
+            policies_fixed += 1
+
+        agents_fixed = 0
+        for a in session.scalars(select(Agent)):
+            if purpose_re.match(a.purpose or ""):
+                a.purpose = ""
+                agents_fixed += 1
+
+        session.flush()
+        return {"policies_fixed": policies_fixed, "agents_fixed": agents_fixed}
+
     @app.get("/metrics", tags=["platform"], response_class=PlainTextResponse)
     def metrics(session: Session = Depends(db)) -> str:
         """I-7 — Prometheus exposition.
