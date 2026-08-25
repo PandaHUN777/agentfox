@@ -314,7 +314,7 @@ h3 { font-size: 13px; margin: 20px 0 8px; color: var(--muted); font-weight: 620;
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th {
   text-align: left;
-  padding: 9px 16px;
+  padding: 10px 16px;
   color: var(--muted);
   font-weight: 560;
   font-size: 10.5px;
@@ -323,7 +323,12 @@ th {
   border-bottom: 1px solid var(--hairline);
   white-space: nowrap;
 }
-td { padding: 10px 16px; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: top;
+  transition: background 0.1s ease;
+}
 tr:last-child td { border-bottom: none; }
 tbody tr:hover { background: var(--panel-2); }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
