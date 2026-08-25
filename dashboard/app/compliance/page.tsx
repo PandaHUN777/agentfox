@@ -27,9 +27,9 @@ const TABS: { key: string; label: string }[] = [
 export default async function Compliance({
   searchParams,
 }: {
-  searchParams: Promise<{ review_error?: string; tab?: string }>;
+  searchParams: Promise<{ review_error?: string; review_notice?: string; tab?: string }>;
 }) {
-  const { review_error, tab: rawTab } = await searchParams;
+  const { review_error, review_notice, tab: rawTab } = await searchParams;
   // Controls is the default because /findings and /policies deep-link to
   // /compliance#<control-key> — a control anchor that lands on the wrong tab
   // never scrolls into view, so the tab that owns those anchors has to be first.
@@ -65,11 +65,15 @@ export default async function Compliance({
           ? "One control set mapped to seven frameworks. Control status is "
           : "One control set maps to seven frameworks, once the catalog below is loaded. Control status is "}
         <strong>computed from telemetry</strong> — detector coverage, decision coverage,
-        audit-chain verification — not attested on a form. That is a claim only an
-        inline, agent-native platform can make.
+        audit-chain verification — not attested on a form. Control codes and
+        cross-references (<span className="mono">NOM-AUD-01</span>,{" "}
+        <span className="mono">P5-1</span>) and plain-language definitions of terms
+        like "entitlement" or "escalation" are decoded on the{" "}
+        <Link href="/glossary">Glossary</Link> page.
       </p>
 
       {review_error && <div className="error">{review_error}</div>}
+      {review_notice && <div className="note-panel">{review_notice}</div>}
 
       {!catalogLoaded && (
         <div className="hero empty" style={{ marginBottom: 20 }}>
@@ -98,6 +102,11 @@ export default async function Compliance({
         <Stat n={counts.degraded || 0} label="degraded" tone="warn" />
         <Stat n={counts.failing || 0} label="failing" tone={counts.failing ? "bad" : "ok"} />
         <Stat n={counts.not_implemented || 0} label="not implemented" tone={counts.not_implemented ? "warn" : "ok"} />
+        <Stat
+          n={counts.not_computed || 0}
+          label="not computed"
+          hint="Cataloged but never assessed — no status has been computed for these controls yet, which is different from 'not implemented' (assessed, and found to have no evidence source)."
+        />
         <Stat
           n={pct(controls.posture.effectiveness)}
           label="effectiveness"
@@ -143,21 +152,30 @@ export default async function Compliance({
             <span className="legend-item"><span className="legend-swatch ok" /> effective</span>
             <span className="legend-item"><span className="legend-swatch warn" /> degraded</span>
             <span className="legend-item"><span className="legend-swatch bad" /> failing</span>
-            <span className="legend-item"><span className="legend-swatch dim" /> not implemented / not applicable</span>
+            <span className="legend-item"><span className="legend-swatch dim" /> not implemented / not applicable / not computed</span>
           </div>
+          {counts.not_computed > 0 && (
+            <div className="note-panel" style={{ marginBottom: 12 }}>
+              <strong>{counts.not_computed} of {controls.controls.length} controls have never been
+              computed</strong> — that's not the same as failing. A control is computed from real
+              usage (traces, decisions, audit entries) that this instance hasn't produced yet.
+              Clicking "Recompute status from telemetry" above won't help until there's real
+              traffic to compute it from — see <Link href="/start">Start here</Link> to connect
+              an agent, then come back and recompute.
+            </div>
+          )}
           <div className="panel scroll-x">
             <table>
               <thead>
-                <tr><th>control</th><th>objective</th><th>status</th><th>evidence / rationale</th></tr>
+                <tr><th>control</th><th>what it checks</th><th>status</th><th>evidence / rationale</th></tr>
               </thead>
               <tbody>
                 {controls.controls.map((c: any) => (
                   <tr key={c.key} id={c.key}>
-                    <td>
-                      <div className="mono small" title={c.key}>{c.key}</div>
-                      <div className="small muted">{c.title}</div>
-                      <div className="mono muted" style={{ fontSize: 11 }}>
-                        {(c.implemented_by || []).join(" ")}
+                    <td className="small wrap" style={{ maxWidth: 240 }}>
+                      {c.title}
+                      <div className="mono small muted" title="Internal code, cross-referenced on the Glossary page">
+                        {c.key}
                       </div>
                     </td>
                     <td className="small wrap muted" style={{ maxWidth: 330 }}>{c.objective}</td>
@@ -234,7 +252,7 @@ export default async function Compliance({
               </thead>
               <tbody>
                 {obligations.obligations.map((o: any, i: number) => (
-                  <tr key={i}>
+                  <tr key={i} id={o.reference ? `obligation-${encodeURIComponent(o.reference)}` : undefined}>
                     <td className="small mono">{(o.effective_date || "").slice(0, 10)}</td>
                     <td className="small muted">{o.framework}</td>
                     <td>
@@ -269,7 +287,7 @@ export default async function Compliance({
               <tbody>
                 {register.register.map((r: any) => (
                   <tr key={r.agent}>
-                    <td className="mono small">{r.agent}</td>
+                    <td className="mono small"><Link href={`/agents/${r.agent}`}>{r.agent}</Link></td>
                     <td><span className={`tag ${r.risk_tier === "high" ? "bad" : ""}`}>{r.risk_tier}</span></td>
                     <td className="small">
                       {r.eu_ai_act_class || <span className="tag warn">not assessed</span>}
@@ -339,8 +357,20 @@ export default async function Compliance({
             policy version was in force, and a standalone script that re-derives the
             audit-chain hash without trusting this platform or calling its API. Draft
             (unreviewed) framework mappings are always excluded — reviewed on the{" "}
-            <a href="/compliance?tab=frameworks">Frameworks tab</a>.
+            <a href="/compliance?tab=frameworks">Frameworks tab</a>. Building a package is
+            itself logged to the audit chain, after the package's own contents are already
+            computed — so a package can never include a record of its own creation, and its
+            audit-entry count will always be one behind "Verify audit chain integrity"
+            checked right after. That's expected, not a discrepancy.
           </p>
+
+          <form action="/api/audit/verify" method="POST" style={{ marginBottom: 20 }}>
+            <button type="submit" className="btn-scan">Verify audit chain integrity now</button>{" "}
+            <span className="small muted">
+              Independently re-derives the hash chain over every audit entry — the same check
+              a package runs at build time, without needing to build one first.
+            </span>
+          </form>
 
           <div className="panel" style={{ marginBottom: 20 }}>
             <div className="head"><span>Build a package</span></div>
@@ -392,26 +422,36 @@ export default async function Compliance({
                   </tr>
                 </thead>
                 <tbody>
-                  {evidencePackages.packages.map((p: any) => (
-                    <tr key={p.id}>
-                      <td className="small muted">{ts(p.built_at)}</td>
-                      <td className="small muted">{p.requested_by}</td>
-                      <td className="small muted">
-                        {(p.scope?.agents || ["*"]).join(", ")} / {(p.scope?.controls || ["*"]).join(", ")}
-                      </td>
-                      <td>
-                        <span className={`tag ${p.chain_valid ? "ok" : "bad"}`}>
-                          {p.chain_valid ? "verified" : "broken"}
-                        </span>
-                      </td>
-                      <td className="small muted">
-                        {Object.entries(p.counts || {}).map(([k, v]) => `${k}: ${v}`).join(", ") || "—"}
-                      </td>
-                      <td>
-                        <a href={`/api/evidence/${p.id}/download`} className="small">Download →</a>
-                      </td>
-                    </tr>
-                  ))}
+                  {evidencePackages.packages.map((p: any) => {
+                    const counts = p.counts || {};
+                    const substantive = ["traces", "decisions", "control_statuses", "eval_runs", "findings"];
+                    const isEmpty = substantive.every((k) => !counts[k]);
+                    return (
+                      <tr key={p.id}>
+                        <td className="small muted">{ts(p.built_at)}</td>
+                        <td className="small muted">{p.requested_by}</td>
+                        <td className="small muted">
+                          {(p.scope?.agents || ["*"]).join(", ")} / {(p.scope?.controls || ["*"]).join(", ")}
+                        </td>
+                        <td>
+                          <span className={`tag ${p.chain_valid ? "ok" : "bad"}`}>
+                            {p.chain_valid ? "verified" : "broken"}
+                          </span>
+                        </td>
+                        <td className="small muted">
+                          {isEmpty && (
+                            <div className="tag warn" style={{ marginBottom: 4 }}>
+                              empty — nothing to show an auditor yet
+                            </div>
+                          )}
+                          {Object.entries(counts).map(([k, v]) => `${k}: ${v}`).join(", ") || "—"}
+                        </td>
+                        <td>
+                          <a href={`/api/evidence/${p.id}/download`} className="small">Download →</a>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

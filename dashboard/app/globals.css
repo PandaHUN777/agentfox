@@ -513,6 +513,30 @@ ol.steps li.done .step-title { color: var(--muted); }
 }
 .note-panel strong { color: var(--text); }
 
+.info-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-left: 5px;
+  border-radius: 50%;
+  border: 1px solid var(--muted);
+  color: var(--muted);
+  font-size: 10px;
+  font-style: italic;
+  font-family: Georgia, serif;
+  line-height: 1;
+  cursor: help;
+  user-select: none;
+  vertical-align: middle;
+}
+.info-tip:hover, .info-tip:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+}
+
 /* --- Brand ---------------------------------------------------------------- */
 
 .wordmark { display: inline-flex; align-items: center; gap: 8px; }
@@ -830,4 +854,12 @@ select.input-select, input.input-text, textarea.input-text {
   h1 { font-size: 20px; }
   .card .n { font-size: 22px; }
   .grid2 { grid-template-columns: 1fr; }
+}
+
+@media print {
+  nav.side, .topbar, .no-print { display: none !important; }
+  .shell { display: block; }
+  main { padding: 0; max-width: none; }
+  a { color: inherit; text-decoration: none; }
+  .panel, .card { break-inside: avoid; }
 }

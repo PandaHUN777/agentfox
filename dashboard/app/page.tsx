@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { ApiDown, Severity, findingTypeInfo, ts } from "@/components/ui";
+import { ApiDown, Severity, Stat, StatLink, findingTypeInfo, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +60,9 @@ export default async function Overview() {
     <>
       <h1>Overview</h1>
       <p className="sub">
-        What needs a human, first. Inventory and posture are underneath.
+        What needs a human, first — check this daily. For a point-in-time summary
+        to print or send to someone outside the team, see <Link href="/board">Board
+        view</Link> instead.
       </p>
 
       {attention.quiet ? (
@@ -77,22 +79,28 @@ export default async function Overview() {
       ) : (
         <>
           <div className="cards">
-            <div className={`card ${counts.critical ? "bad" : "ok"}`}>
-              <div className="n">{counts.critical || 0}</div>
-              <div className="l">critical</div>
-            </div>
-            <div className={`card ${counts.high ? "warn" : "ok"}`}>
-              <div className="n">{counts.high || 0}</div>
-              <div className="l">high</div>
-            </div>
-            <div className="card">
-              <div className="n">{counts.blocked_in_window || 0}</div>
-              <div className="l">blocked in {attention.window_hours}h</div>
-            </div>
-            <div className="card">
-              <div className="n">{counts.observed_in_window || 0}</div>
-              <div className="l">observed, not blocked</div>
-            </div>
+            <Stat
+              n={counts.critical || 0}
+              label="critical problems"
+              tone={counts.critical ? "bad" : "ok"}
+              hint="Issues serious enough that someone should look today — a customer-facing failure, a data exposure, something a regulator would ask about."
+            />
+            <Stat
+              n={counts.high || 0}
+              label="high-priority problems"
+              tone={counts.high ? "warn" : "ok"}
+              hint="Worth fixing this week — not an emergency, but not fine to ignore either."
+            />
+            <Stat
+              n={counts.blocked_in_window || 0}
+              label={`stopped automatically, last ${attention.window_hours}h`}
+              hint="Requests a guardrail actually refused before they reached the customer — this is the system working, not a problem to fix."
+            />
+            <Stat
+              n={counts.observed_in_window || 0}
+              label={`flagged but allowed, last ${attention.window_hours}h`}
+              hint="Requests a guardrail noticed and logged but didn't stop — the policy for this kind of issue is still in 'watch, don't block' mode."
+            />
           </div>
 
           <h2>Needs attention</h2>
@@ -137,16 +145,16 @@ export default async function Overview() {
 
       <h2>Inventory</h2>
       <div className="cards">
-        <Card n={inv.agents} label="agents under management" href="/agents" />
-        <Card n={inv.shadow} label="shadow (ungoverned)" tone={inv.shadow ? "bad" : "ok"} href="/agents" />
-        <Card n={inv.unowned} label="without an owner" tone={inv.unowned ? "warn" : "ok"} href="/agents" />
-        <Card
+        <StatLink n={inv.agents} label="agents under management" href="/agents" />
+        <StatLink n={inv.shadow} label="shadow (ungoverned)" tone={inv.shadow ? "bad" : "ok"} href="/agents" />
+        <StatLink n={inv.unowned} label="without an owner" tone={inv.unowned ? "warn" : "ok"} href="/agents" />
+        <StatLink
           n={onboarding.counts.boundaries}
           label="knowledge boundaries"
           tone={onboarding.counts.boundaries ? "ok" : "warn"}
           href="/start"
         />
-        <Card
+        <StatLink
           n={`${Math.round((posture.effectiveness || 0) * 100)}%`}
           label="control effectiveness"
           href="/compliance"
@@ -161,26 +169,5 @@ export default async function Overview() {
         </div>
       )}
     </>
-  );
-}
-
-function Card({
-  n,
-  label,
-  tone,
-  href,
-  hint,
-}: {
-  n: number | string;
-  label: string;
-  tone?: string;
-  href: string;
-  hint?: string;
-}) {
-  return (
-    <Link href={href} className={`card link ${tone || ""}`} title={hint}>
-      <div className="n">{n}</div>
-      <div className="l">{label}</div>
-    </Link>
   );
 }

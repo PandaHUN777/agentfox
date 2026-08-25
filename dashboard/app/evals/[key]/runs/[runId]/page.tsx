@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { api } from "@/lib/api";
-import { ApiDown, Panel, ts } from "@/components/ui";
+import { ApiError, api } from "@/lib/api";
+import { ApiDown, NotFound, Panel, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +18,11 @@ export default async function RunDetail({
     return (
       <>
         <h1>Run</h1>
-        <ApiDown error={String(e?.message || e)} />
+        {e instanceof ApiError && e.status === 404 ? (
+          <NotFound what="run" detail={runId} back={{ href: `/evals/${key}`, label: key }} />
+        ) : (
+          <ApiDown error={String(e?.message || e)} />
+        )}
       </>
     );
   }
@@ -83,7 +87,13 @@ export default async function RunDetail({
             <tbody>
               {run.results.map((r: any, i: number) => (
                 <tr key={i}>
-                  <td className="mono small">{r.case_id}</td>
+                  <td className="mono small">
+                    {r.case_id ? (
+                      <Link href={`/evals/${key}#case-${r.case_id}`}>{r.case_id}</Link>
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
+                  </td>
                   <td className="small muted">{r.scorer}</td>
                   <td className="num small">{r.score}</td>
                   <td>

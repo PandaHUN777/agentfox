@@ -23,7 +23,11 @@ export function NotificationsBell({
       <div className="notif-body">
         <div className="notif-head">Needs attention</div>
         {count === 0 ? (
-          <div className="notif-empty small muted">Nothing needs a human right now.</div>
+          <div className="notif-empty small muted">
+            No open findings, breached hand-offs, or shadow agents right now — this
+            doesn't cover the Compliance risk register or unassessed/unowned agents,
+            see <Link href="/board">Board view</Link> for those.
+          </div>
         ) : (
           <>
             {items.map((item, i) => (

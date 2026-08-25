@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { ApiDown, Panel, Stat, ts } from "@/components/ui";
+import { ApiDown, InfoTip, Panel, Stat, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -49,13 +49,69 @@ export default async function Agents({
       <div className="cards">
         <Stat n={inv.agents} label="agents" />
         <Stat n={inv.registered} label="registered" tone="ok" />
-        <Stat n={inv.shadow} label="shadow" tone={inv.shadow ? "bad" : "ok"} />
-        <Stat n={inv.unowned} label="unowned" tone={inv.unowned ? "warn" : "ok"} />
+        <Stat
+          n={inv.shadow}
+          label="shadow"
+          tone={inv.shadow ? "bad" : "ok"}
+          hint="Seen making calls but never registered here — either through a repo scan or the form below. An agent nobody registered is an agent nobody is accountable for."
+        />
+        <Stat
+          n={inv.unowned}
+          label="unowned"
+          tone={inv.unowned ? "warn" : "ok"}
+          hint="Registered, but with no owner_email set — see the 'unowned — assign' links in the table below."
+        />
         <Stat n={inv.tools} label="tools" />
-        <Stat n={inv.lineage_edges} label="lineage edges" />
+        <Stat
+          n={inv.lineage_edges}
+          label="lineage edges"
+          hint="Observed agent-to-tool and agent-to-model calls, not declared config — this is what actually ran, not what someone typed into a form."
+        />
       </div>
 
       {review_error && <div className="error">{review_error}</div>}
+
+      <details style={{ marginBottom: 16 }}>
+        <summary className="small" style={{ cursor: "pointer", fontWeight: 600 }}>
+          + Register an agent manually
+        </summary>
+        <p className="small muted" style={{ marginTop: 6, marginBottom: 8 }}>
+          For an agent that doesn't live in a scanned repo, or hasn't been connected yet — see{" "}
+          <Link href="/settings/integrations">Connect</Link> for the repo-scan path instead.
+        </p>
+        <form action="/api/agents" method="POST" className="stack" style={{ maxWidth: 480 }}>
+          <div>
+            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Slug (unique, lowercase)</label>
+            <input type="text" name="slug" required placeholder="e.g. billing-support" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
+          </div>
+          <div>
+            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Name</label>
+            <input type="text" name="name" placeholder="e.g. Billing Support Agent" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
+          </div>
+          <div>
+            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Purpose</label>
+            <input type="text" name="purpose" placeholder="e.g. answers billing questions from account history" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
+          </div>
+          <div className="row" style={{ gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Owner email</label>
+              <input type="email" name="owner_email" placeholder="owner@company.com" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Risk tier</label>
+              <select name="risk_tier" defaultValue="limited" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}>
+                <option value="minimal">minimal</option>
+                <option value="limited">limited</option>
+                <option value="high">high</option>
+                <option value="prohibited">prohibited</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <button type="submit" className="btn-primary">Register agent</button>
+          </div>
+        </form>
+      </details>
 
       {drafts.length > 0 && (
         <>
@@ -154,16 +210,27 @@ export default async function Agents({
                 <th>env</th>
                 <th>risk</th>
                 <th>framework</th>
-                <th>last seen</th>
+                <th>
+                  last seen
+                  <InfoTip text="Timestamp of the most recent traced call from this agent. '—' means no traffic has been recorded for it yet — not that something is broken." />
+                </th>
               </tr>
             </thead>
             <tbody>
               {realAgents.map((a: any) => (
                 <tr key={a.id}>
                   <td>
-                    <Link href={`/agents/${a.slug}`} className="mono">{a.slug}</Link>
+                    <Link href={`/agents/${a.slug}`}>{a.name || a.slug}</Link>
+                    {a.name && <div className="mono small muted">{a.slug}</div>}
                     {a.status === "shadow" && <div><span className="tag bad">shadow</span></div>}
                     {a.status === "draft" && <div><span className="tag warn">draft</span></div>}
+                    {a.is_seed && (
+                      <div>
+                        <span className="tag" title="Created by `nometria seed` for demo purposes — not a real registration.">
+                          sample data
+                        </span>
+                      </div>
+                    )}
                   </td>
                   <td className="small wrap muted" style={{ maxWidth: 320 }}>
                     {a.purpose || "—"}

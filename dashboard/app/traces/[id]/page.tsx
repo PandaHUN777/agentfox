@@ -1,16 +1,19 @@
 import Link from "next/link";
-import { api } from "@/lib/api";
-import { ApiDown, Panel, Verdict, ts } from "@/components/ui";
+import { ApiError, api } from "@/lib/api";
+import { ApiDown, InfoTip, NotFound, Panel, Verdict, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
 
 export default async function TraceDetail({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ review_error?: string; review_notice?: string }>;
 }) {
   const { id } = await params;
+  const { review_error, review_notice } = await searchParams;
   let d: any;
   try {
     d = await api(`/api/traces/${id}`);
@@ -18,7 +21,11 @@ export default async function TraceDetail({
     return (
       <>
         <h1>Trace</h1>
-        <ApiDown error={String(e?.message || e)} />
+        {e instanceof ApiError && e.status === 404 ? (
+          <NotFound what="trace" detail={id} back={{ href: "/traces", label: "Traces" }} />
+        ) : (
+          <ApiDown error={String(e?.message || e)} />
+        )}
       </>
     );
   }
@@ -28,11 +35,17 @@ export default async function TraceDetail({
   return (
     <>
       <Breadcrumbs crumbs={[{ label: "Traces", href: "/traces" }]} />
-      <h1 className="mono" style={{ fontSize: 17 }}>{t.id}</h1>
+      <h1>
+        {t.intent || "One request"} <Verdict value={t.verdict} />
+      </h1>
       <p className="sub">
-        <Link href={`/agents/${t.agent}`} className="mono">{t.agent}</Link> ·{" "}
-        {t.environment} · {ts(t.started_at)} · <Verdict value={t.verdict} />
+        <Link href={`/agents/${t.agent}`}>{t.agent_name || t.agent}</Link> ·{" "}
+        {t.environment} · {ts(t.started_at)}
       </p>
+      <p className="mono small muted" style={{ marginTop: -8 }}>{t.id}</p>
+
+      {review_error && <div className="error">{review_error}</div>}
+      {review_notice && <div className="note-panel">{review_notice}</div>}
 
       {t.intent && (
         <div className="panel" style={{ marginBottom: 16 }}>
@@ -111,7 +124,12 @@ export default async function TraceDetail({
                           <div className="muted small">{r.reason}</div>
                           {r.controls?.length > 0 && (
                             <div className="mono muted" style={{ fontSize: 11 }}>
-                              {r.controls.join(" ")}
+                              {r.controls.map((c: string, ci: number) => (
+                                <span key={c}>
+                                  {ci > 0 && " "}
+                                  <Link href={`/compliance#${c}`}>{c}</Link>
+                                </span>
+                              ))}
                             </div>
                           )}
                         </div>
@@ -133,6 +151,10 @@ export default async function TraceDetail({
             <tr>
               <th>detector</th><th>surface</th><th>status</th>
               <th className="num">score</th><th className="num">ms</th><th>findings</th>
+              <th>
+                was this right?
+                <InfoTip text="Filed against the decision this detector run fed — the input to precision reporting and threshold recommendations on the Guardrails page. The alternative to filing it is someone quietly turning the detector off." />
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -157,6 +179,30 @@ export default async function TraceDetail({
                         <div className="muted mono" style={{ fontSize: 11 }}>{f.sample}</div>
                       </div>
                     ))
+                  )}
+                </td>
+                <td className="small">
+                  {r.decision_id ? (
+                    <form action="/api/guardrails/feedback" method="POST" className="row" style={{ gap: 4, flexWrap: "wrap", alignItems: "center" }}>
+                      <input type="hidden" name="decision_id" value={r.decision_id} />
+                      <input type="hidden" name="detector_key" value={r.detector} />
+                      {r.findings.length === 1 && (
+                        <input type="hidden" name="entity_type" value={r.findings[0].entity_type} />
+                      )}
+                      <input type="hidden" name="return_to" value={`/traces/${t.id}`} />
+                      <select
+                        name="label"
+                        defaultValue="false_positive"
+                        style={{ padding: "2px 6px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 11.5 }}
+                      >
+                        <option value="false_positive">wrong — false positive</option>
+                        <option value="true_positive">correct — true positive</option>
+                        <option value="false_negative">missed something</option>
+                      </select>
+                      <button type="submit" className="chip" style={{ cursor: "pointer" }}>file feedback</button>
+                    </form>
+                  ) : (
+                    <span className="muted small">not tied to a decision</span>
                   )}
                 </td>
               </tr>

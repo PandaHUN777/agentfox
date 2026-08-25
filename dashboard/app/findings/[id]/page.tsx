@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { api } from "@/lib/api";
-import { ApiDown, Panel, Severity, findingTypeInfo, ts } from "@/components/ui";
+import { ApiError, api, safeApi } from "@/lib/api";
+import { AgentLink, ApiDown, NotFound, Severity, findingTypeInfo, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,114 @@ function stillLooksUnresolved(finding: any): boolean {
   if (typeof ev.posture_score === "number" && ev.posture_score < 1) return true;
   if (typeof ev.attacks_succeeded === "number" && ev.attacks_succeeded > 0) return true;
   return false;
+}
+
+function GuardrailDetectionEvidence({ evidence }: { evidence: any }) {
+  const detections = evidence.detections || [];
+  return (
+    <div className="stack">
+      <p className="small muted" style={{ marginTop: -4 }}>
+        Each excerpt below is masked at the moment the detector runs — enough to show
+        what triggered this, never the underlying value. That's already true of every
+        detector in this product; this is that same masked sample, just shown here
+        instead of only on the trace it happened on.
+      </p>
+      <div className="row small" style={{ gap: 16 }}>
+        <span><span className="muted">surface </span><span className="mono">{evidence.surface || "—"}</span></span>
+        <span><span className="muted">verdict </span><span className={`tag ${evidence.verdict === "block" ? "bad" : "warn"}`}>{evidence.verdict}</span></span>
+        {evidence.trace_id && (
+          <span>
+            <Link href={`/traces/${evidence.trace_id}`}>See full detector activity on this trace →</Link>
+          </span>
+        )}
+      </div>
+      <div className="panel">
+        <table>
+          <thead>
+            <tr><th>entity</th><th className="num">score</th><th>masked excerpt</th><th>reference</th></tr>
+          </thead>
+          <tbody>
+            {detections.map((d: any, i: number) => (
+              <tr key={i}>
+                <td className="mono small">{d.entity_type}</td>
+                <td className="num small">{d.score?.toFixed?.(2) ?? d.score}</td>
+                <td className="mono small wrap" style={{ maxWidth: 360 }}>{d.sample || <span className="muted">—</span>}</td>
+                <td className="small muted">
+                  {d.owasp_id && <span className="tag" style={{ marginRight: 4 }}>{d.owasp_id}</span>}
+                  {d.atlas_id && <span className="tag">{d.atlas_id}</span>}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {evidence.reason && <p className="small muted">{evidence.reason}</p>}
+    </div>
+  );
+}
+
+/** Every finding type that doesn't have a bespoke evidence view (most of them —
+ * unowned agent, missed hand-off, budget exceeded, model drift, disclosure risk,
+ * and a dozen more) used to fall back to a raw JSON dump. This renders the same
+ * data as labeled fields instead, so a non-technical reader gets sentences and a
+ * list, not a blob of braces and snake_case keys to decode themselves. */
+function humanizeKey(key: string): string {
+  return key.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
+}
+
+function EvidenceValue({ value }: { value: any }) {
+  if (value === null || value === undefined || value === "") {
+    return <span className="muted">—</span>;
+  }
+  if (typeof value === "boolean") return <>{value ? "yes" : "no"}</>;
+  if (Array.isArray(value)) {
+    if (value.length === 0) return <span className="muted">none</span>;
+    return (
+      <ul style={{ margin: 0, paddingLeft: 18 }}>
+        {value.map((v, i) => (
+          <li key={i} className="small">
+            {typeof v === "object" && v !== null ? JSON.stringify(v) : String(v)}
+          </li>
+        ))}
+      </ul>
+    );
+  }
+  if (typeof value === "object") {
+    return (
+      <div className="stack" style={{ gap: 2 }}>
+        {Object.entries(value).map(([k, v]) => (
+          <div key={k} className="small">
+            <span className="muted">{humanizeKey(k)}: </span>
+            <EvidenceValue value={v} />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return <>{String(value)}</>;
+}
+
+function GenericEvidence({ evidence }: { evidence: any }) {
+  const entries = Object.entries(evidence || {});
+  if (entries.length === 0) {
+    return <p className="small muted">No further detail was recorded with this finding.</p>;
+  }
+  return (
+    <div className="panel">
+      <table>
+        <tbody>
+          {entries.map(([key, value]) => (
+            <tr key={key}>
+              <td className="small muted" style={{ whiteSpace: "nowrap", verticalAlign: "top" }}>
+                {humanizeKey(key)}
+              </td>
+              <td className="small wrap"><EvidenceValue value={value} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
 
 function RedteamEvidence({ evidence }: { evidence: any }) {
@@ -84,20 +192,24 @@ export default async function FindingDetail({
 }) {
   const { id } = await params;
   const { review_error } = await searchParams;
-  let finding: any;
+  let finding: any, agents: any;
   try {
-    finding = await api(`/api/findings/${id}`);
+    [finding, agents] = await Promise.all([
+      api(`/api/findings/${id}`),
+      safeApi("/api/agents", { agents: [] }),
+    ]);
   } catch (e: any) {
     return (
       <>
         <h1>Finding</h1>
-        <ApiDown error={String(e?.message || e)} />
+        {e instanceof ApiError && e.status === 404 ? (
+          <NotFound what="finding" detail={id} back={{ href: "/findings", label: "Findings" }} />
+        ) : (
+          <ApiDown error={String(e?.message || e)} />
+        )}
       </>
     );
   }
-
-  const subjectLink =
-    finding.subject_type === "agent" && finding.subject_id ? `/agents/${finding.subject_id}` : null;
 
   return (
     <>
@@ -124,9 +236,9 @@ export default async function FindingDetail({
           </span>
         </span>
         <span>
-          <span className="muted">subject </span>
-          {subjectLink ? (
-            <Link href={subjectLink} className="mono">{finding.subject_id}</Link>
+          <span className="muted">agent </span>
+          {finding.agent_slug ? (
+            <AgentLink slug={finding.agent_slug} agents={agents.agents || []} />
           ) : (
             <span className="mono">{finding.subject_id || "—"}</span>
           )}
@@ -198,15 +310,13 @@ export default async function FindingDetail({
         </div>
       )}
 
-      <h2>Evidence</h2>
+      <h2>What we found</h2>
       {finding.type === "redteam" ? (
         <RedteamEvidence evidence={finding.evidence} />
+      ) : finding.type === "guardrail_detection" ? (
+        <GuardrailDetectionEvidence evidence={finding.evidence} />
       ) : (
-        <Panel title="Raw evidence">
-          <pre className="small" style={{ margin: 0, padding: 14 }}>
-            {JSON.stringify(finding.evidence, null, 2)}
-          </pre>
-        </Panel>
+        <GenericEvidence evidence={finding.evidence} />
       )}
     </>
   );

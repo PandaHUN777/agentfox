@@ -1,21 +1,23 @@
 import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
-import { ApiDown, Panel, ts } from "@/components/ui";
+import { ApiDown, Empty, Panel, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function Policies({
   searchParams,
 }: {
-  searchParams: Promise<{ review_error?: string }>;
+  searchParams: Promise<{ review_error?: string; agent?: string }>;
 }) {
-  const { review_error } = await searchParams;
-  let policies: any, detectors: any, probes: any;
+  const { review_error, agent } = await searchParams;
+  const policiesPath = agent ? `/api/policies?agent=${encodeURIComponent(agent)}` : "/api/policies";
+  let policies: any, detectors: any, probes: any, agents: any;
   try {
-    [policies, detectors, probes] = await Promise.all([
-      api("/api/policies"),
+    [policies, detectors, probes, agents] = await Promise.all([
+      api(policiesPath),
       safeApi("/api/detectors", { detectors: [], budget_ms: 0, detector_timeout_ms: 0 }),
       safeApi("/api/redteam/probes", { probes: [], runners: {} }),
+      safeApi("/api/agents", { agents: [] }),
     ]);
   } catch (e: any) {
     return (
@@ -32,11 +34,16 @@ export default async function Policies({
     <>
       <h1>Policies</h1>
       <p className="sub">
-        One authored artefact drives both runtime enforcement and compliance
-        reporting. Policies ship in <strong>observe</strong> mode: they record what
-        they would have done, and promotion to <strong>enforce</strong> is a separate,
-        audited act after simulating the change against recorded traffic. A false
-        block is how a guardrail gets switched off for good.
+        The actual rules an agent has to follow — written once, and used both to
+        decide what to block in real time and to prove to an auditor what's
+        enforced. Every policy starts in <strong>observe</strong> mode: it watches
+        and records what it would have blocked, without actually blocking anything,
+        so you can check it's not too trigger-happy before switching it to{" "}
+        <strong>enforce</strong>, where it actually stops matching requests. A policy
+        that starts blocking things the moment it's turned on is how a real safety
+        rule ends up disabled by an annoyed engineer within a week — this two-step
+        exists to prevent that. Rule and control codes are decoded on the{" "}
+        <Link href="/glossary">Glossary</Link> page.
       </p>
 
       {review_error && <div className="error">{review_error}</div>}
@@ -89,7 +96,29 @@ export default async function Policies({
       )}
 
       <h2>All policies</h2>
+      <p className="sub" style={{ marginTop: -8 }}>
+        One policy commonly governs many agents at once, matched by name pattern
+        (e.g. "every agent starting with support-") rather than picked one at a time.
+      </p>
+      <form action="/policies" method="GET" className="chipbar" style={{ marginBottom: 4 }}>
+        <span className="chipbar-label">agent:</span>
+        <select
+          name="agent"
+          defaultValue={agent ?? ""}
+          style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 12, fontFamily: "inherit" }}
+        >
+          <option value="">all agents</option>
+          {(agents.agents || []).map((a: any) => (
+            <option key={a.slug} value={a.slug}>{a.name || a.slug}</option>
+          ))}
+        </select>
+        <button type="submit" className="chip" style={{ cursor: "pointer" }}>filter</button>
+        {agent && <Link href="/policies" className="chip">clear agent ×</Link>}
+      </form>
       <div className="panel scroll-x">
+        {policies.policies.length === 0 && agent ? (
+          <Empty>No policy's declared scope matches &lsquo;{agent}&rsquo;.</Empty>
+        ) : (
         <table>
           <thead>
             <tr><th>policy</th><th>description</th><th>version</th><th>mode</th><th className="num">rules</th></tr>
@@ -114,6 +143,7 @@ export default async function Policies({
             ))}
           </tbody>
         </table>
+        )}
       </div>
 
       <p className="small muted" style={{ marginTop: 10 }}>
@@ -123,52 +153,25 @@ export default async function Policies({
       </p>
 
       <h2>Detectors</h2>
-      <Panel
-        title="Runtime detector pipeline"
-        note={`budget ${detectors.budget_ms}ms · per-detector timeout ${detectors.detector_timeout_ms}ms`}
-      >
-        <table>
-          <thead>
-            <tr>
-              <th>detector</th><th>version</th><th>surfaces</th><th>state</th>
-              <th className="num">runs</th><th className="num">avg ms</th><th className="num">max ms</th>
-            </tr>
-          </thead>
-          <tbody>
-            {detectors.detectors.map((d: any) => (
-              <tr key={d.key}>
-                <td className="mono small">{d.key}</td>
-                <td className="small muted">{d.version}</td>
-                <td className="small muted">{d.surfaces.join(", ")}</td>
-                <td>
-                  {d.enabled && d.available ? (
-                    <span className="tag ok">active</span>
-                  ) : d.available ? (
-                    <span className="tag">available</span>
-                  ) : (
-                    <span className="tag warn">not installed</span>
-                  )}
-                  {d.unavailable_reason && (
-                    <div className="small muted wrap" style={{ maxWidth: 280, marginTop: 3 }}>
-                      {d.unavailable_reason}
-                    </div>
-                  )}
-                </td>
-                <td className="num small">{d.stats?.runs ?? "—"}</td>
-                <td className="num small">{d.stats?.avg_ms ?? "—"}</td>
-                <td className="num small">{d.stats?.max_ms ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Panel>
-      <p className="small muted" style={{ marginTop: 10 }}>
-        Detectors that exceed the budget degrade to observe-only for that request and
-        raise a finding — a control that quietly stops running while reporting
-        effective is the failure mode this measurement exists to prevent.
+      <p className="sub" style={{ marginTop: -8 }}>
+        {detectors.detectors.filter((d: any) => d.enabled && d.available).length} of{" "}
+        {detectors.detectors.length} available checks are actually turned on in this
+        deployment
+        {detectors.detectors.filter((d: any) => !d.available).length > 0 && (
+          <> ({detectors.detectors.filter((d: any) => !d.available).length} not
+          installed)</>
+        )}
+        . For the detail — how much each one costs, how often it's right, what's
+        been suppressed — see <Link href="/guardrails">Guardrails</Link>.
       </p>
 
-      <h2>Red-team probe suite</h2>
+      <h2>Attack simulations available</h2>
+      <p className="sub" style={{ marginTop: -8 }}>
+        Scripted attempts to break an agent — get it to leak a secret, ignore its
+        instructions, or say something it shouldn't — that can be run against any
+        agent from the <Link href="/evals">Evaluation</Link> page to see whether it
+        actually holds up, rather than assuming it does.
+      </p>
       <div className="panel scroll-x">
         <table>
           <thead>

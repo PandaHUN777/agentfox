@@ -91,7 +91,15 @@ export default async function PolicyDetail({ params }: { params: Promise<{ key: 
         Saving creates a new immutable version; nothing currently in force changes
         until you promote it.
       </p>
-      <PolicyEditor policyKey={key} initialBody={body} canEnforce={true} isTemplate={isTemplate} />
+      <PolicyEditor
+        policyKey={key}
+        initialBody={body}
+        canEnforce={true}
+        isTemplate={isTemplate}
+        initialLevel={policy.level}
+        initialScopeId={policy.scope_id}
+        initialCompose={policy.compose}
+      />
 
       {policy.versions?.length > 0 && (
         <>
@@ -120,10 +128,20 @@ export default async function PolicyDetail({ params }: { params: Promise<{ key: 
       {policy.compiled?.rules?.length > 0 && (
         <>
           <h2>Compiled — what actually evaluates</h2>
+          <p className="small muted" style={{ marginTop: -8, marginBottom: 14, maxWidth: "70ch" }}>
+            The YAML above compiles down to this — every field the engine checks, most of
+            them null because most rules only use a few. Collapsed by default since this is
+            the debugging view, not the everyday one.
+          </p>
           <Panel title="Compiled rules">
-            <pre className="small" style={{ margin: 0, padding: 14 }}>
-              {JSON.stringify(policy.compiled.rules, null, 2)}
-            </pre>
+            <details>
+              <summary className="small muted" style={{ cursor: "pointer", padding: "8px 14px" }}>
+                Show the compiled rule objects ({policy.compiled.rules.length})
+              </summary>
+              <pre className="small" style={{ margin: 0, padding: 14 }}>
+                {JSON.stringify(policy.compiled.rules, null, 2)}
+              </pre>
+            </details>
           </Panel>
         </>
       )}

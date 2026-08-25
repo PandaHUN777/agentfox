@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { InfoTip } from "@/components/ui";
 
 const inputStyle = {
   width: "100%",
@@ -242,6 +243,10 @@ export function PolicyEditor({
   initialBody,
   canEnforce,
   isTemplate,
+  agentSlug,
+  initialLevel,
+  initialScopeId,
+  initialCompose,
 }: {
   policyKey: string;
   initialBody: string;
@@ -250,10 +255,23 @@ export function PolicyEditor({
    * is actually saved — the "rules" count shown elsewhere reflects the real saved
    * version and will legitimately read 0 until this is edited and saved. */
   isTemplate?: boolean;
+  /** Narrows the simulate-before-promote replay to one agent's traffic, when this
+   * editor is scoped to a single agent's policy rather than an org-wide one. */
+  agentSlug?: string;
+  /** P12 hierarchy placement of the currently-saved version — every save silently
+   * defaulted to org-level, wildcard scope, extend mode until these were exposed here. */
+  initialLevel?: string;
+  initialScopeId?: string;
+  initialCompose?: string;
 }) {
   const [body, setBody] = useState(initialBody);
+  const [level, setLevel] = useState(initialLevel || "org");
+  const [scopeId, setScopeId] = useState(initialScopeId || "*");
+  const [compose, setCompose] = useState(initialCompose || "extend");
   const [validation, setValidation] = useState<any>(null);
   const [saveResult, setSaveResult] = useState<any>(null);
+  const [simulation, setSimulation] = useState<any>(null);
+  const [simulatedBody, setSimulatedBody] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [dismissedTemplate, setDismissedTemplate] = useState(false);
 
@@ -272,13 +290,30 @@ export function PolicyEditor({
     }
   }
 
+  async function simulate() {
+    setBusy(true);
+    setSaveResult(null);
+    try {
+      const res = await fetch("/api/policies/simulate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body, agent: agentSlug }),
+      });
+      const json = await res.json();
+      setSimulation({ ok: res.ok, ...json });
+      if (res.ok) setSimulatedBody(body);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function save() {
     setBusy(true);
     try {
       const res = await fetch(`/api/policies/${policyKey}/save`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body, notes: "edited from the dashboard" }),
+        body: JSON.stringify({ body, notes: "edited from the dashboard", level, scope_id: scopeId, compose }),
       });
       const json = await res.json();
       setSaveResult({ ok: res.ok, ...json });
@@ -292,13 +327,25 @@ export function PolicyEditor({
   }
 
   async function setMode(mode: "observe" | "enforce") {
-    if (
-      mode === "enforce" &&
-      !window.confirm(
-        "This will start actually blocking real traffic that matches this policy's rules, starting now. Are you sure?",
-      )
-    ) {
-      return;
+    if (mode === "enforce") {
+      if (simulatedBody !== body) {
+        setSaveResult({
+          ok: false,
+          detail: "Run Simulate against the currently saved rules first — promoting without replaying recent traffic against them is exactly the false-block risk simulate exists to catch.",
+        });
+        return;
+      }
+      const risky = simulation?.risky;
+      const riskNote = risky
+        ? `The last simulation found this WOULD newly block real traffic (${simulation.counts?.newly_blocked ?? "some"} decisions) — `
+        : "The last simulation found nothing would newly block — ";
+      if (
+        !window.confirm(
+          `${riskNote}this will start actually blocking real traffic that matches this policy's rules, starting now. Are you sure?`,
+        )
+      ) {
+        return;
+      }
     }
     setBusy(true);
     try {
@@ -357,6 +404,34 @@ export function PolicyEditor({
         />
       </details>
 
+      <div>
+        <label className="small muted" style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 4 }}>
+          Where does this apply?
+          <InfoTip text="Four levels, narrowest wins on ties: org -> team -> agent -> user. 'Extend' adds rules on top of broader levels (the default); 'restrict' may only tighten, never asked for; 'override' may loosen, but only rules the broader level explicitly marked overridable." />
+        </label>
+        <div className="row" style={{ gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <select value={level} onChange={(e) => setLevel(e.target.value)} style={inputStyle}>
+            <option value="org">org — everyone</option>
+            <option value="team">team</option>
+            <option value="agent">agent</option>
+            <option value="user">user</option>
+          </select>
+          <input
+            type="text"
+            value={scopeId}
+            onChange={(e) => setScopeId(e.target.value)}
+            placeholder="* for all, or a glob like payments-*"
+            disabled={level === "org"}
+            style={{ ...inputStyle, width: 220 }}
+          />
+          <select value={compose} onChange={(e) => setCompose(e.target.value)} style={inputStyle}>
+            <option value="extend">extend — add to broader rules</option>
+            <option value="restrict">restrict — tighten only</option>
+            <option value="override">override — loosen (only where allowed)</option>
+          </select>
+        </div>
+      </div>
+
       <div className="row" style={{ gap: 8 }}>
         <button type="button" className="btn-scan" onClick={validate} disabled={busy}>
           Validate
@@ -366,15 +441,42 @@ export function PolicyEditor({
         </button>
         {canEnforce && (
           <>
+            <button type="button" className="btn-scan" onClick={simulate} disabled={busy}>
+              Simulate against recent traffic
+            </button>
             <button type="button" className="btn-scan" onClick={() => setMode("observe")} disabled={busy}>
               Set observe
             </button>
-            <button type="button" className="btn-reject" onClick={() => setMode("enforce")} disabled={busy}>
+            <button
+              type="button"
+              className="btn-reject"
+              onClick={() => setMode("enforce")}
+              disabled={busy}
+              title={simulatedBody !== body ? "Run Simulate first — rules have changed since the last simulation" : undefined}
+            >
               Promote to enforce
             </button>
           </>
         )}
       </div>
+
+      {simulation && (
+        <div className={simulation.ok === false ? "error" : simulation.risky ? "note-panel" : "note-panel"} style={simulation.ok !== false && simulation.risky ? { borderLeftColor: "var(--warn)" } : undefined}>
+          {simulation.ok === false ? (
+            <>
+              <strong>Simulation failed</strong> — {simulation.detail || simulation.error || "unknown error"}
+            </>
+          ) : (
+            <>
+              <strong>{simulation.risky ? "Would newly block real traffic" : "Safe to promote"}</strong> — replayed{" "}
+              {simulation.replayed} recent decision(s): {simulation.counts?.newly_blocked ?? 0} newly blocked,{" "}
+              {simulation.counts?.newly_escalated ?? 0} newly escalated,{" "}
+              {simulation.counts?.newly_allowed ?? 0} newly allowed, {simulation.unchanged ?? 0} unchanged.{" "}
+              {simulation.recommendation}
+            </>
+          )}
+        </div>
+      )}
 
       {validation && (
         <div className={validation.valid ? "note-panel" : "error"}>

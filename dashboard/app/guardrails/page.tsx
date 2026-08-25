@@ -1,5 +1,6 @@
-import { api } from "@/lib/api";
-import { ApiDown, Empty } from "@/components/ui";
+import Link from "next/link";
+import { api, safeApi } from "@/lib/api";
+import { ApiDown, Empty, InfoTip, Stat } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -10,15 +11,23 @@ export const dynamic = "force-dynamic";
  * it, and what is it costing me" — precision beside its sample size, latency as
  * percentiles rather than a mean, and every suppression with an expiry date.
  */
-export default async function Guardrails() {
-  let detectors: any, latency: any, precision: any, recommendations: any, suppressions: any;
+export default async function Guardrails({
+  searchParams,
+}: {
+  searchParams: Promise<{ agent?: string; review_error?: string; review_notice?: string }>;
+}) {
+  const { agent, review_error, review_notice } = await searchParams;
+  const agentQs = agent ? `agent=${encodeURIComponent(agent)}` : "";
+  let detectors: any, latency: any, precision: any, recommendations: any, suppressions: any, agents: any, feedback: any;
   try {
-    [detectors, latency, precision, recommendations, suppressions] = await Promise.all([
+    [detectors, latency, precision, recommendations, suppressions, agents, feedback] = await Promise.all([
       api("/api/detectors"),
-      api("/api/guardrails/latency"),
-      api("/api/guardrails/precision"),
+      api(`/api/guardrails/latency?${agentQs}`),
+      api(`/api/guardrails/precision?${agentQs}`),
       api("/api/guardrails/recommendations"),
-      api("/api/guardrails/suppressions"),
+      api(`/api/guardrails/suppressions?${agentQs}`),
+      safeApi("/api/agents", { agents: [] }),
+      api("/api/guardrails/feedback?limit=50"),
     ]);
   } catch (e: any) {
     return (
@@ -36,49 +45,82 @@ export default async function Guardrails() {
     <>
       <h1>Guardrails</h1>
       <p className="sub">
-        Whether the detectors are working, what they cost, and where they are wrong.
-        Detection is commoditised — tuning is the part that decides whether anyone
-        leaves them switched on.
+        Guardrails are the automated checks that run on every message an agent sends
+        or receives — catching things like a leaked password, a manipulated prompt,
+        or an unsafe answer before a person sees it. This page is for tuning them:
+        are they actually catching real problems, are they slowing agents down, and
+        are any of them wrong often enough that someone quietly turned them off (a
+        "suppression," below) — which is worth knowing, since a check nobody trusts
+        might as well not exist.
       </p>
 
+      {review_error && <div className="error">{review_error}</div>}
+      {review_notice && <div className="note-panel">{review_notice}</div>}
+
+      <form action="/guardrails" method="GET" className="chipbar" style={{ marginBottom: 4 }}>
+        <span className="chipbar-label">agent:</span>
+        <select
+          name="agent"
+          defaultValue={agent ?? ""}
+          style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 12, fontFamily: "inherit" }}
+        >
+          <option value="">all agents</option>
+          {(agents.agents || []).map((a: any) => (
+            <option key={a.slug} value={a.slug}>{a.name || a.slug}</option>
+          ))}
+        </select>
+        <button type="submit" className="chip" style={{ cursor: "pointer" }}>filter</button>
+        {agent && <Link href="/guardrails" className="chip">clear agent ×</Link>}
+      </form>
+
       <div className="cards">
-        <div className="card">
-          <div className="n">{detectors.detectors.filter((d: any) => d.available).length}</div>
-          <div className="l">detectors live</div>
-        </div>
-        <div className={`card ${degraded > 0.01 ? "warn" : "ok"}`}>
-          <div className="n">{(degraded * 100).toFixed(1)}%</div>
-          <div className="l">runs degraded or shed</div>
-        </div>
-        <div className="card">
-          <div className="n">{latency.runs}</div>
-          <div className="l">detector runs ({latency.window_days}d)</div>
-        </div>
-        <div className={`card ${health.never_hit?.length ? "warn" : "ok"}`}>
-          <div className="n">{health.active || 0}</div>
-          <div className="l">active suppressions</div>
-        </div>
-        <div className={`card ${health.expiring_within_7_days?.length ? "warn" : ""}`}>
-          <div className="n">{health.expiring_within_7_days?.length || 0}</div>
-          <div className="l">expiring this week</div>
-        </div>
+        <Stat
+          n={detectors.detectors.filter((d: any) => d.available).length}
+          label="checks turned on"
+          hint="How many of the built-in safety checks are actually installed and running in this deployment."
+        />
+        <Stat
+          n={`${(degraded * 100).toFixed(1)}%`}
+          label="checks that ran late or got skipped"
+          tone={degraded > 0.01 ? "warn" : "ok"}
+          hint="A check that took too long (degraded, only partly ran) or got skipped entirely to keep the agent responsive under load. High here means the safety net has holes, not that anything caught a real problem."
+        />
+        <Stat
+          n={latency.runs}
+          label={`checks run, last ${latency.window_days} days`}
+          hint="Total volume — how much traffic these checks have actually looked at."
+        />
+        <Stat
+          n={health.active || 0}
+          label="checks someone turned off for a specific case"
+          tone={health.never_hit?.length ? "warn" : "ok"}
+          hint="A 'suppression' — someone decided this check was wrong often enough for a specific agent/pattern that they silenced it there. Worth reviewing periodically so a silenced check doesn't stay silenced forever by accident."
+        />
+        <Stat
+          n={health.expiring_within_7_days?.length || 0}
+          label="of those expiring this week"
+          tone={health.expiring_within_7_days?.length ? "warn" : undefined}
+          hint="Suppressions are time-boxed on purpose — these will start enforcing again automatically unless someone renews them."
+        />
       </div>
 
-      <h2>Cost per detector</h2>
+      <h2>How much each check slows things down</h2>
       <p className="sub">
-        Percentiles, not means. A mean hides the tail, and the tail is what gets a
-        governance layer removed for being slow.
+        Shown as "typical" (p50), "slow" (p95), and "worst case" (max) — an average
+        would hide the slow outliers, and those outliers are exactly what gets a
+        safety check disabled for being too slow. See{" "}
+        <Link href="/policies">Policies</Link> for which checks are installed at all.
       </p>
       <div className="panel">
         <table>
           <thead>
             <tr>
-              <th>detector</th>
+              <th>check</th>
               <th>version</th>
               <th>runs</th>
-              <th>p50</th>
-              <th>p95</th>
-              <th>max</th>
+              <th>typical (p50)</th>
+              <th>slow (p95)</th>
+              <th>worst case</th>
             </tr>
           </thead>
           <tbody>
@@ -113,10 +155,12 @@ export default async function Guardrails() {
         </div>
       </div>
 
-      <h2>Are they right?</h2>
+      <h2>How often each check is actually right</h2>
       <p className="sub">
-        Precision is shown with its denominator. Precision over four labels is noise,
-        and publishing it without the sample size is how a tuning surface starts lying.
+        "Precision" here means: of the times this check flagged something, how often
+        was it actually a real problem versus a false alarm. Shown together with how
+        many flags that's based on — a check that's "right" 3 times out of 4 isn't a
+        real number yet; a check that's right 300 times out of 400 is.
       </p>
       <div className="panel">
         {Object.keys(precision.detectors || {}).length ? (
@@ -175,9 +219,68 @@ export default async function Guardrails() {
           </table>
         ) : (
           <Empty>
-            No feedback yet. When a detector is wrong, file it — the alternative is
-            that somebody turns the detector off instead, and nobody finds out.
+            No feedback yet. File it from a detection on a <Link href="/traces">trace</Link> —
+            the alternative is that somebody turns the detector off instead, and nobody finds
+            out.
           </Empty>
+        )}
+      </div>
+
+      <h2>Feedback log</h2>
+      <p className="sub">
+        Every verdict a human has filed on a detection, most recent first. A false
+        positive here is one click from becoming a scoped, expiring suppression.
+      </p>
+      <div className="panel scroll-x">
+        {feedback.feedback?.length ? (
+          <table>
+            <thead>
+              <tr>
+                <th>detector</th>
+                <th>entity</th>
+                <th>label</th>
+                <th>note</th>
+                <th>actor</th>
+                <th>status</th>
+                <th>trace</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {feedback.feedback.slice(0, 20).map((f: any) => (
+                <tr key={f.id}>
+                  <td className="mono small">{f.detector_key || <span className="muted">—</span>}</td>
+                  <td className="mono small">{f.entity_type || <span className="muted">—</span>}</td>
+                  <td>
+                    <span className={`tag ${f.label === "false_positive" ? "bad" : f.label === "true_positive" ? "ok" : "warn"}`}>
+                      {f.label.replace(/_/g, " ")}
+                    </span>
+                  </td>
+                  <td className="small muted wrap" style={{ maxWidth: 260 }}>{f.note || "—"}</td>
+                  <td className="small muted">{f.actor || "—"}</td>
+                  <td className="small">
+                    <span className={`tag ${f.status === "applied" ? "ok" : f.status === "rejected" ? "bad" : ""}`}>{f.status}</span>
+                  </td>
+                  <td className="small">
+                    {f.trace_id ? <Link href={`/traces/${f.trace_id}`}>trace</Link> : <span className="muted">—</span>}
+                  </td>
+                  <td className="small">
+                    {f.label === "false_positive" && f.status === "open" && f.detector_key ? (
+                      <form action="/api/guardrails/suppressions" method="POST" className="row" style={{ gap: 4, alignItems: "center" }}>
+                        <input type="hidden" name="feedback_id" value={f.id} />
+                        <input type="hidden" name="ttl_days" value="30" />
+                        <button type="submit" className="chip" style={{ cursor: "pointer" }}>suppress 30d</button>
+                      </form>
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <Empty>No feedback filed yet.</Empty>
         )}
       </div>
 
@@ -196,6 +299,7 @@ export default async function Guardrails() {
                 <th>reason</th>
                 <th>hits</th>
                 <th>expires</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -203,7 +307,11 @@ export default async function Guardrails() {
                 <tr key={s.id}>
                   <td className="mono">{s.detector_key}</td>
                   <td className="small">
-                    {s.agent}
+                    {s.agent === "*" ? (
+                      <span className="muted">all agents</span>
+                    ) : (
+                      <Link href={`/agents/${s.agent}`}>{s.agent}</Link>
+                    )}
                     {s.entity_type && <span className="tag">{s.entity_type}</span>}
                   </td>
                   <td className="small muted">{s.reason || "—"}</td>
@@ -214,6 +322,14 @@ export default async function Guardrails() {
                   <td className="small muted">
                     {s.expires_at ? s.expires_at.slice(0, 10) : "—"}
                     {!s.active && <span className="tag">inactive</span>}
+                  </td>
+                  <td className="small">
+                    {s.active && (
+                      <form action="/api/guardrails/suppressions/revoke" method="POST">
+                        <input type="hidden" name="id" value={s.id} />
+                        <button type="submit" className="chip" style={{ cursor: "pointer" }}>revoke</button>
+                      </form>
+                    )}
                   </td>
                 </tr>
               ))}

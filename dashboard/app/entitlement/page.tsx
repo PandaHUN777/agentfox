@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { api } from "@/lib/api";
-import { ApiDown, Empty, Panel } from "@/components/ui";
+import { ApiDown, Empty, InfoTip, Panel, Stat } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -52,9 +53,12 @@ export default async function Entitlement() {
     <>
       <h1>Entitlement</h1>
       <p className="sub">
-        Whether answers contain only what the person asking may see. Every permission
-        check can pass and the answer still overshare — the agent runs under its own
-        identity and inherits everything that identity can reach.
+        If two different employees ask the same agent the same question, do they get
+        the same answer — even when one of them isn't supposed to see everything the
+        other can? Most agents run under one shared identity, so a permission check
+        that "passes" can still hand someone information meant for a different
+        person or team. This page tells you whether that's actually being checked,
+        and how often something got held back because it should have been.
       </p>
 
       {report.requests === 0 ? (
@@ -62,41 +66,27 @@ export default async function Entitlement() {
           <div className="hero-title">Nobody is being checked yet</div>
           <p>{report.note}</p>
           <p className="small muted">
-            Add a person or team and a grant below to get started — this number fills in
-            automatically once real requests are being filtered.
-          </p>
-          <p className="small muted">
-            Filtering happens through <code className="mono">POST /api/entitlement/filter</code> before
-            generation. Filtering afterwards means the answer already contains what it
-            should not.
+            To turn this on: add the people/teams below, tell us what each one is
+            and isn't allowed to see (a "grant"), and this page fills in
+            automatically once real requests start being checked against it.
           </p>
         </div>
       ) : (
         <>
           <div className="cards">
-            <div className={`card ${ratio > 0.2 ? "bad" : ratio ? "warn" : "ok"}`}>
-              <div className="n">{(ratio * 100).toFixed(1)}%</div>
-              <div className="l">of retrieved content withheld</div>
-            </div>
-            <div className="card">
-              <div className="n">{report.requests}</div>
-              <div className="l">decisions ({report.window_days}d)</div>
-            </div>
-            <div className="card">
-              <div className="n">{report.principals}</div>
-              <div className="l">distinct callers</div>
-            </div>
-            <div className="card">
-              <div className="n">{report.candidates}</div>
-              <div className="l">chunks considered</div>
-            </div>
-          </div>
-
-          <div className="note-panel">
-            <strong>That share is not an error rate.</strong> It is what the agent could
-            reach and the caller could not — the oversharing number. A high figure with
-            few grants configured usually means the entitlement model is missing, not
-            that the filter is wrong.
+            <Stat
+              n={`${(ratio * 100).toFixed(1)}%`}
+              label="held back for not being cleared to see it"
+              tone={ratio > 0.2 ? "bad" : ratio ? "warn" : "ok"}
+              hint="Not an error rate — this is how much of what the agent could technically reach, it correctly did NOT show someone because they weren't cleared for it. A high number with few people/grants set up below usually means nobody's configured entitlement yet, not that something's broken."
+            />
+            <Stat n={report.requests} label={`checks run, last ${report.window_days} days`} />
+            <Stat n={report.principals} label="different people this was checked for" />
+            <Stat
+              n={report.candidates}
+              label="pieces of content evaluated"
+              hint="Every retrieved chunk of information that was checked against someone's entitlement, across every request in the window."
+            />
           </div>
 
           <h2>Why content was withheld</h2>
@@ -135,7 +125,7 @@ export default async function Entitlement() {
             </thead>
             <tbody>
               {principals.principals.map((p: any) => (
-                <tr key={p.subject}>
+                <tr key={p.subject} id={`principal-${encodeURIComponent(p.subject)}`}>
                   <td className="mono small">{p.subject}</td>
                   <td className="small">{p.groups?.join(", ") || <span className="muted">—</span>}</td>
                   <td className="small">
@@ -196,10 +186,14 @@ export default async function Entitlement() {
         </Panel>
       </div>
 
-      <h2>Grants</h2>
+      <h2>
+        Grants
+        <InfoTip text="A resource here is the same identifier space as a source's key on the Sources page — that page tells you whether the resource itself is trustworthy; this one tells you who's allowed to see it." />
+      </h2>
       <p className="sub">
         Default-deny: a resource with no grant is invisible. A grant does not open a
-        restricted class — that needs a matching clearance.
+        restricted class — that needs a matching clearance. Resource names correspond
+        to source keys on the <Link href="/sources">Sources</Link> page.
       </p>
       <div className="panel">
         {grants.grants?.length ? (
@@ -217,7 +211,7 @@ export default async function Entitlement() {
                 <tr key={g.id}>
                   <td className="mono small">{g.resource}</td>
                   <td className="small">
-                    {g.principal}
+                    <Link href={`#principal-${encodeURIComponent(g.principal)}`}>{g.principal}</Link>
                     <span className="tag">{g.principal_kind}</span>
                   </td>
                   <td className="small">

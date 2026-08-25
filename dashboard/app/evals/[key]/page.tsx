@@ -57,7 +57,7 @@ export default async function SuiteDetail({
             </thead>
             <tbody>
               {suite.cases.map((c: any) => (
-                <tr key={c.id}>
+                <tr key={c.id} id={`case-${c.id}`}>
                   <td className="small wrap" style={{ maxWidth: 320 }}>{c.input?.prompt || "—"}</td>
                   <td className="small wrap muted" style={{ maxWidth: 260 }}>{c.expected?.goal || "—"}</td>
                   <td className="small muted">{c.split}</td>

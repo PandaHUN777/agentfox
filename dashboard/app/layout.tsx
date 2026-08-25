@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { cookies, headers } from "next/headers";
@@ -9,7 +8,7 @@ import { Wordmark } from "@/components/Logo";
 import { AccountMenu } from "@/components/AccountMenu";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandSearch } from "@/components/CommandSearch";
-import { NavIcon } from "@/components/NavIcons";
+import { GlossaryLink, SideNav } from "@/components/SideNav";
 import "./globals.css";
 
 // Runs before paint so a stored theme choice never flashes the wrong colors on load.
@@ -35,6 +34,7 @@ const NAV: { group: string; items: [string, string][] }[] = [
       ["Overview", "/"],
       ["Start here", "/start"],
       ["Connect", "/settings/integrations"],
+      ["API tokens", "/settings/tokens"],
     ],
   },
   {
@@ -51,6 +51,7 @@ const NAV: { group: string; items: [string, string][] }[] = [
       ["Policies", "/policies"],
       ["Guardrails", "/guardrails"],
       ["Entitlement", "/entitlement"],
+      ["Approvals", "/approvals"],
     ],
   },
   {
@@ -106,20 +107,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <Wordmark />
                 <small>agent governance control plane</small>
               </div>
-              {NAV.map(({ group, items }) => (
-                <div key={group || "root"}>
-                  {group && <div className="group">{group}</div>}
-                  {items.map(([label, href]) => {
-                    const isActive = href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
-                    return (
-                      <Link key={href} href={href} className={isActive ? "active" : ""}>
-                        <NavIcon href={href} />
-                        <span>{label}</span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              ))}
+              <SideNav nav={NAV} />
+              <GlossaryLink />
               <ThemeToggle />
             </nav>
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>

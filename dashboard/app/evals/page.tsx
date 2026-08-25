@@ -1,22 +1,24 @@
 import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
-import { ApiDown, Panel, Stat, ts } from "@/components/ui";
+import { ApiDown, InfoTip, Panel, Stat, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
 export default async function Evals({
   searchParams,
 }: {
-  searchParams: Promise<{ review_error?: string }>;
+  searchParams: Promise<{ review_error?: string; drift_agent?: string; drift_scorer?: string }>;
 }) {
-  const { review_error } = await searchParams;
-  let suites: any, runs: any, scorers: any, campaigns: any;
+  const { review_error, drift_agent, drift_scorer } = await searchParams;
+  let suites: any, runs: any, scorers: any, campaigns: any, slos: any, agents: any;
   try {
-    [suites, runs, scorers, campaigns] = await Promise.all([
+    [suites, runs, scorers, campaigns, slos, agents] = await Promise.all([
       api("/api/eval/suites"),
       api("/api/eval/runs?limit=20"),
       safeApi("/api/eval/scorers", { scorers: [], runners: {} }),
       safeApi("/api/redteam/campaigns", { campaigns: [] }),
+      safeApi("/api/eval/slos", { slos: [] }),
+      safeApi("/api/agents", { agents: [] }),
     ]);
   } catch (e: any) {
     return (
@@ -27,22 +29,31 @@ export default async function Evals({
     );
   }
 
+  let drift: any = null;
+  if (drift_agent && drift_scorer) {
+    drift = await safeApi(
+      `/api/eval/drift?agent=${encodeURIComponent(drift_agent)}&scorer=${encodeURIComponent(drift_scorer)}`,
+      null,
+    );
+  }
+
   const latest = runs.runs[0];
 
   return (
     <>
       <h1>Evaluation</h1>
       <p className="sub">
-        Evaluation and reliability: the widest solved-vs-unsolved gap in the stack —
-        teams can see their agents but cannot judge them. This is the pillar that
-        governs whether the agent <em>worked</em>, not only whether it was safe.
+        Did your agent actually get the answer right — not just avoid saying
+        anything unsafe. Run a set of known questions against an agent, grade every
+        answer automatically, and get a pass rate you can track over time instead of
+        spot-checking a few transcripts by hand.
       </p>
 
       <div className="cards">
-        <Stat n={suites.suites.length} label="suites" />
-        <Stat n={runs.runs.length} label="recent runs" />
-        <Stat n={scorers.scorers.length} label="scorers" />
-        <Stat n={campaigns.campaigns.length} label="red-team campaigns" />
+        <Stat n={suites.suites.length} label="suites" hint="Named collections of test cases with expected behavior — the unit an eval run scores against." />
+        <Stat n={runs.runs.length} label="recent runs" hint="Suite runs in the last window, across every runner (native, Ragas when installed, etc.)." />
+        <Stat n={scorers.scorers.length} label="scorers" hint="Metrics available to score a run — groundedness, exact-match, and any others a runner exposes." />
+        <Stat n={campaigns.campaigns.length} label="red-team campaigns" hint="Adversarial probe runs against one agent — see 'Red-team posture' below to run one." />
       </div>
 
       {review_error && <div className="error">{review_error}</div>}
@@ -89,6 +100,129 @@ export default async function Evals({
         </>
       )}
 
+      <h2>
+        Reliability &amp; SLOs
+        <InfoTip text="A declared reliability target for one agent+scorer pair — e.g. '95% of sampled production answers stay grounded, measured weekly.' Error budget tracks how much room is left before that target is breached." />
+      </h2>
+      <div className="panel">
+        {(slos.slos || []).length === 0 ? (
+          <div className="body muted small">
+            No SLOs declared yet — declare one below.
+          </div>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>agent</th>
+                <th>scorer</th>
+                <th>objective</th>
+                <th className="num">target</th>
+                <th className="num">attainment</th>
+                <th className="num">error budget</th>
+                <th>drift</th>
+              </tr>
+            </thead>
+            <tbody>
+              {slos.slos.map((s: any) => (
+                <tr key={s.slo_id}>
+                  <td className="small"><Link href={`/agents/${s.agent}`}>{s.agent}</Link></td>
+                  <td className="mono small">{s.scorer}</td>
+                  <td className="small wrap muted" style={{ maxWidth: 260 }}>{s.objective || "—"}</td>
+                  <td className="num small">{s.target ?? "—"}</td>
+                  <td className="num small">
+                    {s.attainment === undefined ? (
+                      <span className="muted">no data</span>
+                    ) : (
+                      <span className={`tag ${s.status === "burned" ? "bad" : "ok"}`}>
+                        {Math.round(s.attainment * 100)}%
+                      </span>
+                    )}
+                  </td>
+                  <td className="num small">
+                    {s.error_budget_remaining === undefined ? (
+                      "—"
+                    ) : (
+                      <span className={s.error_budget_remaining > 0 ? "" : "tag bad"}>
+                        {Math.round(s.error_budget_remaining * 100)}%
+                      </span>
+                    )}
+                  </td>
+                  <td className="small">
+                    <Link href={`/evals?drift_agent=${encodeURIComponent(s.agent)}&drift_scorer=${encodeURIComponent(s.scorer)}#drift`}>
+                      check drift →
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        <div className="body" style={{ borderTop: "1px solid var(--border)" }}>
+          <form action="/api/eval/slos" method="POST" className="row" style={{ gap: 6, flexWrap: "wrap" }}>
+            <select
+              name="agent" required
+              style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            >
+              <option value="">agent…</option>
+              {(agents.agents || []).map((a: any) => (
+                <option key={a.slug} value={a.slug}>{a.slug}</option>
+              ))}
+            </select>
+            <select
+              name="scorer" required
+              style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            >
+              <option value="">scorer…</option>
+              {(scorers.scorers || []).map((s: any) => (
+                <option key={s.key} value={s.key}>{s.key}</option>
+              ))}
+            </select>
+            <input
+              type="text" name="objective" placeholder="objective, e.g. '95% of answers stay grounded'"
+              style={{ flex: 1, minWidth: 220, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            />
+            <select
+              name="window" defaultValue="7d"
+              style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            >
+              <option value="1d">1 day</option>
+              <option value="7d">7 days</option>
+              <option value="30d">30 days</option>
+            </select>
+            <input
+              type="number" name="target" step="0.01" min="0" max="1" defaultValue="0.9" required
+              style={{ width: 80, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            />
+            <button type="submit" className="btn-primary">Declare SLO</button>
+          </form>
+        </div>
+      </div>
+
+      {drift_agent && drift_scorer && (
+        <div id="drift" className={`note-panel ${drift?.drifted ? "" : ""}`} style={{ borderLeftColor: drift?.drifted ? "var(--bad)" : "var(--accent)" }}>
+          <strong>
+            Drift check: {drift_agent} / {drift_scorer}
+          </strong>
+          {!drift || drift.drifted === null ? (
+            <div>
+              Insufficient online samples in the current and baseline windows to compare —
+              this needs production traffic sampled via <code className="mono">POST /api/eval/online</code> first.
+            </div>
+          ) : (
+            <div>
+              {drift.drifted ? (
+                <>Drifted ({drift.band}) — PSI {drift.psi?.toFixed(3)}, mean moved from{" "}
+                {drift.mean_baseline?.toFixed(3)} to {drift.mean_current?.toFixed(3)}.</>
+              ) : (
+                <>No significant drift — PSI {drift.psi?.toFixed(3)}, mean {drift.mean_current?.toFixed(3)}{" "}
+                (baseline {drift.mean_baseline?.toFixed(3)}).</>
+              )}
+              {" "}Compared {drift.n_current} recent sample(s) against {drift.n_baseline} baseline sample(s).
+            </div>
+          )}
+        </div>
+      )}
+
       <h2>Suites</h2>
       {suites.suites.length === 0 && (
         <p className="small muted" style={{ marginTop: -8 }}>
@@ -131,10 +265,27 @@ export default async function Evals({
       </div>
 
       <h2>Red-team posture</h2>
+      <form action="/api/redteam/campaigns" method="POST" className="row" style={{ gap: 8, marginBottom: 10, alignItems: "center" }}>
+        <select
+          name="agent"
+          required
+          defaultValue=""
+          style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+        >
+          <option value="" disabled>choose an agent…</option>
+          {(agents.agents || []).map((a: any) => (
+            <option key={a.slug} value={a.slug}>{a.slug}</option>
+          ))}
+        </select>
+        <button type="submit" className="btn-scan">Run built-in probes</button>
+        <span className="small muted">
+          Or from the CLI: <code className="mono">nometria redteam run &lt;agent&gt;</code>
+        </span>
+      </form>
       <div className="panel">
         {campaigns.campaigns.length === 0 ? (
           <div className="body muted small">
-            No campaigns yet — run <code className="mono">nometria redteam run &lt;agent&gt;</code>.
+            No campaigns yet — pick an agent above and run one.
           </div>
         ) : (
           <table>

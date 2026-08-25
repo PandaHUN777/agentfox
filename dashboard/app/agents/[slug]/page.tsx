@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
-import { ApiDown, Panel, Severity, Stat, ts } from "@/components/ui";
+import { ApiDown, InfoTip, Panel, Severity, Stat, StatLink, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
@@ -10,18 +10,22 @@ export default async function AgentDetail({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ review_error?: string }>;
+  searchParams: Promise<{ review_error?: string; review_notice?: string }>;
 }) {
   const { slug } = await params;
-  const { review_error } = await searchParams;
-  let posture: any, lineage: any, traces: any, classification: any, boundaries: any;
+  const { review_error, review_notice } = await searchParams;
+  let posture: any, lineage: any, traces: any, classification: any, boundaries: any, controls: any, effective: any, tools: any, mcpServers: any;
   try {
-    [posture, lineage, traces, classification, boundaries] = await Promise.all([
+    [posture, lineage, traces, classification, boundaries, controls, effective, tools, mcpServers] = await Promise.all([
       api(`/api/agents/${slug}/posture`),
       safeApi(`/api/agents/${slug}/lineage?depth=2`, { nodes: [], links: [], blast_radius: 0 }),
       safeApi(`/api/traces?agent=${slug}&limit=15`, { traces: [] }),
       safeApi(`/api/risk/classify/${slug}`, null),
       safeApi(`/api/answerability/boundaries`, { boundaries: [], question_types: [] }),
+      safeApi(`/api/agent-controls`, { controls: [] }),
+      safeApi(`/api/policies/effective?agent=${slug}`, null),
+      safeApi(`/api/tools`, { tools: [] }),
+      safeApi(`/api/mcp-servers`, { servers: [] }),
     ]);
   } catch (e: any) {
     return (
@@ -33,7 +37,15 @@ export default async function AgentDetail({
   }
 
   const a = posture.agent;
+  const lineageNodeType: Record<string, string> = {};
+  for (const n of lineage.nodes || []) lineageNodeType[n.id] = n.type;
   const boundary = boundaries.boundaries.find((b: any) => b.agent === a.slug) || null;
+  const control = (controls.controls || []).find((c: any) => c.agent === a.slug) || null;
+  const state = control?.state || "active";
+  const toolByKey: Record<string, any> = {};
+  for (const t of tools.tools || []) toolByKey[t.key] = t;
+  const mcpById: Record<string, any> = {};
+  for (const s of mcpServers.servers || []) mcpById[s.id] = s;
   const questionTypes: string[] = boundaries.question_types?.length
     ? boundaries.question_types
     : ["fact", "aggregate", "prediction", "opinion", "procedure"];
@@ -41,10 +53,23 @@ export default async function AgentDetail({
   return (
     <>
       <Breadcrumbs crumbs={[{ label: "Agents", href: "/agents" }]} />
-      <h1 className="mono">{a.slug}</h1>
+      <h1>
+        {a.name || a.slug}
+        {a.is_seed && (
+          <span
+            className="tag"
+            style={{ marginLeft: 10, verticalAlign: "middle" }}
+            title="Created by `nometria seed` for demo purposes — not a real registration."
+          >
+            sample data
+          </span>
+        )}
+      </h1>
+      {a.name && <p className="mono small muted" style={{ marginTop: -8 }}>{a.slug}</p>}
       <p className="sub">{a.purpose || "No business purpose recorded."}</p>
 
       {review_error && <div className="error">{review_error}</div>}
+      {review_notice && <div className="note-panel">{review_notice}</div>}
 
       <form
         action={`/api/agents/${a.slug}/owner`}
@@ -69,7 +94,55 @@ export default async function AgentDetail({
         <Stat n={posture.decisions} label="decisions" />
         <Stat n={posture.blocked} label="blocked" tone={posture.blocked ? "bad" : "ok"} />
         <Stat n={posture.escalated} label="escalated" tone={posture.escalated ? "warn" : "ok"} />
-        <Stat n={lineage.blast_radius} label="blast radius" />
+        <StatLink
+          n={posture.handoffs}
+          label="hand-offs"
+          href={`/escalation?agent=${a.slug}`}
+          tone={posture.handoffs ? "warn" : "ok"}
+          hint="Conversations transferred to a human — recorded independently of traced execution paths, so this can be non-zero even when 'execution paths' above is 0."
+        />
+        <Stat
+          n={lineage.blast_radius}
+          label="blast radius"
+          hint="How many other agents, tools or models are reachable from this one within 2 hops of observed traffic — a rough proxy for how far a compromise or a bad decision here could actually spread."
+        />
+      </div>
+
+      {state !== "active" && (
+        <div className="note-panel" style={{ borderLeftColor: "var(--bad)" }}>
+          <strong>This agent is {state}</strong>
+          {control?.reason && <> — {control.reason}</>}
+          {control?.actor && <span className="small muted"> ({control.actor}, {ts(control.changed_at)})</span>}
+          . Every governed call is currently refused until it's resumed.
+        </div>
+      )}
+
+      <h2>
+        Kill switch
+        <InfoTip text="Quarantine: reversible, 'stop while I investigate.' Kill: the stronger incident action, requires the identity role rather than the registry role. Both refuse every governed call from this agent immediately and are logged to the audit chain." />
+      </h2>
+      <div className="panel body row" style={{ gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <span className={`tag ${state === "active" ? "ok" : "bad"}`}>{state}</span>
+        <form action={`/api/agents/${a.slug}/control`} method="POST" className="row" style={{ gap: 8, alignItems: "center", flex: 1, minWidth: 260 }}>
+          <input type="hidden" name="action" value={state === "active" ? "quarantine" : "resume"} />
+          <input
+            type="text"
+            name="reason"
+            placeholder={state === "active" ? "reason for quarantining (optional)" : "reason for resuming (optional)"}
+            style={{ flex: 1, minWidth: 200, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+          />
+          {state === "active" ? (
+            <button type="submit" className="btn-reject">Quarantine</button>
+          ) : (
+            <button type="submit" className="btn-approve">Resume</button>
+          )}
+        </form>
+        {state !== "killed" && (
+          <form action={`/api/agents/${a.slug}/control`} method="POST">
+            <input type="hidden" name="action" value="kill" />
+            <button type="submit" className="btn-reject">Kill</button>
+          </form>
+        )}
       </div>
 
       <div className="grid2" style={{ marginTop: 22 }}>
@@ -112,7 +185,12 @@ export default async function AgentDetail({
 
         <Panel
           title="Observed lineage"
-          note="derived from execution paths, not config"
+          note={
+            <>
+              derived from execution paths, not config{" "}
+              <InfoTip text="'Observed' means seen actually happening in traced traffic. Contrast with the 'declared models'/'declared tools' rows in Registration, which are just what someone typed in — a mismatch between the two is itself a signal worth noticing. When a target is a registered tool, its impact tier (read/write/irreversible) and — if it came through an MCP server — that server's trust level are shown alongside it." />
+            </>
+          }
         >
           {lineage.links.length === 0 ? (
             <div className="body muted small">No relationships observed yet.</div>
@@ -124,9 +202,34 @@ export default async function AgentDetail({
               <tbody>
                 {lineage.links.map((l: any, i: number) => (
                   <tr key={i}>
-                    <td className="mono small">{l.source}</td>
+                    <td className="mono small">
+                      {lineageNodeType[l.source] === "agent" ? (
+                        <Link href={`/agents/${l.source}`}>{l.source}</Link>
+                      ) : (
+                        l.source
+                      )}
+                    </td>
                     <td className="small muted">{l.relation}</td>
-                    <td className="mono small">{l.target}</td>
+                    <td className="mono small">
+                      {lineageNodeType[l.target] === "agent" ? (
+                        <Link href={`/agents/${l.target}`}>{l.target}</Link>
+                      ) : (
+                        l.target
+                      )}
+                      {toolByKey[l.target] && (
+                        <>
+                          {" "}
+                          <span className={`tag ${toolByKey[l.target].impact === "irreversible" ? "bad" : toolByKey[l.target].impact === "write" ? "warn" : ""}`}>
+                            {toolByKey[l.target].impact}
+                          </span>
+                          {toolByKey[l.target].mcp_server_id && mcpById[toolByKey[l.target].mcp_server_id] && (
+                            <span className="tag" title="MCP server trust level">
+                              {mcpById[toolByKey[l.target].mcp_server_id].trust_level}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </td>
                     <td className="num small">{l.observed_count}</td>
                   </tr>
                 ))}
@@ -214,7 +317,10 @@ export default async function AgentDetail({
 
       {classification && (
         <>
-          <h2>Proposed risk classification</h2>
+          <h2>
+            Proposed risk classification
+            <InfoTip text="EU AI Act terms: 'Annex III' lists the domains (employment, credit, law enforcement, etc.) that count as high-risk by default; 'Art. 14' requires a human-oversight gate before a high-impact action; 'Art. 50' requires disclosing that the user is talking to an AI. This is an advisory signal from purpose text and observed behavior, not a legal determination." />
+          </h2>
           <Panel
             title={`EU AI Act — proposed: ${classification.proposed_class}`}
             note={`currently recorded as ${classification.current_class}`}
@@ -233,8 +339,66 @@ export default async function AgentDetail({
                 <strong>Requires human confirmation</strong>
                 {classification.caveat}
               </div>
+              {classification.proposed_class !== classification.current_class && (
+                <form action={`/api/agents/${a.slug}/owner`} method="POST" style={{ marginTop: 10 }}>
+                  <input type="hidden" name="risk_tier" value={classification.proposed_class} />
+                  <button type="submit" className="btn-approve">
+                    Accept — set risk tier to {classification.proposed_class}
+                  </button>{" "}
+                  <span className="small muted">
+                    or leave as recorded ({classification.current_class}) to reject.
+                  </span>
+                </form>
+              )}
             </div>
           </Panel>
+        </>
+      )}
+
+      {effective && (
+        <>
+          <h2>
+            Effective policy
+            <InfoTip text="What actually applies to this agent right now, composed from every level that reaches it (org, team, agent) — with per-rule provenance so 'why did this block?' has a real answer. A rule from a narrower level can loosen or override a broader one; 'loosened' flags exactly that." />
+          </h2>
+          <div className="panel">
+            <div className="body small muted">
+              mode <span className="tag">{effective.mode}</span> · default effect{" "}
+              <span className="tag">{effective.default_effect}</span> · layers:{" "}
+              {effective.layers?.length ? effective.layers.join(", ") : "none apply"}
+            </div>
+            {effective.rules?.length > 0 && (
+              <table>
+                <thead>
+                  <tr><th>what it checks</th><th>effect</th><th>source</th><th>mode</th><th></th></tr>
+                </thead>
+                <tbody>
+                  {effective.rules.map((r: any) => (
+                    <tr key={r.rule_id}>
+                      <td className="small">
+                        {r.description || r.rule_id}
+                        <div className="mono small muted">{r.rule_id}</div>
+                      </td>
+                      <td><span className={`tag ${r.effect === "block" ? "bad" : ""}`}>{r.effect}</span></td>
+                      <td className="small muted">{r.source}</td>
+                      <td className="small muted">{r.mode}</td>
+                      <td>{r.loosened && <span className="tag warn">loosened</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {effective.rejected?.length > 0 && (
+              <div className="body small">
+                <strong>{effective.rejected.length} rule(s) rejected during composition:</strong>
+                <ul style={{ margin: "6px 0 0", paddingLeft: 18 }}>
+                  {effective.rejected.map((r: any, i: number) => (
+                    <li key={i} className="muted">{r.rule_id ? `${r.rule_id}: ` : ""}{r.message || r.code}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </>
       )}
 
@@ -274,7 +438,9 @@ export default async function AgentDetail({
                   <tr key={f.id}>
                     <td><Severity value={f.severity} /></td>
                     <td className="mono small">{f.type}</td>
-                    <td className="small wrap">{f.title}</td>
+                    <td className="small wrap">
+                      <Link href={`/findings/${f.id}`}>{f.title}</Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -286,7 +452,16 @@ export default async function AgentDetail({
       <h2>Recent execution paths</h2>
       <div className="panel">
         {traces.traces.length === 0 ? (
-          <div className="body muted small">No traffic recorded.</div>
+          <div className="body muted small">
+            No traced execution paths.
+            {posture.handoffs > 0 && (
+              <>
+                {" "}This agent does have {posture.handoffs} hand-off{posture.handoffs === 1 ? "" : "s"} on
+                record — hand-offs are logged independently of traced calls, see{" "}
+                <Link href={`/escalation?agent=${a.slug}`}>Escalation</Link>.
+              </>
+            )}
+          </div>
         ) : (
           <table>
             <thead><tr><th>trace</th><th>verdict</th><th>model</th><th>intent</th><th>when</th></tr></thead>

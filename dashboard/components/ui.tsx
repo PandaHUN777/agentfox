@@ -1,5 +1,51 @@
 /** Shared presentational pieces. */
 
+import Link from "next/link";
+
+/**
+ * A small "ⓘ" badge carrying a native tooltip. Unlike a bare `title=` on some
+ * larger element, this is visibly hoverable — the whole point being that a user
+ * scanning the page can tell there's an explanation available before they need
+ * it, rather than discovering tooltips exist by accidentally hovering the right
+ * pixel.
+ */
+export function InfoTip({ text }: { text: string }) {
+  return (
+    <span
+      className="info-tip"
+      title={text}
+      aria-label={text}
+      tabIndex={0}
+    >
+      i
+    </span>
+  );
+}
+
+/**
+ * Every agent has a real display name (e.g. "Payments Operations Agent") — the
+ * registry slug (`payments-ops`) is still needed for the URL and for cross-
+ * referencing logs, but a non-technical reader shouldn't have to see it as the
+ * primary label. Pass the already-fetched agents list so this needs no extra
+ * request; falls back to the slug if the agent isn't found in it.
+ */
+export function AgentLink({
+  slug,
+  agents,
+  className,
+}: {
+  slug: string;
+  agents: { slug: string; name?: string }[];
+  className?: string;
+}) {
+  const name = agents.find((a) => a.slug === slug)?.name;
+  return (
+    <Link href={`/agents/${slug}`} className={className} title={name ? slug : undefined}>
+      {name || slug}
+    </Link>
+  );
+}
+
 export function Stat({
   n,
   label,
@@ -14,10 +60,39 @@ export function Stat({
   hint?: string;
 }) {
   return (
-    <div className={`card${tone ? " " + tone : ""}`} title={hint}>
+    <div className={`card${tone ? " " + tone : ""}`}>
       <div className="n">{n}</div>
-      <div className="l">{label}</div>
+      <div className="l">
+        {label}
+        {hint && <InfoTip text={hint} />}
+      </div>
     </div>
+  );
+}
+
+/** A `Stat` that goes somewhere — the number is the summary, the link is where
+ * to go to see the rows that make it up. */
+export function StatLink({
+  n,
+  label,
+  tone,
+  href,
+  hint,
+}: {
+  n: React.ReactNode;
+  label: string;
+  tone?: "ok" | "warn" | "bad";
+  href: string;
+  hint?: string;
+}) {
+  return (
+    <Link href={href} className={`card link${tone ? " " + tone : ""}`}>
+      <div className="n">{n}</div>
+      <div className="l">
+        {label}
+        {hint && <InfoTip text={hint} />}
+      </div>
+    </Link>
   );
 }
 
@@ -89,6 +164,7 @@ export function Severity({ value }: { value: string }) {
  * ever renders as raw underscored jargon with zero explanation.
  */
 const FINDING_TYPE_INFO: Record<string, { label: string; blurb?: string }> = {
+  guardrail_detection: { label: "Guardrail catch", blurb: "A detector caught something in a request or response and it changed the outcome — see the masked excerpt below." },
   redteam: { label: "Security test", blurb: "Simulated attacks got through without being blocked." },
   shadow_agent: { label: "Unregistered agent", blurb: "This agent is sending traffic but was never registered." },
   unowned_agent: { label: "No owner", blurb: "No one is accountable for this agent's decisions." },
@@ -173,6 +249,39 @@ export function ApiDown({ error }: { error: string }) {
       <div className="small mono muted" style={{ marginTop: 8 }}>
         {error}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The other half of the not-ok-response story: the server answered fine, it just
+ * doesn't have this row. Confusing this with `ApiDown` sends a reader toward
+ * "restart the server" for a problem that isn't the server — a stale link, a
+ * record that was never created, an id that got typo'd.
+ */
+export function NotFound({
+  what,
+  detail,
+  back,
+}: {
+  /** What kind of thing is missing, lowercase — "finding", "trace", "run". */
+  what: string;
+  detail?: string;
+  back?: { href: string; label: string };
+}) {
+  return (
+    <div className="hero empty">
+      <div className="hero-title">No such {what}</div>
+      <p>
+        The control plane is up — it just doesn&rsquo;t have a {what} at this id. The
+        link may be stale, or nothing has created one yet.
+      </p>
+      {detail && <p className="small muted mono">{detail}</p>}
+      {back && (
+        <p>
+          <Link href={back.href}>&larr; {back.label}</Link>
+        </p>
+      )}
     </div>
   );
 }
