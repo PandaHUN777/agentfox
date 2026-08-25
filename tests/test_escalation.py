@@ -13,6 +13,7 @@ import datetime as dt
 
 import pytest
 
+from nometria.db import session_scope
 from nometria.escalation import (
     DEFAULT_CONDITIONS,
     REQUIRED_CONTEXT,
@@ -480,6 +481,25 @@ def test_the_escalation_api(client):
         f"/api/escalation/handoffs/{handoffs[0]['id']}/acknowledge", headers=headers
     ).json()
     assert acked["status"] == "acknowledged"
+
+
+def test_gateway_completions_record_a_conversation_turn(client):
+    """Before this, only the SDK's `nometria.auto()` monkeypatch called record_turn
+    — a team integrating via this HTTP gateway directly got zero escalation tracking
+    however long they ran it. Exercised end to end through the actual route."""
+    response = client.post(
+        "/v1/chat/completions",
+        json={
+            "model": "echo-1",
+            "messages": [{"role": "user", "content": "I want to speak to a manager"}],
+        },
+        headers={"X-Nometria-Agent": "support-triage", "X-Nometria-Session": "gw-turn-1"},
+    )
+    assert response.status_code == 200
+    with session_scope() as session:
+        turn = session.query(ConversationTurn).filter_by(session_id="gw-turn-1").one()
+    assert turn.user_text == "I want to speak to a manager"
+    assert turn.signals_json.get("explicit_request") is True
 
 
 def test_policy_writes_require_the_policy_role(client):

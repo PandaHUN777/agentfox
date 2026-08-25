@@ -29,6 +29,46 @@ from ..deps import agent_credential, db
 router = APIRouter(tags=["inline"])
 
 
+def _record_turn(
+    session: Session,
+    *,
+    agent_slug: str | None,
+    session_id: str | None,
+    trace_id: str | None,
+    messages: list[dict[str, Any]],
+    answer: str,
+) -> None:
+    """P11 over HTTP — the same gap the SDK path had for entitlement: escalation
+    governance reads recorded conversation turns, and only the SDK's `nometria.auto()`
+    monkeypatch was ever recording them (autoguard.py's `_record_turn`). A team
+    integrating via this HTTP gateway directly — not the Python SDK — got zero
+    escalation tracking, however long they ran it. Never breaks the caller's request.
+    """
+    if not answer or not trace_id:
+        return
+    try:
+        from ...escalation import record_turn
+        from ...models import Agent
+
+        user_text = next(
+            (str(m.get("content") or "") for m in reversed(messages) if str(m.get("role")) == "user"),
+            "",
+        )
+        if not user_text:
+            return
+        agent = session.scalar(select(Agent).where(Agent.slug == agent_slug)) if agent_slug else None
+        record_turn(
+            session,
+            session_id=session_id or trace_id,
+            agent_id=agent.id if agent else None,
+            trace_id=trace_id,
+            user_text=user_text,
+            agent_text=answer,
+        )
+    except Exception:  # pragma: no cover - observability must not break the call
+        pass
+
+
 def _trust_map(header: str | None) -> dict[str, str] | None:
     if not header:
         return None
@@ -302,6 +342,14 @@ async def chat_completions(
             },
             headers=_headers(result),
         )
+    _record_turn(
+        session,
+        agent_slug=x_nometria_agent,
+        session_id=x_nometria_session,
+        trace_id=result.trace_id,
+        messages=body.get("messages", []),
+        answer=response.text,
+    )
     return JSONResponse(content=response.to_openai(body.get("model", "")), headers=_headers(result))
 
 
@@ -376,6 +424,14 @@ async def messages(
             },
             headers=_headers(result),
         )
+    _record_turn(
+        session,
+        agent_slug=x_nometria_agent,
+        session_id=x_nometria_session,
+        trace_id=result.trace_id,
+        messages=payload,
+        answer=response.text,
+    )
     return JSONResponse(
         content=response.to_anthropic(body.get("model", "")), headers=_headers(result)
     )
