@@ -718,7 +718,11 @@ def _loop_without_handoff(session: Session, session_id: str) -> bool:
 
 
 def detect_false_resolution(
-    session: Session, *, since_hours: int = 24, raise_findings: bool = True
+    session: Session,
+    *,
+    since_hours: int = 24,
+    agent_id: str | None = None,
+    raise_findings: bool = True,
 ) -> list[dict[str, Any]]:
     """F5.5 — the agent said it was resolved and the conversation says otherwise.
 
@@ -727,10 +731,11 @@ def detect_false_resolution(
     negative. "Anything else I can help with?" after declining to help is the shape.
     """
     since = utcnow() - dt.timedelta(hours=since_hours)
+    stmt = select(ConversationTurn).where(ConversationTurn.created_at >= since)
+    if agent_id:
+        stmt = stmt.where(ConversationTurn.agent_id == agent_id)
     sessions: dict[str, list[ConversationTurn]] = {}
-    for turn in session.scalars(
-        select(ConversationTurn).where(ConversationTurn.created_at >= since)
-    ):
+    for turn in session.scalars(stmt):
         sessions.setdefault(turn.session_id, []).append(turn)
 
     out: list[dict[str, Any]] = []
@@ -773,16 +778,32 @@ def detect_false_resolution(
     return out
 
 
-def escalation_report(session: Session, *, since_hours: int = 24) -> dict[str, Any]:
+def escalation_report(
+    session: Session, *, since_hours: int = 24, agent_slug: str | None = None
+) -> dict[str, Any]:
     """Everything an operator needs to answer "is escalation working?"."""
-    missed = detect_missed_escalation(session, since_hours=since_hours, raise_findings=False)
-    false_res = detect_false_resolution(session, since_hours=since_hours, raise_findings=False)
-    breached = [h for h in session.scalars(select(Handoff)) if h.status == "breached"]
-    handoffs = list(session.scalars(select(Handoff)))
+    agent_id = None
+    if agent_slug:
+        agent = session.scalar(select(Agent).where(Agent.slug == agent_slug))
+        agent_id = agent.id if agent else agent_slug  # unknown slug -> matches nothing
+
+    missed = detect_missed_escalation(
+        session, since_hours=since_hours, agent_slug=agent_slug, raise_findings=False
+    )
+    false_res = detect_false_resolution(
+        session, since_hours=since_hours, agent_id=agent_id, raise_findings=False
+    )
+    handoff_stmt = select(Handoff)
+    turns_stmt = select(ConversationTurn)
+    if agent_id:
+        handoff_stmt = handoff_stmt.where(Handoff.agent_id == agent_id)
+        turns_stmt = turns_stmt.where(ConversationTurn.agent_id == agent_id)
+    breached = [h for h in session.scalars(handoff_stmt) if h.status == "breached"]
+    handoffs = list(session.scalars(handoff_stmt))
     incomplete = [h for h in handoffs if h.completeness < 1.0]
     loops = [
         sid
-        for sid in {t.session_id for t in session.scalars(select(ConversationTurn))}
+        for sid in {t.session_id for t in session.scalars(turns_stmt)}
         if _loop_without_handoff(session, sid)
     ]
     return {

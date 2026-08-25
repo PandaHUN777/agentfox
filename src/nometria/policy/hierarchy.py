@@ -81,6 +81,7 @@ class ResolvedRule:
     def to_json(self) -> dict[str, Any]:
         return {
             "rule_id": self.rule.id,
+            "description": self.rule.description,
             "effect": self.rule.effect,
             "level": self.level,
             "scope": self.scope_id,

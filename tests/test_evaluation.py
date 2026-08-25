@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.evaluation import gate, psi, run_campaign, set_baseline
+from nometria.evaluation import evaluate_slos, gate, psi, run_campaign, set_baseline, set_slo
 from nometria.evaluation.drift import ks_statistic
 from nometria.evaluation.gating import to_junit, to_sarif
 from nometria.evaluation.runner import NativeEvalRunner
@@ -16,6 +16,8 @@ from nometria.evaluation.silent_failure import (
     self_consistency,
 )
 from nometria.models import EvalSuite
+
+from .conftest import as_user
 
 CONTEXT = (
     "Refund policy. Customers may request a refund within 30 days of purchase. "
@@ -238,6 +240,60 @@ def test_psi_rises_on_shift():
 def test_ks_statistic():
     assert ks_statistic([1, 2, 3], [1, 2, 3]) == pytest.approx(0.0)
     assert ks_statistic([1, 1, 1], [9, 9, 9]) == pytest.approx(1.0)
+
+
+# ---------------------------------------------------------------------------
+# SLOs (P4-7)
+# ---------------------------------------------------------------------------
+
+
+def test_declaring_an_slo_with_no_data_reports_no_data(seeded):
+    """A page that reads SLOs is a dead end without a way to declare one — this is
+    the write side that GET /api/eval/slos needs something to show."""
+    set_slo(
+        seeded,
+        agent_slug="support-triage",
+        scorer_key="groundedness",
+        objective="95% of answers stay grounded",
+        target=0.95,
+    )
+    [reported] = evaluate_slos(seeded, "support-triage")
+    assert reported["status"] == "no_data"
+    assert reported["agent"] == "support-triage"
+    assert reported["scorer"] == "groundedness"
+
+
+def test_declaring_the_same_pair_twice_edits_rather_than_duplicates(seeded):
+    set_slo(seeded, agent_slug="support-triage", scorer_key="groundedness", target=0.9)
+    set_slo(seeded, agent_slug="support-triage", scorer_key="groundedness", target=0.99)
+    assert len(evaluate_slos(seeded, "support-triage")) == 1
+    assert evaluate_slos(seeded, "support-triage")[0]["slo_id"]
+
+
+def test_the_slo_api(client):
+    headers = as_user("priya@example.com")
+    created = client.post(
+        "/api/eval/slos",
+        json={
+            "agent": "support-triage",
+            "scorer": "groundedness",
+            "objective": "95% of answers stay grounded",
+            "target": 0.95,
+        },
+        headers=headers,
+    )
+    assert created.status_code == 201
+    assert created.json()["agent"] == "support-triage"
+
+    listed = client.get("/api/eval/slos", headers=headers).json()
+    assert any(s["agent"] == "support-triage" for s in listed["slos"])
+
+    unknown_agent = client.post(
+        "/api/eval/slos",
+        json={"agent": "no-such-agent", "scorer": "groundedness"},
+        headers=headers,
+    )
+    assert unknown_agent.status_code == 404
 
 
 # ---------------------------------------------------------------------------

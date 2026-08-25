@@ -60,6 +60,7 @@ rules:
 
   # --- Least privilege (NOM-IAM-02) -----------------------------------
   - id: capability.denied
+    description: The agent tried to use a tool or take an action nobody explicitly gave it permission for.
     when:
       capability: denied
     effect: block
@@ -68,6 +69,7 @@ rules:
     controls: [NOM-IAM-02]
 
   - id: capability.approval_required
+    description: This specific action is allowed, but only with a human's sign-off first — see Approvals.
     when:
       capability: requires_approval
     effect: escalate
@@ -90,6 +92,7 @@ rules:
 
   # --- Consumption & loops (NOM-RTG-08) --------------------------------
   - id: budget.exceeded
+    description: The agent hit its spending or usage limit for this task (calls, tokens, cost, or how deep it recursed).
     when:
       budget_exceeded: true
     effect: block
@@ -98,6 +101,7 @@ rules:
     controls: [NOM-RTG-08]
 
   - id: loop.runaway
+    description: The agent got stuck repeating the same action instead of making progress.
     when:
       loop_detected: true
     effect: block
@@ -117,6 +121,7 @@ rules:
     controls: [NOM-RTG-04, NOM-RTG-01]
 
   - id: secrets.in_tool_arguments
+    description: A password, API key, or other credential showed up in what the agent was about to send to a tool.
     when:
       surface: [tool_args]
       detection: {entity_prefix: SECRET, min_score: 0.9}

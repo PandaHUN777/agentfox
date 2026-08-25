@@ -443,9 +443,11 @@ def over_permission_report(session: Session, *, days: int = 7) -> dict[str, Any]
             "requests": 0,
             "over_permission": None,
             "note": (
-                "No entitlement decisions recorded. Until the end-user principal is "
-                "propagated, the agent answers with no idea who is asking — which is "
-                "the Copilot failure exactly."
+                "No entitlement checks recorded yet. Until the agent is told who's "
+                "actually asking, it answers with no idea whether that person is "
+                "allowed to see what it's about to say — the exact failure mode "
+                "behind real-world AI oversharing incidents at companies that rolled "
+                "out an assistant without this check."
             ),
         }
     candidates = sum(e.candidates for e in events)

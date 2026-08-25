@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.models import Agent, ApprovalRequest, AuditEntry, Decision, Trace
+from nometria.models import Agent, ApprovalRequest, AuditEntry, Decision, Finding, Trace
 from nometria.policy import set_mode
 
 from .conftest import INDIRECT_INJECTION, PII_TEXT, SECRET_TEXT, as_user
@@ -166,6 +166,35 @@ def test_pii_redacted_in_the_response(seeded, enforcer):
 def test_high_sensitivity_pii_blocked_not_redacted(seeded, enforcer):
     result = enforcer.check_content(agent_slug="support-triage", content=PII_TEXT, surface="output")
     assert result["effective_verdict"] == "block"
+
+
+def test_a_material_detection_raises_a_finding_with_a_masked_sample(seeded, enforcer):
+    """A catch that changed the outcome should not be invisible outside its trace.
+
+    `Detection.sample` is already redacted at construction — there is no reason to
+    withhold it a second time behind a bare category name once it changed what the
+    agent could send.
+    """
+    enforcer.check_content(agent_slug="support-triage", content=PII_TEXT, surface="output")
+    finding = seeded.query(Finding).filter_by(type="guardrail_detection").one()
+    assert finding.severity == "high"  # blocked, not merely redacted
+    detections = finding.evidence_json["detections"]
+    assert detections
+    for d in detections:
+        # The sample is a redacted excerpt, never the raw matched value.
+        assert PII_TEXT not in d["sample"]
+        assert d["entity_type"]
+    assert finding.evidence_json["verdict"] == "block"
+    assert finding.control_keys
+
+
+def test_an_allowed_pass_does_not_flood_the_findings_queue(seeded, enforcer):
+    """Only outcome-changing catches become findings — every allowed pass would
+    otherwise bury the ones that matter."""
+    enforcer.check_content(
+        agent_slug="support-triage", content="What is the refund window?", surface="output"
+    )
+    assert seeded.query(Finding).filter_by(type="guardrail_detection").count() == 0
 
 
 def test_every_decision_writes_an_audit_entry(seeded, enforcer):
@@ -483,6 +512,25 @@ def test_resolving_a_finding_requires_a_note(client):
     detail = client.get(f"/api/findings/{finding_id}", headers=as_user("admin@example.com")).json()
     assert detail["resolution_note"] == "registered the agent and assigned an owner"
     assert detail["resolved_by"] == "admin@example.com"
+
+
+def test_findings_can_be_filtered_by_agent(client):
+    """`subject_id` has been raised as both the agent's DB id and its slug across
+    call sites — the filter has to match either, or it silently misses rows."""
+    client.post("/api/discovery/scan", headers=as_user("admin@example.com"))
+    unfiltered = client.get("/api/findings", headers=as_user("admin@example.com")).json()
+    assert any(f["agent_slug"] == "hr-screening" for f in unfiltered["findings"])
+
+    filtered = client.get(
+        "/api/findings?agent=hr-screening", headers=as_user("admin@example.com")
+    ).json()
+    assert filtered["findings"]
+    assert all(f["agent_slug"] == "hr-screening" for f in filtered["findings"])
+
+    other = client.get(
+        "/api/findings?agent=payments-ops", headers=as_user("admin@example.com")
+    ).json()
+    assert all(f["id"] != filtered["findings"][0]["id"] for f in other["findings"])
 
 
 def test_get_finding_returns_the_full_evidence(client):

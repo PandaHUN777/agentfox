@@ -12,6 +12,7 @@ from __future__ import annotations
 from .engine import NativePolicyEngine, PolicyEngine, combine
 from .hierarchy import (
     LEVELS,
+    MODES,
     EffectivePolicy,
     LintFinding,
     PolicyLayer,
@@ -48,6 +49,7 @@ from .store import (
 __all__ = [
     "EFFECT_RANK",
     "LEVELS",
+    "MODES",
     "EffectivePolicy",
     "LintFinding",
     "PolicyLayer",

@@ -152,8 +152,10 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "done": enforcing > 0,
             "command": "nometria policy enforce baseline",
             "detail": (
-                "The only step that blocks anything. Do it when the findings look right, "
-                "not before."
+                "Promotes the content-based policies (prompt injection, PII, safety) from "
+                "observe to enforce — do it when the findings look right, not before. Tool "
+                "containment (least-privilege action control) is a separate, structural "
+                "policy that already enforces from step 1; see the note below the checklist."
             ),
         },
     ]

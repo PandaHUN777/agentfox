@@ -32,8 +32,8 @@ in [traceability.md](traceability.md).
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 14 | OpenFGA adapter is a declared seam, not an implementation |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 52 |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 36 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
-| `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ◐ partial | 27 | gates the ingestion and assembly path. Semantic chunk-boundary repair and automatic re-extraction of a corrupt document are not built — a finding is reported and the decision to drop the document belongs to the operator |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 35 | no Ragas adapter, model-based groundedness or annotation queue |
+| `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ◐ partial | 27 | the quality-check logic (`context_integrity.py`) is built and tested in isolation, but no route or enforcement path calls it yet — it does not currently gate anything in the running system. Semantic chunk-boundary repair and automatic re-extraction of a corrupt document are also not built |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 35 | Ragas adapter built (`I-8`) but not reachable from any route — no model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ◐ partial | 22 | attributes a failure to the step that originated the value and measures what each handoff dropped. Both work on constraints that were written down — an expectation the human held and never typed is invisible here, and no trace analysis recovers it |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 17 |  |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 36 |  |

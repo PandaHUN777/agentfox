@@ -633,6 +633,26 @@ class Enforcer:
             result.explanation["dispute"]["payload"]["decision_id"] = decision_row.id
             result.explanation["decision_id"] = decision_row.id
 
+        # A detector catch is invisible outside the trace it happened on unless it
+        # actually changed the outcome — surfacing every allowed pass here would
+        # flood the queue with routine catches nobody needs to act on. When it
+        # *did* change the outcome, an operator reviewing findings gets nothing to
+        # go on today but the entity type: `Detection.sample` is already redacted
+        # at construction (P5-5), so there is no reason to withhold it a second
+        # time behind a blanket "we don't store this" — showing the masked excerpt
+        # is strictly more useful than a bare category name, and no less safe.
+        if effective != "allow" and pipeline_result.detections:
+            self._raise_detection_finding(
+                agent=agent,
+                trace_id=trace_id,
+                decision_id=decision_row.id,
+                surface=surface,
+                effective=effective,
+                reason=reason,
+                rules_fired=rules_fired,
+                detections=pipeline_result.detections,
+            )
+
         # --- 6. escalation (P2-3) ----------------------------------------
         if effective == "escalate":
             approval = request_approval(
@@ -1777,6 +1797,68 @@ class Enforcer:
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------
+
+    def _raise_detection_finding(
+        self,
+        *,
+        agent: Agent | None,
+        trace_id: str | None,
+        decision_id: str,
+        surface: str,
+        effective: str,
+        reason: str,
+        rules_fired: list[dict[str, Any]],
+        detections: list,
+    ) -> None:
+        """The general-Findings counterpart to `_persist_detectors`.
+
+        `DetectionFinding.sample` already carries a redacted excerpt — it just
+        never left the trace it was captured on. This dedupes by entity type,
+        keeping the highest-scoring sample for each, and reuses whichever
+        controls the firing rules already declared rather than inventing a new
+        control key for the same decision.
+        """
+        by_entity: dict[str, Any] = {}
+        for detection in detections:
+            current = by_entity.get(detection.entity_type)
+            if current is None or detection.score > current.score:
+                by_entity[detection.entity_type] = detection
+        if not by_entity:
+            return
+
+        controls = sorted({c for r in rules_fired for c in (r.get("controls") or [])}) or [
+            "NOM-RTG-06"
+        ]
+        entity_types = sorted(by_entity)
+        severity = "high" if effective in ("block", "escalate") else "medium"
+
+        self.session.add(
+            Finding(
+                type="guardrail_detection",
+                severity=severity,
+                title=f"{effective.capitalize()}ed on {surface}: {', '.join(entity_types)}",
+                subject_type="agent",
+                subject_id=agent.id if agent else None,
+                evidence_json={
+                    "trace_id": trace_id,
+                    "decision_id": decision_id,
+                    "surface": surface,
+                    "verdict": effective,
+                    "reason": reason,
+                    "detections": [
+                        {
+                            "entity_type": d.entity_type,
+                            "score": d.score,
+                            "sample": d.sample,
+                            "owasp_id": d.owasp_id,
+                            "atlas_id": d.atlas_id,
+                        }
+                        for d in by_entity.values()
+                    ],
+                },
+                control_keys=controls,
+            )
+        )
 
     def _persist_detectors(self, pipeline_result, trace_id: str | None, surface: str) -> list[str]:
         ids: list[str] = []

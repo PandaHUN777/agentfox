@@ -131,6 +131,7 @@ def list_feedback(
 
 @router.get("/precision")
 def precision(
+    agent: str | None = None,
     days: int = Query(30, ge=1, le=365),
     session: Session = Depends(db),
     _user: User = Depends(current_user),
@@ -140,7 +141,11 @@ def precision(
     The denominator is not decoration — precision over four labels is noise, and
     reporting it without the sample size is how a tuning surface starts lying.
     """
-    return precision_report(session, days=days)
+    agent_id = None
+    if agent:
+        record = session.scalar(select(Agent).where(Agent.slug == agent))
+        agent_id = record.id if record else agent
+    return precision_report(session, days=days, agent_id=agent_id)
 
 
 @router.get("/recommendations")

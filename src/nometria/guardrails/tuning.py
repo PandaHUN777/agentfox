@@ -439,16 +439,19 @@ def record_feedback(
     return feedback
 
 
-def precision_report(session: Session, *, days: int = 30) -> dict[str, Any]:
+def precision_report(
+    session: Session, *, days: int = 30, agent_id: str | None = None
+) -> dict[str, Any]:
     """Per-detector precision from human labels, with the label count next to it.
 
     The count is not decoration. Precision computed over four labels is noise, and
     presenting it without the denominator is how a tuning surface starts lying.
     """
     since = dt.datetime.now(dt.UTC) - dt.timedelta(days=days)
-    rows = list(
-        session.scalars(select(GuardrailFeedback).where(GuardrailFeedback.created_at >= since))
-    )
+    stmt = select(GuardrailFeedback).where(GuardrailFeedback.created_at >= since)
+    if agent_id:
+        stmt = stmt.where(GuardrailFeedback.agent_id == agent_id)
+    rows = list(session.scalars(stmt))
     per_detector: dict[str, dict[str, Any]] = {}
     for row in rows:
         key = row.detector_key or "(unattributed)"

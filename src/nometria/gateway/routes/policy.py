@@ -19,7 +19,10 @@ from sqlalchemy.orm import Session
 from ...audit import chain
 from ...models import Policy, PolicyBinding, PolicyVersion, User
 from ...policy import (
+    LEVELS,
+    MODES,
     PolicyDocument,
+    active_policies,
     compile_to_rego,
     effective_for,
     history,
@@ -36,10 +39,24 @@ router = APIRouter(prefix="/api/policies", tags=["policy"])
 
 @router.get("")
 def list_policies(
-    session: Session = Depends(db), _user: User = Depends(current_user)
+    agent: str | None = None,
+    session: Session = Depends(db),
+    _user: User = Depends(current_user),
 ) -> dict[str, Any]:
+    # A policy's real scope lives in its declared `scope.agents` glob (checked by
+    # `matches_scope`, honouring the binding's own scope override) — not a simple
+    # FK, since one policy commonly governs many agents by pattern. Reusing
+    # `active_policies` here means the filter agrees with what actually gets
+    # enforced at request time, rather than a second, looser notion of "applies to".
+    scoped_policy_ids = (
+        {version.policy_id for _doc, version, _binding in active_policies(session, agent_slug=agent)}
+        if agent
+        else None
+    )
     out = []
     for policy in session.scalars(select(Policy).order_by(Policy.key)):
+        if scoped_policy_ids is not None and policy.id not in scoped_policy_ids:
+            continue
         versions = list(
             session.scalars(
                 select(PolicyVersion)
@@ -116,6 +133,16 @@ def get_policy(
         .where(PolicyVersion.policy_id == policy.id)
         .order_by(PolicyVersion.version.desc())
     ).first()
+    binding = (
+        session.scalars(
+            select(PolicyBinding).where(
+                PolicyBinding.policy_version_id == latest.id,
+                PolicyBinding.effective_to.is_(None),
+            )
+        ).first()
+        if latest
+        else None
+    )
     return {
         "key": policy.key,
         "name": policy.name,
@@ -123,6 +150,9 @@ def get_policy(
         "versions": versions,
         "body": latest.body if latest else "",
         "compiled": latest.compiled_json if latest else {},
+        "level": binding.level if binding else "org",
+        "scope_id": binding.scope_id if binding else "*",
+        "compose": binding.compose if binding else "extend",
     }
 
 
@@ -130,6 +160,11 @@ class PolicyIn(BaseModel):
     body: str
     notes: str = ""
     mode: str | None = None
+    #: P12 hierarchy (org -> team -> agent -> user, narrowest wins on ties) — every
+    #: save silently defaulted to org/*/extend until this was exposed to the form.
+    level: str = "org"
+    scope_id: str = "*"
+    compose: str = "extend"
 
 
 @router.post("", status_code=201)
@@ -141,6 +176,11 @@ def upsert_policy(
     except Exception as exc:
         raise HTTPException(400, f"invalid policy: {exc}") from exc
 
+    if payload.level not in LEVELS:
+        raise HTTPException(400, f"level must be one of {LEVELS}")
+    if payload.compose not in MODES:
+        raise HTTPException(400, f"compose must be one of {MODES}")
+
     # Binding a policy straight to enforce in production requires the stronger role.
     if (payload.mode or doc.mode) == "enforce" and user.role not in {"owner", "admin", "security"}:
         raise HTTPException(
@@ -148,7 +188,14 @@ def upsert_policy(
         )
 
     policy, version = save_policy(
-        session, doc, author=user.email, notes=payload.notes, bind_mode=payload.mode
+        session,
+        doc,
+        author=user.email,
+        notes=payload.notes,
+        bind_mode=payload.mode,
+        level=payload.level,
+        scope_id=payload.scope_id,
+        compose=payload.compose,
     )
     chain.append(
         session,
@@ -162,6 +209,9 @@ def upsert_policy(
             "version": version.version,
             "mode": payload.mode or doc.mode,
             "notes": payload.notes,
+            "level": payload.level,
+            "scope_id": payload.scope_id,
+            "compose": payload.compose,
         },
     )
     return {"key": policy.key, "version": version.version, "version_id": version.id}

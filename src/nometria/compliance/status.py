@@ -475,11 +475,19 @@ def latest_statuses(session: Session) -> dict[str, ControlStatus]:
 
 
 def posture(session: Session, framework: str | None = None) -> dict[str, Any]:
-    """Aggregate control posture, optionally scoped to one framework."""
+    """Aggregate control posture, optionally scoped to one framework.
+
+    Scoped to every control in the catalog, not just the ones with a computed
+    ``ControlStatus`` row — a freshly-synced catalog has none, and counting only
+    computed rows made a 41-control catalog report 0 controls of every status,
+    itself included, with no visible account of where the other 41 went. A
+    control with no status row is ``not_computed`` (matching ``list_controls``'s
+    own default), and is counted as such rather than silently dropped.
+    """
     from ..models import FrameworkMapping
 
     statuses = latest_statuses(session)
-    keys = set(statuses)
+    keys = set(session.scalars(select(Control.key)))
     if framework:
         keys &= {
             m.control_key
@@ -488,9 +496,10 @@ def posture(session: Session, framework: str | None = None) -> dict[str, Any]:
             )
         }
 
-    counts = dict.fromkeys(STATUSES, 0)
+    counts = dict.fromkeys((*STATUSES, "not_computed"), 0)
     for key in keys:
-        counts[statuses[key].status] = counts.get(statuses[key].status, 0) + 1
+        status = statuses[key].status if key in statuses else "not_computed"
+        counts[status] = counts.get(status, 0) + 1
 
     assessed = sum(counts[s] for s in ("effective", "degraded", "failing"))
     return {
@@ -498,8 +507,10 @@ def posture(session: Session, framework: str | None = None) -> dict[str, Any]:
         "controls": len(keys),
         "counts": counts,
         "effectiveness": round(counts["effective"] / assessed, 4) if assessed else None,
-        "failing_controls": sorted(k for k in keys if statuses[k].status == "failing"),
-        "degraded_controls": sorted(k for k in keys if statuses[k].status == "degraded"),
-        "not_implemented": sorted(k for k in keys if statuses[k].status == "not_implemented"),
-        "computed_at": max((statuses[k].computed_at for k in keys), default=None),
+        "failing_controls": sorted(k for k in keys if k in statuses and statuses[k].status == "failing"),
+        "degraded_controls": sorted(k for k in keys if k in statuses and statuses[k].status == "degraded"),
+        "not_implemented": sorted(
+            k for k in keys if k in statuses and statuses[k].status == "not_implemented"
+        ),
+        "computed_at": max((statuses[k].computed_at for k in keys if k in statuses), default=None),
     }

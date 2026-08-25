@@ -98,6 +98,9 @@ def test_the_empty_state_says_what_it_means(isolated_db):
 def test_sources_are_reachable_over_http(client):
     """P8 shipped with zero API routes — the only way in was to import our package."""
     headers = as_user("priya@example.com")
+    before = client.get("/api/sources", headers=headers).json()
+    before_health = client.get("/api/sources/health", headers=headers).json()
+
     created = client.put(
         "/api/sources",
         json={"key": "price-book", "tier": "system_of_record", "owner": "fin@x.test"},
@@ -106,10 +109,11 @@ def test_sources_are_reachable_over_http(client):
     assert created.status_code == 201, created.text
 
     listing = client.get("/api/sources", headers=headers).json()
-    assert listing["counts"]["system_of_record"] == 1
+    assert listing["counts"]["system_of_record"] == before["counts"]["system_of_record"] + 1
+    assert any(s["key"] == "price-book" for s in listing["sources"])
 
     health = client.get("/api/sources/health", headers=headers).json()
-    assert health["registered"] == 1
+    assert health["registered"] == before_health["registered"] + 1
 
 
 def test_retiring_a_source_deprecates_rather_than_deletes(client):
@@ -123,7 +127,8 @@ def test_retiring_a_source_deprecates_rather_than_deletes(client):
     assert response.json()["deprecated"] is True
 
     listing = client.get("/api/sources", headers=headers).json()
-    assert listing["sources"][0]["deprecated"] is True
+    wiki = next(s for s in listing["sources"] if s["key"] == "wiki-2019")
+    assert wiki["deprecated"] is True
 
 
 def test_provenance_can_be_dry_run_before_it_is_wired_in(client):
@@ -191,7 +196,9 @@ def test_a_question_can_be_dry_run_against_the_boundary(ready):
 
 
 def test_checking_without_a_boundary_says_so_rather_than_passing_silently(ready):
-    result = runner.invoke(app, ["boundary", "check", "support-triage", "anything"])
+    # support-triage carries a real seeded boundary (NOM-RTG-11); hr-screening
+    # deliberately doesn't, so it's the one that still exercises this path.
+    result = runner.invoke(app, ["boundary", "check", "hr-screening", "anything"])
     assert "no boundary declared" in flat(result.output)
 
 
@@ -307,8 +314,10 @@ def test_the_one_liner_captures_conversation_turns(isolated_db, fake_openai):
         fake_openai().create(model="gpt-4o", messages=[{"role": "user", "content": question}])
 
     with session_scope() as session:
-        assert session.query(ConversationTurn).count() == 3
-        result = detect_missed_escalation(session, raise_findings=False)
+        # filtered to this test's own session — the seed demo carries a real,
+        # already-escalated conversation of its own (seed-refund-dispute-1)
+        assert session.query(ConversationTurn).filter_by(session_id="conv-1").count() == 3
+        result = detect_missed_escalation(session, raise_findings=False, agent_slug="support-triage")
     assert result["qualified"] == 1
     assert len(result["missed"]) == 1
 
@@ -329,7 +338,9 @@ def test_turns_group_into_one_conversation(isolated_db, fake_openai):
         fake_openai().create(model="gpt-4o", messages=[{"role": "user", "content": "hello"}])
 
     with session_scope() as session:
-        turns = session.query(ConversationTurn).all()
+        turns = session.query(ConversationTurn).filter_by(session_id="conv-2").all()
+    # scoped to conv-2 — the seed demo carries a real conversation of its own
+    # (seed-refund-dispute-1) that would otherwise mix into these assertions
     assert {t.session_id for t in turns} == {"conv-2"}
     assert sorted(t.turn_index for t in turns) == [0, 1, 2]
 

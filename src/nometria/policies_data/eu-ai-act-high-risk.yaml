@@ -61,6 +61,7 @@ rules:
     controls: [NOM-RTG-06]
 
   - id: eu.art15.injection_resistance
+    description: Someone tried to hijack a high-risk agent's instructions through the content it was given to process.
     when:
       risk_tier: [high]
       detection: {entity_prefix: INJECTION, min_score: 0.5}

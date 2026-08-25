@@ -21,7 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..ids import span_id as new_span_id
-from ..models import Decision, DetectionFinding, DetectorRun, Span, TaintTag, Trace, utcnow
+from ..models import Agent, Decision, DetectionFinding, DetectorRun, Span, TaintTag, Trace, utcnow
 
 # OpenLLMetry / OTel GenAI semantic conventions.
 ATTR_SYSTEM = "gen_ai.system"
@@ -170,6 +170,15 @@ def full_trace(session: Session, trace_id: str) -> dict[str, Any] | None:
         session.scalars(select(DetectionFinding).where(DetectionFinding.trace_id == trace_id))
     )
     taints = list(session.scalars(select(TaintTag).where(TaintTag.trace_id == trace_id)))
+    agent = session.get(Agent, trace.agent_id) if trace.agent_id else None
+
+    # A detector run has no FK to the decision it fed — decisions instead carry a
+    # `detector_run_ids` list — so invert it here once rather than making every
+    # caller (e.g. the guardrail-feedback form) re-derive "which decision was this?".
+    decision_by_run: dict[str, str] = {}
+    for d in decisions:
+        for run_id in d.detector_run_ids or []:
+            decision_by_run[run_id] = d.id
 
     findings_by_run: dict[str, list[dict[str, Any]]] = {}
     for f in findings:
@@ -191,6 +200,7 @@ def full_trace(session: Session, trace_id: str) -> dict[str, Any] | None:
             "id": trace.id,
             "agent": trace.agent_slug,
             "agent_id": trace.agent_id,
+            "agent_name": agent.name if agent else None,
             "session_id": trace.session_id,
             "environment": trace.environment,
             "started_at": _iso(trace.started_at),
@@ -242,6 +252,7 @@ def full_trace(session: Session, trace_id: str) -> dict[str, Any] | None:
                 "duration_ms": r.duration_ms,
                 "score": r.score,
                 "findings": findings_by_run.get(r.id, []),
+                "decision_id": decision_by_run.get(r.id),
             }
             for r in runs
         ],

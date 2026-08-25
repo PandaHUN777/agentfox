@@ -501,7 +501,7 @@ document at 13 ms), PII (native + Presidio), secrets, safety lexicon, schema, bu
 
 ---
 
-### Pillar 9 · Action Assurance ✗
+### Pillar 9 · Action Assurance ✅◐
 
 **What.** Deterministic analysis of **generated artefacts** — SQL, scripts, API bodies — before execution: operation class, targets, blast radius, reversibility, environment.
 
@@ -526,7 +526,7 @@ to engineers as `nometria analyse-action`. ◐ idempotency keys (P9-8) absent.
 
 ---
 
-### Pillar 10 · Entitlement & Disclosure Control ✗
+### Pillar 10 · Entitlement & Disclosure Control ✅◐
 
 **What.** Propagate the **end-user principal** through the agent into retrieval and tools; enforce that responses contain only what that human may see; detect over-permissioned retrieval.
 
@@ -550,7 +550,7 @@ declared seam, not an implementation.
 ---
 ## Layer C — Ground
 
-### Pillar 7 · Answerability & Abstention ✗
+### Pillar 7 · Answerability & Abstention ✅
 
 **What.** A declared **knowledge boundary** per agent; pre-flight classification of whether a question is answerable at all; forced templated abstention **before generation**.
 
@@ -657,7 +657,7 @@ And the mechanism it addresses is documented: *"A wrong decision at step 3 shape
 
 ---
 
-### Pillar 11 · Escalation Governance ✗◐
+### Pillar 11 · Escalation Governance ✅
 
 **What.** Declared escalation conditions; detection of **missed** escalation; context-complete hand-off; ownership and SLA.
 
@@ -723,7 +723,7 @@ against *qualifying* conversations rather than all traffic, which would flatter 
 
 ## Cross-cutting
 
-### Pillar 15 · Cost, Reliability & Degradation ✗
+### Pillar 15 · Cost, Reliability & Degradation ◐
 
 **What.** Circuit breakers, fallback chains, degradation ladders, hard token/spend caps, backpressure, cost attribution.
 
@@ -735,7 +735,12 @@ against *qualifying* conversations rather than all traffic, which would flatter 
 | **Commercial** | Portkey, Kong AI Gateway, Cloudflare AI Gateway, TrueFoundry |
 | **Their gap** | Gateways do routing and cost. **None tie spend to governance** — no "this agent's budget is exhausted, and here is the audit entry for the block". |
 
-**Our status.** ✗ `Budget` table counts; nothing enforces, no fallback, no circuit breaker.
+**Our status.** ◐ a fail-open/fail-closed degradation policy per control with an audit trail
+(`availability.py::service_fallback` — blocks once a control has been failing open past its time
+budget, rather than silently degrading forever) and a priority-aware rate limiter/load shedder
+ahead of governance (`AdmissionController` — P15-4 backpressure). ✗ no per-provider circuit
+breaker or model-fallback chain, no TPM/RPM token-based caps (P15-1/2/3), no cost attribution
+beyond agent-level (P15-5), no LiteLLM adapter (P15-6).
 
 **Requirements.** P15-1 circuit breaker per provider/model · P15-2 fallback chain and degradation ladder · P15-3 TPM/RPM limits with hard daily caps · P15-4 backpressure queueing · P15-5 cost attribution per agent/team/user/session/tool · P15-6 **LiteLLM adapter** where teams already run it.
 

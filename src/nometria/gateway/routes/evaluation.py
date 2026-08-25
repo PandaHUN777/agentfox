@@ -24,6 +24,7 @@ from ...evaluation import (
     run_campaign,
     sample_production,
     set_baseline,
+    set_slo,
     to_junit,
     to_sarif,
 )
@@ -31,6 +32,7 @@ from ...evaluation.adapters import available_runners, get_runner
 from ...evaluation.redteam import BUILTIN_PROBES
 from ...evaluation.runner import NativeEvalRunner, fit_envelope
 from ...models import (
+    Agent,
     EvalCase,
     EvalResult,
     EvalRun,
@@ -402,6 +404,37 @@ def slos(
     agent: str | None = None, session: Session = Depends(db), _user: User = Depends(current_user)
 ) -> dict[str, Any]:
     return {"slos": evaluate_slos(session, agent)}
+
+
+class SloIn(BaseModel):
+    agent: str
+    scorer: str
+    objective: str = ""
+    window: str = "7d"
+    target: float = Field(0.9, ge=0.0, le=1.0)
+
+
+@router.post("/eval/slos", status_code=201)
+def declare_slo(
+    payload: SloIn, session: Session = Depends(db), _user: User = Depends(require("eval"))
+) -> dict[str, Any]:
+    """Declare a reliability target for one agent+scorer pair.
+
+    Without this, `evaluate_slos` has nothing to measure against — a page that only
+    reads SLOs and never lets anyone set one is a dead end for every org that hasn't
+    already seeded them by hand.
+    """
+    if session.scalar(select(Agent).where(Agent.slug == payload.agent)) is None:
+        raise HTTPException(404, f"unknown agent '{payload.agent}'")
+    slo = set_slo(
+        session,
+        agent_slug=payload.agent,
+        scorer_key=payload.scorer,
+        objective=payload.objective,
+        window=payload.window,
+        target=payload.target,
+    )
+    return {"slo_id": slo.id, "agent": slo.agent_id, "scorer": slo.scorer_key, "target": slo.target}
 
 
 @router.get("/eval/scorers")

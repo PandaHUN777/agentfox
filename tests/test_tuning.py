@@ -10,6 +10,7 @@ from __future__ import annotations
 import datetime as dt
 
 import pytest
+from sqlalchemy import select
 
 from nometria.guardrails.base import Detection, DetectorResult
 from nometria.guardrails.pipeline import PipelineResult
@@ -246,6 +247,34 @@ def test_precision_is_reported_with_its_denominator(seeded):
     assert stats["precision"] == round(1 / 3, 3)
     assert stats["labelled"] == 3
     assert stats["sufficient_sample"] is False
+
+
+def test_precision_can_be_scoped_to_one_agent(seeded):
+    """A team with more than one agent needs to know which agent a detector is
+    actually noisy for, not a number blended across all of them."""
+    triage = seeded.scalar(select(Agent).where(Agent.slug == "support-triage"))
+    payments = seeded.scalar(select(Agent).where(Agent.slug == "payments-ops"))
+    seeded.add(
+        GuardrailFeedback(
+            decision_id=None, detector_key="pii.native", entity_type="PII_SSN",
+            label="false_positive", score=0.4, agent_id=triage.id,
+        )
+    )
+    seeded.add(
+        GuardrailFeedback(
+            decision_id=None, detector_key="pii.native", entity_type="PII_SSN",
+            label="true_positive", score=0.9, agent_id=payments.id,
+        )
+    )
+    seeded.flush()
+
+    triage_report = precision_report(seeded, agent_id=triage.id)
+    assert triage_report["detectors"]["pii.native"]["labelled"] == 1
+    assert triage_report["detectors"]["pii.native"]["false_positive"] == 1
+
+    payments_report = precision_report(seeded, agent_id=payments.id)
+    assert payments_report["detectors"]["pii.native"]["labelled"] == 1
+    assert payments_report["detectors"]["pii.native"]["true_positive"] == 1
 
 
 def test_no_recommendation_below_the_evidence_threshold(seeded):

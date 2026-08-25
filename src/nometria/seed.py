@@ -11,26 +11,38 @@ what lets the demo and the test suite share it.
 
 from __future__ import annotations
 
+import datetime as dt
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .answerability import FACT, PROCEDURE, declare_boundary
 from .compliance.catalog import sync_catalog, sync_obligations
 from .compliance.risk import assess
+from .entitlement import grant as grant_resource
+from .entitlement import upsert_principal
+from .escalation import Trigger, raise_handoff, record_turn
 from .identity import ensure_identity, grant_capability, issue_credential
 from .models import (
     SLO,
     Budget,
+    DriftWindow,
     EvalCase,
     EvalSuite,
+    Handoff,
+    McpToolSnapshot,
+    ResourceGrant,
     RetentionPolicy,
     RiskAssessment,
+    SourceRecord,
     User,
+    utcnow,
 )
 from .policy import load_from_dir, save_policy
+from .provenance import APPROVED, SYSTEM_OF_RECORD, register_source
 from .providers import script
-from .registry.service import register_agent, upsert_mcp_server, upsert_tool
+from .registry.service import register_agent, scan_mcp_server, upsert_mcp_server, upsert_tool
 
 # ---------------------------------------------------------------------------
 # Tools — `impact` is the axis every containment rule reasons over
@@ -289,14 +301,45 @@ def seed(session: Session, *, with_policies: bool = True) -> dict[str, Any]:
         )
 
     server = upsert_mcp_server(
-        session, "internal-tools", url="stdio://internal-tools", trust_level="internal"
+        session,
+        "internal-tools",
+        url="stdio://internal-tools",
+        trust_level="internal",
+        pinned_version="1.0.0",
     )
     summary["mcp_server"] = server.name
+    # NOM-DSC-05 needs a real snapshot to compare future scans against — without
+    # one, "has the tool surface drifted" has no baseline to answer from.
+    if (
+        session.scalar(
+            select(McpToolSnapshot).where(McpToolSnapshot.mcp_server_id == server.id)
+        )
+        is None
+    ):
+        scan_mcp_server(
+            session,
+            server,
+            [
+                {
+                    "name": "kb.search",
+                    "description": "Search the internal support knowledge base.",
+                    "inputSchema": {"type": "object", "properties": {"query": {"type": "string"}}},
+                },
+                {
+                    "name": "tickets.create",
+                    "description": "Open a support ticket on behalf of a customer.",
+                    "inputSchema": {"type": "object", "properties": {"summary": {"type": "string"}}},
+                },
+            ],
+        )
 
     # --- Agents, identities, capabilities ----------------------------
     credentials: dict[str, str] = {}
+    agents_by_slug: dict[str, Any] = {}
     for spec in AGENTS:
         agent = register_agent(session, **spec)
+        agent.is_seed = True
+        agents_by_slug[agent.slug] = agent
         identity = ensure_identity(session, agent)
         if not identity.credentials:
             _credential, raw = issue_credential(session, identity)
@@ -401,6 +444,155 @@ def seed(session: Session, *, with_policies: bool = True) -> dict[str, Any]:
             session.add(
                 RetentionPolicy(data_class=data_class, retain_days=days, redact_fields=fields)
             )
+    session.flush()
+
+    # --- Entitlement, escalation, boundary, provenance ----------------
+    # Each of these has a full working capability (routes, dashboard page, real
+    # detection logic) that a fresh environment never exercises on its own — the
+    # corresponding compliance control reads not_implemented not because the check
+    # is missing, but because nothing has ever called it. Seeding one real row per
+    # table is what makes NOM-IAM-07 / NOM-RTG-10 / NOM-RTG-11 / NOM-RTG-12 /
+    # NOM-EVL-02 computable out of the box.
+    triage = agents_by_slug.get("support-triage")
+    payments = agents_by_slug.get("payments-ops")
+
+    if triage is not None:
+        upsert_principal(
+            session,
+            "alex@example.com",
+            agent_id=triage.id,
+            display="Alex (Support Agent)",
+            groups=["support-team"],
+            clearances=[],
+        )
+        if (
+            session.scalar(
+                select(ResourceGrant).where(
+                    ResourceGrant.resource == "help-center-articles",
+                    ResourceGrant.principal == "support-team",
+                )
+            )
+            is None
+        ):
+            grant_resource(
+                session,
+                "help-center-articles",
+                principal="support-team",
+                principal_kind="group",
+                classes=[],
+            )
+
+        declare_boundary(
+            session,
+            agent_id=triage.id,
+            systems_of_record=["help-center-articles"],
+            coverage_months=12,
+            answerable_types=[FACT, PROCEDURE],
+            out_of_scope_topics=["legal advice", "medical advice"],
+            freshness_hours=24,
+        )
+
+        if session.scalar(select(DriftWindow).where(DriftWindow.agent_id == triage.slug)) is None:
+            now = utcnow()
+            session.add(
+                DriftWindow(
+                    agent_id=triage.slug,
+                    scorer_key="groundedness",
+                    window_start=now - dt.timedelta(days=1),
+                    window_end=now,
+                    n=12,
+                    mean=0.93,
+                    p50=0.95,
+                    p95=0.98,
+                    psi=0.04,
+                    ks=0.05,
+                    drifted=False,
+                )
+            )
+
+        if (
+            session.scalar(select(SourceRecord).where(SourceRecord.key == "help-center-articles"))
+            is None
+        ):
+            src = register_source(
+                session,
+                "help-center-articles",
+                title="Support help center",
+                tier=SYSTEM_OF_RECORD,
+                owner="priya@example.com",
+                domain="support",
+                updated_at_source=utcnow(),
+                freshness_sla_hours=168,
+            )
+            src.is_seed = True
+        if session.scalar(select(SourceRecord).where(SourceRecord.key == "crm-notes")) is None:
+            src = register_source(
+                session,
+                "crm-notes",
+                title="CRM account notes",
+                tier=APPROVED,
+                owner="priya@example.com",
+                domain="support",
+            )
+            src.is_seed = True
+
+    if (
+        payments is not None
+        and session.scalar(select(Handoff).where(Handoff.agent_id == payments.id)) is None
+    ):
+        # The hand-off's own context summarizes a 3-turn conversation ("turn 0:
+        # answered", "turn 1: declined", "turn 2: escalated") — recording the real
+        # turns behind it is what makes the Escalation page's own instruction
+        # ("click any conversation to see the transcript") actually work, instead
+        # of raising a hand-off with nothing underneath it to click into.
+        session_id = "seed-refund-dispute-1"
+        record_turn(
+            session,
+            session_id=session_id,
+            agent_id=payments.id,
+            user_text="My refund for order #48213 was denied. I want it reversed.",
+            agent_text="I can see the refund request — it was denied because the return "
+            "window closed 4 days ago. I'm not able to override that.",
+        )
+        record_turn(
+            session,
+            session_id=session_id,
+            agent_id=payments.id,
+            user_text="That's not good enough, the item arrived broken. I need this fixed today.",
+            agent_text="I understand this is frustrating, but I don't have the authority to "
+            "make an exception to the return window on a damaged-item claim.",
+            failed=True,
+        )
+        record_turn(
+            session,
+            session_id=session_id,
+            agent_id=payments.id,
+            user_text="I want a refund reversed and I want to speak to a manager.",
+            agent_text="I'm connecting you with a member of our team who can take this "
+            "further.",
+            escalated=True,
+        )
+        raise_handoff(
+            session,
+            agent_id=payments.id,
+            session_id=session_id,
+            trace_id=None,
+            triggers=[
+                Trigger(
+                    condition="explicit_request",
+                    detail="the customer asked for a manager",
+                    turn_index=2,
+                    severity="high",
+                )
+            ],
+            context={
+                "user_request": "I want a refund reversed and I want to speak to a manager.",
+                "conversation_summary": "Customer disputes a refund denial and asked for a human twice.",
+                "attempted_actions": ["turn 0: answered", "turn 1: declined", "turn 2: escalated"],
+                "blocking_reason": "explicit escalation request",
+                "customer_reference": session_id,
+            },
+        )
     session.flush()
 
     return summary

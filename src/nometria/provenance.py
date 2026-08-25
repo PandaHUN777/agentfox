@@ -22,15 +22,19 @@ caveated or blocked."*
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 import logging
 import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from sqlalchemy import select
+import httpx
+from sqlalchemy import create_engine, inspect, select
+from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
-from .models import SourceRecord, utcnow
+from .crypto import decrypt_secret, encrypt_secret
+from .models import SourceConnection, SourceRecord, utcnow
 
 log = logging.getLogger(__name__)
 
@@ -74,6 +78,217 @@ def register_source(
     record.metadata_json = metadata or {}
     session.flush()
     return record
+
+
+CONNECTION_KINDS = ("database", "api")
+
+
+def register_connection(
+    session: Session,
+    source_key: str,
+    *,
+    kind: str,
+    config: dict[str, Any],
+    credential: str | None = None,
+) -> SourceConnection:
+    """Attach a real connection to a registered source — see `SourceConnection`.
+
+    `credential` is the raw password or token; it is encrypted before it ever
+    touches the session, and the caller's copy is not retained by this function.
+    Re-registering the same `source_key` updates the existing connection rather
+    than creating a second one, matching `register_source`'s own upsert shape.
+    """
+    if kind not in CONNECTION_KINDS:
+        raise ValueError(f"kind must be one of {CONNECTION_KINDS}")
+    if session.scalar(select(SourceRecord).where(SourceRecord.key == source_key)) is None:
+        raise ValueError(f"no such source: {source_key}")
+
+    connection = session.scalar(
+        select(SourceConnection).where(SourceConnection.source_key == source_key)
+    )
+    if connection is None:
+        connection = SourceConnection(source_key=source_key)
+        session.add(connection)
+    connection.kind = kind
+    connection.config_json = config
+    if credential:
+        connection.credential_encrypted = encrypt_secret(credential)
+    session.flush()
+    return connection
+
+
+#: A tier is a human's claim; validation is us actually fetching the thing and
+#: checking it exists. Only `http(s)://` keys are fetchable — a table name or a
+#: doc id has nothing behind it to GET, and pretending otherwise would just be a
+#: second unverified claim wearing a "verified" badge.
+_URL_RE = re.compile(r"^https?://", re.IGNORECASE)
+
+#: Same bound as discovery_openapi.fetch_spec: a source we don't own is not a place
+#: to spend unbounded time or bandwidth checking.
+VALIDATE_TIMEOUT_SECONDS = 10.0
+VALIDATE_MAX_BYTES = 2_000_000
+
+NOT_FETCHABLE = "not_fetchable"
+VALID = "valid"
+CHANGED = "changed"
+UNREACHABLE = "unreachable"
+
+#: Postgres is the one dialect this deployment already ships a driver for
+#: (`psycopg`, the `postgres` optional extra) — a bounded connect timeout is only
+#: passed for it. Any other dialect degrades to whatever `create_engine` does with
+#: no explicit timeout, and a missing driver surfaces as an honest `unreachable`
+#: rather than a crash, same as an unpinned optional dependency anywhere else in
+#: this codebase.
+_TIMED_DIALECTS = {"postgresql", "postgresql+psycopg", "postgresql+psycopg2"}
+
+
+def _finish(
+    session: Session, record: SourceRecord, now: dt.datetime, status: str, **extra: Any
+) -> dict[str, Any]:
+    record.last_validated_at = now
+    record.last_validation_status = status
+    if "content_hash" in extra:
+        record.content_hash = extra["content_hash"]
+    session.flush()
+    return {"key": record.key, "status": status, **extra}
+
+
+def _validate_database(
+    session: Session, record: SourceRecord, connection: SourceConnection, now: dt.datetime
+) -> dict[str, Any]:
+    """F2 for a source that's a customer's own database, not a URL.
+
+    Validated by connecting and introspecting structure — table names by
+    default, or a specific table's columns when `check_table` is configured —
+    rather than by fetching rows. A schema fingerprint is what actually answers
+    "has this source drifted out from under its tier"; row content is not.
+    """
+    config = connection.config_json or {}
+    dialect = config.get("dialect", "postgresql")
+    password = decrypt_secret(connection.credential_encrypted) if connection.credential_encrypted else None
+    url = URL.create(
+        drivername=dialect,
+        username=config.get("username") or None,
+        password=password,
+        host=config.get("host") or None,
+        port=config.get("port") or None,
+        database=config.get("database") or None,
+    )
+    connect_args = {"connect_timeout": int(VALIDATE_TIMEOUT_SECONDS)} if dialect in _TIMED_DIALECTS else {}
+
+    engine = create_engine(url, connect_args=connect_args)
+    try:
+        with engine.connect() as conn:
+            inspector = inspect(conn)
+            check_table = config.get("check_table")
+            if check_table:
+                columns = inspector.get_columns(check_table)
+                fingerprint = sorted((c["name"], str(c["type"])) for c in columns)
+            else:
+                fingerprint = sorted(inspector.get_table_names())
+    except Exception as exc:  # driver missing, auth failure, host unreachable — all "can't verify"
+        return _finish(session, record, now, UNREACHABLE, reason=f"could not connect: {exc}")
+    finally:
+        engine.dispose()
+
+    new_hash = hashlib.sha256(repr(fingerprint).encode()).hexdigest()
+    status = VALID if record.content_hash in (None, new_hash) else CHANGED
+    result = _finish(session, record, now, status, content_hash=new_hash)
+    if status == CHANGED:
+        result["reason"] = (
+            "connected successfully but the schema changed since it was last validated "
+            "— the tier a human assigned may no longer describe what's there"
+        )
+    return result
+
+
+def _validate_api(
+    session: Session, record: SourceRecord, connection: SourceConnection, now: dt.datetime
+) -> dict[str, Any]:
+    """F2 for an enterprise knowledge base — Confluence, SharePoint, Notion and
+    similar are all an authenticated REST endpoint under the hood, and that is
+    the primitive this validates against rather than a vendor-specific SDK.
+    """
+    config = connection.config_json or {}
+    base_url = config.get("base_url", "")
+    headers = {}
+    if connection.credential_encrypted:
+        header_name = config.get("auth_header", "Authorization")
+        token = decrypt_secret(connection.credential_encrypted)
+        prefix = config.get("auth_prefix", "Bearer ")
+        headers[header_name] = f"{prefix}{token}" if header_name == "Authorization" else token
+
+    try:
+        resp = httpx.get(
+            base_url, headers=headers, timeout=VALIDATE_TIMEOUT_SECONDS, follow_redirects=True
+        )
+        resp.raise_for_status()
+    except httpx.HTTPError as exc:
+        return _finish(session, record, now, UNREACHABLE, reason=f"'{base_url}' could not be fetched: {exc}")
+
+    new_hash = hashlib.sha256(resp.content[:VALIDATE_MAX_BYTES]).hexdigest()
+    status = VALID if record.content_hash in (None, new_hash) else CHANGED
+    result = _finish(session, record, now, status, content_hash=new_hash)
+    if status == CHANGED:
+        result["reason"] = (
+            f"'{base_url}' fetched successfully but its content changed since it was last "
+            f"validated — the tier a human assigned may no longer describe what's there"
+        )
+    return result
+
+
+def validate_source(session: Session, key: str, *, now: dt.datetime | None = None) -> dict[str, Any]:
+    """F2 — check that a registered source is actually there, not just declared.
+
+    Registering a source tiers it; it says nothing about whether the content
+    behind it still resolves, or has moved out from under the tier a human
+    assigned it. Three ways to check, in order of preference:
+
+    1. A registered `SourceConnection` — a real database or an authenticated
+       enterprise API, validated by actually connecting (see `_validate_database`
+       / `_validate_api`).
+    2. A plain `http(s)://` key — bounded fetch and content hash, same bound as
+       `discovery_openapi.fetch_spec`.
+    3. Anything else (a table name, a doc id with no connection registered) —
+       reported honestly as `not_fetchable` rather than faking a check that
+       never happened.
+    """
+    record = session.scalar(select(SourceRecord).where(SourceRecord.key == key))
+    if record is None:
+        raise ValueError(f"no such source: {key}")
+
+    now = now or utcnow()
+
+    connection = session.scalar(select(SourceConnection).where(SourceConnection.source_key == key))
+    if connection is not None and connection.kind == "database":
+        return _validate_database(session, record, connection, now)
+    if connection is not None and connection.kind == "api":
+        return _validate_api(session, record, connection, now)
+
+    if not _URL_RE.match(key):
+        return _finish(
+            session,
+            record,
+            now,
+            NOT_FETCHABLE,
+            reason=f"'{key}' is not a fetchable URL — nothing to check content against",
+        )
+
+    try:
+        resp = httpx.get(key, timeout=VALIDATE_TIMEOUT_SECONDS, follow_redirects=True)
+        resp.raise_for_status()
+    except httpx.HTTPError as exc:
+        return _finish(session, record, now, UNREACHABLE, reason=f"'{key}' could not be fetched: {exc}")
+
+    new_hash = hashlib.sha256(resp.content[:VALIDATE_MAX_BYTES]).hexdigest()
+    status = VALID if record.content_hash in (None, new_hash) else CHANGED
+    result = _finish(session, record, now, status, content_hash=new_hash)
+    if status == CHANGED:
+        result["reason"] = (
+            f"'{key}' fetched successfully but its content changed since it was last "
+            f"validated — the tier a human assigned may no longer describe what's there"
+        )
+    return result
 
 
 def source_tier(session: Session, key: str) -> str:

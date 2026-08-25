@@ -13,8 +13,11 @@ the question means the same three months as "Q1" in the source.
 from __future__ import annotations
 
 import datetime as dt
+import hashlib
 
+import httpx
 import pytest
+from sqlalchemy import select
 
 from nometria.integrity import (
     assess_integrity,
@@ -25,21 +28,27 @@ from nometria.integrity import (
     detect_unit_mismatch,
     detect_unmatched_records,
 )
-from nometria.models import Agent, Finding, utcnow
+from nometria.models import Agent, Finding, SourceRecord, utcnow
 from nometria.provenance import (
     APPROVED,
+    CHANGED,
     EXTERNAL,
+    NOT_FETCHABLE,
     SYSTEM_OF_RECORD,
+    UNREACHABLE,
     UNVERIFIED,
+    VALID,
     assess_provenance,
     detect_fabricated_citations,
     detect_source_conflict,
     domain_breach,
     freshness_breach,
+    register_connection,
     register_source,
     source_tier,
     tier_allows,
     uncited_claims,
+    validate_source,
 )
 
 # ---------------------------------------------------------------------------
@@ -119,6 +128,213 @@ def test_an_sla_with_no_recorded_update_is_a_breach(seeded):
 
 def test_a_source_without_an_sla_is_not_checked(seeded):
     assert freshness_breach(register_source(seeded, "static-doc")) is None
+
+
+# ---------------------------------------------------------------------------
+# F2 — content validation: a tier is a claim, this is us actually checking
+# ---------------------------------------------------------------------------
+
+
+def test_a_non_url_key_is_reported_not_fetchable_rather_than_faked(seeded):
+    """A table name or doc id has nothing behind it to GET — validating it should
+    say so honestly, not silently mark it valid."""
+    register_source(seeded, "warehouse.finance.q3_actuals", tier=SYSTEM_OF_RECORD)
+    result = validate_source(seeded, "warehouse.finance.q3_actuals")
+    assert result["status"] == NOT_FETCHABLE
+    record = seeded.scalar(select(SourceRecord).where(SourceRecord.key == "warehouse.finance.q3_actuals"))
+    assert record.last_validation_status == NOT_FETCHABLE
+    assert record.last_validated_at is not None
+
+
+def test_a_url_source_is_hashed_and_marked_valid_on_first_check(seeded, monkeypatch):
+    url = "https://docs.example.com/pricing"
+    register_source(seeded, url, tier=APPROVED)
+
+    class _Resp:
+        content = b"pricing content v1"
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr("nometria.provenance.httpx.get", lambda *a, **k: _Resp())
+    result = validate_source(seeded, url)
+    assert result["status"] == VALID
+    assert result["content_hash"] == hashlib.sha256(b"pricing content v1").hexdigest()
+
+
+def test_changed_content_is_flagged_against_the_previously_recorded_hash(seeded, monkeypatch):
+    """The tier a human assigned may no longer describe what's actually there — that's
+    exactly the gap a name-only 'validation' can't see."""
+    url = "https://docs.example.com/pricing"
+    register_source(seeded, url, tier=APPROVED)
+
+    class _RespV1:
+        content = b"pricing content v1"
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr("nometria.provenance.httpx.get", lambda *a, **k: _RespV1())
+    first = validate_source(seeded, url)
+    assert first["status"] == VALID
+
+    class _RespV2:
+        content = b"pricing content v2 -- silently changed"
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr("nometria.provenance.httpx.get", lambda *a, **k: _RespV2())
+    second = validate_source(seeded, url)
+    assert second["status"] == CHANGED
+
+
+def test_an_unreachable_url_is_reported_rather_than_silently_passed(seeded, monkeypatch):
+    url = "https://docs.example.com/gone"
+    register_source(seeded, url, tier=APPROVED)
+
+    def _explode(*a, **k):
+        raise httpx.ConnectError("no route to host")
+
+    monkeypatch.setattr("nometria.provenance.httpx.get", _explode)
+    result = validate_source(seeded, url)
+    assert result["status"] == UNREACHABLE
+    record = seeded.scalar(select(SourceRecord).where(SourceRecord.key == url))
+    assert record.last_validation_status == UNREACHABLE
+
+
+def test_validating_an_unregistered_source_is_an_error(seeded):
+    with pytest.raises(ValueError):
+        validate_source(seeded, "https://docs.example.com/never-registered")
+
+
+# ---------------------------------------------------------------------------
+# Source connections — a database or an enterprise API, not just a URL
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def encryption_key(monkeypatch):
+    from cryptography.fernet import Fernet
+
+    from nometria.config import reset_settings_cache
+
+    monkeypatch.setenv("NOMETRIA_TOKEN_ENCRYPTION_KEY", Fernet.generate_key().decode())
+    reset_settings_cache()
+    yield
+    reset_settings_cache()
+
+
+def test_a_credential_is_never_stored_in_the_clear(seeded, encryption_key):
+    register_source(seeded, "internal-crm", tier=APPROVED)
+    connection = register_connection(
+        seeded,
+        "internal-crm",
+        kind="database",
+        config={"dialect": "postgresql", "host": "db.internal", "database": "crm"},
+        credential="hunter2",
+    )
+    assert connection.credential_encrypted is not None
+    assert "hunter2" not in connection.credential_encrypted
+
+
+def test_registering_a_connection_without_a_source_is_an_error(seeded, encryption_key):
+    with pytest.raises(ValueError):
+        register_connection(seeded, "never-registered", kind="api", config={})
+
+
+def test_an_unknown_connection_kind_is_rejected(seeded):
+    register_source(seeded, "some-source")
+    with pytest.raises(ValueError):
+        register_connection(seeded, "some-source", kind="ftp", config={})
+
+
+def test_a_database_connection_validates_by_introspecting_schema(seeded, tmp_path):
+    """No enterprise DB driver needed for this — SQLite is a real SQLAlchemy dialect,
+    so this exercises the actual connect-and-introspect path, not a mock of it."""
+    db_path = tmp_path / "crm.db"
+    import sqlite3
+
+    conn = sqlite3.connect(db_path)
+    conn.execute("CREATE TABLE customers (id INTEGER, name TEXT)")
+    conn.commit()
+    conn.close()
+
+    register_source(seeded, "crm-db", tier=SYSTEM_OF_RECORD)
+    register_connection(
+        seeded, "crm-db", kind="database", config={"dialect": "sqlite", "database": str(db_path)}
+    )
+
+    first = validate_source(seeded, "crm-db")
+    assert first["status"] == VALID
+
+    # Schema drift: a table appears that wasn't there at the last check.
+    conn = sqlite3.connect(db_path)
+    conn.execute("CREATE TABLE orders (id INTEGER)")
+    conn.commit()
+    conn.close()
+
+    second = validate_source(seeded, "crm-db")
+    assert second["status"] == CHANGED
+
+
+def test_a_database_connection_that_cannot_connect_is_unreachable(seeded):
+    register_source(seeded, "unreachable-db", tier=UNVERIFIED)
+    register_connection(
+        seeded,
+        "unreachable-db",
+        kind="database",
+        config={"dialect": "sqlite", "database": "/nonexistent/path/does-not-exist.db"},
+    )
+    result = validate_source(seeded, "unreachable-db")
+    assert result["status"] == UNREACHABLE
+
+
+def test_an_api_connection_sends_the_decrypted_credential(seeded, encryption_key, monkeypatch):
+    register_source(seeded, "confluence-space", tier=APPROVED)
+    register_connection(
+        seeded,
+        "confluence-space",
+        kind="api",
+        config={"base_url": "https://wiki.example.com/api/space", "auth_header": "Authorization"},
+        credential="secret-token-123",
+    )
+
+    seen = {}
+
+    def fake_get(url, *, headers=None, timeout=None, follow_redirects=None):
+        seen["url"] = url
+        seen["headers"] = headers
+
+        class _Resp:
+            content = b"space contents"
+
+            def raise_for_status(self):
+                pass
+
+        return _Resp()
+
+    monkeypatch.setattr("nometria.provenance.httpx.get", fake_get)
+    result = validate_source(seeded, "confluence-space")
+    assert result["status"] == VALID
+    assert seen["url"] == "https://wiki.example.com/api/space"
+    assert seen["headers"]["Authorization"] == "Bearer secret-token-123"
+
+
+def test_a_source_with_no_connection_still_falls_back_to_a_plain_url_check(seeded, monkeypatch):
+    """Registering a connection is opt-in — a source with none behaves exactly as
+    before, so existing sources don't silently change behaviour."""
+    register_source(seeded, "https://docs.example.com/plain", tier=APPROVED)
+
+    class _Resp:
+        content = b"plain content"
+
+        def raise_for_status(self):
+            pass
+
+    monkeypatch.setattr("nometria.provenance.httpx.get", lambda *a, **k: _Resp())
+    result = validate_source(seeded, "https://docs.example.com/plain")
+    assert result["status"] == VALID
 
 
 # ---------------------------------------------------------------------------

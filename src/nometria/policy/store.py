@@ -131,21 +131,41 @@ def save_policy(
         .order_by(PolicyVersion.version.desc())
     ).first()
 
-    if latest is not None and latest.body == body:
-        return policy, latest  # no-op edit; do not manufacture a version
-
-    version = PolicyVersion(
-        policy_id=policy.id,
-        version=(latest.version + 1) if latest else doc.version,
-        body=body,
-        compiled_json=doc.model_dump(),
-        author=author,
-        notes=notes,
-    )
-    session.add(version)
-    session.flush()
+    body_unchanged = latest is not None and latest.body == body
+    if body_unchanged:
+        version = latest  # no-op edit on the rules; do not manufacture a version
+    else:
+        version = PolicyVersion(
+            policy_id=policy.id,
+            version=(latest.version + 1) if latest else doc.version,
+            body=body,
+            compiled_json=doc.model_dump(),
+            author=author,
+            notes=notes,
+        )
+        session.add(version)
+        session.flush()
 
     mode = bind_mode or doc.mode
+    current_binding = (
+        session.scalar(
+            select(PolicyBinding).where(
+                PolicyBinding.policy_version_id == version.id,
+                PolicyBinding.effective_to.is_(None),
+            )
+        )
+        if body_unchanged
+        else None
+    )
+    if (
+        current_binding is not None
+        and current_binding.mode == mode
+        and current_binding.level == level
+        and current_binding.scope_id == scope_id
+        and current_binding.compose == compose
+    ):
+        return policy, version  # rules, mode, and hierarchy placement all unchanged
+
     _close_open_bindings(session, policy.id)
     session.add(
         PolicyBinding(

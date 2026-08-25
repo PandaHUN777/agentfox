@@ -217,7 +217,10 @@ def test_a_qualifying_conversation_that_never_escalated_is_detected(seeded, agen
         ],
         session_id="missed-1",
     )
-    result = detect_missed_escalation(seeded, raise_findings=False)
+    # agent_slug scopes this to support-triage — the seed demo carries a real,
+    # already-escalated qualifying conversation on payments-ops that would
+    # otherwise inflate "qualified" here.
+    result = detect_missed_escalation(seeded, raise_findings=False, agent_slug="support-triage")
     assert [m["session_id"] for m in result["missed"]] == ["missed-1"]
     assert result["qualified"] == 1
     assert result["missed_rate"] == 1.0
@@ -270,10 +273,11 @@ def test_scanning_twice_does_not_duplicate(seeded, agent_id):
 
 
 def test_the_read_only_endpoint_does_not_act(seeded, agent_id):
+    before = seeded.query(Handoff).count()  # the seed demo carries one real hand-off
     _conversation(seeded, agent_id, [("escalate", "ok", {})], session_id="ro-1")
     detect_missed_escalation(seeded, raise_findings=False)
     assert seeded.query(Finding).filter_by(type="missed_escalation").count() == 0
-    assert seeded.query(Handoff).count() == 0
+    assert seeded.query(Handoff).count() == before
 
 
 def test_the_missed_rate_is_measured_against_qualifying_conversations(seeded, agent_id):
@@ -282,7 +286,8 @@ def test_the_missed_rate_is_measured_against_qualifying_conversations(seeded, ag
     _conversation(seeded, agent_id, [("escalate", "ok", {})], session_id="q-1")
     _conversation(seeded, agent_id, [("escalate", "ok", {"escalated": True})], session_id="q-2")
     _conversation(seeded, agent_id, [("hours?", "9-5", {})], session_id="q-3")
-    result = detect_missed_escalation(seeded, raise_findings=False)
+    # agent_slug scopes this to support-triage — see the note above.
+    result = detect_missed_escalation(seeded, raise_findings=False, agent_slug="support-triage")
     assert result["conversations"] == 3
     assert result["qualified"] == 2
     assert result["missed_rate"] == 0.5
@@ -434,7 +439,8 @@ def test_a_genuine_resolution_is_not_flagged(seeded, agent_id):
 
 def test_the_report_carries_the_headline_metric(seeded, agent_id):
     _conversation(seeded, agent_id, [("get me a human", "I can help.", {})], session_id="rep-1")
-    report = escalation_report(seeded)
+    # agent_slug scopes this to support-triage — see the note above.
+    report = escalation_report(seeded, agent_slug="support-triage")
     assert report["qualified_for_escalation"] == 1
     assert report["missed_escalations"] == 1
     assert report["missed_rate"] == 1.0
@@ -481,6 +487,28 @@ def test_the_escalation_api(client):
         f"/api/escalation/handoffs/{handoffs[0]['id']}/acknowledge", headers=headers
     ).json()
     assert acked["status"] == "acknowledged"
+
+    # The queue and the report both need to answer "just this agent" — a mixed
+    # queue with no filter is exactly what a team with more than one agent hits.
+    # hr-screening (not payments-ops) is the clean "other agent" here — the seed
+    # demo carries a real hand-off for payments-ops to make NOM-RTG-10 computable.
+    filtered = client.get(
+        "/api/escalation/handoffs?agent=support-triage", headers=headers
+    ).json()["handoffs"]
+    assert filtered and all(h["agent_slug"] == "support-triage" for h in filtered)
+    other = client.get(
+        "/api/escalation/handoffs?agent=hr-screening", headers=headers
+    ).json()["handoffs"]
+    assert not other
+
+    report = client.get(
+        "/api/escalation/report?agent=support-triage", headers=headers
+    ).json()
+    assert report["handoffs"] == len(filtered)
+    empty_report = client.get(
+        "/api/escalation/report?agent=hr-screening", headers=headers
+    ).json()
+    assert empty_report["handoffs"] == 0
 
 
 def test_gateway_completions_record_a_conversation_turn(client):

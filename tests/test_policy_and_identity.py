@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from sqlalchemy import select
 
 from nometria.identity import (
     check_capability,
@@ -215,6 +216,60 @@ def test_policy_versions_are_immutable(session):
     assert session.get(type(v1), v1.id).body != v2.body  # v1 unchanged
 
 
+def test_changing_hierarchy_placement_alone_rebinds_without_a_new_version(session):
+    """A save that only moves a policy in the org/team/agent/user hierarchy — same
+    rules, different level/scope — must still take effect. The no-op-edit check
+    above only guards against manufacturing an identical *version*; it must not
+    also silently swallow a real binding change."""
+    from nometria.models import PolicyBinding
+
+    doc = PolicyDocument.from_yaml(POLICY)
+    _policy, v1 = save_policy(session, doc, author="a", level="org", scope_id="*")
+
+    _policy, v2 = save_policy(session, doc, author="a", level="team", scope_id="finance")
+    assert v2.id == v1.id  # still a no-op on the rules body — no new version
+
+    binding = session.scalar(
+        select(PolicyBinding).where(
+            PolicyBinding.policy_version_id == v2.id,
+            PolicyBinding.effective_to.is_(None),
+        )
+    )
+    assert binding.level == "team"
+    assert binding.scope_id == "finance"
+
+
+def test_policies_can_be_filtered_by_the_agents_they_actually_govern(client):
+    """A policy's real scope is its declared `scope.agents` glob, not a one-to-one
+    assignment — one policy commonly governs many agents by pattern. The Policies
+    page filter has to agree with what `active_policies` actually enforces."""
+    from .conftest import as_user
+
+    headers = as_user("marcus@example.com")
+    scoped = """
+key: hr-only
+mode: observe
+default_effect: allow
+scope:
+  agents: ["hr-*"]
+rules:
+  - id: injection.block
+    when: {detection: {entity_prefix: INJECTION, min_score: 0.8}}
+    effect: block
+"""
+    created = client.post("/api/policies", json={"body": scoped}, headers=headers)
+    assert created.status_code == 201
+
+    hr = client.get("/api/policies?agent=hr-screening", headers=headers).json()
+    assert any(p["key"] == "hr-only" for p in hr["policies"])
+
+    triage = client.get("/api/policies?agent=support-triage", headers=headers).json()
+    assert not any(p["key"] == "hr-only" for p in triage["policies"])
+    # The seeded baseline policy scopes to "*" — it governs every agent, so it
+    # should still show up for an agent the new policy doesn't cover.
+    assert any(p["key"] == "baseline" for p in triage["policies"])
+
+
 def test_mode_promotion_is_recorded(session):
     save_policy(session, PolicyDocument.from_yaml(POLICY), author="a", bind_mode="observe")
     binding = set_mode(session, "test", "enforce")
@@ -398,3 +453,26 @@ def test_unanswered_approval_fails_closed(session):
     assert expire_stale_approvals(session) == 1
     session.refresh(request)
     assert request.status == "expired"
+
+
+def test_a_single_polled_approval_expires_without_the_bulk_list_route(client, session):
+    """The SDK polls `GET /api/approvals/{id}`, never the bulk list — a stale
+    approval must not read "pending" forever just because nothing else happened to
+    call `GET /api/approvals` first (NOM-IAM-03: unanswered fails closed)."""
+    import datetime as dt
+
+    from .conftest import as_user
+
+    headers = as_user("marcus@example.com")
+    request = request_approval(
+        session,
+        agent_id=None,
+        tool_key="payments.transfer",
+        arguments={"amount": 1},
+        reason="tainted argument",
+    )
+    request.expires_at = utcnow() - dt.timedelta(minutes=1)
+    session.commit()
+
+    body = client.get(f"/api/approvals/{request.id}", headers=headers).json()
+    assert body["status"] == "expired"

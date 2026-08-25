@@ -358,10 +358,16 @@ def test_not_connected_and_nothing_wrong_are_distinguishable(client):
 
 
 def test_enforcement_is_the_last_step(client):
-    """Everything before it is safe to run without reading further."""
+    """Promotes the content-based policies from observe to enforce.
+
+    Tool containment is a separate, structural policy that already enforces from
+    step 1 — this step is about the content-based policies specifically, not "the
+    only thing that blocks anything" (that claim was inaccurate and got corrected
+    after a UX audit caught it contradicting the Policies page).
+    """
     body = client.get("/api/onboarding", headers=as_user("admin@example.com")).json()
     assert body["steps"][-1]["id"] == "enforce"
-    assert "only step that blocks" in body["steps"][-1]["detail"]
+    assert "observe to enforce" in body["steps"][-1]["detail"]
 
 
 def test_attention_is_quiet_when_there_is_nothing_to_do(client):

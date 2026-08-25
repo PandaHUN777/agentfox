@@ -97,6 +97,7 @@ rules:
 
   # --- Safety (NOM-RTG-05) --------------------------------------------
   - id: safety.harm
+    description: Content that's unsafe to send — hate speech, self-harm encouragement, and similar.
     when:
       detection: {entity_prefix: SAFETY, min_score: 0.7}
     effect: block
@@ -106,6 +107,7 @@ rules:
 
   # --- Output contract (NOM-RTG-07) -----------------------------------
   - id: schema.violation
+    description: The response doesn't match the format it was supposed to come back in.
     when:
       surface: [output]
       detection: {entity_prefix: SCHEMA, min_score: 0.9}

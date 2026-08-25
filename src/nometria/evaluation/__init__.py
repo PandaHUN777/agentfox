@@ -7,7 +7,7 @@ whether it was safe (principle X-5).
 
 from . import adapters, drift, gating, redteam, runner, scorers, silent_failure
 from .adapters import PromptfooRunner, get_runner
-from .drift import DriftReport, evaluate_slos, ks_statistic, psi
+from .drift import DriftReport, evaluate_slos, ks_statistic, psi, set_slo
 from .drift import compute as compute_drift
 from .gating import GateResult, Regression, gate, set_baseline, to_junit, to_sarif
 from .ragas_adapter import (
@@ -68,6 +68,7 @@ __all__ = [
     "scorers",
     "self_consistency",
     "set_baseline",
+    "set_slo",
     "silent_failure",
     "to_junit",
     "to_sarif",

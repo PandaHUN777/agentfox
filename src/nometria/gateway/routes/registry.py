@@ -29,6 +29,7 @@ from ...models import (
     Capability,
     Credential,
     Finding,
+    Handoff,
     Identity,
     McpServer,
     Tool,
@@ -174,6 +175,7 @@ def _agent_json(agent: Agent, session: Session | None = None) -> dict[str, Any]:
         "status": agent.status,
         "registered": agent.registered,
         "owned": agent.is_owned,
+        "is_seed": agent.is_seed,
         "declared_models": agent.declared_models,
         "declared_tools": agent.declared_tools,
         "data_classes": agent.data_classes,
@@ -290,6 +292,12 @@ def agent_posture(
             )
         )
     )
+    # Hand-offs are recorded independently of Trace/Decision — a conversation can
+    # escalate without ever producing a traced execution path (e.g. this agent's
+    # SDK only calls record_turn/raise_handoff directly). Counting only Trace and
+    # Decision rows here made a real, escalated conversation report as "no traffic
+    # recorded" on the one page most likely to be checked first during an incident.
+    handoffs = list(session.scalars(select(Handoff).where(Handoff.agent_id == agent.id)))
     by_verdict: dict[str, int] = {}
     for decision in decisions:
         by_verdict[decision.verdict] = by_verdict.get(decision.verdict, 0) + 1
@@ -301,6 +309,7 @@ def agent_posture(
         "decisions_by_verdict": by_verdict,
         "blocked": by_verdict.get("block", 0),
         "escalated": by_verdict.get("escalate", 0),
+        "handoffs": len(handoffs),
         "open_findings": [
             {"id": f.id, "type": f.type, "severity": f.severity, "title": f.title} for f in findings
         ],
@@ -470,11 +479,26 @@ def register_mcp_tools(
 # ---------------------------------------------------------------------------
 
 
+def _agent_slug_for_subject(session: Session, subject_type: str, subject_id: str | None) -> str | None:
+    """A finding's `subject_id` is an agent identifier — but call sites across the
+    codebase have raised findings with both the agent's DB id and its slug in that
+    field over time. Resolving both here, once, means the dashboard can always link
+    to `/agents/{slug}` without guessing which form a given finding used.
+    """
+    if subject_type != "agent" or not subject_id:
+        return None
+    agent = session.get(Agent, subject_id)
+    if agent is None:
+        agent = session.scalar(select(Agent).where(Agent.slug == subject_id))
+    return agent.slug if agent else None
+
+
 @router.get("/findings")
 def list_findings(
     status: str | None = "open",
     severity: str | None = None,
     type: str | None = None,
+    agent: str | None = None,
     limit: int = 200,
     session: Session = Depends(db),
     _user: User = Depends(current_user),
@@ -486,6 +510,14 @@ def list_findings(
         query = query.where(Finding.severity == severity)
     if type:
         query = query.where(Finding.type == type)
+    if agent:
+        # `subject_id` has been raised with both the agent's DB id and its slug
+        # across call sites over time (see `_agent_slug_for_subject`) — matching
+        # against both is what makes this filter reliable regardless of which
+        # form a given finding used.
+        record = session.scalar(select(Agent).where(Agent.slug == agent))
+        subject_ids = {agent, record.id} if record else {agent}
+        query = query.where(Finding.subject_type == "agent", Finding.subject_id.in_(subject_ids))
     return {
         "findings": [
             {
@@ -496,6 +528,7 @@ def list_findings(
                 "title": f.title,
                 "subject_type": f.subject_type,
                 "subject_id": f.subject_id,
+                "agent_slug": _agent_slug_for_subject(session, f.subject_type, f.subject_id),
                 "controls": f.control_keys,
                 "evidence": f.evidence_json,
                 "created_at": _iso(f.created_at),
@@ -520,6 +553,7 @@ def get_finding(
         "title": finding.title,
         "subject_type": finding.subject_type,
         "subject_id": finding.subject_id,
+        "agent_slug": _agent_slug_for_subject(session, finding.subject_type, finding.subject_id),
         "controls": finding.control_keys,
         "evidence": finding.evidence_json,
         "suppression_reason": finding.suppression_reason,
@@ -843,6 +877,10 @@ def list_approvals(
 def get_approval(
     approval_id: str, session: Session = Depends(db), _user: User = Depends(current_user)
 ) -> dict[str, Any]:
+    # The SDK polls this single-approval route, not the bulk list below — without
+    # expiring here too, a stale approval reads "pending" forever unless something
+    # else happens to hit /approvals first (NOM-IAM-03: unanswered must fail closed).
+    expire_stale_approvals(session)
     approval = session.get(ApprovalRequest, approval_id)
     if approval is None:
         raise HTTPException(404, "unknown approval")

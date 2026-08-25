@@ -114,6 +114,9 @@ class Agent(Base, TimestampMixin):
     data_classes: Mapped[list[str]] = mapped_column(JSON, default=list)
     first_seen_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
     last_seen_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    # Set only by `nometria seed` — a UX audit found seed/demo agents were
+    # indistinguishable from a real customer's own registrations anywhere in the UI.
+    is_seed: Mapped[bool] = mapped_column(Boolean, default=False)
 
     identities: Mapped[list[Identity]] = relationship(back_populates="agent")
 
@@ -575,6 +578,50 @@ class SourceRecord(Base, TimestampMixin):
     freshness_sla_hours: Mapped[int | None] = mapped_column(Integer)
     deprecated: Mapped[bool] = mapped_column(Boolean, default=False)
     metadata_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    #: Tiering a source is a claim that it's authoritative — these two fields are the
+    #: difference between that claim and a checked fact. A tier says a human decided
+    #: this source should be trusted; these say we actually went and looked at what's
+    #: there. Only ever set for a `key` that resolves to a fetchable URL — a doc id or
+    #: table name has nothing to fetch, and last_validated_at stays null for those,
+    #: honestly, rather than faking a check that never happened.
+    content_hash: Mapped[str | None] = mapped_column(String(64))
+    last_validated_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    last_validation_status: Mapped[str | None] = mapped_column(String(24))
+    #: Set only by `nometria seed` — see Agent.is_seed for why this exists.
+    is_seed: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class SourceConnection(Base, TimestampMixin):
+    """P8 — how to actually reach a source, for sources that are more than a
+    fetchable URL: an enterprise knowledge base or a customer's own database.
+
+    A registry key alone is a claim; this is what turns "validate" from a plain
+    HTTP GET into a real connector. `kind` picks which one:
+
+    * ``database`` — dialect/host/port/database/username in `config_json`, the
+      password held only as `credential_encrypted`. Validated by connecting and
+      introspecting schema, not by fetching arbitrary bytes.
+    * ``api`` — `base_url` and an `auth_header` name in `config_json`, the
+      bearer token or key held only as `credential_encrypted`. This is the one
+      connector that covers Confluence, SharePoint, Notion, Jira and similar —
+      they are all an authenticated REST endpoint under the hood, and that is
+      the primitive this wraps rather than a vendor-specific SDK per source.
+    """
+
+    __tablename__ = "source_connections"
+    __table_args__ = (
+        UniqueConstraint("org_id", "source_key", name="ux_source_connections_org_key"),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("con"))
+    #: Matches SourceRecord.key — one connection per registered source.
+    source_key: Mapped[str] = mapped_column(String(500), index=True)
+    kind: Mapped[str] = mapped_column(String(16))  # database | api
+    config_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    #: Never the raw password/token — see crypto.py. Nullable only because a
+    #: connection can in principle be unauthenticated (an internal API with no
+    #: auth), not because we ever store a secret in the clear.
+    credential_encrypted: Mapped[str | None] = mapped_column(Text)
 
 
 class KnowledgeBoundary(Base, TimestampMixin):

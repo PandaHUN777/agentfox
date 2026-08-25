@@ -22,12 +22,17 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from ...models import SourceRecord, User
+from ...crypto import DecryptionFailed, EncryptionNotConfigured
+from ...models import SourceConnection, SourceRecord, User
+from ...context_integrity import chunk_quality, document_quality
 from ...provenance import (
+    CONNECTION_KINDS,
     TIERS,
     assess_provenance,
     freshness_breach,
+    register_connection,
     register_source,
+    validate_source,
 )
 from ..deps import current_user, db, require
 
@@ -108,8 +113,16 @@ def list_sources(
     if domain:
         stmt = stmt.where(SourceRecord.domain == domain)
     records = list(session.scalars(stmt))
+    connection_kinds = {
+        c.source_key: c.kind
+        for c in session.scalars(
+            select(SourceConnection).where(
+                SourceConnection.source_key.in_([r.key for r in records])
+            )
+        )
+    }
     return {
-        "sources": [_json(r) for r in records],
+        "sources": [_json(r, connection_kind=connection_kinds.get(r.key)) for r in records],
         "tiers": list(TIERS),
         "counts": {t: sum(1 for r in records if r.tier == t) for t in TIERS},
     }
@@ -164,6 +177,42 @@ def assess(
     ).to_json()
 
 
+class ContextCheckIn(BaseModel):
+    #: A single document's extracted text, e.g. what a loader just pulled from a PDF.
+    text: str = ""
+    #: Or a list of chunks as they would reach the retriever — checked for the
+    #: assembly-level defects `document_quality` can't see (duplicates, near-empty
+    #: chunks, a boundary cut mid-sentence).
+    chunks: list[str] = Field(default_factory=list)
+    source_key: str = ""
+
+
+@router.post("/context-check")
+def context_check(
+    payload: ContextCheckIn, _user: User = Depends(current_user)
+) -> dict[str, Any]:
+    """P14 — would this document or chunk set be fit to enter the corpus?
+
+    A dry run against pasted or re-fetched text, in the same spirit as `/assess`:
+    the ingestion/chunk quality gate (`context_integrity.py`) existed with no route
+    at all — this is deliberately the lightweight wiring rather than an inline
+    retrieval-path gate, so a team can check a document before deciding whether to
+    build that gate at all.
+    """
+    if not payload.text and not payload.chunks:
+        raise HTTPException(400, "provide 'text' or 'chunks' to check")
+    result: dict[str, Any] = {}
+    if payload.text:
+        result["document"] = document_quality(payload.text, source_key=payload.source_key).to_json()
+    if payload.chunks:
+        findings = chunk_quality(payload.chunks)
+        result["chunks"] = {
+            "count": len(payload.chunks),
+            "findings": [f.to_json() for f in findings],
+        }
+    return result
+
+
 @router.delete("/{key:path}")
 def deprecate(
     key: str,
@@ -189,6 +238,76 @@ def deprecate(
     return _json(record)
 
 
+@router.post("/{key:path}/validate")
+def validate(
+    key: str,
+    session: Session = Depends(db),
+    _user: User = Depends(require("registry")),
+) -> dict[str, Any]:
+    """Actually fetch the source and check its content, rather than trust the tier.
+
+    A tier is a claim a human made once. This is us going and looking: fetching the
+    URL, hashing what came back, and flagging when it's changed since the last check
+    — or reporting honestly that the key isn't a URL at all and can't be checked this
+    way.
+    """
+    try:
+        return validate_source(session, key)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
+
+
+class ConnectionIn(BaseModel):
+    key: str = Field(description="Must match an already-registered source's key.")
+    kind: str = Field(description=" | ".join(CONNECTION_KINDS))
+    config: dict[str, Any] = Field(
+        default_factory=dict,
+        description=(
+            "database: dialect, host, port, database, username, check_table (optional). "
+            "api: base_url, auth_header (default 'Authorization'), auth_prefix (default 'Bearer ')."
+        ),
+    )
+    credential: str | None = Field(
+        None, description="The raw password or token — encrypted immediately, never stored in the clear."
+    )
+
+
+@router.post("/connections", status_code=201)
+def connect(
+    payload: ConnectionIn,
+    session: Session = Depends(db),
+    _user: User = Depends(require("registry")),
+) -> dict[str, Any]:
+    """Attach a real connector to a registered source — a database or an
+    authenticated enterprise API — so `validate` can check it for real instead
+    of assuming every source is a plain fetchable URL.
+    """
+    try:
+        connection = register_connection(
+            session,
+            payload.key,
+            kind=payload.kind,
+            config=payload.config,
+            credential=payload.credential,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except EncryptionNotConfigured as exc:
+        raise HTTPException(503, str(exc)) from exc
+    except DecryptionFailed as exc:
+        raise HTTPException(500, str(exc)) from exc
+    return _connection_json(connection)
+
+
+def _connection_json(connection: SourceConnection) -> dict[str, Any]:
+    return {
+        "source_key": connection.source_key,
+        "kind": connection.kind,
+        "config": connection.config_json,
+        "has_credential": bool(connection.credential_encrypted),
+    }
+
+
 def _kwargs(item: SourceIn) -> dict[str, Any]:
     return {
         "title": item.title,
@@ -202,7 +321,7 @@ def _kwargs(item: SourceIn) -> dict[str, Any]:
     }
 
 
-def _json(record: SourceRecord) -> dict[str, Any]:
+def _json(record: SourceRecord, *, connection_kind: str | None = None) -> dict[str, Any]:
     return {
         "key": record.key,
         "title": record.title,
@@ -214,5 +333,13 @@ def _json(record: SourceRecord) -> dict[str, Any]:
         ),
         "freshness_sla_hours": record.freshness_sla_hours,
         "deprecated": record.deprecated,
+        "is_seed": record.is_seed,
         "stale": bool(freshness_breach(record)),
+        "content_hash": record.content_hash,
+        "last_validated_at": (
+            record.last_validated_at.isoformat() if record.last_validated_at else None
+        ),
+        "last_validation_status": record.last_validation_status,
+        #: None means "plain URL or unfetchable key" — no connection registered.
+        "connection_kind": connection_kind,
     }

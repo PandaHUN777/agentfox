@@ -20,7 +20,7 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from .scorers import content_tokens, sentences
+from .scorers import BaseScorer, ScoreContext, ScoreResult, content_tokens, register_scorer, sentences
 
 log = logging.getLogger(__name__)
 
@@ -172,3 +172,70 @@ def score_dataset(samples: list[RagasSample], *, prefer_ragas: bool = True) -> d
         "implementation": scored[0].implementation,
         "per_sample": [s.to_json() for s in scored],
     }
+
+
+# ---------------------------------------------------------------------------
+# P4-9 wiring — Ragas metrics as selectable scorers (not just a standalone report)
+# ---------------------------------------------------------------------------
+
+
+def _context_list(ctx: ScoreContext) -> list[str]:
+    """Retrieved context, from wherever the harness put it — same keys the
+    groundedness scorer already checks, so a case only has to supply this once."""
+    for key in ("retrieved", "context", "documents", "sources"):
+        value = ctx.context.get(key)
+        if isinstance(value, list) and value:
+            return [v if isinstance(v, str) else str(v.get("text") or v.get("content") or "") for v in value]
+        if isinstance(value, str) and value.strip():
+            return [value]
+    return []
+
+
+def _ragas_sample(output: str, ctx: ScoreContext) -> RagasSample:
+    return RagasSample(
+        question=str(ctx.case_input.get("input") or ctx.case_input.get("question") or ""),
+        answer=output,
+        contexts=_context_list(ctx),
+        ground_truth=str(ctx.expected.get("output") or ctx.expected.get("ground_truth") or ""),
+    )
+
+
+class _RagasMetricScorer(BaseScorer):
+    """One selectable scorer per Ragas metric, named exactly as Ragas names it —
+    a team already fluent in Ragas vocabulary shouldn't have to relearn ours.
+    Falls back to the native lexical approximation where the real `ragas` package
+    isn't installed; `detail.implementation` on every result says which ran."""
+
+    metric: str = ""
+    kind = "ragas"
+    threshold = 0.7
+
+    def score(self, output: str, ctx: ScoreContext) -> ScoreResult:
+        scores = score_sample(_ragas_sample(output, ctx))
+        value = getattr(scores, self.metric)
+        return self._result(value, implementation=scores.implementation)
+
+
+class RagasFaithfulnessScorer(_RagasMetricScorer):
+    key, metric = "ragas_faithfulness", "faithfulness"
+
+
+class RagasAnswerRelevancyScorer(_RagasMetricScorer):
+    key, metric = "ragas_answer_relevancy", "answer_relevancy"
+
+
+class RagasContextPrecisionScorer(_RagasMetricScorer):
+    key, metric = "ragas_context_precision", "context_precision"
+
+
+class RagasContextRecallScorer(_RagasMetricScorer):
+    key, metric = "ragas_context_recall", "context_recall"
+
+
+for _rs in (
+    RagasFaithfulnessScorer(),
+    RagasAnswerRelevancyScorer(),
+    RagasContextPrecisionScorer(),
+    RagasContextRecallScorer(),
+):
+    register_scorer(_rs)

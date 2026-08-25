@@ -209,6 +209,33 @@ def compute(
     return report
 
 
+def set_slo(
+    session: Session,
+    *,
+    agent_slug: str,
+    scorer_key: str,
+    objective: str = "",
+    window: str = "7d",
+    target: float = 0.9,
+) -> SLO:
+    """Declare (or edit) a reliability target for one agent+scorer pair.
+
+    One row per (agent, scorer) — declaring the same pair again edits it rather
+    than piling up duplicates that `evaluate_slos` would then have to reconcile.
+    """
+    slo = session.scalar(
+        select(SLO).where(SLO.agent_id == agent_slug, SLO.scorer_key == scorer_key)
+    )
+    if slo is None:
+        slo = SLO(agent_id=agent_slug, scorer_key=scorer_key)
+        session.add(slo)
+    slo.objective = objective
+    slo.window = window
+    slo.target = target
+    session.flush()
+    return slo
+
+
 def evaluate_slos(session: Session, agent_slug: str | None = None) -> list[dict[str, Any]]:
     """Measure declared reliability targets and report error-budget burn (P4-7)."""
     query = select(SLO)

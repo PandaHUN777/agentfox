@@ -51,7 +51,20 @@ _HIGH_RISK_CUES = {
     "migration": ["visa", "asylum", "immigration", "border"],
     "biometric": ["biometric", "facial recognition", "emotion recognition"],
     "critical_infrastructure": ["safety component", "traffic", "water supply", "power grid"],
-    "medical": ["diagnos", "triage", "clinical", "patient care", "medical device"],
+    # Bare "triage" was too generic — it substring-matches "support-triage" and any
+    # other customer-service/IT-ticket agent whose purpose or slug just says
+    # "triages tickets", producing a false Annex III "medical" classification with
+    # nothing medical about the agent. Scoped to phrases that only occur in a
+    # clinical context.
+    "medical": [
+        "diagnos",
+        "clinical triage",
+        "patient triage",
+        "triage nurse",
+        "clinical",
+        "patient care",
+        "medical device",
+    ],
 }
 
 _PROHIBITED_CUES = [
@@ -327,6 +340,7 @@ def board_view(session: Session) -> dict[str, Any]:
     return {
         "generated_at": _iso(utcnow()),
         "inventory": inventory(session),
+        "seed_agents": sum(1 for a in agents if a.is_seed),
         "agents_by_risk_class": by_class,
         "high_risk_agents": [a.slug for a in agents if a.risk_tier in ("high", "prohibited")],
         "unassessed_agents": [

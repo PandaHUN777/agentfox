@@ -136,23 +136,43 @@ def capture_turn(
 def conversation(
     session_id: str, session: Session = Depends(db), _user: User = Depends(current_user)
 ) -> dict[str, Any]:
+    """The transcript plus why the policy did or didn't fire on it.
+
+    Includes the actual turn text — a missed-escalation row that says only
+    "3 triggers on turn 2" gives an operator nothing to act on; they need to see
+    what the user actually said.
+    """
     turns = list(
         session.scalars(select(ConversationTurn).where(ConversationTurn.session_id == session_id))
     )
     if not turns:
         raise HTTPException(404, "no turns recorded for that session")
     agent_id = next((t.agent_id for t in turns if t.agent_id), None)
+    agent = session.get(Agent, agent_id) if agent_id else None
     assessment = assess(turns, get_policy(session, agent_id))
+    handoff = session.scalar(
+        select(Handoff)
+        .where(Handoff.session_id == session_id)
+        .order_by(Handoff.created_at.desc())
+    )
     return {
         "session_id": session_id,
+        "agent_id": agent_id,
+        "agent_slug": agent.slug if agent else None,
+        "agent_name": agent.name if agent else None,
         "assessment": assessment.to_json(),
         "turn_depth": turn_depth_risk(turns, get_policy(session, agent_id)),
+        "handoff": _handoff_json(handoff, session) if handoff else None,
         "turns": [
             {
                 "index": t.turn_index,
+                "user_text": t.user_text,
+                "agent_text": t.agent_text,
+                "trace_id": t.trace_id,
                 "signals": t.signals_json,
                 "escalated": t.escalated,
                 "claims_resolution": t.resolved_claimed,
+                "created_at": t.created_at.isoformat() if t.created_at else None,
             }
             for t in sorted(turns, key=lambda t: t.turn_index)
         ],
@@ -176,9 +196,16 @@ def missed(
     Read-only: this endpoint does not raise findings or retroactive hand-offs, so it
     is safe to poll from a dashboard. `POST /scan` is the one that acts.
     """
-    return detect_missed_escalation(
+    result = detect_missed_escalation(
         session, since_hours=since_hours, agent_slug=agent, raise_findings=False
     )
+    agent_ids = {m["agent_id"] for m in result["missed"] if m.get("agent_id")}
+    slugs = {
+        a.id: a.slug for a in session.scalars(select(Agent).where(Agent.id.in_(agent_ids)))
+    } if agent_ids else {}
+    for m in result["missed"]:
+        m["agent_slug"] = slugs.get(m.get("agent_id"))
+    return result
 
 
 @router.post("/scan")
@@ -206,10 +233,11 @@ def scan(
 @router.get("/report")
 def report(
     since_hours: int = Query(24, ge=1, le=8760),
+    agent: str | None = None,
     session: Session = Depends(db),
     _user: User = Depends(current_user),
 ) -> dict[str, Any]:
-    return escalation_report(session, since_hours=since_hours)
+    return escalation_report(session, since_hours=since_hours, agent_slug=agent)
 
 
 # ---------------------------------------------------------------------------
@@ -248,19 +276,22 @@ def create_handoff(
         triggers=[],
         context=context,
     )
-    return _handoff_json(handoff)
+    return _handoff_json(handoff, session)
 
 
 @router.get("/handoffs")
 def list_handoffs(
     status: str | None = None,
+    agent: str | None = None,
     session: Session = Depends(db),
     _user: User = Depends(current_user),
 ) -> dict[str, Any]:
     stmt = select(Handoff).order_by(Handoff.created_at.desc())
     if status:
         stmt = stmt.where(Handoff.status == status)
-    return {"handoffs": [_handoff_json(h) for h in session.scalars(stmt)]}
+    if agent:
+        stmt = stmt.where(Handoff.agent_id == _agent_id(session, agent))
+    return {"handoffs": [_handoff_json(h, session) for h in session.scalars(stmt)]}
 
 
 @router.post("/handoffs/{handoff_id}/acknowledge")
@@ -276,17 +307,22 @@ def acknowledge(
     handoff.owner_user_id = user.id
     handoff.status = "acknowledged"
     session.flush()
-    return _handoff_json(handoff)
+    return _handoff_json(handoff, session)
 
 
-def _handoff_json(handoff: Handoff) -> dict[str, Any]:
+def _handoff_json(handoff: Handoff, session: Session) -> dict[str, Any]:
     completeness = handoff_completeness(handoff.context_json)
+    agent = session.get(Agent, handoff.agent_id) if handoff.agent_id else None
     return {
         "id": handoff.id,
         "session_id": handoff.session_id,
         "agent_id": handoff.agent_id,
+        "agent_slug": agent.slug if agent else None,
+        "agent_name": agent.name if agent else None,
+        "trace_id": handoff.trace_id,
         "status": handoff.status,
         "reason": handoff.reason,
+        "summary": (handoff.context_json or {}).get("conversation_summary"),
         "triggers": handoff.triggers_json,
         "owner_role": handoff.owner_role,
         "due_at": handoff.due_at.isoformat() if handoff.due_at else None,
