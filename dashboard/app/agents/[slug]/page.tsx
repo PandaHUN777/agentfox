@@ -94,7 +94,7 @@ export default async function AgentDetail({
                     defaultValue={a.owner_team || ""}
                     style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 12, fontFamily: "inherit", width: 130 }}
                   />
-                  <button type="submit" className="btn-approve">{a.owner_email ? "Update" : "Assign owner"}</button>
+                  <button type="submit" className="btn-primary">{a.owner_email ? "Update" : "Assign owner"}</button>
                 </form>
               </td></tr>
               <tr><td className="muted">team</td><td>{a.owner_team || "—"}</td></tr>
@@ -205,7 +205,7 @@ export default async function AgentDetail({
             </div>
           </div>
           <div>
-            <button type="submit" className="btn-approve">
+            <button type="submit" className="btn-primary">
               {boundary ? "Update boundary" : "Declare boundary"}
             </button>
           </div>

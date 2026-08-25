@@ -92,7 +92,7 @@ export function TokenManager() {
             </div>
             <button
               type="button"
-              className="btn-approve"
+              className="btn-primary"
               style={{ marginTop: 10 }}
               onClick={() => navigator.clipboard.writeText(minted.token)}
             >
@@ -120,7 +120,7 @@ export function TokenManager() {
             />
           </div>
           {error && <div className="error small">{error}</div>}
-          <button type="submit" className="btn-approve" disabled={busy}>
+          <button type="submit" className="btn-primary" disabled={busy}>
             {busy ? "Generating…" : "Generate token"}
           </button>
         </form>

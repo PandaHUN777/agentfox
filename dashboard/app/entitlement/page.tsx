@@ -190,7 +190,7 @@ export default async function Entitlement() {
               <input type="text" name="clearances" placeholder="pii_sensitive" style={inputStyle} />
             </div>
             <div>
-              <button type="submit" className="btn-approve">Add person or group</button>
+              <button type="submit" className="btn-primary">Add person or group</button>
             </div>
           </form>
         </Panel>
@@ -269,7 +269,7 @@ export default async function Entitlement() {
               </div>
             </div>
             <div>
-              <button type="submit" className="btn-approve">Add grant</button>
+              <button type="submit" className="btn-primary">Add grant</button>
             </div>
           </form>
         </Panel>

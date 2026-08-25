@@ -125,7 +125,7 @@ export default async function Evals({
               type="text" name="description" placeholder="description (optional)"
               style={{ flex: 1, minWidth: 200, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
             />
-            <button type="submit" className="btn-approve">Create suite</button>
+            <button type="submit" className="btn-primary">Create suite</button>
           </form>
         </div>
       </div>

@@ -31,7 +31,7 @@
   --bad: #b91c1c;
   --bad-bg: #fee2e2;
   --dim-bg: #edeff3;
-  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --r-1: 7px; --r-2: 9px; --r-3: 13px; --r-4: 20px; --r-pill: 999px;
   --e-1: 0 1px 2px rgba(20, 22, 30, 0.04), 0 1px 3px rgba(20, 22, 30, 0.04);
   --e-2: 0 6px 16px rgba(20, 22, 30, 0.08), 0 2px 6px rgba(20, 22, 30, 0.05);
@@ -101,9 +101,10 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font: 14px/1.55 var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
-  letter-spacing: -0.006em;
+  letter-spacing: -0.011em;
 }
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 
@@ -150,6 +151,7 @@ a:hover { text-decoration: underline; }
 
 .btn-github,
 .btn-scan,
+.btn-primary,
 .btn-approve,
 .btn-reject {
   display: inline-flex;
@@ -169,6 +171,18 @@ a:hover { text-decoration: underline; }
   transition: border-color .12s, background .12s, color .12s, box-shadow .12s;
 }
 .btn-scan:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-weak); }
+/* The primary action on a page — solid, monochrome, no color semantics attached.
+   Green/red stay reserved for genuine accept/reject judgement calls (.btn-approve/
+   .btn-reject below); a "Create suite" or "Generate token" button isn't approving
+   anything, and dressing every primary action in traffic-light color is what reads
+   as a template rather than a considered surface. */
+.btn-primary {
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+.btn-primary:hover { opacity: 0.88; }
+.btn-primary:disabled { opacity: 0.45; cursor: default; }
 .btn-approve { border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); color: var(--ok); }
 .btn-approve:hover { background: var(--ok-bg); border-color: var(--ok); }
 .btn-reject { border-color: color-mix(in srgb, var(--bad) 45%, var(--border)); color: var(--bad); margin-left: 6px; }

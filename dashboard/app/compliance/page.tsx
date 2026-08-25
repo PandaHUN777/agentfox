@@ -83,7 +83,7 @@ export default async function Compliance({
             catalog version changes.
           </p>
           <form action="/api/compliance/sync" method="POST">
-            <button type="submit" className="btn-approve">
+            <button type="submit" className="btn-primary">
               Load control catalog
             </button>
           </form>
@@ -317,7 +317,7 @@ export default async function Compliance({
                               style={inputStyle}
                             />
                           </label>
-                          <button type="submit" className="btn-approve" style={{ fontSize: 12 }}>
+                          <button type="submit" className="btn-primary" style={{ fontSize: 12 }}>
                             Record assessment
                           </button>
                         </form>
@@ -373,7 +373,7 @@ export default async function Compliance({
                   <input type="date" name="period_to" style={inputStyle} />
                 </div>
               </div>
-              <button type="submit" className="btn-approve">Build evidence package</button>
+              <button type="submit" className="btn-primary">Build evidence package</button>
             </form>
           </div>
 

@@ -74,7 +74,7 @@ function AddSourceForm() {
           </div>
         </div>
         <div>
-          <button type="submit" className="btn-approve">Add source</button>
+          <button type="submit" className="btn-primary">Add source</button>
         </div>
       </form>
     </Panel>

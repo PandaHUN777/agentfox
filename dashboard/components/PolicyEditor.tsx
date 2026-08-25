@@ -217,7 +217,7 @@ function RuleBuilder({ onAdd }: { onAdd: (yaml: string) => void }) {
       </div>
 
       <div className="row" style={{ gap: 10, alignItems: "center" }}>
-        <button type="button" className="btn-approve" onClick={add} disabled={surfaces.length === 0}>
+        <button type="button" className="btn-primary" onClick={add} disabled={surfaces.length === 0}>
           Add this rule
         </button>
         {justAdded && <span className="small" style={{ color: "var(--ok)" }}>Added below — click Validate, then Save new version to make it real.</span>}
@@ -361,7 +361,7 @@ export function PolicyEditor({
         <button type="button" className="btn-scan" onClick={validate} disabled={busy}>
           Validate
         </button>
-        <button type="button" className="btn-approve" onClick={save} disabled={busy}>
+        <button type="button" className="btn-primary" onClick={save} disabled={busy}>
           Save new version
         </button>
         {canEnforce && (

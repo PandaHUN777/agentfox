@@ -91,7 +91,7 @@ export default async function SuiteDetail({
               />
             </div>
             <div>
-              <button type="submit" className="btn-approve">Add case</button>
+              <button type="submit" className="btn-primary">Add case</button>
             </div>
           </form>
         </Panel>
@@ -151,7 +151,7 @@ export default async function SuiteDetail({
             </div>
           </div>
           <div>
-            <button type="submit" className="btn-approve" disabled={suite.cases.length === 0}>
+            <button type="submit" className="btn-primary" disabled={suite.cases.length === 0}>
               {suite.cases.length === 0 ? "Add a case first" : "Run"}
             </button>
           </div>
