@@ -329,6 +329,53 @@ def test_a_credential_with_an_expiry_does_not_crash_the_inline_path(ready):
             assert credential.active in (True, False)
 
 
+# ---------------------------------------------------------------------------
+# Self-service tokens (/api/tokens) — the CLI/SDK path had no way for an
+# already-signed-in dashboard user to get a token for their own scripts short of
+# the GitHub-login provisioning flow, which only ever mints one server-to-server
+# at sign-in.
+# ---------------------------------------------------------------------------
+
+
+def test_a_signed_in_user_can_mint_their_own_token(client):
+    from .conftest import as_user
+
+    body = client.post(
+        "/api/tokens", json={"name": "my-laptop"}, headers=as_user("dana@example.com")
+    ).json()
+    assert body["token"].startswith(API_KEY_PREFIX)
+    assert body["name"] == "my-laptop"
+
+    # And it actually authenticates against production-style token auth.
+    with session_scope() as session:
+        user = authenticate(session, authorization=f"Bearer {body['token']}", header_user=None)
+    assert user.email == "dana@example.com"
+
+
+def test_minted_tokens_are_listed_without_the_raw_value(client):
+    from .conftest import as_user
+
+    headers = as_user("aisha@example.com")
+    client.post("/api/tokens", json={"name": "ci-runner"}, headers=headers)
+    body = client.get("/api/tokens", headers=headers).json()
+    assert body["tokens"][0]["name"] == "ci-runner"
+    assert "token" not in body["tokens"][0]
+    assert body["tokens"][0]["key_prefix"]
+
+
+def test_a_revoked_self_service_token_stops_authenticating(client):
+    from .conftest import as_user
+
+    headers = as_user("priya@example.com")
+    minted = client.post("/api/tokens", json={"name": "temp"}, headers=headers).json()
+    token_id = client.get("/api/tokens", headers=headers).json()["tokens"][0]["id"]
+
+    client.post(f"/api/tokens/{token_id}/revoke", headers=headers)
+
+    with session_scope() as session, pytest.raises(AuthenticationRequired):
+        authenticate(session, authorization=f"Bearer {minted['token']}", header_user=None)
+
+
 def test_doctor_reports_the_authentication_posture(ready, monkeypatch):
     """The check most likely to be wrong, and most costly when it is."""
     from typer.testing import CliRunner

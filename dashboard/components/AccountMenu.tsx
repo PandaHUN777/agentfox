@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 /**
  * Was a bare "Sign out" text link — no avatar, name, email, or workspace shown
  * anywhere, in a product that is clearly multi-user. `<details>` gives a real
@@ -39,6 +41,9 @@ export function AccountMenu({
             <span className="small">{role}</span>
           </div>
         )}
+        <Link href="/settings/tokens" className="account-menu-row" style={{ display: "block" }}>
+          API tokens
+        </Link>
         <form action="/api/auth/logout" method="POST">
           <button type="submit" className="account-menu-signout">
             Sign out

@@ -24,6 +24,7 @@ from ...identity import (
 )
 from ...models import (
     Agent,
+    ApiToken,
     ApprovalRequest,
     Capability,
     Credential,
@@ -47,9 +48,90 @@ from ...registry.service import (
     upsert_mcp_server,
     upsert_tool,
 )
+from ..auth import issue_token
 from ..deps import current_user, db, require
 
 router = APIRouter(prefix="/api", tags=["registry", "identity"])
+
+
+# ---------------------------------------------------------------------------
+# Self-service API tokens — the CLI/SDK path had no way for an already-signed-in
+# dashboard user to get a token for their own scripts short of the GitHub-login
+# provisioning flow, which only ever mints one server-to-server at sign-in.
+# ---------------------------------------------------------------------------
+
+
+class TokenIn(BaseModel):
+    name: str = ""
+    ttl_days: int | None = 365
+
+
+@router.post("/tokens", status_code=201)
+def create_token(
+    payload: TokenIn, session: Session = Depends(db), user: User = Depends(current_user)
+) -> dict[str, Any]:
+    """Mint a token for the caller's own use. The raw value is returned once —
+    same guarantee as every other credential this platform issues."""
+    token, raw = issue_token(
+        session,
+        user,
+        name=payload.name or "self-service",
+        ttl_days=payload.ttl_days,
+        actor=user.email or user.id,
+        reason="self-service token generation",
+    )
+    chain.append(
+        session,
+        "token.self_issued",
+        actor_type="user",
+        actor_id=user.email or user.id,
+        subject_type="api_token",
+        subject_id=token.id,
+        payload={"name": token.name},
+    )
+    session.commit()
+    return {"id": token.id, "name": token.name, "token": raw, "expires_at": _iso(token.expires_at)}
+
+
+@router.get("/tokens")
+def list_tokens(session: Session = Depends(db), user: User = Depends(current_user)) -> dict[str, Any]:
+    tokens = session.scalars(
+        select(ApiToken).where(ApiToken.user_id == user.id).order_by(ApiToken.created_at.desc())
+    )
+    return {
+        "tokens": [
+            {
+                "id": t.id,
+                "name": t.name,
+                "key_prefix": t.key_prefix,
+                "created_at": _iso(t.created_at),
+                "expires_at": _iso(t.expires_at),
+                "revoked_at": _iso(t.revoked_at),
+            }
+            for t in tokens
+        ]
+    }
+
+
+@router.post("/tokens/{token_id}/revoke")
+def revoke_token(
+    token_id: str, session: Session = Depends(db), user: User = Depends(current_user)
+) -> dict[str, Any]:
+    token = session.get(ApiToken, token_id)
+    if token is None or token.user_id != user.id:
+        raise HTTPException(404, "no token with that id")
+    token.revoked_at = utcnow()
+    session.flush()
+    chain.append(
+        session,
+        "token.revoked",
+        actor_type="user",
+        actor_id=user.email or user.id,
+        subject_type="api_token",
+        subject_id=token.id,
+    )
+    session.commit()
+    return {"id": token.id, "revoked": True}
 
 
 # ---------------------------------------------------------------------------
