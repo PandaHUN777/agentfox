@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
-import { ApiDown, ControlStatus, DraftCaveat, Stat, pct, ts } from "@/components/ui";
+import { ApiDown, ControlStatus, DraftCaveat, InfoTip, Stat, pct, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -110,12 +110,9 @@ export default async function Compliance({
         <Stat
           n={pct(controls.posture.effectiveness)}
           label="effectiveness"
-          hint={`Of ${assessed} assessed control(s) — effective ÷ (effective + degraded + failing). The ${counts.not_implemented || 0} not-yet-implemented control(s) are excluded from this ratio, not counted as failing.`}
+          hint={`Measured against the ${assessed} control(s) with telemetry to assess, not all ${controls.controls.length} — effective ÷ (effective + degraded + failing). The ${counts.not_implemented || 0} not-yet-implemented control(s) are excluded from this ratio, not counted as failing.`}
         />
       </div>
-      <p className="small muted" style={{ marginTop: -8, marginBottom: 18 }}>
-        Effectiveness is measured against the {assessed} control(s) with telemetry to assess — not against all {controls.controls.length}.
-      </p>
 
       <div className="tabbar">
         {TABS.map((t) => (
@@ -141,33 +138,33 @@ export default async function Compliance({
           <h2 style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <span>Controls</span>
             {catalogLoaded && (
-              <form action="/api/compliance/compute" method="POST">
-                <button type="submit" className="btn-scan" style={{ fontWeight: 400 }}>
-                  Recompute status from telemetry
-                </button>
-              </form>
+              <div className="row" style={{ gap: 10 }}>
+                {counts.not_computed > 0 && (
+                  <span className="small muted">
+                    {counts.not_computed} never computed — needs real traffic, not a click.{" "}
+                    <Link href="/start">Connect an agent</Link>
+                  </span>
+                )}
+                <form action="/api/compliance/compute" method="POST">
+                  <button type="submit" className="btn-scan" style={{ fontWeight: 400 }}>
+                    Recompute status from telemetry
+                  </button>
+                </form>
+              </div>
             )}
           </h2>
-          <div className="legend">
-            <span className="legend-item"><span className="legend-swatch ok" /> effective</span>
-            <span className="legend-item"><span className="legend-swatch warn" /> degraded</span>
-            <span className="legend-item"><span className="legend-swatch bad" /> failing</span>
-            <span className="legend-item"><span className="legend-swatch dim" /> not implemented / not applicable / not computed</span>
-          </div>
-          {counts.not_computed > 0 && (
-            <div className="note-panel" style={{ marginBottom: 12 }}>
-              <strong>{counts.not_computed} of {controls.controls.length} controls have never been
-              computed</strong> — that's not the same as failing. A control is computed from real
-              usage (traces, decisions, audit entries) that this instance hasn't produced yet.
-              Clicking "Recompute status from telemetry" above won't help until there's real
-              traffic to compute it from — see <Link href="/start">Start here</Link> to connect
-              an agent, then come back and recompute.
-            </div>
-          )}
           <div className="panel scroll-x">
             <table>
               <thead>
-                <tr><th>control</th><th>what it checks</th><th>status</th><th>evidence / rationale</th></tr>
+                <tr>
+                  <th>control</th>
+                  <th>what it checks</th>
+                  <th>
+                    status
+                    <InfoTip text="Effective (green): telemetry confirms it works. Degraded (amber): partially confirmed. Failing (red): telemetry contradicts it. Grey: not implemented, not applicable, or not computed yet — a control catalogued but never assessed, which is different from failing." />
+                  </th>
+                  <th>evidence / rationale</th>
+                </tr>
               </thead>
               <tbody>
                 {controls.controls.map((c: any) => (
