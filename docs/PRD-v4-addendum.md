@@ -186,9 +186,18 @@ behind a click.
 
 Neither fix removed information — both moved it from *always visible* to *available on click*,
 which is precisely the "summary visible, detail on demand" split Decawork's inline-expand audit
-rows and EVO's collapsible panel already validate (§2.3 below). This is the general fix, not
-two isolated patches: **any table cell whose content is a sentence rather than a value is the
-same bug**, and it is worth a pass over every table in the app, not just these two.
+rows and EVO's collapsible panel already validate (§2.3 below).
+
+A full sweep of every table in the app followed, on the theory that a table cell whose content
+is a sentence rather than a value is the same bug wherever it recurs. Six more instances, all
+missing the `maxWidth`+`wrap` bound already standard elsewhere in the app (Policies' description
+column, Evals' objective column): `findings/[id]`'s generic evidence fallback (the table a dozen
+finding types with no bespoke view render through), `traces/[id]`'s rules-fired reason text,
+`policies/[key]`'s version-history notes, `agents/[slug]`'s effective-policy rule descriptions
+and SLO objectives, and both escalation pages' hand-off trigger detail. Left deliberately alone:
+escalation's transcript cells (`user_text`/`agent_text`) — that one is the actual conversation
+content, which is supposed to render in full, not a metadata field standing in for one. All
+fixed and pushed.
 
 ### 2.2 Confirmed, not yet fixed — a design call, not a bug
 
@@ -259,11 +268,10 @@ cadence (§1.4) · explicit ASI05 non-goal statement in PRD v3 §10.3 (§1.4, al
 do it alongside the L2.12 correction)
 
 ### Tranche 7 — dashboard UX
-§2.1 table-cell audit across the rest of the app (Approvals and Guardrails done; sweep
-Findings, Traces, Compliance, Escalation for the same pattern) · §2.2 Compliance page cut,
-pending confirmation · §2.4 items 1–2 next (real functional value); items 3–4 after (Overview/
-Board view and Trace timeline specifically); item 5 whenever someone is already touching that
-CSS. §2.3 nav density is flagged, not scheduled — it implies page consolidation, a bigger call.
+§2.1 table-cell audit — **done**, full sweep across the app. §2.2 Compliance scaffolding cut —
+**done**. §2.4 items 1–2 next (real functional value); items 3–4 after (Overview/Board view
+and Trace timeline specifically); item 5 whenever someone is already touching that CSS. §2.3
+nav density is flagged, not scheduled — it implies page consolidation, a bigger call.
 
 ### Non-goals this addendum reinforces
 Sandboxing an agent's own code execution (§1.4, ASI05) remains explicitly out of scope — this
