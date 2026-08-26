@@ -269,9 +269,19 @@ do it alongside the L2.12 correction)
 
 ### Tranche 7 — dashboard UX
 §2.1 table-cell audit — **done**, full sweep across the app. §2.2 Compliance scaffolding cut —
-**done**. §2.4 items 1–2 next (real functional value); items 3–4 after (Overview/Board view
-and Trace timeline specifically); item 5 whenever someone is already touching that CSS. §2.3
-nav density is flagged, not scheduled — it implies page consolidation, a bigger call.
+**done**. §2.3 nav density — **done**: Connect/API tokens folded into Start here, Guardrails
+into Policies, Escalation into Approvals, Board view into Compliance, all as tabs behind a
+redirect shim so old links still resolve; sidebar is 11 items now, not 16.
+
+§2.4 additive polish — items 1, 2, 3, 5 **done**: inline-expandable Findings/Traces rows,
+countdown expiry on tokens/suppressions/pending approvals, a persistent critical/high stat
+strip in the (now sticky) topbar, and an orange tone for `escalate` distinct from generic
+amber `warn`. Item 4 (drag-resizable/collapsible trace-timeline panel, state in localStorage)
+is deliberately **not built** — it's real interaction-design surface area (drag handles,
+size persistence, collapse/expand/maximize states, mobile behavior) for a panel that's
+already just a short list in the current data model, and the addendum ranked it last of the
+five for a reason. Revisit if a real deployment's span counts make the timeline long enough
+that resizing would matter.
 
 ### Non-goals this addendum reinforces
 Sandboxing an agent's own code execution (§1.4, ASI05) remains explicitly out of scope — this
