@@ -61,7 +61,7 @@ export default async function Overview() {
       <h1>Overview</h1>
       <p className="sub">
         What needs a human, first — check this daily. For a point-in-time summary
-        to print or send to someone outside the team, see <Link href="/board">Board
+        to print or send to someone outside the team, see <Link href="/compliance?tab=board">Board
         view</Link> instead.
       </p>
 
