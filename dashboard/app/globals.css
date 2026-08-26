@@ -1118,6 +1118,14 @@ select.input-select, input.input-text, textarea.input-text {
     backdrop-filter: saturate(1.8) blur(16px);
     -webkit-backdrop-filter: saturate(1.8) blur(16px);
   }
+  /* SideNav renders one unstyled <div> per nav group so the desktop layout can
+     stack them in a column with a label above each — on mobile nav.side becomes
+     a single flex row instead, but those wrapper divs have no flex context of
+     their own, so each group's links stacked vertically inside their div and
+     the divs wrapped instead of joining one scrollable row. display:contents
+     removes the wrapper from the box tree so its <a> children become direct
+     flex items of nav.side itself. */
+  nav.side > div:not(.brand):not(.theme-toggle) { display: contents; }
   nav.side .brand { padding: 4px 10px 4px 4px; flex: none; }
   nav.side .brand small { display: none; }
   nav.side .group { display: none; }
@@ -1131,6 +1139,16 @@ select.input-select, input.input-text, textarea.input-text {
   h1 { font-size: 20px; }
   .card .n { font-size: 22px; }
   .grid2 { grid-template-columns: 1fr; }
+  /* table's base rule is width:100% of its container, so on a narrow screen
+     it never actually exceeds that container's width for overflow-x to
+     trigger on — every cell's text wraps to fit instead, turning one row
+     into a screen-tall column of broken text. Applied to every .panel, not
+     just ones already opted into .scroll-x, since roughly a third of the
+     Panel call sites (Agent detail's Registration/Lineage tables, evidence
+     packages, run results, ...) never added that class and would otherwise
+     still break the same way. */
+  .panel { overflow-x: auto; }
+  .panel table { min-width: 900px; }
 }
 
 @media print {
