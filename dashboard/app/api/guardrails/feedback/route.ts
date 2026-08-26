@@ -13,7 +13,7 @@ const API_BASE = process.env.NOMETRIA_API_URL || "http://127.0.0.1:8080";
 export async function POST(req: NextRequest) {
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   const form = await req.formData();
-  const returnTo = String(form.get("return_to") || "/guardrails");
+  const returnTo = String(form.get("return_to") || "/policies?tab=guardrails");
   const target = new URL(returnTo, req.nextUrl.origin);
   if (!token) {
     target.searchParams.set("review_error", "not signed in");

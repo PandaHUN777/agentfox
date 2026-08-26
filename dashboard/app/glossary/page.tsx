@@ -51,7 +51,7 @@ export default function Glossary() {
               <td className="mono small">Detectors / Guardrails</td>
               <td className="small">
                 Runtime checks that run on every request as it happens — prompt injection,
-                PII, secrets, unsafe content. See <a href="/guardrails">Guardrails</a>.
+                PII, secrets, unsafe content. See <a href="/policies?tab=guardrails">Guardrails</a>.
               </td>
             </tr>
             <tr>
@@ -212,7 +212,7 @@ export default function Glossary() {
 
       <h2>Detector library names</h2>
       <p className="small muted" style={{ maxWidth: "70ch" }}>
-        The <a href="/guardrails">Guardrails</a> and <a href="/policies">Policies</a> pages
+        The <a href="/policies?tab=guardrails">Guardrails</a> and <a href="/policies">Policies</a> pages
         name the underlying open-source engine behind each detector, since which library
         caught something is itself useful debugging context:
       </p>

@@ -5,7 +5,8 @@ import { SESSION_COOKIE } from "@/lib/api";
 const API_BASE = process.env.NOMETRIA_API_URL || "http://127.0.0.1:8080";
 
 export async function POST(req: NextRequest) {
-  const target = new URL("/guardrails", req.nextUrl.origin);
+  const target = new URL("/policies", req.nextUrl.origin);
+  target.searchParams.set("tab", "guardrails");
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) {
     target.searchParams.set("review_error", "not signed in");

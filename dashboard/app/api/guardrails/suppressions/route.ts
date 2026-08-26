@@ -6,11 +6,13 @@ const API_BASE = process.env.NOMETRIA_API_URL || "http://127.0.0.1:8080";
 
 /**
  * Accept a filed false positive as a scoped, expiring exception. Only reachable
- * from a `false_positive` feedback row (see /guardrails) — the backend itself
- * rejects any other label, this just keeps the form from being offered at all.
+ * from a `false_positive` feedback row (see the Guardrail tuning tab on
+ * /policies) — the backend itself rejects any other label, this just keeps the
+ * form from being offered at all.
  */
 export async function POST(req: NextRequest) {
-  const target = new URL("/guardrails", req.nextUrl.origin);
+  const target = new URL("/policies", req.nextUrl.origin);
+  target.searchParams.set("tab", "guardrails");
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) {
     target.searchParams.set("review_error", "not signed in");
