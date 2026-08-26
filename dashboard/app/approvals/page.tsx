@@ -7,6 +7,27 @@ export const dynamic = "force-dynamic";
 const STATUSES = ["pending", "approved", "denied", "expired"];
 
 /**
+ * `reason` is every fired rule's reason joined with "; " — three or four full
+ * sentences is normal. Showing all of them inline blows one row out to seven
+ * lines next to five one-line columns. Show the first rule's reason (the one
+ * that actually decided the verdict) and a count for the rest, full text on
+ * hover — the same "summary visible, detail on demand" split the table uses
+ * for arguments (truncated + monospace) already, just applied here too.
+ */
+function ReasonCell({ reason }: { reason?: string }) {
+  if (!reason) return <span className="muted">—</span>;
+  const parts = reason.split(/;\s*/).filter(Boolean);
+  return (
+    <span className="row" style={{ gap: 6, flexWrap: "nowrap", maxWidth: 280 }} title={reason}>
+      <span className="small muted truncate" style={{ flex: 1, minWidth: 0 }}>{parts[0]}</span>
+      {parts.length > 1 && (
+        <span className="tag" style={{ flex: "0 0 auto" }}>+{parts.length - 1} more</span>
+      )}
+    </span>
+  );
+}
+
+/**
  * P2-3 — a human sign-off on one specific tool call, distinct from Escalation's
  * hand-offs (which transfer a whole conversation). This existed as an API with
  * no page: an agent that hit an approval gate had a working backend and no way
@@ -88,7 +109,7 @@ export default async function Approvals({
                     )}
                   </td>
                   <td className="mono small">{a.tool || "—"}</td>
-                  <td className="small wrap muted" style={{ maxWidth: 260 }}>{a.reason || "—"}</td>
+                  <td><ReasonCell reason={a.reason} /></td>
                   <td className="small wrap mono muted" style={{ maxWidth: 260, fontSize: 11 }}>
                     {a.arguments && Object.keys(a.arguments).length ? JSON.stringify(a.arguments) : "—"}
                   </td>

@@ -863,6 +863,14 @@ ol.steps li.done .step-title { color: var(--muted); }
   place-items: center;
   flex: 0 0 25px;
 }
+.truncate {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  cursor: help;
+}
 .account-summary { display: flex; flex-direction: column; line-height: 1.25; max-width: 150px; }
 .account-email { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .account-workspace { font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
