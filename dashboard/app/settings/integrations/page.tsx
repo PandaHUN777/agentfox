@@ -72,7 +72,11 @@ export default async function Integrations({
         Two ways to point this at something real instead of seeded demo data,
         depending on what you can (or want to) share: hand over read access to a
         repository, or just point at a live API you already run. Either way nothing
-        goes live until you approve it on the Agents and Policies pages.
+        goes live until you approve it on the Agents and Policies pages. This finds
+        the <strong>agents</strong> themselves — the code or endpoint that answers
+        requests. Looking to register the data those agents read from instead — a
+        database, wiki, or knowledge base used for retrieval? That&rsquo;s{" "}
+        <Link href="/sources">Sources</Link>.
       </p>
 
       {scan_error && <div className="error">Scan failed: {scan_error}</div>}
@@ -128,8 +132,10 @@ export default async function Integrations({
 
       {connectError && <ApiDown error={connectError} />}
 
-      <div className="grid2" style={{ alignItems: "start" }}>
-        {!repos ? (
+      {!repos ? (
+        // Neither option is connected yet — both cards are compact, so a
+        // side-by-side comparison actually works here.
+        <div className="grid2" style={{ alignItems: "start" }}>
           <Panel title="Give us codebase access">
             <div className="body">
               <p className="small muted">
@@ -147,71 +153,84 @@ export default async function Integrations({
               </a>
             </div>
           </Panel>
-        ) : (
-          <div>
-            <p className="small muted" style={{ maxWidth: "70ch" }}>
-              This is every repository the GitHub account{" "}
-              <strong>{repos.github_login}</strong> can see — your own projects and
-              anything shared with you, personal or your company's. We only read code
-              structure to guess what AI frameworks you're using; we never run,
-              execute, or modify anything in it. Look for the{" "}
-              <span className="tag ok">company account</span> tag to spot your
-              organization's repos among personal ones.
-            </p>
-            <Panel
-              title={`Repositories — ${repos.github_login}`}
-              note={<a href="/api/auth/github/login">reconnect</a>}
-            >
-              {repos.repos.length === 0 ? (
-                <Empty>No repositories visible to this GitHub account.</Empty>
-              ) : (
-                <RepoTable repos={repos.repos} />
-              )}
-            </Panel>
-          </div>
-        )}
 
-        <Panel title="Or point us at a hosted API">
-          <div className="body">
-            <p className="small muted" style={{ marginTop: 0 }}>
-              No repo access needed. Give us the live endpoint and, if you have one,
-              its OpenAPI/Swagger spec URL — we fetch and read the spec document only,
-              never call the API itself, and propose a draft agent from what it
-              describes.
-            </p>
-            <form action="/api/integrations/hosted-api/scan" method="POST" className="stack">
-              <Field
-                label="API endpoint"
-                type="url"
-                name="endpoint_url"
-                placeholder="https://api.yourcompany.com"
-                required
-              />
-              <Field
-                label="OpenAPI / Swagger spec URL (optional)"
-                type="url"
-                name="openapi_spec_url"
-                placeholder="https://api.yourcompany.com/openapi.json"
-              />
-              <Field
-                label="Docs URL (optional)"
-                type="url"
-                name="docs_url"
-                placeholder="https://docs.yourcompany.com"
-              />
-              <Field
-                label="What does it do?"
-                type="text"
-                name="purpose"
-                placeholder="Internal support-ticket assistant"
-              />
-              <button type="submit" className="btn-scan">
-                Connect &amp; scan
-              </button>
-            </form>
+          <HostedApiPanel />
+        </div>
+      ) : (
+        // GitHub is connected — the repo table needs real width to be usable,
+        // so it gets the full page instead of being squeezed into a half
+        // column next to a form a fraction of its size.
+        <>
+          <p className="small muted" style={{ maxWidth: "70ch" }}>
+            This is every repository the GitHub account{" "}
+            <strong>{repos.github_login}</strong> can see — your own projects and
+            anything shared with you, personal or your company's. We only read code
+            structure to guess what AI frameworks you're using; we never run,
+            execute, or modify anything in it. Look for the{" "}
+            <span className="tag ok">company account</span> tag to spot your
+            organization's repos among personal ones.
+          </p>
+          <Panel
+            title={`Repositories — ${repos.github_login}`}
+            note={<a href="/api/auth/github/login">reconnect</a>}
+          >
+            {repos.repos.length === 0 ? (
+              <Empty>No repositories visible to this GitHub account.</Empty>
+            ) : (
+              <RepoTable repos={repos.repos} />
+            )}
+          </Panel>
+
+          <div style={{ maxWidth: 480, marginTop: 20 }}>
+            <HostedApiPanel />
           </div>
-        </Panel>
-      </div>
+        </>
+      )}
     </>
+  );
+}
+
+function HostedApiPanel() {
+  return (
+    <Panel title="Or point us at a hosted API">
+      <div className="body">
+        <p className="small muted" style={{ marginTop: 0 }}>
+          No repo access needed. Give us the live endpoint and, if you have one,
+          its OpenAPI/Swagger spec URL — we fetch and read the spec document only,
+          never call the API itself, and propose a draft agent from what it
+          describes.
+        </p>
+        <form action="/api/integrations/hosted-api/scan" method="POST" className="stack">
+          <Field
+            label="API endpoint"
+            type="url"
+            name="endpoint_url"
+            placeholder="https://api.yourcompany.com"
+            required
+          />
+          <Field
+            label="OpenAPI / Swagger spec URL (optional)"
+            type="url"
+            name="openapi_spec_url"
+            placeholder="https://api.yourcompany.com/openapi.json"
+          />
+          <Field
+            label="Docs URL (optional)"
+            type="url"
+            name="docs_url"
+            placeholder="https://docs.yourcompany.com"
+          />
+          <Field
+            label="What does it do?"
+            type="text"
+            name="purpose"
+            placeholder="Internal support-ticket assistant"
+          />
+          <button type="submit" className="btn-scan">
+            Connect &amp; scan
+          </button>
+        </form>
+      </div>
+    </Panel>
   );
 }

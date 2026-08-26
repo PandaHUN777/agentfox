@@ -318,6 +318,10 @@ def run_campaign(
                     "surface": outcome.probe.surface,
                     "verdict": outcome.verdict,
                     "detections": outcome.detections,
+                    # The actual text sent through enforcement for this probe — not our
+                    # summary of it. A reader who doesn't trust "posture: 92%" can read
+                    # exactly what was tried and judge the verdict themselves.
+                    "payload": outcome.probe.payload,
                     **outcome.detail,
                 },
             )
@@ -333,6 +337,21 @@ def run_campaign(
         "by_category": _by_category(outcomes),
         "critical_breaches": [
             o.probe.key for o in outcomes if o.succeeded and o.probe.severity == "critical"
+        ],
+        # The actual prompt tried for every probe, not just the ones that got
+        # through — so a reader can see what "blocked" and "succeeded" actually
+        # mean here instead of trusting the aggregate numbers on their own.
+        "probes": [
+            {
+                "key": o.probe.key,
+                "category": o.probe.category,
+                "severity": o.probe.severity,
+                "description": o.probe.description,
+                "payload": o.probe.payload,
+                "verdict": o.verdict,
+                "succeeded": o.succeeded,
+            }
+            for o in outcomes
         ],
     }
     campaign.status = "completed"

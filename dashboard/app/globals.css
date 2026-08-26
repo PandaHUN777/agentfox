@@ -514,6 +514,7 @@ ol.steps li.done .step-title { color: var(--muted); }
 .note-panel strong { color: var(--text); }
 
 .info-tip {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -536,6 +537,151 @@ ol.steps li.done .step-title { color: var(--muted); }
   color: var(--accent);
   outline: none;
 }
+.info-tip-bubble {
+  position: absolute;
+  z-index: 40;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 320px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--e-2);
+  font-size: 12px;
+  font-style: normal;
+  font-family: inherit;
+  line-height: 1.45;
+  text-align: left;
+  white-space: normal;
+  cursor: auto;
+}
+/* Flip below the icon when there isn't room above (near the top of the page). */
+@media (max-height: 500px) {
+  .info-tip-bubble {
+    bottom: auto;
+    top: calc(100% + 8px);
+  }
+}
+
+/* --- Segmented control (type-first pickers) -------------------------------- */
+
+.segmented {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--r-2);
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  gap: 2px;
+}
+.segmented-option {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 550;
+  font-family: inherit;
+  padding: 6px 12px;
+  border-radius: var(--r-1);
+  cursor: pointer;
+  transition: background .12s, color .12s;
+}
+.segmented-option:hover { color: var(--text); }
+.segmented-option.active {
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--e-1);
+}
+
+/* --- Row action menu (Sources table and similar) --------------------------- */
+
+.row-menu { position: relative; display: inline-block; }
+.row-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 24px;
+  border-radius: var(--r-1);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.row-menu-trigger:hover, .row-menu-trigger[aria-expanded="true"] {
+  border-color: var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+}
+.row-menu-popover {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  right: 0;
+  width: max-content;
+  min-width: 190px;
+  padding: 6px;
+  border-radius: var(--r-2);
+  border: 1px solid var(--border);
+  background: var(--elevated);
+  box-shadow: var(--e-2);
+  text-align: left;
+}
+.row-menu-item {
+  display: block;
+  width: 100%;
+  padding: 7px 9px;
+  border: none;
+  background: transparent;
+  border-radius: var(--r-1);
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.row-menu-item:hover { background: var(--panel-2); }
+.row-menu-item.bad { color: var(--bad); }
+.row-menu-item.bad:hover { background: var(--bad-bg); }
+.row-menu-divider { height: 1px; margin: 5px 2px; background: var(--hairline); }
+.row-menu-form {
+  width: 280px;
+  max-width: min(280px, calc(100vw - 40px));
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 12px;
+  cursor: auto;
+}
+.row-menu-form-title {
+  font-size: 12.5px;
+  font-weight: 620;
+  margin-bottom: 10px;
+}
+.row-menu-form label { font-size: 12px; }
+.row-menu-form .segmented { display: flex; }
+.row-menu-form .segmented-option { flex: 1; }
+
+.btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--r-2);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.btn-cancel:hover { color: var(--text); background: var(--panel-2); }
 
 /* --- Brand ---------------------------------------------------------------- */
 

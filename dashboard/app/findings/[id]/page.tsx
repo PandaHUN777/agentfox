@@ -169,15 +169,61 @@ function RedteamEvidence({ evidence }: { evidence: any }) {
         </div>
       )}
 
-      {(evidence.critical_breaches || []).length > 0 && (
+      {evidence.probes?.length > 0 ? (
         <div>
-          <h3>Critical breaches</h3>
-          <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
-            {evidence.critical_breaches.map((p: string) => (
-              <li key={p} className="mono">{p}</li>
-            ))}
-          </ul>
+          <h3>Every prompt tried</h3>
+          <p className="small muted" style={{ marginTop: -4 }}>
+            The literal text sent through this agent's enforcement path for each
+            probe — read it yourself rather than trusting the posture score above.
+          </p>
+          <div className="panel scroll-x">
+            <table>
+              <thead>
+                <tr>
+                  <th>probe</th>
+                  <th>prompt tried</th>
+                  <th>verdict</th>
+                  <th>result</th>
+                </tr>
+              </thead>
+              <tbody>
+                {evidence.probes.map((p: any) => (
+                  <tr key={p.key}>
+                    <td className="small">
+                      <span className="mono">{p.key}</span>
+                      <div className="muted">{p.category}</div>
+                    </td>
+                    <td className="small mono wrap" style={{ maxWidth: 420 }}>{p.payload}</td>
+                    <td className="small">
+                      <span className={`tag ${p.verdict === "allow" ? "" : "warn"}`}>{p.verdict}</span>
+                    </td>
+                    <td className="small">
+                      <span className={`tag ${p.succeeded ? "bad" : "ok"}`}>
+                        {p.succeeded ? "got through" : "blocked"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
+      ) : (
+        (evidence.critical_breaches || []).length > 0 && (
+          <div>
+            <h3>Critical breaches</h3>
+            <p className="small muted" style={{ marginTop: -4 }}>
+              This campaign ran before prompts were recorded per finding — only the
+              probe names survived, not the text tried. Re-run the campaign to see
+              the actual prompts here.
+            </p>
+            <ul className="small" style={{ margin: 0, paddingLeft: 18 }}>
+              {evidence.critical_breaches.map((p: string) => (
+                <li key={p} className="mono">{p}</li>
+              ))}
+            </ul>
+          </div>
+        )
       )}
     </div>
   );

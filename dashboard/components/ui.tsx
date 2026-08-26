@@ -1,26 +1,9 @@
 /** Shared presentational pieces. */
 
 import Link from "next/link";
+import { InfoTip } from "./InfoTip";
 
-/**
- * A small "ⓘ" badge carrying a native tooltip. Unlike a bare `title=` on some
- * larger element, this is visibly hoverable — the whole point being that a user
- * scanning the page can tell there's an explanation available before they need
- * it, rather than discovering tooltips exist by accidentally hovering the right
- * pixel.
- */
-export function InfoTip({ text }: { text: string }) {
-  return (
-    <span
-      className="info-tip"
-      title={text}
-      aria-label={text}
-      tabIndex={0}
-    >
-      i
-    </span>
-  );
-}
+export { InfoTip } from "./InfoTip";
 
 /**
  * Every agent has a real display name (e.g. "Payments Operations Agent") — the
