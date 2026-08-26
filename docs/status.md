@@ -14,8 +14,8 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 19 ◐ |
 | **Absent** | 0 ✗ |
 | **Weighted coverage** | **77%** *(partial counts half)* |
-| **Tests** | 1061 |
-| **Lines** | 54,084 (src + tests) |
+| **Tests** | 1076 |
+| **Lines** | 55,015 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -27,7 +27,7 @@ in [traceability.md](traceability.md).
 | `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 8 | connector-based estate discovery (P1-8) absent |
 | `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 16 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 12 | no live IdP; Entra/Okta integration (P2-8) absent |
-| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 48 | model-based detectors wired but need an opt-in weights download |
+| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 52 | model-based detectors wired but need an opt-in weights download |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 38 | cascade analysis is exactly as good as the trigger declarations it is given — an undeclared webhook stays invisible, and shell analysis remains a deny-list rather than a parser |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 16 | OpenFGA adapter is a declared seam, not an implementation |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 52 |  |
@@ -55,7 +55,7 @@ in [traceability.md](traceability.md).
 | `P16` | 16 Business rules | Business-process guardrails and the guardrail catalogue | ◐ partial | 32 | policy compilation is deterministic: 86% of a tuned document and 64% of a held-out one compile with no question. Prose with no parseable structure ("be courteous") is reported as inexpressible rather than guessed at; a model-assisted path for those sentences is not built |
 | `X-4` | Adoption | Protective controls reachable without writing code | ✅ built | 8 |  |
 | `X-3` | Adoption | Control-plane onboarding and attention-first home | ✅ built | 6 |  |
-| `I-1` | Integration | LangGraph-native SDK | ✅ built | 2 |  |
+| `I-1` | Integration | LangGraph-native SDK | ✅ built | 3 |  |
 | `I-2` | Integration | MCP inline governance | ✅ built | 15 |  |
 | `I-3` | Integration | FastAPI middleware and dependency | ✅ built | 7 |  |
 | `I-4` | Integration | LangSmith correlation | ✅ built | 7 |  |

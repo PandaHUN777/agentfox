@@ -35,8 +35,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from .agent_messaging import verify_message
 from .answerability import (
     classify_answerability,
     detect_over_refusal,
@@ -62,6 +64,7 @@ from .business.ladder import LadderDecision
 from .business.ladder import evaluate as evaluate_ladder
 from .business.store import load_ladders
 from .config import get_settings
+from .crypto import DecryptionFailed, decrypt_secret
 from .entitlement import (
     aggregation_risk,
     filter_retrieval,
@@ -94,12 +97,15 @@ from .integrations.correlation import (
 from .integrity import assess_integrity
 from .models import (
     Agent,
+    AgentMessageLog,
+    AgentSigningKey,
     Budget,
     Decision,
     DetectionFinding,
     DetectorRun,
     Finding,
     Identity,
+    MemoryEntry,
     TaintTag,
     Tool,
     Trace,
@@ -861,6 +867,241 @@ class Enforcer:
             "severity": "critical",
             "controls": ["NOM-RTG-09", "NOM-IAM-03"],
         }
+
+    # ------------------------------------------------------------------
+    # Memory write governance (P14, NOM-RTG-13) — closes OWASP ASI06
+    # ------------------------------------------------------------------
+
+    def guard_memory_write(
+        self,
+        *,
+        agent_slug: str,
+        content: str,
+        subject: str | None = None,
+        taint_source: str = "user",
+        provenance: dict[str, Any] | None = None,
+        verified_by: str | None = None,
+        ttl_seconds: int | None = None,
+        trace: Trace | None = None,
+        credential: str | None = None,
+        persist: bool = True,
+    ) -> EnforcementResult:
+        """Authorise a write into an agent's long-term memory before it commits.
+
+        A write into a vector store, a `mem0`-style store, or a LangGraph
+        checkpointer is governed the same way a tool call is — the detector
+        pipeline runs on the way *in*, not only at retrieval time, so a poisoned
+        entry that would be blocked on the way out never gets the chance to
+        persist on the way in.
+
+        Provenance is carried on the entry itself so a later retrieval can weight
+        or refuse it the way P8 already weights a source tier. An entry nobody
+        has verified (``verified_by=None``) defaults **closed**: it decays after
+        ``ttl_seconds`` (default: ``settings.memory_unverified_ttl_seconds``)
+        rather than persisting indefinitely — the opposite default from
+        :class:`Suppression`, deliberately, because an unconfirmed memory has not
+        earned the benefit of the doubt a human-authored suppression has.
+        """
+        agent, identity, _ = self.resolve(agent_slug, credential)
+        result = self.evaluate(
+            agent=agent,
+            identity=identity,
+            content=content,
+            surface="memory_write",
+            trace=trace,
+            taint_source=taint_source,
+            persist=persist,
+        )
+        # Mode-aware, like every other surface (R3: nothing blocks until a
+        # policy is promoted to enforce) — `result.verdict`, not the
+        # `effective_verdict` counterfactual, is what actually gates the
+        # write. Once enforced, a blocked or escalated write does not get to
+        # persist at all: that is the entire point of governing the write
+        # path rather than only the read path. tokenize/mask/redact still
+        # persist, but the *redacted* content (`result.content` is only set
+        # when the verdict rewrote it), matching every other surface.
+        if persist and result.verdict not in ("block", "escalate", "abstain"):
+            expires_at = None
+            if verified_by is None:
+                ttl = ttl_seconds if ttl_seconds is not None else self.settings.memory_unverified_ttl_seconds
+                expires_at = utcnow() + dt.timedelta(seconds=ttl)
+            entry = MemoryEntry(
+                agent_id=agent.id if agent else None,
+                subject=subject,
+                content=result.content if result.content is not None else content,
+                taint_source=taint_source,
+                provenance=provenance or {},
+                decision_id=result.decision_id,
+                verified_by=verified_by,
+                expires_at=expires_at,
+            )
+            self.session.add(entry)
+            self.session.flush()
+            result.taint["memory_entry_id"] = entry.id
+            result.taint["memory_expires_at"] = expires_at.isoformat() if expires_at else None
+        return result
+
+    # ------------------------------------------------------------------
+    # Inter-agent message security (P17, NOM-IAM-08) — closes OWASP ASI07
+    # ------------------------------------------------------------------
+
+    def guard_agent_message(
+        self,
+        *,
+        sender_slug: str,
+        content: str,
+        recipient_slug: str | None = None,
+        nonce: str | None = None,
+        timestamp: float | None = None,
+        signature: str | None = None,
+        trace: Trace | None = None,
+        persist: bool = True,
+    ) -> EnforcementResult:
+        """Authorise a sub-agent's message to another agent, as another agent's
+        untrusted claim rather than as a tool's return value.
+
+        Three checks layer on top of the generic detector pipeline, each mapped
+        to the corresponding half of OWASP ASI07:
+
+        * **Agent-card check** — the declared sender must resolve to a
+          registered agent, reusing :func:`registry.service.attest_registry`'s
+          declared-vs-observed comparison rather than a second attestation
+          mechanism. An unregistered sender cannot be vouched for.
+        * **Replay protection** — ``(sender, nonce)`` must be unique. A repeat
+          fails to insert into ``agent_message_log`` and the message is blocked
+          as a replay, full stop, before the detector pipeline even runs.
+        * **Signature verification** — where the sender has a registered signing
+          key (:mod:`agent_messaging`), the HMAC is checked. Where the transport
+          is external (a customer's own A2A/MCP bus) and no signature is
+          present, the message is reported **unsigned** rather than silently
+          trusted — same "declare the gap, don't hide it" convention P14 uses
+          for what it doesn't check.
+        """
+        agent, identity, _ = self.resolve(sender_slug, None)
+        agent_card_match = agent is not None and bool(agent.registered)
+        nonce = nonce or ""
+
+        replayed = False
+        if persist:
+            # A SAVEPOINT, not the whole transaction: a plain `session.rollback()`
+            # on the IntegrityError would discard *everything* pending on this
+            # session, not just this one failed insert — including, in the
+            # request path, the trace/span rows already added ahead of this call.
+            try:
+                with self.session.begin_nested():
+                    self.session.add(
+                        AgentMessageLog(
+                            sender_slug=sender_slug,
+                            recipient_slug=recipient_slug,
+                            nonce=nonce,
+                            signed=signature is not None,
+                            agent_card_match=agent_card_match,
+                            trace_id=trace.id if trace else None,
+                        )
+                    )
+                    self.session.flush()
+            except IntegrityError:
+                replayed = True
+
+        signature_valid: bool | None = None
+        if signature is not None and agent is not None and not replayed:
+            key_row = self.session.scalar(
+                select(AgentSigningKey).where(
+                    AgentSigningKey.agent_id == agent.id,
+                    AgentSigningKey.revoked_at.is_(None),
+                )
+            )
+            if key_row is None:
+                signature_valid = False
+            else:
+                try:
+                    raw_key = decrypt_secret(key_row.key_encrypted)
+                    signature_valid = verify_message(
+                        raw_key,
+                        sender=sender_slug,
+                        nonce=nonce,
+                        payload=content,
+                        timestamp=timestamp or 0.0,
+                        signature=signature,
+                        validity_seconds=self.settings.agent_message_validity_seconds,
+                    )
+                except DecryptionFailed:
+                    signature_valid = False
+
+        result = self.evaluate(
+            agent=agent,
+            identity=identity,
+            content=content,
+            surface="agent_message",
+            trace=trace,
+            taint_source="subagent",
+            persist=persist,
+        )
+
+        if replayed:
+            result.verdict = "block"
+            result.effective_verdict = "block"
+            result.reason = f"replayed message: (sender='{sender_slug}', nonce) was already seen"
+            result.rules_fired.append(
+                {
+                    "rule_id": "agent_message.replay",
+                    "effect": "block",
+                    "reason": result.reason,
+                    "controls": ["NOM-IAM-08"],
+                }
+            )
+        elif not agent_card_match:
+            effect = "escalate" if result.verdict == "allow" else result.verdict
+            result.verdict = effect
+            result.effective_verdict = effect
+            result.rules_fired.append(
+                {
+                    "rule_id": "agent_message.agent_card_mismatch",
+                    "effect": effect,
+                    "reason": (
+                        f"sender '{sender_slug}' is not a registered agent — "
+                        "its agent-card cannot be verified"
+                    ),
+                    "controls": ["NOM-IAM-08"],
+                }
+            )
+        elif signature_valid is False:
+            effect = "block" if result.verdict != "block" else result.verdict
+            result.verdict = effect
+            result.effective_verdict = effect
+            result.rules_fired.append(
+                {
+                    "rule_id": "agent_message.bad_signature",
+                    "effect": effect,
+                    "reason": "signature did not verify against the sender's registered signing key",
+                    "controls": ["NOM-IAM-08"],
+                }
+            )
+        elif signature is None:
+            result.taint["unsigned"] = True
+            result.rules_fired.append(
+                {
+                    "rule_id": "agent_message.unsigned",
+                    "effect": "observe",
+                    "reason": (
+                        "message arrived unsigned — either the transport is not "
+                        "Nometria's own, or the sender has no registered signing key"
+                    ),
+                    "controls": ["NOM-IAM-08"],
+                }
+            )
+
+        if persist:
+            log_row = self.session.scalar(
+                select(AgentMessageLog)
+                .where(AgentMessageLog.sender_slug == sender_slug, AgentMessageLog.nonce == nonce)
+                .order_by(AgentMessageLog.created_at.desc())
+            )
+            if log_row is not None:
+                log_row.signature_valid = signature_valid
+                log_row.decision_id = result.decision_id
+
+        return result
 
     # ------------------------------------------------------------------
     # Full inline path (gateway)

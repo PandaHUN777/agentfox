@@ -553,6 +553,87 @@ def guard_tool_call(
     return result.to_json()
 
 
+class GuardMemoryWriteRequest(BaseModel):
+    agent: str
+    content: str
+    subject: str | None = None
+    taint_source: str = "user"
+    provenance: dict[str, Any] = Field(default_factory=dict)
+    verified_by: str | None = None
+    ttl_seconds: int | None = None
+    session_id: str | None = None
+
+
+@router.post("/v1/guard/memory_write", summary="Authorise a memory write (P14, NOM-RTG-13)")
+def guard_memory_write(
+    payload: GuardMemoryWriteRequest,
+    session: Session = Depends(db),
+    credential: str | None = Depends(agent_credential),
+) -> dict[str, Any]:
+    from ...audit.trace import start_trace
+    from ...registry.service import slugify
+
+    enforcer = Enforcer(session)
+    agent, _identity, _shadow = enforcer.resolve(payload.agent, credential)
+    trace = start_trace(
+        session,
+        agent_id=agent.id if agent else None,
+        agent_slug=slugify(payload.agent),
+        session_id=payload.session_id,
+    )
+    result = enforcer.guard_memory_write(
+        agent_slug=payload.agent,
+        content=payload.content,
+        subject=payload.subject,
+        taint_source=payload.taint_source,
+        provenance=payload.provenance,
+        verified_by=payload.verified_by,
+        ttl_seconds=payload.ttl_seconds,
+        trace=trace,
+        credential=credential,
+    )
+    return result.to_json()
+
+
+class GuardAgentMessageRequest(BaseModel):
+    sender: str
+    content: str
+    recipient: str | None = None
+    nonce: str | None = None
+    timestamp: float | None = None
+    signature: str | None = None
+    session_id: str | None = None
+
+
+@router.post("/v1/guard/agent_message", summary="Authorise an inter-agent message (P17, NOM-IAM-08)")
+def guard_agent_message(
+    payload: GuardAgentMessageRequest,
+    session: Session = Depends(db),
+    credential: str | None = Depends(agent_credential),
+) -> dict[str, Any]:
+    from ...audit.trace import start_trace
+    from ...registry.service import slugify
+
+    enforcer = Enforcer(session)
+    agent, _identity, _shadow = enforcer.resolve(payload.sender, credential)
+    trace = start_trace(
+        session,
+        agent_id=agent.id if agent else None,
+        agent_slug=slugify(payload.sender),
+        session_id=payload.session_id,
+    )
+    result = enforcer.guard_agent_message(
+        sender_slug=payload.sender,
+        content=payload.content,
+        recipient_slug=payload.recipient,
+        nonce=payload.nonce,
+        timestamp=payload.timestamp,
+        signature=payload.signature,
+        trace=trace,
+    )
+    return result.to_json()
+
+
 # ---------------------------------------------------------------------------
 # OTLP ingest (X-1c) — the zero-integration surface
 # ---------------------------------------------------------------------------

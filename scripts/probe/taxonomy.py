@@ -375,10 +375,11 @@ SCENARIOS: list[Scenario] = [
         note=(
             "Cross-tenant memory was already prevented, and within a tenant the boundary is "
             "the subject the memory is about — an entry with no subject is reported rather "
-            "than allowed through. But this checks a list the caller hands in on each call; "
-            "there is no persistent memory store, no content validation on the write path, "
-            "no provenance weighting on a retrieved entry, and no expiry for one nobody has "
-            "verified (OWASP ASI06; PRD v4 addendum SS1.2)."
+            "than allowed through. This checks a list the caller hands in on each call; the "
+            "write path itself — content validation, provenance, expiry — is a separate "
+            "control, NOM-RTG-13, see L2.17. Still missing here specifically: nothing at "
+            "*retrieval* time reads a stored entry's provenance back and weights or refuses it "
+            "the way P8 weights a source tier."
         ),
         probe="probe_memory_binding",
         tags=["F8"],
@@ -659,6 +660,24 @@ SCENARIOS: list[Scenario] = [
         ),
         probe="probe_source_disagreement",
         tags=['F2'],
+    ),
+    Scenario(
+        "L2.17",
+        "L2 retrieval and context",
+        "A poisoned entry persists into long-term memory",
+        "Injected instructions or a leaked secret get written to the store an agent "
+        "retrieves from later, not just passed through once.",
+        control="Enforcer.guard_memory_write() — NOM-RTG-13, closes OWASP ASI06",
+        expect="covered",
+        note=(
+            "A write into memory now runs the same injection/secrets/PII detector pipeline "
+            "a tool call gets, on the new `memory_write` surface, before it commits — once "
+            "enforced, a write that would be blocked never reaches the `MemoryEntry` table at "
+            "all. An entry nobody has verified also carries a default-closed expiry rather "
+            "than persisting indefinitely."
+        ),
+        probe="probe_memory_write_governance",
+        tags=["F8"],
     ),
     # ---------------------------------------------------------------- L5
     Scenario(
@@ -1007,6 +1026,26 @@ SCENARIOS: list[Scenario] = [
             "both detected on the graph."
         ),
         probe="probe_delegation_cycle",
+    ),
+    Scenario(
+        "L6.7",
+        "L6 multi-agent",
+        "A forged or replayed message from another agent",
+        "A message claims to be from a registered agent it isn't, or the same "
+        "signed message is sent twice to force a repeated action.",
+        control="Enforcer.guard_agent_message() — NOM-IAM-08, closes OWASP ASI07",
+        expect="covered",
+        note=(
+            "Sub-agent output used to be folded into the tool_result surface — governed as a "
+            "tool's return value, not as another agent's claim. It now has its own "
+            "`agent_message` surface with three checks layered on the detector pipeline: an "
+            "unregistered sender fails the agent-card check, a repeated (sender, nonce) pair "
+            "is rejected as a replay before the pipeline even runs, and a signed message is "
+            "HMAC-verified against the sender's registered key. A message with no signature "
+            "at all is reported unsigned rather than silently trusted."
+        ),
+        probe="probe_agent_message_security",
+        tags=["F8"],
     ),
     Scenario(
         "L5.19",

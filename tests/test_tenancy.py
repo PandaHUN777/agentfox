@@ -429,6 +429,7 @@ def test_no_tenant_scoped_model_has_a_globally_unique_column(isolated_db):
         ("eval_results", "run_id"),
         ("eval_results", "case_id"),
         ("knowledge_boundaries", "agent_id"),
+        ("agent_signing_keys", "agent_id"),
     }
     offenders = []
 

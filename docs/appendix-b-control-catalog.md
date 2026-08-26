@@ -62,6 +62,7 @@ Each control declares: `id`, `title`, `objective`, `pillar`, `implemented_by` (t
 | **NOM-IAM-04** | Control-plane access is authenticated, role-based, and provisioned/de-provisioned through the identity system. | P2-4 | `User`, `Role`, session log | Art. 26 | GOVERN 2.1 | A.3 | CC6.1, CC6.2, CC6.6 | — | — | — |
 | **NOM-IAM-05** | Delegated (sub-agent) authority is narrowed, never widened, and the chain is recorded. | P2-5 | `DelegationEdge` w/ capability diff | Art. 14, Art. 15 | MANAGE 2.2 | A.9 | CC6.3 | LLM06 Excessive Agency | T3 Privilege Compromise | — |
 | **NOM-IAM-06** | Policy changes are simulated against recorded traffic and reviewed before enforcement. | P2-7 | `SimulationRun` diff report | Art. 17 (QMS) | MANAGE 4.1, GOVERN 1.2 | A.6 | **CC8.1 (change mgmt)** | — | — | — |
+| **NOM-IAM-08** | Inter-agent messages are evaluated on their own surface (not folded into tool results), signed and verified where the transport is ours, and rejected on replay; unsigned traffic is reported, not silently trusted. | P17-1 | `AgentMessageLog`, `AgentSigningKey` | Art. 15 | MANAGE 2.2 | A.9 | CC6.1, CC6.3 | — | **T12 Agent Communication Poisoning**, T16 Insecure Inter-Agent Protocol Abuse | — |
 
 ### NOM-RTG — Runtime Guardrails (Pillar 3)
 
@@ -75,6 +76,7 @@ Each control declares: `id`, `title`, `objective`, `pillar`, `implemented_by` (t
 | **NOM-RTG-06** | Enforcement operates within a documented latency budget; degradation is detected and recorded rather than silently skipped. | P3-6, P3-7 | `DetectorRun.duration_ms`, `Finding[type=budget_breach]` | Art. 15 | MEASURE 2.5 | A.6 | CC7.2, **A1.1 (availability)** | — | T4 Resource Overload | — |
 | **NOM-RTG-07** | Model output conforms to its declared schema/contract; violations are repaired, retried or blocked. | P3-9 | `DetectorRun[schema]` | Art. 15 | MEASURE 2.5 | A.6 | CC7.2 | **LLM05 Improper Output Handling** | — | — |
 | **NOM-RTG-08** | Consumption (calls, tokens, spend, recursion depth) is bounded per agent, and runaway loops are broken. | P3-10 | `Budget` counters, `Finding[type=loop]` | Art. 15 | MANAGE 2.2 | A.4 | A1.1 | **LLM10 Unbounded Consumption** | **T4 Resource Overload** | — |
+| **NOM-RTG-13** | Writes into an agent's long-term memory are validated by the detector pipeline before they commit and carry provenance/taint; unverified entries expire rather than persisting indefinitely. | P14-7 | `MemoryEntry`, `Decision[surface=memory_write]` | Art. 15 | MEASURE 2.7, MANAGE 2.2 | A.6, A.9 | CC6.6, CC6.7 | LLM04 Data & Model Poisoning | **T1 Memory Poisoning** | AML.T0020 Poison Training Data |
 
 ### NOM-EVL — Evaluation & Reliability (Pillar 4)
 
@@ -163,3 +165,4 @@ Before any mapping in this appendix is presented to a customer's auditor:
 | 2026-08-18 | 0.1.0-draft | Added NOM-RTG-09 (generated actions analysed before execution, P9) — 37 controls, 266 mappings. |
 | 2026-08-19 | 0.1.0-draft | Added NOM-RTG-10 (escalation governed, P11) and NOM-RTG-11 (knowledge boundary, P7) — 39 controls, 280 mappings. |
 | 2026-08-19 | 0.1.0-draft | Added NOM-RTG-12 (source authority, P8) and NOM-IAM-07 (entitlement, P10) — 41 controls, 300 mappings. |
+| 2026-08-26 | 0.1.0-draft | Added NOM-RTG-13 (memory write governance, P14-7, closes OWASP ASI06) and NOM-IAM-08 (inter-agent message security, new P17, closes OWASP ASI07). PRD v4 addendum §1.2/§1.3 proposed NOM-RTG-09 for the memory-write control; corrected to NOM-RTG-13 here since NOM-RTG-09 was already assigned (P9, generated-action risk analysis) — see PRD-v4-addendum.md's own correction note. |

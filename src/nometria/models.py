@@ -827,6 +827,89 @@ class Budget(Base, TimestampMixin):
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
 
 
+class MemoryEntry(Base, TimestampMixin):
+    """NOM-RTG-13 — P14 extension, closes OWASP ASI06 (Memory & Context Poisoning).
+
+    A write into whatever an agent uses as long-term memory (vector store, `mem0`
+    -style store, a LangGraph checkpointer) governed the same way a tool call is:
+    the detector pipeline runs on the way *in*, not only on the way back out at
+    retrieval time, and the entry carries the taint of whatever produced it so a
+    later retrieval can weight or refuse it the way P8 already weights a source
+    tier. ``verified_by`` is None until a human or a trusted process confirms the
+    entry — until then :attr:`active` defaults closed rather than open, unlike
+    :class:`Suppression`: an unconfirmed memory is not entitled to persist
+    indefinitely just because nobody has gotten around to revoking it.
+    """
+
+    __tablename__ = "memory_entries"
+    __table_args__ = (Index("ix_memory_entries_scope", "agent_id", "subject"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.memory_entry_id)
+    agent_id: Mapped[str | None] = mapped_column(String(40), index=True)
+    subject: Mapped[str | None] = mapped_column(String(200))
+    content: Mapped[str] = mapped_column(Text)
+    taint_source: Mapped[str] = mapped_column(String(32), default="user")
+    provenance: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    decision_id: Mapped[str | None] = mapped_column(String(40))
+    verified_by: Mapped[str | None] = mapped_column(String(200))
+    expires_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    revoked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+
+    @property
+    def active(self) -> bool:
+        if self.revoked_at is not None:
+            return False
+        if self.verified_by is not None:
+            return True
+        if self.expires_at is None:
+            return False
+        expires = as_aware(self.expires_at)
+        return expires > dt.datetime.now(dt.UTC)
+
+
+class AgentSigningKey(Base, TimestampMixin):
+    """NOM-IAM-08 — P17, closes OWASP ASI07 (agent-to-agent message integrity).
+
+    One HMAC secret per agent, encrypted at rest with the same primitive
+    :mod:`crypto` already uses for a connected GitHub token or a source
+    connection's credential. Signs and verifies A2A traffic where Nometria is
+    the transport (``nometria.auto()``-wrapped multi-agent calls); traffic on an
+    external A2A/MCP bus is reported ``unsigned`` rather than silently trusted.
+    """
+
+    __tablename__ = "agent_signing_keys"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.agent_signing_key_id)
+    agent_id: Mapped[str] = mapped_column(String(40), unique=True, index=True)
+    key_encrypted: Mapped[str] = mapped_column(Text)
+    created_by: Mapped[str | None] = mapped_column(String(200))
+    revoked_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AgentMessageLog(Base, TimestampMixin):
+    """NOM-IAM-08 — one row per inter-agent message evaluated on the
+    ``agent_message`` surface. The ``(org_id, sender_slug, nonce)`` uniqueness is
+    the anti-replay mechanism itself, not just an audit convenience: a repeated
+    ``(sender, nonce)`` pair fails to insert, and the caller maps that straight
+    to a ``replay`` verdict rather than re-deriving replay detection elsewhere.
+    """
+
+    __tablename__ = "agent_message_log"
+    __table_args__ = (
+        UniqueConstraint("org_id", "sender_slug", "nonce", name="ux_agent_message_sender_nonce"),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.agent_message_id)
+    sender_slug: Mapped[str] = mapped_column(String(120), index=True)
+    recipient_slug: Mapped[str | None] = mapped_column(String(120))
+    nonce: Mapped[str] = mapped_column(String(64))
+    signed: Mapped[bool] = mapped_column(Boolean, default=False)
+    signature_valid: Mapped[bool | None] = mapped_column(Boolean)
+    agent_card_match: Mapped[bool] = mapped_column(Boolean, default=True)
+    decision_id: Mapped[str | None] = mapped_column(String(40))
+    trace_id: Mapped[str | None] = mapped_column(String(40), index=True)
+
+
 # ---------------------------------------------------------------------------
 # Pillar 4 — Evaluation & Reliability
 # ---------------------------------------------------------------------------

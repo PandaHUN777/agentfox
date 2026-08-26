@@ -51,6 +51,20 @@ rules:
     reason: "System-prompt extraction attempt."
     controls: [NOM-RTG-01]
 
+  - id: injection.memory_and_agent_message
+    description: >
+      Injection or jailbreak content arriving via a memory write or an
+      inter-agent message — the same untrusted-provenance case
+      injection.indirect covers for retrieved/tool_result content, on the two
+      surfaces that predate this policy (NOM-RTG-13, NOM-IAM-08).
+    when:
+      surface: [memory_write, agent_message]
+      detection: {entity_prefix: INJECTION, min_score: 0.6}
+    effect: block
+    severity: critical
+    reason: "Instruction-like content found in a memory write or inter-agent message."
+    controls: [NOM-RTG-13, NOM-IAM-08]
+
   # --- Secrets (NOM-RTG-03) -------------------------------------------
   - id: secrets.block
     description: Never let a credential transit the agent, in either direction.
@@ -94,6 +108,19 @@ rules:
     severity: critical
     reason: "High-sensitivity national identifier detected."
     controls: [NOM-RTG-02]
+
+  - id: pii.memory_and_agent_message
+    description: >
+      Personal data should not persist into long-term memory or cross an
+      agent-to-agent boundary unmasked (NOM-RTG-13, NOM-IAM-08).
+    when:
+      surface: [memory_write, agent_message]
+      detection: {entity_prefix: PII, min_score: 0.7}
+    effect: redact
+    redaction: mask
+    severity: medium
+    reason: "Personal data detected in a memory write or inter-agent message; redacted."
+    controls: [NOM-RTG-13, NOM-IAM-08]
 
   # --- Safety (NOM-RTG-05) --------------------------------------------
   - id: safety.harm

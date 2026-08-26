@@ -73,7 +73,7 @@ def shannon_entropy(value: str) -> float:
 class SecretsDetector(BaseDetector):
     key = "secrets.native"
     version = "1.1"
-    surfaces = ("input", "output", "tool_args", "tool_result", "retrieved")
+    surfaces = ("input", "output", "tool_args", "tool_result", "retrieved", "memory_write", "agent_message")
 
     #: Below this, a generic high-entropy string is treated as ordinary data.
     entropy_threshold = 3.6

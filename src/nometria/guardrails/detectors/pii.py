@@ -79,7 +79,7 @@ def _luhn(digits: str) -> bool:
 class NativePiiDetector(BaseDetector):
     key = "pii.native"
     version = "1.1"
-    surfaces = ("input", "output", "tool_args", "tool_result", "retrieved")
+    surfaces = ("input", "output", "tool_args", "tool_result", "retrieved", "memory_write", "agent_message")
 
     def __init__(self, packs: tuple[str, ...] = DEFAULT_PACKS) -> None:
         self.packs = packs

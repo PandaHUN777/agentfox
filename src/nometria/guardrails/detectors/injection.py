@@ -275,7 +275,7 @@ class InjectionHeuristicDetector(BaseDetector):
     handles_views = True
     key = "injection.heuristic"
     version = "1.2"
-    surfaces = ("input", "retrieved", "tool_result", "output")
+    surfaces = ("input", "retrieved", "tool_result", "output", "memory_write", "agent_message")
 
     def _detect(self, content: str, context: DetectionContext) -> list[Detection]:
         if not content:

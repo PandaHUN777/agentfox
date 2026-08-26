@@ -80,6 +80,16 @@ way to find and remove a bad memory."* Three sources, same hole.
 all already exist — this composes them onto a new write path rather than building primitives
 from zero.
 
+> **Correction on ship (2026-08-26):** built as **`NOM-RTG-13`**, not `NOM-RTG-09` as proposed
+> above. `NOM-RTG-09` turned out to already be assigned in `enforcement.py` — the P9 critical-
+> action-risk block and the P9-7 unverified-state gate both cite it — so reusing it here would
+> have made three unrelated mechanisms share one control code in findings and audit exports.
+> `NOM-RTG-13` is the next free number in that prefix (`appendix-b-control-catalog.md` shows
+> `NOM-RTG-12` as the last one actually assigned). Everything else below shipped as designed:
+> `MemoryEntry` model + migration, `Enforcer.guard_memory_write()`, the `memory_write` detector
+> surface, default-closed `expires_at` for unverified entries, `GET/POST /api/memory` for
+> dashboard visibility, and `POST /v1/guard/memory_write` on the inline gateway.
+
 ### 1.3 New pillar — P17 Inter-agent communication security (closes ASI07)
 
 **What's missing, precisely.** Every `surface` value in the enforcement pipeline is

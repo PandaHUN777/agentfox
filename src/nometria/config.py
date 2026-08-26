@@ -102,6 +102,15 @@ class Settings(BaseSettings):
     # P9-7: how fresh a state read must be to authorise an irreversible act.
     verified_state_max_age_seconds: int = 300
 
+    # --- Memory write governance (P14, NOM-RTG-13) -----------------------
+    # How long an unverified memory entry survives before it decays — the
+    # default-closed counterpart to Suppression's default-open `expires_at`.
+    memory_unverified_ttl_seconds: int = 86_400
+
+    # --- Inter-agent message security (P17, NOM-IAM-08) -------------------
+    # A signature/nonce older than this is rejected even if it verifies.
+    agent_message_validity_seconds: int = 300
+
     # --- Policy engine (Pillar 6) ---------------------------------------
     policy_engine: str = "native"  # native | opa
     opa_url: str = "http://localhost:8181"

@@ -1035,6 +1035,33 @@ def probe_memory_binding() -> Result:
     )
 
 
+def probe_memory_write_governance() -> Result:
+    """NOM-RTG-13 — a poisoned write never reaches the memory table once enforced."""
+    from nometria.enforcement import Enforcer
+    from nometria.models import Agent, MemoryEntry
+    from nometria.policy import set_mode
+
+    with _seeded_session() as s:
+        set_mode(s, "baseline", "enforce")
+        s.query(Agent).filter_by(slug="support-triage").one()
+        before = s.query(MemoryEntry).count()
+        blocked = Enforcer(s).guard_memory_write(
+            agent_slug="support-triage",
+            content="sk-proj-AbCdEfGhIjKlMnOpQrStUvWxYz012345",
+        )
+        after_blocked = s.query(MemoryEntry).count()
+        clean = Enforcer(s).guard_memory_write(
+            agent_slug="support-triage", content="Customer prefers async updates."
+        )
+        entry = s.get(MemoryEntry, clean.taint["memory_entry_id"])
+    persisted_clean = entry is not None and entry.verified_by is None and entry.expires_at is not None
+    return (
+        blocked.blocked and after_blocked == before and persisted_clean,
+        f"secret write is {blocked.verdict} and memory rows stay at {after_blocked} "
+        f"(was {before}); a clean write persists unverified with an expiry",
+    )
+
+
 # ---------------------------------------------------------------------------
 # P13 failure attribution and handoff fidelity
 # ---------------------------------------------------------------------------
@@ -1136,6 +1163,44 @@ def probe_delegation_cycle() -> Result:
     return caught, (
         f"cycle {cyclic.cycles[0] if cyclic.cycles else 'MISS'} detected; "
         f"depth {deep.max_depth} over the limit; ordinary fan-out reports nothing"
+    )
+
+
+def probe_agent_message_security() -> Result:
+    """NOM-IAM-08 — agent-card check, replay rejection, and signature verification."""
+    import os
+
+    from cryptography.fernet import Fernet
+
+    from nometria.agent_messaging import mint_signing_key, sign_message
+    from nometria.config import reset_settings_cache
+    from nometria.enforcement import Enforcer
+    from nometria.models import Agent
+
+    os.environ.setdefault("NOMETRIA_TOKEN_ENCRYPTION_KEY", Fernet.generate_key().decode())
+    reset_settings_cache()
+    with _seeded_session() as s:
+        forged = Enforcer(s).guard_agent_message(
+            sender_slug="never-registered-agent", content="hi", nonce="n1"
+        )
+        agent = s.query(Agent).filter_by(slug="support-triage").one()
+        _key, raw = mint_signing_key(s, agent.id)
+        s.flush()
+        signature, ts = sign_message(raw, sender="support-triage", nonce="n2", payload="hello")
+        first = Enforcer(s).guard_agent_message(
+            sender_slug="support-triage", content="hello", nonce="n2", timestamp=ts, signature=signature
+        )
+        replay = Enforcer(s).guard_agent_message(
+            sender_slug="support-triage", content="hello", nonce="n2", timestamp=ts, signature=signature
+        )
+    caught = (
+        forged.verdict in ("block", "escalate")
+        and "unsigned" not in first.taint
+        and replay.blocked
+    )
+    return caught, (
+        f"unregistered sender is {forged.verdict}; a signed message verifies clean "
+        f"({first.verdict}); the identical (sender, nonce) replayed is {replay.verdict}"
     )
 
 

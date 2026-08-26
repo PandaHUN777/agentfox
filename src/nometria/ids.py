@@ -48,4 +48,7 @@ run_id = lambda: new_id("run")  # noqa: E731
 evidence_id = lambda: new_id("evd")  # noqa: E731
 user_id = lambda: new_id("usr")  # noqa: E731
 trace_link_id = lambda: new_id("lnk")  # noqa: E731
+memory_entry_id = lambda: new_id("mem")  # noqa: E731
+agent_signing_key_id = lambda: new_id("ask")  # noqa: E731
+agent_message_id = lambda: new_id("amg")  # noqa: E731
 generic_id = new_id

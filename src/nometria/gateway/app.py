@@ -32,6 +32,8 @@ from .routes import (
     governance,
     inline,
     integrations,
+    memory,
+    messaging,
     onboarding,
     policy,
     provenance,
@@ -122,6 +124,8 @@ def create_app() -> FastAPI:
     app.include_router(provenance.router)
     app.include_router(entitlement.router)
     app.include_router(integrations.router)
+    app.include_router(memory.router)
+    app.include_router(messaging.router)
 
     @app.get("/api/health", tags=["platform"])
     def health() -> dict[str, Any]:
