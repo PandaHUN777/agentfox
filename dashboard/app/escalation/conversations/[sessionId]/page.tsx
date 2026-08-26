@@ -141,7 +141,7 @@ export default async function EscalationConversation({
                     {t.claims_resolution && <span className="tag"> claims resolved</span>}
                     {t.escalated && <span className="tag ok"> escalated here</span>}
                   </td>
-                  <td className="small">
+                  <td className="small wrap" style={{ maxWidth: 260 }}>
                     {triggers.length === 0 ? (
                       <span className="muted">—</span>
                     ) : (

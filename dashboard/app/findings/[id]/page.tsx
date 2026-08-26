@@ -114,7 +114,7 @@ function GenericEvidence({ evidence }: { evidence: any }) {
               <td className="small muted" style={{ whiteSpace: "nowrap", verticalAlign: "top" }}>
                 {humanizeKey(key)}
               </td>
-              <td className="small wrap"><EvidenceValue value={value} /></td>
+              <td className="small wrap" style={{ maxWidth: 460 }}><EvidenceValue value={value} /></td>
             </tr>
           ))}
         </tbody>

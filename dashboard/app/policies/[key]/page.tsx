@@ -114,7 +114,7 @@ export default async function PolicyDetail({ params }: { params: Promise<{ key: 
                   <tr key={v.id}>
                     <td className="num small">{v.version}</td>
                     <td className="small muted">{v.author}</td>
-                    <td className="small wrap muted">{v.notes || "—"}</td>
+                    <td className="small wrap muted" style={{ maxWidth: 320 }}>{v.notes || "—"}</td>
                     <td className="num small">{v.rules}</td>
                     <td className="small muted">{ts(v.created_at)}</td>
                   </tr>

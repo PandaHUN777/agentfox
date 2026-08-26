@@ -113,7 +113,7 @@ export default async function TraceDetail({
                   <td className="mono small">{x.tool || "—"}</td>
                   <td><Verdict value={x.verdict} /></td>
                   <td className="small muted">{x.mode}</td>
-                  <td className="small wrap">
+                  <td className="small wrap" style={{ maxWidth: 380 }}>
                     {(x.rules_fired || []).length === 0 ? (
                       <span className="muted">none</span>
                     ) : (

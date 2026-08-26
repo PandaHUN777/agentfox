@@ -137,7 +137,7 @@ export default async function Escalation({
                   </td>
                   <td>{m.turns}</td>
                   <td>turn {m.first_qualifying_turn}</td>
-                  <td>
+                  <td className="wrap" style={{ maxWidth: 260 }}>
                     {m.triggers.slice(0, 2).map((t: any, i: number) => (
                       <div key={i} className="small">
                         <Severity value={t.severity} /> {t.detail}

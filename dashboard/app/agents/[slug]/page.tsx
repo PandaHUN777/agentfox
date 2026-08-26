@@ -375,7 +375,7 @@ export default async function AgentDetail({
                 <tbody>
                   {effective.rules.map((r: any) => (
                     <tr key={r.rule_id}>
-                      <td className="small">
+                      <td className="small wrap" style={{ maxWidth: 340 }}>
                         {r.description || r.rule_id}
                         <div className="mono small muted">{r.rule_id}</div>
                       </td>
@@ -414,7 +414,7 @@ export default async function AgentDetail({
                 {posture.slos.map((s: any) => (
                   <tr key={s.slo_id}>
                     <td className="mono small">{s.scorer}</td>
-                    <td className="small wrap">{s.objective || "—"}</td>
+                    <td className="small wrap" style={{ maxWidth: 260 }}>{s.objective || "—"}</td>
                     <td className="num small">{s.target ?? "—"}</td>
                     <td className="num small">{s.attainment ?? "—"}</td>
                     <td className="num small">{s.error_budget_remaining ?? "—"}</td>
