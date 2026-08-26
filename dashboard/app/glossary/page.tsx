@@ -100,7 +100,7 @@ export default function Glossary() {
               <td className="small">
                 A whole conversation getting handed off to a human — distinct from{" "}
                 <strong>Approvals</strong>, which gates one specific tool call, not the
-                conversation around it. See <a href="/escalation">Escalation</a> and{" "}
+                conversation around it. See <a href="/approvals?tab=escalation">Escalation</a> and{" "}
                 <a href="/approvals">Approvals</a>.
               </td>
             </tr>

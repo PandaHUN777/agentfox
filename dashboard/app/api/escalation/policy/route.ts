@@ -11,7 +11,8 @@ const API_BASE = process.env.NOMETRIA_API_URL || "http://127.0.0.1:8080";
  * thresholds) is editable from the dashboard; this one wasn't.
  */
 export async function POST(req: NextRequest) {
-  const target = new URL("/escalation", req.nextUrl.origin);
+  const target = new URL("/approvals", req.nextUrl.origin);
+  target.searchParams.set("tab", "escalation");
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) {
     target.searchParams.set("review_error", "not signed in");

@@ -97,7 +97,7 @@ export default async function AgentDetail({
         <StatLink
           n={posture.handoffs}
           label="hand-offs"
-          href={`/escalation?agent=${a.slug}`}
+          href={`/approvals?tab=escalation&agent=${a.slug}`}
           tone={posture.handoffs ? "warn" : "ok"}
           hint="Conversations transferred to a human — recorded independently of traced execution paths, so this can be non-zero even when 'execution paths' above is 0."
         />
@@ -458,7 +458,7 @@ export default async function AgentDetail({
               <>
                 {" "}This agent does have {posture.handoffs} hand-off{posture.handoffs === 1 ? "" : "s"} on
                 record — hand-offs are logged independently of traced calls, see{" "}
-                <Link href={`/escalation?agent=${a.slug}`}>Escalation</Link>.
+                <Link href={`/approvals?tab=escalation&agent=${a.slug}`}>Escalation</Link>.
               </>
             )}
           </div>

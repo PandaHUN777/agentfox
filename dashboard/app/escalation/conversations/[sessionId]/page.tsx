@@ -26,7 +26,7 @@ export default async function EscalationConversation({
           <NotFound
             what="recorded conversation"
             detail={`${sessionId} — no turns were recorded for this session`}
-            back={{ href: "/escalation", label: "Escalation" }}
+            back={{ href: "/approvals?tab=escalation", label: "Escalation" }}
           />
         ) : (
           <ApiDown error={String(e?.message || e)} />
@@ -45,7 +45,7 @@ export default async function EscalationConversation({
   return (
     <>
       <p className="small muted" style={{ marginBottom: 4 }}>
-        <Link href="/escalation">← Escalation</Link>
+        <Link href="/approvals?tab=escalation">← Escalation</Link>
       </p>
       <h1>{data.handoff?.summary || data.handoff?.reason || "Conversation"}</h1>
       <p className="mono small muted" style={{ marginTop: -8 }}>{sessionId}</p>
