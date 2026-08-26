@@ -413,8 +413,8 @@ async function EscalationTab({ agent }: { agent?: string }) {
       </h2>
       <p className="sub">
         Every condition below is a signal, not a guarantee — that's why this pillar ships
-        observe-first (see the counter-metric above). Fields not present in the JSON fall
-        back to the platform default shown as a placeholder.
+        observe-first. Fields not present in the JSON fall back to the platform default
+        shown as a placeholder.
       </p>
       <form action="/api/escalation/policy" method="POST" className="panel body stack">
         <div className="field-grid">

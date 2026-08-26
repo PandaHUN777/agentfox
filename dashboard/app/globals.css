@@ -4,26 +4,30 @@
    set before paint by the inline script in layout.tsx — see ThemeToggle.tsx). An
    explicit "light" choice (data-theme="light") wins over the system preference too.
 
-   Token system: cool slate neutrals + a blue accent (Nometria's identity), a real
-   elevation scale, and a radius scale — same shape as the design language used
-   across this team's other products, ported to this app's plain-CSS architecture
-   (no Tailwind here, so the tokens are custom properties rather than @theme). */
+   Token system: warm oat/cream neutrals + a terracotta accent, carried over from
+   decawork.ai (the reference the team standardized on) — measured off their live
+   site (near-black warm charcoal text, not pure black; cream panels, not stark
+   white; a single burnt-orange accent used sparingly) and translated into a
+   token set for this app's plain-CSS architecture (no Tailwind here, so the
+   tokens are custom properties rather than @theme). Severity colors (ok/warn/
+   escalate/bad) stay conventional red/amber/green — semantic meaning, not brand,
+   so they're deliberately not warmed to match. */
 
 :root {
-  --bg: #f7f8fb;
-  --panel: #ffffff;
-  --panel-2: #f1f3f7;
-  --elevated: #ffffff;
-  --border: #e2e5eb;
-  --hairline: #eaecf1;
-  --text: #16181d;
-  --text-2: #3d4250;
-  --muted: #676e7e;
-  --faint: #9aa1b0;
-  --accent: #2f5fe0;
-  --accent-press: #2249c2;
-  --accent-ink: #ffffff;
-  --accent-weak: rgba(47, 95, 224, 0.09);
+  --bg: #f6f4ef;
+  --panel: #fdfcf8;
+  --panel-2: #efece1;
+  --elevated: #fffefb;
+  --border: #e2ddcd;
+  --hairline: #eae5d6;
+  --text: #1f2624;
+  --text-2: #454d49;
+  --muted: #5c655e;
+  --faint: #96a098;
+  --accent: #c2603a;
+  --accent-press: #a3502f;
+  --accent-ink: #fbfaf5;
+  --accent-weak: rgba(194, 96, 58, 0.1);
   --ok: #15803d;
   --ok-bg: #dcfce7;
   --warn: #a16207;
@@ -32,31 +36,31 @@
   --escalate-bg: #ffedd5;
   --bad: #b91c1c;
   --bad-bg: #fee2e2;
-  --dim-bg: #edeff3;
+  --dim-bg: #ece7d9;
   --mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   --r-1: 7px; --r-2: 9px; --r-3: 13px; --r-4: 20px; --r-pill: 999px;
-  --e-1: 0 1px 2px rgba(20, 22, 30, 0.04), 0 1px 3px rgba(20, 22, 30, 0.04);
-  --e-2: 0 6px 16px rgba(20, 22, 30, 0.08), 0 2px 6px rgba(20, 22, 30, 0.05);
-  --e-3: 0 20px 48px rgba(15, 17, 24, 0.16), 0 6px 18px rgba(15, 17, 24, 0.08);
+  --e-1: 0 1px 2px rgba(31, 26, 15, 0.05), 0 1px 3px rgba(31, 26, 15, 0.04);
+  --e-2: 0 6px 16px rgba(31, 26, 15, 0.09), 0 2px 6px rgba(31, 26, 15, 0.05);
+  --e-3: 0 20px 48px rgba(24, 20, 12, 0.18), 0 6px 18px rgba(24, 20, 12, 0.09);
   --bar-bg: color-mix(in srgb, var(--bg) 72%, transparent);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0b0c10;
-    --panel: #16181d;
-    --panel-2: #1c1f26;
-    --elevated: #1a1d24;
-    --border: #262a33;
-    --hairline: #21242c;
-    --text: #eef0f4;
-    --text-2: #c7cbd6;
-    --muted: #8b93a3;
-    --faint: #5b6272;
-    --accent: #6d93f5;
-    --accent-press: #8aa8f7;
-    --accent-ink: #0b0c10;
-    --accent-weak: rgba(109, 147, 245, 0.14);
+    --bg: #17140f;
+    --panel: #201c16;
+    --panel-2: #27221a;
+    --elevated: #241f18;
+    --border: #362d21;
+    --hairline: #2c2519;
+    --text: #f2ede1;
+    --text-2: #d6cfbe;
+    --muted: #a39c8a;
+    --faint: #6c6656;
+    --accent: #e08a5e;
+    --accent-press: #e8a179;
+    --accent-ink: #19140e;
+    --accent-weak: rgba(224, 138, 94, 0.16);
     --ok: #4ade80;
     --ok-bg: #052e16;
     --warn: #fbbf24;
@@ -65,7 +69,7 @@
     --escalate-bg: #431407;
     --bad: #f87171;
     --bad-bg: #3b0d0d;
-    --dim-bg: #1f2229;
+    --dim-bg: #2a2419;
     --e-1: 0 1px 2px rgba(0, 0, 0, 0.5);
     --e-2: 0 10px 24px rgba(0, 0, 0, 0.45), 0 3px 8px rgba(0, 0, 0, 0.35);
     --e-3: 0 24px 56px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.4);
@@ -73,20 +77,20 @@
 }
 
 :root[data-theme="dark"] {
-  --bg: #0b0c10;
-  --panel: #16181d;
-  --panel-2: #1c1f26;
-  --elevated: #1a1d24;
-  --border: #262a33;
-  --hairline: #21242c;
-  --text: #eef0f4;
-  --text-2: #c7cbd6;
-  --muted: #8b93a3;
-  --faint: #5b6272;
-  --accent: #6d93f5;
-  --accent-press: #8aa8f7;
-  --accent-ink: #0b0c10;
-  --accent-weak: rgba(109, 147, 245, 0.14);
+  --bg: #17140f;
+  --panel: #201c16;
+  --panel-2: #27221a;
+  --elevated: #241f18;
+  --border: #362d21;
+  --hairline: #2c2519;
+  --text: #f2ede1;
+  --text-2: #d6cfbe;
+  --muted: #a39c8a;
+  --faint: #6c6656;
+  --accent: #e08a5e;
+  --accent-press: #e8a179;
+  --accent-ink: #19140e;
+  --accent-weak: rgba(224, 138, 94, 0.16);
   --ok: #4ade80;
   --ok-bg: #052e16;
   --warn: #fbbf24;
@@ -95,7 +99,7 @@
   --escalate-bg: #431407;
   --bad: #f87171;
   --bad-bg: #3b0d0d;
-  --dim-bg: #1f2229;
+  --dim-bg: #2a2419;
   --e-1: 0 1px 2px rgba(0, 0, 0, 0.5);
   --e-2: 0 10px 24px rgba(0, 0, 0, 0.45), 0 3px 8px rgba(0, 0, 0, 0.35);
   --e-3: 0 24px 56px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.4);
@@ -107,7 +111,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.55 var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+  font: 14px/1.55 var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
     Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.011em;
@@ -165,8 +169,8 @@ a:hover { text-decoration: underline; }
   justify-content: center;
   gap: 6px;
   height: 30px;
-  padding: 0 12px;
-  border-radius: var(--r-2);
+  padding: 0 14px;
+  border-radius: var(--r-pill);
   border: 1px solid var(--border);
   background: var(--panel);
   color: var(--text);
@@ -203,7 +207,7 @@ a:hover { text-decoration: underline; }
   background: var(--text);
   color: var(--bg);
   border: none;
-  border-radius: var(--r-2);
+  border-radius: var(--r-pill);
   font-size: 13.5px;
   font-weight: 620;
   box-shadow: var(--e-1);
@@ -292,7 +296,7 @@ nav.side a.active svg { opacity: 1; }
 
 main { flex: 1; padding: 28px 32px 64px; max-width: 1400px; min-width: 0; }
 
-h1 { font-size: 25px; margin: 0 0 4px; letter-spacing: -0.024em; font-weight: 700; }
+h1 { font-size: 25px; margin: 0 0 4px; letter-spacing: -0.022em; font-weight: 660; }
 h2 { font-size: 15px; margin: 30px 0 12px; letter-spacing: -0.01em; font-weight: 640; }
 h3 { font-size: 13px; margin: 20px 0 8px; color: var(--muted); font-weight: 620; }
 .sub { color: var(--muted); margin: 0 0 22px; font-size: 13px; max-width: 78ch; }
