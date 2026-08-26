@@ -84,7 +84,7 @@ export default async function AgentDetail({
           name="purpose"
           placeholder="e.g. answers customer support questions from our help center"
           defaultValue={a.purpose || ""}
-          style={{ flex: 1, minWidth: 260, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+          style={{ flex: 1, minWidth: 260, maxWidth: 560, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
         />
         <button type="submit" className="btn-scan">Save</button>
       </form>

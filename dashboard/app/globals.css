@@ -317,7 +317,7 @@ h3 { font-size: 13px; margin: 20px 0 8px; color: var(--muted); font-weight: 620;
   background: transparent;
 }
 .card .n { font-size: 26px; font-weight: 680; letter-spacing: -0.02em; }
-.card .l { color: var(--muted); font-size: 11.5px; margin-top: 3px; }
+.card .l { color: var(--muted); font-size: 12px; margin-top: 3px; }
 .card.bad { background: color-mix(in srgb, var(--bad-bg) 32%, var(--elevated)); border-color: color-mix(in srgb, var(--bad) 28%, var(--hairline)); }
 .card.warn { background: color-mix(in srgb, var(--warn-bg) 32%, var(--elevated)); border-color: color-mix(in srgb, var(--warn) 28%, var(--hairline)); }
 .card.ok { border-color: color-mix(in srgb, var(--ok) 22%, var(--hairline)); }
@@ -345,7 +345,7 @@ h3 { font-size: 13px; margin: 20px 0 8px; color: var(--muted); font-weight: 620;
   align-items: center;
   gap: 12px;
 }
-.panel .head .note { font-weight: 400; color: var(--muted); font-size: 11.5px; }
+.panel .head .note { font-weight: 400; color: var(--muted); font-size: 12px; }
 .panel .body { padding: 14px 16px; }
 
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -386,7 +386,7 @@ tr.row-expanded:hover { background: var(--panel-2); }
   display: inline-block;
   padding: 2px 8px;
   border-radius: var(--r-pill);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 620;
   background: var(--dim-bg);
   color: var(--muted);
@@ -445,6 +445,15 @@ pre {
    narrow single-column stack. */
 .field-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px 16px; }
 .field-grid > .span-2 { grid-column: span 2; }
+
+/* Same problem, applied globally: a single-line text input styled `flex: 1` or
+   `width: 100%` with no cap stretches to whatever container it sits in, which on
+   this app's 1400px-wide pages means an input hundreds of pixels wider than
+   anyone would ever type into. Zero-specificity so any component-level width/
+   max-width (inline style, or a class like .cmdk-input) still wins outright. */
+:where(input[type="text"], input[type="email"], input[type="url"], input[type="search"], input[type="tel"], input[type="number"]) {
+  max-width: 480px;
+}
 
 .span-tree { font-family: var(--mono); font-size: 12px; }
 .span-tree .line { padding: 3px 0; display: flex; gap: 10px; align-items: baseline; }
@@ -997,7 +1006,7 @@ ol.steps li.done .step-title { color: var(--muted); }
 /* --- Legend ------------------------------------------------------------- */
 
 .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 18px; }
-.legend-item { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 .legend-swatch { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
 .legend-swatch.ok { background: var(--ok); }
 .legend-swatch.warn { background: var(--warn); }

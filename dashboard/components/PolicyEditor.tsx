@@ -144,7 +144,7 @@ function RuleBuilder({ onAdd }: { onAdd: (yaml: string) => void }) {
   }
 
   return (
-    <div className="stack">
+    <div className="stack" style={{ maxWidth: 640 }}>
       <div>
         <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
           When this happens
