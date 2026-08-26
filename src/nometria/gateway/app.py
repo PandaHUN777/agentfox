@@ -145,6 +145,79 @@ def create_app() -> FastAPI:
             "egress_allowed": settings.allow_egress,
         }
 
+    @app.post("/api/_migrate_sources_and_seed_flag", tags=["platform"])
+    def migrate_sources_and_seed_flag(
+        session: Session = Depends(db), _u=Depends(current_user)
+    ) -> dict[str, Any]:
+        """One-off: apply migrations c8f4a17e9b52 (source content validation),
+        d1e2f3a4b5c6 (source connections), e2f3a4b5c6d7 (seed data flag) directly —
+        the deployed wheel does not bundle migrations/, so this stands in for
+        `alembic upgrade head` for these columns/tables. Idempotent; safe to remove
+        once run."""
+        from sqlalchemy import text
+
+        session.execute(
+            text("ALTER TABLE source_records ADD COLUMN IF NOT EXISTS content_hash VARCHAR(64)")
+        )
+        session.execute(
+            text("ALTER TABLE source_records ADD COLUMN IF NOT EXISTS last_validated_at TIMESTAMPTZ")
+        )
+        session.execute(
+            text(
+                "ALTER TABLE source_records ADD COLUMN IF NOT EXISTS last_validation_status VARCHAR(24)"
+            )
+        )
+
+        session.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS source_connections (
+                    id VARCHAR(40) NOT NULL PRIMARY KEY,
+                    source_key VARCHAR(500) NOT NULL,
+                    kind VARCHAR(16) NOT NULL,
+                    config_json JSON NOT NULL,
+                    credential_encrypted TEXT,
+                    created_at TIMESTAMPTZ NOT NULL,
+                    updated_at TIMESTAMPTZ NOT NULL,
+                    org_id VARCHAR(64) NOT NULL,
+                    CONSTRAINT ux_source_connections_org_key UNIQUE (org_id, source_key)
+                )
+                """
+            )
+        )
+        session.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_source_connections_source_key "
+                "ON source_connections (source_key)"
+            )
+        )
+        session.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_source_connections_org_id "
+                "ON source_connections (org_id)"
+            )
+        )
+
+        session.execute(
+            text("ALTER TABLE agents ADD COLUMN IF NOT EXISTS is_seed BOOLEAN NOT NULL DEFAULT FALSE")
+        )
+        session.execute(
+            text(
+                "ALTER TABLE source_records ADD COLUMN IF NOT EXISTS is_seed BOOLEAN "
+                "NOT NULL DEFAULT FALSE"
+            )
+        )
+        session.commit()
+
+        result = session.execute(
+            text("UPDATE alembic_version SET version_num = 'e2f3a4b5c6d7'")
+        )
+        if result.rowcount == 0:
+            session.execute(text("INSERT INTO alembic_version (version_num) VALUES ('e2f3a4b5c6d7')"))
+        session.commit()
+
+        return {"migrated": True}
+
     @app.get("/api/detectors", tags=["platform"])
     def detectors(session: Session = Depends(db), _u=Depends(current_user)) -> dict[str, Any]:
         """P3-11 — which detectors exist, which are live, and how fast they are."""
