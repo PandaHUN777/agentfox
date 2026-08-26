@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
 import { ApiDown, Empty, InfoTip, Panel, Stat } from "@/components/ui";
+import { Countdown } from "@/components/Countdown";
 
 export const dynamic = "force-dynamic";
 
@@ -532,9 +533,8 @@ async function GuardrailTuningTab({ agent }: { agent?: string }) {
                     {s.hits}
                     {s.hits === 0 && <span className="tag warn">never used</span>}
                   </td>
-                  <td className="small muted">
-                    {s.expires_at ? s.expires_at.slice(0, 10) : "—"}
-                    {!s.active && <span className="tag">inactive</span>}
+                  <td className="small">
+                    {s.active ? <Countdown at={s.expires_at} /> : <span className="tag">inactive</span>}
                   </td>
                   <td className="small">
                     {s.active && (

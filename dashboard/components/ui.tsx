@@ -101,7 +101,7 @@ export function Panel({
 
 const VERDICT_TONE: Record<string, string> = {
   block: "bad",
-  escalate: "warn",
+  escalate: "escalate",
   redact: "warn",
   mask: "warn",
   tokenize: "warn",

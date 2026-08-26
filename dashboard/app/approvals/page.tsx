@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
 import { AgentLink, ApiDown, Empty, InfoTip, Severity, ts } from "@/components/ui";
+import { Countdown } from "@/components/Countdown";
 
 export const dynamic = "force-dynamic";
 
@@ -150,7 +151,7 @@ async function ApprovalsTab({ status: rawStatus }: { status?: string }) {
                     {a.arguments && Object.keys(a.arguments).length ? JSON.stringify(a.arguments) : "—"}
                   </td>
                   <td className="small muted">{ts(a.requested_at)}</td>
-                  <td className="small muted">{ts(a.expires_at)}</td>
+                  <td className="small">{status === "pending" ? <Countdown at={a.expires_at} /> : <span className="small muted">{ts(a.expires_at)}</span>}</td>
                   {status === "pending" && (
                     <td className="small">
                       <div className="review-actions" style={{ flexDirection: "column", gap: 4 }}>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
-import { AgentLink, ApiDown, Severity, findingTypeInfo, ts } from "@/components/ui";
+import { ApiDown } from "@/components/ui";
+import { ExpandableFindingRow } from "@/components/ExpandableFindingRow";
 
 export const dynamic = "force-dynamic";
 
@@ -104,34 +105,9 @@ export default async function Findings({
               <tr><th>severity</th><th>agent</th><th>type</th><th>finding</th><th>controls</th><th>raised</th></tr>
             </thead>
             <tbody>
-              {data.findings.map((f: any) => {
-                const typeInfo = findingTypeInfo(f.type);
-                return (
-                  <tr key={f.id}>
-                    <td><Severity value={f.severity} /></td>
-                    <td className="small">
-                      {f.agent_slug ? (
-                        <AgentLink slug={f.agent_slug} agents={agents.agents || []} />
-                      ) : (
-                        <span className="muted">unattributed</span>
-                      )}
-                    </td>
-                    <td className="small">{typeInfo.label}</td>
-                    <td className="small wrap">
-                      <Link href={`/findings/${f.id}`}>{f.title}</Link>
-                      {typeInfo.blurb && <div className="small muted">{typeInfo.blurb}</div>}
-                    </td>
-                    <td className="small mono">
-                      {(f.controls || []).map((c: string) => (
-                        <Link key={c} href={`/compliance#${c}`} className="muted" style={{ marginRight: 6 }}>
-                          {c}
-                        </Link>
-                      ))}
-                    </td>
-                    <td className="small muted">{ts(f.created_at)}</td>
-                  </tr>
-                );
-              })}
+              {data.findings.map((f: any) => (
+                <ExpandableFindingRow key={f.id} finding={f} agents={agents.agents || []} />
+              ))}
             </tbody>
           </table>
         )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Countdown } from "@/components/Countdown";
 
 const inputStyle = {
   width: "100%",
@@ -144,7 +145,7 @@ export function TokenManager() {
                 <td className="small">{t.name || "—"}</td>
                 <td className="mono small muted">{t.key_prefix}…</td>
                 <td className="small muted">{(t.created_at || "").slice(0, 10)}</td>
-                <td className="small muted">{(t.expires_at || "never").slice(0, 10)}</td>
+                <td>{t.revoked_at ? <span className="muted small">revoked</span> : <Countdown at={t.expires_at} fallback="never" />}</td>
                 <td>
                   <span className={`tag ${t.revoked_at ? "bad" : "ok"}`}>
                     {t.revoked_at ? "revoked" : "active"}

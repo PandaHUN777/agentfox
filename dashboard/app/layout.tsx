@@ -9,6 +9,7 @@ import { AccountMenu } from "@/components/AccountMenu";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandSearch } from "@/components/CommandSearch";
 import { GlossaryLink, SideNav } from "@/components/SideNav";
+import { TopbarStats } from "@/components/TopbarStats";
 import "./globals.css";
 
 // Runs before paint so a stored theme choice never flashes the wrong colors on load.
@@ -109,6 +110,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
               {signedIn && (
                 <div className="topbar">
+                  {attention?.counts && <TopbarStats counts={attention.counts} />}
                   <CommandSearch nav={NAV_FLAT} />
                   <NotificationsBell items={attention?.items?.slice(0, 6) || []} total={attention?.total || 0} />
                   {me && <AccountMenu email={me.email} workspace={me.workspace} role={me.role} />}

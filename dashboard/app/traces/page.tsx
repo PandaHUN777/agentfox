@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
-import { AgentLink, ApiDown, Verdict, ts } from "@/components/ui";
+import { ApiDown } from "@/components/ui";
+import { ExpandableTraceRow } from "@/components/ExpandableTraceRow";
 
 export const dynamic = "force-dynamic";
 
@@ -91,15 +92,7 @@ export default async function Traces({
             </thead>
             <tbody>
               {data.traces.map((t: any) => (
-                <tr key={t.id}>
-                  <td><Link href={`/traces/${t.id}`} className="mono small">{t.id}</Link></td>
-                  <td><AgentLink slug={t.agent} agents={agents.agents || []} className="small" /></td>
-                  <td><Verdict value={t.verdict} /></td>
-                  <td className="small muted">{t.environment}</td>
-                  <td className="small muted">{t.model || "—"}</td>
-                  <td className="small wrap muted" style={{ maxWidth: 300 }}>{t.intent || "—"}</td>
-                  <td className="small muted">{ts(t.started_at)}</td>
-                </tr>
+                <ExpandableTraceRow key={t.id} trace={t} agents={agents.agents || []} />
               ))}
             </tbody>
           </table>
