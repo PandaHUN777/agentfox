@@ -66,7 +66,6 @@ export default async function AgentDetail({
         )}
       </h1>
       {a.name && <p className="mono small muted" style={{ marginTop: -8 }}>{a.slug}</p>}
-      <p className="sub">{a.purpose || "No business purpose recorded."}</p>
 
       {review_error && <div className="error">{review_error}</div>}
       {review_notice && <div className="note-panel">{review_notice}</div>}
@@ -75,16 +74,17 @@ export default async function AgentDetail({
         action={`/api/agents/${a.slug}/owner`}
         method="POST"
         className="row"
-        style={{ gap: 6, marginBottom: 20, alignItems: "center" }}
+        style={{ gap: 6, marginBottom: 20, marginTop: 10, alignItems: "center" }}
       >
-        <label className="small muted" htmlFor="purpose-input">What does this agent do?</label>
+        <label className="small muted" htmlFor="purpose-input">Purpose</label>
+        {!a.purpose && <span className="tag warn">not set</span>}
         <input
           id="purpose-input"
           type="text"
           name="purpose"
           placeholder="e.g. answers customer support questions from our help center"
           defaultValue={a.purpose || ""}
-          style={{ flex: 1, minWidth: 260, maxWidth: 560, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+          style={{ flex: 1, minWidth: 260, maxWidth: 480, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
         />
         <button type="submit" className="btn-scan">Save</button>
       </form>
@@ -121,27 +121,32 @@ export default async function AgentDetail({
         Kill switch
         <InfoTip text="Quarantine: reversible, 'stop while I investigate.' Kill: the stronger incident action, requires the identity role rather than the registry role. Both refuse every governed call from this agent immediately and are logged to the audit chain." />
       </h2>
-      <div className="panel body row" style={{ gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-        <span className={`tag ${state === "active" ? "ok" : "bad"}`}>{state}</span>
-        <form action={`/api/agents/${a.slug}/control`} method="POST" className="row" style={{ gap: 8, alignItems: "center", flex: 1, minWidth: 260 }}>
-          <input type="hidden" name="action" value={state === "active" ? "quarantine" : "resume"} />
-          <input
-            type="text"
-            name="reason"
-            placeholder={state === "active" ? "reason for quarantining (optional)" : "reason for resuming (optional)"}
-            style={{ flex: 1, minWidth: 200, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
-          />
-          {state === "active" ? (
-            <button type="submit" className="btn-reject">Quarantine</button>
-          ) : (
-            <button type="submit" className="btn-approve">Resume</button>
-          )}
-        </form>
-        {state !== "killed" && (
-          <form action={`/api/agents/${a.slug}/control`} method="POST">
-            <input type="hidden" name="action" value="kill" />
-            <button type="submit" className="btn-reject">Kill</button>
+      <div className="panel body stack">
+        <div className="row" style={{ gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <span className={`tag ${state === "active" ? "ok" : "bad"}`}>{state}</span>
+          <form action={`/api/agents/${a.slug}/control`} method="POST" className="row" style={{ gap: 8, alignItems: "center", flex: 1, minWidth: 260 }}>
+            <input type="hidden" name="action" value={state === "active" ? "quarantine" : "resume"} />
+            <input
+              type="text"
+              name="reason"
+              placeholder={state === "active" ? "reason for quarantining (optional)" : "reason for resuming (optional)"}
+              style={{ flex: 1, minWidth: 200, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            />
+            {state === "active" ? (
+              <button type="submit" className="btn-reject">Quarantine</button>
+            ) : (
+              <button type="submit" className="btn-approve">Resume</button>
+            )}
           </form>
+        </div>
+        {state !== "killed" && (
+          <div className="row" style={{ gap: 10, alignItems: "center", paddingTop: 12, borderTop: "1px solid var(--hairline)" }}>
+            <span className="small muted">Stronger incident action, different role:</span>
+            <form action={`/api/agents/${a.slug}/control`} method="POST">
+              <input type="hidden" name="action" value="kill" />
+              <button type="submit" className="btn-reject">Kill</button>
+            </form>
+          </div>
         )}
       </div>
 

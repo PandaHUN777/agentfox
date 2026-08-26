@@ -111,7 +111,7 @@ export default async function Overview() {
                 </tr>
               </thead>
               <tbody>
-                {attention.items.map((item: any, i: number) => {
+                {attention.items.slice(0, 6).map((item: any, i: number) => {
                   const typeInfo = findingTypeInfo(item.type);
                   return (
                     <tr key={i}>
@@ -129,10 +129,9 @@ export default async function Overview() {
                 })}
               </tbody>
             </table>
-            {attention.total > attention.items.length && (
+            {attention.total > 6 && (
               <div className="body small muted">
-                {attention.total - attention.items.length} more —{" "}
-                <Link href="/findings">see all findings</Link>
+                {attention.total - 6} more — <Link href="/findings">see all findings</Link>
               </div>
             )}
           </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { ApiDown, InfoTip, Panel, Stat, ts } from "@/components/ui";
+import { Modal } from "@/components/Modal";
 
 export const dynamic = "force-dynamic";
 
@@ -71,47 +72,46 @@ export default async function Agents({
 
       {review_error && <div className="error">{review_error}</div>}
 
-      <details style={{ marginBottom: 16 }}>
-        <summary className="small" style={{ cursor: "pointer", fontWeight: 600 }}>
-          + Register an agent manually
-        </summary>
-        <p className="small muted" style={{ marginTop: 6, marginBottom: 8 }}>
-          For an agent that doesn't live in a scanned repo, or hasn't been connected yet — see{" "}
-          <Link href="/start?tab=connect">Connect</Link> for the repo-scan path instead.
-        </p>
-        <form action="/api/agents" method="POST" className="stack" style={{ maxWidth: 480 }}>
-          <div>
-            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Slug (unique, lowercase)</label>
-            <input type="text" name="slug" required placeholder="e.g. billing-support" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
-          </div>
-          <div>
-            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Name</label>
-            <input type="text" name="name" placeholder="e.g. Billing Support Agent" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
-          </div>
-          <div>
-            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Purpose</label>
-            <input type="text" name="purpose" placeholder="e.g. answers billing questions from account history" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
-          </div>
-          <div className="row" style={{ gap: 12 }}>
-            <div style={{ flex: 1 }}>
-              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Owner email</label>
-              <input type="email" name="owner_email" placeholder="owner@company.com" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
+      <div style={{ marginBottom: 16 }}>
+        <Modal trigger="+ Register an agent manually" title="Register an agent manually">
+          <p className="small muted" style={{ marginTop: 0, marginBottom: 12 }}>
+            For an agent that doesn't live in a scanned repo, or hasn't been connected yet — see{" "}
+            <Link href="/start?tab=connect">Connect</Link> for the repo-scan path instead.
+          </p>
+          <form action="/api/agents" method="POST" className="stack">
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Slug (unique, lowercase)</label>
+              <input type="text" name="slug" required placeholder="e.g. billing-support" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
             </div>
-            <div style={{ flex: 1 }}>
-              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Risk tier</label>
-              <select name="risk_tier" defaultValue="limited" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}>
-                <option value="minimal">minimal</option>
-                <option value="limited">limited</option>
-                <option value="high">high</option>
-                <option value="prohibited">prohibited</option>
-              </select>
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Name</label>
+              <input type="text" name="name" placeholder="e.g. Billing Support Agent" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
             </div>
-          </div>
-          <div>
-            <button type="submit" className="btn-primary">Register agent</button>
-          </div>
-        </form>
-      </details>
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Purpose</label>
+              <input type="text" name="purpose" placeholder="e.g. answers billing questions from account history" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
+            </div>
+            <div className="row" style={{ gap: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Owner email</label>
+                <input type="email" name="owner_email" placeholder="owner@company.com" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Risk tier</label>
+                <select name="risk_tier" defaultValue="limited" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}>
+                  <option value="minimal">minimal</option>
+                  <option value="limited">limited</option>
+                  <option value="high">high</option>
+                  <option value="prohibited">prohibited</option>
+                </select>
+              </div>
+            </div>
+            <div>
+              <button type="submit" className="btn-primary">Register agent</button>
+            </div>
+          </form>
+        </Modal>
+      </div>
 
       {drafts.length > 0 && (
         <>

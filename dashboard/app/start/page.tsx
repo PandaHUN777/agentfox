@@ -117,7 +117,7 @@ async function ChecklistTab() {
                 {next?.id === step.id && <span className="tag accent">next</span>}
               </div>
               {step.id === "connect" ? (
-                <Link href="/start?tab=connect" className="btn-github" style={{ display: "inline-block", marginBottom: 6 }}>
+                <Link href="/start?tab=connect" className="btn-scan" style={{ display: "inline-flex", marginBottom: 6 }}>
                   {step.done ? "Manage connection" : "Connect →"}
                 </Link>
               ) : step.id === "boundary" ? (
@@ -219,14 +219,10 @@ async function ConnectTab({
   return (
     <>
       <p className="sub" style={{ marginTop: 16 }}>
-        Two ways to point this at something real instead of seeded demo data,
-        depending on what you can (or want to) share: hand over read access to a
-        repository, or just point at a live API you already run. Either way nothing
-        goes live until you approve it on the Agents and Policies pages. This finds
-        the <strong>agents</strong> themselves — the code or endpoint that answers
-        requests. Looking to register the data those agents read from instead — a
-        database, wiki, or knowledge base used for retrieval? That&rsquo;s{" "}
-        <Link href="/sources">Sources</Link>.
+        Hand over read access to a repository, or point at a live API — either way
+        nothing goes live until you approve it on the Agents and Policies pages.
+        This finds the <strong>agents</strong> themselves; for the data they read
+        from, that&rsquo;s <Link href="/sources">Sources</Link>.
       </p>
 
       {scanError && <div className="error">Scan failed: {scanError}</div>}
@@ -289,10 +285,8 @@ async function ConnectTab({
           <Panel title="Give us codebase access">
             <div className="body">
               <p className="small muted">
-                We statically read your code (the same scanner behind{" "}
-                <code className="mono">nometria check</code>) for LangChain/LangGraph/
-                CrewAI/AutoGen usage — no import, no execution. No account connected
-                yet.
+                We statically read your code for LangChain/LangGraph/CrewAI/AutoGen
+                usage — no import, no execution.
               </p>
               <a
                 className="btn-github"
@@ -307,17 +301,20 @@ async function ConnectTab({
           <HostedApiPanel />
         </div>
       ) : (
-        // GitHub is connected — the repo table needs real width to be usable,
-        // so it gets the full page instead of being squeezed into a half
-        // column next to a form a fraction of its size.
+        // GitHub is connected — the repo table needs real width to be usable, so
+        // it gets the full page instead of being squeezed into a half column next
+        // to a form a fraction of its size. The hosted-API option stays above it
+        // (not after) so a long repo list never scrolls it out of reach.
         <>
+          <div style={{ maxWidth: 480, marginBottom: 20 }}>
+            <HostedApiPanel />
+          </div>
+
           <p className="small muted" style={{ maxWidth: "70ch" }}>
-            This is every repository the GitHub account{" "}
-            <strong>{repos.github_login}</strong> can see — your own projects and
-            anything shared with you, personal or your company's. We only read code
-            structure to guess what AI frameworks you're using; we never run,
-            execute, or modify anything in it. Look for the{" "}
-            <span className="tag ok">company account</span> tag to spot your
+            Every repository the GitHub account <strong>{repos.github_login}</strong>{" "}
+            can see. We only read code structure to guess what AI frameworks you're
+            using — never run, execute, or modify anything. Look for{" "}
+            <span className="tag ok">company account</span> to spot your
             organization's repos among personal ones.
           </p>
           <Panel
@@ -330,10 +327,6 @@ async function ConnectTab({
               <RepoTable repos={repos.repos} />
             )}
           </Panel>
-
-          <div style={{ maxWidth: 480, marginTop: 20 }}>
-            <HostedApiPanel />
-          </div>
         </>
       )}
     </>
@@ -345,10 +338,9 @@ function HostedApiPanel() {
     <Panel title="Or point us at a hosted API">
       <div className="body">
         <p className="small muted" style={{ marginTop: 0 }}>
-          No repo access needed. Give us the live endpoint and, if you have one,
-          its OpenAPI/Swagger spec URL — we fetch and read the spec document only,
-          never call the API itself, and propose a draft agent from what it
-          describes.
+          No repo access needed — give us the live endpoint and, if you have one,
+          its OpenAPI/Swagger spec URL. We only read the spec document, never call
+          the API itself.
         </p>
         <form action="/api/integrations/hosted-api/scan" method="POST" className="stack">
           <Field

@@ -501,7 +501,10 @@ pre {
   font-size: 13px;
 }
 
-.progress-line { display: flex; align-items: center; gap: 12px; margin: 4px 0 22px; }
+/* Capped to the same measure as ol.steps right below it — an element this thin
+   spanning the full page width while everything under it reads at 76ch makes
+   the text look like it stops arbitrarily partway across, not deliberately. */
+.progress-line { display: flex; align-items: center; gap: 12px; margin: 4px 0 22px; max-width: 76ch; }
 .progress-track {
   flex: 1;
   height: 5px;
@@ -564,6 +567,39 @@ ol.steps li.done .step-title { color: var(--muted); }
   box-shadow: var(--e-1);
 }
 .note-panel strong { color: var(--text); }
+
+/* --- Modal ---------------------------------------------------------------- */
+
+.modal {
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  padding: 0;
+  width: min(520px, calc(100vw - 48px));
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--e-3);
+}
+.modal::backdrop { background: rgba(20, 16, 10, 0.45); }
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--hairline);
+  font-weight: 620;
+}
+.modal-close {
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--r-1);
+}
+.modal-close:hover { background: var(--panel-2); color: var(--text); }
+.modal-body { padding: 16px; max-height: 70vh; overflow-y: auto; }
 
 .info-tip {
   position: relative;
@@ -1006,16 +1042,6 @@ ol.steps li.done .step-title { color: var(--muted); }
 }
 .chip:hover { color: var(--text); border-color: var(--accent); text-decoration: none; }
 .chip.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 620; }
-
-/* --- Legend ------------------------------------------------------------- */
-
-.legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 4px 0 18px; }
-.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
-.legend-swatch { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
-.legend-swatch.ok { background: var(--ok); }
-.legend-swatch.warn { background: var(--warn); }
-.legend-swatch.bad { background: var(--bad); }
-.legend-swatch.dim { background: var(--muted); opacity: 0.5; }
 
 /* --- Tabs (query-param driven, server-rendered, no client JS) -------------- */
 

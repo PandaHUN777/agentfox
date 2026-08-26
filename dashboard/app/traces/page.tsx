@@ -37,14 +37,13 @@ export default async function Traces({
     <>
       <h1>Traces</h1>
       <p className="sub">
-        Execution paths: every prompt, retrieval, tool call, delegation and guardrail
-        decision, correlated into one auditable object — the full record of what an
-        agent actually did on one request, not a summary of it. This is what an
-        auditor reads, and what a candidate policy change is replayed against on the{" "}
-        <Link href="/policies">Policies</Link> page before it can be promoted.
+        Every prompt, retrieval, tool call, delegation and guardrail decision,
+        correlated into one auditable object — what an agent actually did on one
+        request, replayed against a candidate{" "}
+        <Link href="/policies">policy</Link> change before it's promoted.
       </p>
 
-      <div className="chipbar">
+      <form action="/traces" method="GET" className="chipbar">
         <span className="chipbar-label">filter:</span>
         <Link href={`/traces?${agentQs.replace(/^&/, "")}`} className={`chip${!sp.verdict && !sp.entity_type ? " active" : ""}`}>all</Link>
         <Link href={`/traces?verdict=block${agentQs}`} className={`chip${sp.verdict === "block" ? " active" : ""}`}>blocked</Link>
@@ -52,9 +51,7 @@ export default async function Traces({
         <Link href={`/traces?entity_type=INJECTION${agentQs}`} className={`chip${sp.entity_type === "INJECTION" ? " active" : ""}`}>injection</Link>
         <Link href={`/traces?entity_type=PII${agentQs}`} className={`chip${sp.entity_type === "PII" ? " active" : ""}`}>PII</Link>
         <Link href={`/traces?entity_type=SECRET${agentQs}`} className={`chip${sp.entity_type === "SECRET" ? " active" : ""}`}>secrets</Link>
-      </div>
-      <form action="/traces" method="GET" className="chipbar" style={{ marginTop: -4 }}>
-        <span className="chipbar-label">agent:</span>
+        <span className="chipbar-label" style={{ marginLeft: 10 }}>agent:</span>
         {sp.verdict && <input type="hidden" name="verdict" value={sp.verdict} />}
         {sp.entity_type && <input type="hidden" name="entity_type" value={sp.entity_type} />}
         <select

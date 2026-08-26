@@ -34,12 +34,11 @@ export default async function Findings({
     <>
       <h1>Findings</h1>
       <p className="sub">
-        Every problem this product detected, ranked by severity — security failures,
-        missing owners, drifted models, broken hand-offs, and more. See what kind of
+        Every problem this product detected, ranked by severity. See what kind of
         problem each one is in the type column below.
       </p>
 
-      <div className="chipbar">
+      <form action="/findings" method="GET" className="chipbar">
         <span className="chipbar-label">status:</span>
         {["open", "resolved", "suppressed"].map((s) => (
           <Link
@@ -65,9 +64,7 @@ export default async function Findings({
             clear severity ×
           </Link>
         )}
-      </div>
-      <form action="/findings" method="GET" className="chipbar" style={{ marginTop: -4 }}>
-        <span className="chipbar-label">agent:</span>
+        <span className="chipbar-label" style={{ marginLeft: 10 }}>agent:</span>
         <input type="hidden" name="status" value={sp.status ?? "open"} />
         {sp.severity && <input type="hidden" name="severity" value={sp.severity} />}
         <select
@@ -87,11 +84,6 @@ export default async function Findings({
           </Link>
         )}
       </form>
-      <div className="legend">
-        <span className="legend-item"><span className="legend-swatch bad" /> critical / high severity</span>
-        <span className="legend-item"><span className="legend-swatch warn" /> medium severity</span>
-        <span className="legend-item"><span className="legend-swatch dim" /> low severity</span>
-      </div>
 
       <div className="panel scroll-x">
         {data.findings.length === 0 ? (
