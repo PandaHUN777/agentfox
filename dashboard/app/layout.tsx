@@ -33,8 +33,6 @@ const NAV: { group: string; items: [string, string][] }[] = [
     items: [
       ["Overview", "/"],
       ["Start here", "/start"],
-      ["Connect", "/settings/integrations"],
-      ["API tokens", "/settings/tokens"],
     ],
   },
   {
@@ -49,7 +47,6 @@ const NAV: { group: string; items: [string, string][] }[] = [
     group: "Govern",
     items: [
       ["Policies", "/policies"],
-      ["Guardrails", "/guardrails"],
       ["Entitlement", "/entitlement"],
       ["Approvals", "/approvals"],
     ],
@@ -58,7 +55,6 @@ const NAV: { group: string; items: [string, string][] }[] = [
     group: "Quality",
     items: [
       ["Evaluation", "/evals"],
-      ["Escalation", "/escalation"],
       ["Sources", "/sources"],
     ],
   },
@@ -66,7 +62,6 @@ const NAV: { group: string; items: [string, string][] }[] = [
     group: "Reporting",
     items: [
       ["Compliance", "/compliance"],
-      ["Board view", "/board"],
     ],
   },
 ];
