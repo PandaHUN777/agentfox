@@ -2,6 +2,7 @@ import { api, safeApi } from "@/lib/api";
 import { ApiDown, Panel, ts } from "@/components/ui";
 import { PolicyEditor } from "@/components/PolicyEditor";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { CanaryPanel } from "@/components/CanaryPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -45,11 +46,12 @@ function withExampleRuleIfEmpty(body: string): string {
 
 export default async function PolicyDetail({ params }: { params: Promise<{ key: string }> }) {
   const { key } = await params;
-  let policy: any, bindings: any;
+  let policy: any, bindings: any, canaryData: any;
   try {
-    [policy, bindings] = await Promise.all([
+    [policy, bindings, canaryData] = await Promise.all([
       api(`/api/policies/${key}`),
       safeApi("/api/policies", { policies: [] }),
+      safeApi(`/api/policies/${key}/canary`, { canary: null }),
     ]);
   } catch (e: any) {
     return (
@@ -122,6 +124,17 @@ export default async function PolicyDetail({ params }: { params: Promise<{ key: 
               </tbody>
             </table>
           </div>
+        </>
+      )}
+
+      {policy.versions?.length > 1 && (
+        <>
+          <h2>Canary rollout</h2>
+          <CanaryPanel
+            policyKey={key}
+            initialCanary={canaryData?.canary ?? null}
+            latestVersion={policy.versions[policy.versions.length - 1]?.version ?? 1}
+          />
         </>
       )}
 

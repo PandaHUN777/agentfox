@@ -10,12 +10,12 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | | |
 |---|---|
 | **Capabilities** | 41 tracked |
-| **Built** | 22 ✅ |
-| **Partial** | 19 ◐ |
+| **Built** | 23 ✅ |
+| **Partial** | 18 ◐ |
 | **Absent** | 0 ✗ |
-| **Weighted coverage** | **77%** *(partial counts half)* |
-| **Tests** | 1076 |
-| **Lines** | 55,015 (src + tests) |
+| **Weighted coverage** | **78%** *(partial counts half)* |
+| **Tests** | 1093 |
+| **Lines** | 55,807 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -25,7 +25,7 @@ in [traceability.md](traceability.md).
 | ID | Pillar | Capability | Status | Tests | Note |
 |---|---|---|---|---|---|
 | `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 8 | connector-based estate discovery (P1-8) absent |
-| `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 16 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
+| `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ✅ built | 18 | non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 12 | no live IdP; Entra/Okta integration (P2-8) absent |
 | `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 52 | model-based detectors wired but need an opt-in weights download |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 38 | cascade analysis is exactly as good as the trigger declarations it is given — an undeclared webhook stays invisible, and shell analysis remains a deny-list rather than a parser |
@@ -50,7 +50,7 @@ in [traceability.md](traceability.md).
 | `P18` | 18 Tool Contract | Semantic contract: data access, result fidelity, register, source arbitration | ◐ partial | 60 | governs the gap between the request, the rows a tool touched and the answer. Data-access scoping is exactly as good as the ScopeRule declarations it is given — an undeclared table is reported, never assumed safe. Register checks are lexical and licensed per domain; they judge standing, not content, and a licensed operator turns them off deliberately |
 | `PL-10` | Platform | Operator actions recorded in the decision chain | ◐ partial | 11 | the registry of privileged operations is declared and the check is structural, so a new operator surface without an audit call fails the suite. system_scope is the stated exception: it lifts tenant isolation and so has no tenant chain to write to, which needs a separate system-level chain |
 | `PL-8` | Platform | Tenant isolation enforced at the session | ✅ built | 15 |  |
-| `X-1` | Adoption | One-line auto-instrumentation | ✅ built | 12 |  |
+| `X-1` | Adoption | One-line auto-instrumentation | ✅ built | 13 |  |
 | `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 20 |  |
 | `P16` | 16 Business rules | Business-process guardrails and the guardrail catalogue | ◐ partial | 32 | policy compilation is deterministic: 86% of a tuned document and 64% of a held-out one compile with no question. Prose with no parseable structure ("be courteous") is reported as inexpressible rather than guessed at; a model-assisted path for those sentences is not built |
 | `X-4` | Adoption | Protective controls reachable without writing code | ✅ built | 8 |  |
@@ -84,4 +84,4 @@ above. The 50 modes come from [failure-modes.md](failure-modes.md).
 | **F7** Numeric, temporal & entity integrity | 7 | 7 | 0 | ✅ 7/7 | — |
 | **F8** Context & retrieval integrity | 7 | 5 | 1 | ◐ 5.5/7 | F8.3 |
 
-**Reading the gaps.** Nothing is untouched — every tracked capability has at least a foundation. What remains is 19 partial capabilities, each with a specific, named piece left rather than a blank slate: `P1`, `P12`, `P2`, `P9`, `P10`, `P8`, `P14`, `P4`, `P13`, `P6`, `P15`, `PL-4`, `PL-5`, `PL-6`, `PL-7`, `PL-9`, `P18`, `PL-10`, `P16`. See each row's note for what that piece is.
+**Reading the gaps.** Nothing is untouched — every tracked capability has at least a foundation. What remains is 18 partial capabilities, each with a specific, named piece left rather than a blank slate: `P1`, `P2`, `P9`, `P10`, `P8`, `P14`, `P4`, `P13`, `P6`, `P15`, `PL-4`, `PL-5`, `PL-6`, `PL-7`, `PL-9`, `P18`, `PL-10`, `P16`. See each row's note for what that piece is.

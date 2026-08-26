@@ -21,6 +21,7 @@ from sqlalchemy.orm import Session
 
 from ..config import get_settings
 from ..models import Policy, PolicyBinding, PolicyVersion, utcnow
+from .canary import active_canary, pick_version_id
 from .engine import NativePolicyEngine, PolicyEngine
 from .hierarchy import EffectivePolicy, PolicyLayer, lint_policy, lint_summary, resolve_effective
 from .model import PolicyDocument
@@ -214,6 +215,18 @@ def active_policies(
         version = session.get(PolicyVersion, binding.policy_version_id)
         if version is None:
             continue
+        # P12-6 — a running canary splits live traffic between the bound (stable)
+        # version and a candidate by percentage, per request. `active_canary` only
+        # returns a hit when the binding still points at the canary's own recorded
+        # stable version, so a binding that moved out from under a stale canary
+        # (e.g. someone edited the policy directly) is never silently overridden.
+        canary = active_canary(session, version.policy_id)
+        if canary is not None and canary.stable_version_id == version.id:
+            picked_id = pick_version_id(canary)
+            if picked_id != version.id:
+                candidate_version = session.get(PolicyVersion, picked_id)
+                if candidate_version is not None:
+                    version = candidate_version
         doc = PolicyDocument.model_validate(version.compiled_json or yaml.safe_load(version.body))
         scope = binding.scope_json or doc.scope
         doc.scope = scope

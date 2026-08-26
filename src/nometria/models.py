@@ -1250,6 +1250,38 @@ class PolicyBinding(Base, TimestampMixin):
     effective_to: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class PolicyCanary(Base, TimestampMixin):
+    """Agent canary rollout by version, with health gates and automated rollback (P12-6).
+
+    A running canary sits *on top of* the current binding rather than replacing it:
+    ``stable_version_id`` is what the binding already points to, ``candidate_version_id``
+    is the version being tried. Traffic is split per request by ``percent`` (see
+    :func:`policy.canary.pick_version_id`); which cohort a given ``Decision`` landed in
+    is never stored redundantly — it is recovered after the fact by checking whether its
+    ``policy_version_id`` equals the stable or the candidate id, which stays true for the
+    whole lifetime of a completed or rolled-back canary because versions are immutable.
+    """
+
+    __tablename__ = "policy_canaries"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.policy_canary_id)
+    policy_id: Mapped[str] = mapped_column(String(40), ForeignKey("policies.id"), index=True)
+    stable_version_id: Mapped[str] = mapped_column(String(40))
+    candidate_version_id: Mapped[str] = mapped_column(String(40))
+    #: The rollout ladder, e.g. [10, 25, 50, 100]. `percent` is always steps[step_index].
+    steps: Mapped[list[int]] = mapped_column(JSON, default=list)
+    step_index: Mapped[int] = mapped_column(Integer, default=0)
+    percent: Mapped[int] = mapped_column(Integer, default=10)
+    status: Mapped[str] = mapped_column(String(16), default="rolling", index=True)
+    #: Health gate: automatic rollback fires when the candidate cohort's block rate
+    #: exceeds the stable cohort's by more than this, once both have `min_sample`.
+    max_block_rate_delta: Mapped[float] = mapped_column(Float, default=0.15)
+    min_sample: Mapped[int] = mapped_column(Integer, default=20)
+    started_by: Mapped[str | None] = mapped_column(String(120))
+    rollback_reason: Mapped[str] = mapped_column(Text, default="")
+    completed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class Decision(Base, TimestampMixin):
     __tablename__ = "decisions"
     __table_args__ = (Index("ix_decisions_agent_verdict", "agent_id", "verdict", "created_at"),)

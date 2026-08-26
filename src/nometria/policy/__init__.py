@@ -9,6 +9,15 @@ upgrade). They are cross-verified in the test suite, which is what keeps the
 
 from __future__ import annotations
 
+from .canary import (
+    CanaryError,
+    active_canary,
+    canary_health,
+    canary_rollout,
+    pick_version_id,
+    rollback_canary,
+    start_canary,
+)
 from .engine import NativePolicyEngine, PolicyEngine, combine
 from .hierarchy import (
     LEVELS,
@@ -50,6 +59,7 @@ __all__ = [
     "EFFECT_RANK",
     "LEVELS",
     "MODES",
+    "CanaryError",
     "EffectivePolicy",
     "LintFinding",
     "PolicyLayer",
@@ -66,8 +76,11 @@ __all__ = [
     "PolicyInput",
     "Rule",
     "SimulationDiff",
+    "active_canary",
     "active_layers",
     "active_policies",
+    "canary_health",
+    "canary_rollout",
     "effective_for",
     "combine",
     "compile_to_rego",
@@ -77,9 +90,12 @@ __all__ = [
     "lint_policy",
     "lint_summary",
     "load_from_dir",
+    "pick_version_id",
     "record_simulation",
     "resolve_effective",
+    "rollback_canary",
     "save_policy",
     "set_mode",
     "simulate",
+    "start_canary",
 ]

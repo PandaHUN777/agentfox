@@ -17,20 +17,26 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ...audit import chain
-from ...models import Policy, PolicyBinding, PolicyVersion, User
+from ...models import Policy, PolicyBinding, PolicyCanary, PolicyVersion, User
 from ...policy import (
     LEVELS,
     MODES,
+    CanaryError,
     PolicyDocument,
+    active_canary,
     active_policies,
+    canary_health,
+    canary_rollout,
     compile_to_rego,
     effective_for,
     history,
     lint_all,
     record_simulation,
+    rollback_canary,
     save_policy,
     set_mode,
     simulate,
+    start_canary,
 )
 from ..deps import current_user, db, require
 
@@ -304,6 +310,154 @@ def simulate_policy(
         )
         result["simulation_id"] = run.id
     return result
+
+
+# ---------------------------------------------------------------------------
+# Canary rollout (P12-6)
+# ---------------------------------------------------------------------------
+
+
+def _canary_json(session: Session, canary: PolicyCanary) -> dict[str, Any]:
+    stable = session.get(PolicyVersion, canary.stable_version_id)
+    candidate = session.get(PolicyVersion, canary.candidate_version_id)
+    out: dict[str, Any] = {
+        "id": canary.id,
+        "status": canary.status,
+        "percent": canary.percent,
+        "step_index": canary.step_index,
+        "steps": canary.steps,
+        "stable_version": stable.version if stable else None,
+        "candidate_version": candidate.version if candidate else None,
+        "max_block_rate_delta": canary.max_block_rate_delta,
+        "min_sample": canary.min_sample,
+        "started_by": canary.started_by,
+        "started_at": canary.created_at.isoformat() if canary.created_at else None,
+        "completed_at": canary.completed_at.isoformat() if canary.completed_at else None,
+        "rollback_reason": canary.rollback_reason,
+    }
+    if canary.status == "rolling":
+        out["health"] = canary_health(session, canary)
+    return out
+
+
+class CanaryStartIn(BaseModel):
+    candidate_version: int | None = None
+    steps: list[int] | None = None
+    max_block_rate_delta: float = 0.15
+    min_sample: int = 20
+
+
+@router.post("/{key}/canary/start", status_code=201)
+def start_policy_canary(
+    key: str,
+    payload: CanaryStartIn,
+    session: Session = Depends(db),
+    user: User = Depends(require("policy_production")),
+) -> dict[str, Any]:
+    try:
+        canary = start_canary(
+            session,
+            key,
+            candidate_version=payload.candidate_version,
+            steps=payload.steps,
+            max_block_rate_delta=payload.max_block_rate_delta,
+            min_sample=payload.min_sample,
+            started_by=user.email,
+        )
+    except CanaryError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    chain.append(
+        session,
+        "policy.canary_started",
+        actor_type="user",
+        actor_id=user.email,
+        subject_type="policy",
+        subject_id=key,
+        payload={
+            "canary_id": canary.id,
+            "stable_version_id": canary.stable_version_id,
+            "candidate_version_id": canary.candidate_version_id,
+            "steps": canary.steps,
+        },
+    )
+    return _canary_json(session, canary)
+
+
+@router.get("/{key}/canary")
+def get_policy_canary(
+    key: str, session: Session = Depends(db), _u: User = Depends(current_user)
+) -> dict[str, Any]:
+    policy = session.scalar(select(Policy).where(Policy.key == key))
+    if policy is None:
+        raise HTTPException(404, f"unknown policy '{key}'")
+    canary = active_canary(session, policy.id)
+    if canary is None:
+        # Most recent one regardless of status, so the UI can show "rolled back
+        # 10 minutes ago, here's why" instead of just "nothing running".
+        canary = session.scalar(
+            select(PolicyCanary)
+            .where(PolicyCanary.policy_id == policy.id)
+            .order_by(PolicyCanary.created_at.desc())
+        )
+    if canary is None:
+        return {"canary": None}
+    return {"canary": _canary_json(session, canary)}
+
+
+@router.post("/{key}/canary/advance")
+def advance_policy_canary(
+    key: str, session: Session = Depends(db), user: User = Depends(require("policy_production"))
+) -> dict[str, Any]:
+    """Check the candidate cohort's health and advance, hold, or auto-roll-back.
+
+    Safe to call repeatedly — a canary without enough traffic yet simply holds at
+    its current step. This is what makes rollback "automated": the decision is
+    computed from telemetry every time this is called, never a human judgement call.
+    """
+    policy = session.scalar(select(Policy).where(Policy.key == key))
+    if policy is None:
+        raise HTTPException(404, f"unknown policy '{key}'")
+    canary = active_canary(session, policy.id)
+    if canary is None:
+        raise HTTPException(400, f"policy '{key}' has no canary rolling")
+    before_status, before_percent = canary.status, canary.percent
+    canary = canary_rollout(session, canary.id)
+    if canary.status != before_status or canary.percent != before_percent:
+        chain.append(
+            session,
+            "policy.canary_rolled_back" if canary.status == "rolled_back" else (
+                "policy.canary_completed" if canary.status == "completed" else "policy.canary_advanced"
+            ),
+            actor_type="user",
+            actor_id=user.email,
+            subject_type="policy",
+            subject_id=key,
+            payload={"canary_id": canary.id, "status": canary.status, "percent": canary.percent},
+        )
+    return _canary_json(session, canary)
+
+
+@router.post("/{key}/canary/rollback")
+def rollback_policy_canary(
+    key: str, session: Session = Depends(db), user: User = Depends(require("policy_production"))
+) -> dict[str, Any]:
+    policy = session.scalar(select(Policy).where(Policy.key == key))
+    if policy is None:
+        raise HTTPException(404, f"unknown policy '{key}'")
+    canary = active_canary(session, policy.id)
+    if canary is None:
+        raise HTTPException(400, f"policy '{key}' has no canary rolling")
+    canary = rollback_canary(session, canary.id, reason=f"manual rollback by {user.email}")
+    chain.append(
+        session,
+        "policy.canary_rolled_back",
+        actor_type="user",
+        actor_id=user.email,
+        subject_type="policy",
+        subject_id=key,
+        payload={"canary_id": canary.id, "reason": canary.rollback_reason},
+    )
+    return _canary_json(session, canary)
 
 
 @router.get("/{key}/rego")

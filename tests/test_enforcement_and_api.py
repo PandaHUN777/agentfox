@@ -425,6 +425,60 @@ def test_policy_simulation_reports_a_diff(client):
     assert "Review the newly blocked" in body["recommendation"]
 
 
+def test_policy_canary_lifecycle_via_api(client):
+    """P12-6, end to end through the routes: start, check health, roll back."""
+    body = "key: canary-api\nmode: enforce\ndefault_effect: allow\nrules: []\n"
+    client.post("/api/policies", json={"body": body, "mode": "enforce"}, headers=as_user("marcus@example.com"))
+    body2 = (
+        "key: canary-api\nmode: enforce\ndefault_effect: allow\n"
+        "rules:\n  - id: all\n    when: {}\n    effect: block\n"
+    )
+    client.post("/api/policies", json={"body": body2, "mode": "enforce"}, headers=as_user("marcus@example.com"))
+
+    start = client.post(
+        "/api/policies/canary-api/canary/start", json={}, headers=as_user("marcus@example.com")
+    )
+    assert start.status_code == 201, start.text
+    started = start.json()
+    assert started["status"] == "rolling"
+    assert started["percent"] == 10
+    assert started["stable_version"] == 1
+    assert started["candidate_version"] == 2
+
+    # A developer may not start, advance, or roll back a production canary.
+    forbidden = client.post(
+        "/api/policies/canary-api/canary/start", json={}, headers=as_user("priya@example.com")
+    )
+    assert forbidden.status_code in (400, 403)  # 400: already rolling, but never 201
+
+    fetched = client.get("/api/policies/canary-api/canary", headers=as_user("aisha@example.com"))
+    assert fetched.status_code == 200
+    assert fetched.json()["canary"]["status"] == "rolling"
+
+    rolled_back = client.post(
+        "/api/policies/canary-api/canary/rollback", headers=as_user("marcus@example.com")
+    )
+    assert rolled_back.status_code == 200
+    assert rolled_back.json()["status"] == "rolled_back"
+
+    again = client.get("/api/policies/canary-api/canary", headers=as_user("aisha@example.com"))
+    assert again.json()["canary"]["status"] == "rolled_back"
+
+
+def test_only_production_roles_can_start_a_canary(client):
+    body = "key: canary-rbac\nmode: enforce\ndefault_effect: allow\nrules: []\n"
+    client.post("/api/policies", json={"body": body, "mode": "enforce"}, headers=as_user("marcus@example.com"))
+    body2 = (
+        "key: canary-rbac\nmode: enforce\ndefault_effect: allow\n"
+        "rules:\n  - id: x\n    when: {}\n    effect: block\n"
+    )
+    client.post("/api/policies", json={"body": body2, "mode": "enforce"}, headers=as_user("marcus@example.com"))
+    response = client.post(
+        "/api/policies/canary-rbac/canary/start", json={}, headers=as_user("aisha@example.com")
+    )
+    assert response.status_code == 403
+
+
 # ---------------------------------------------------------------------------
 # RBAC (Appendix C §4)
 # ---------------------------------------------------------------------------

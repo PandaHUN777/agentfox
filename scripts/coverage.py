@@ -232,7 +232,7 @@ PROBES: list[Probe] = [
         ["class PolicyDocument", "def resolve_effective", "def lint_policy"],
         ["def canary_rollout"],
         "policy|hierarchy",
-        "canary rollout (P12-6) and non-developer authoring (P12-7) absent",
+        "non-developer authoring (P12-7) absent",
     ),
     # --- Layer B: Constrain
     Probe(
