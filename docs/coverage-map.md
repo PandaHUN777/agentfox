@@ -9,7 +9,7 @@ what we set out to cover and say nothing about what we never thought of. This on
 walks the path a request actually travels and asks, at each layer, what can go
 wrong there.
 
-**112 scenarios · 98 verified by execution · 90% weighted coverage**
+**112 scenarios · 98 verified by execution · 89% weighted coverage**
 (partial counts half). The harness runs every executable claim against the real
 product and fails if any disagrees — so a row marked ✅ here has fired at least
 once in anger.
@@ -18,7 +18,7 @@ once in anger.
 |---|---|---|
 | L0 model-intrinsic | 6/11 | `████████` |
 | L1 input and prompt | 7/9 | `████████████` |
-| L2 retrieval and context | 15.5/16 | `███████████████` |
+| L2 retrieval and context | 15/16 | `██████████████` |
 | L3 reasoning and planning | 5/6 | `████████████` |
 | L4 tools and actions | 17.5/18 | `███████████████` |
 | L5 output and disclosure | 18/19 | `██████████████` |
@@ -63,7 +63,7 @@ once in anger.
 | L2.9 | Tokeniser failure on non-Latin script | ✅ covered | P14 document quality — decoder and tokeniser damage | decoder damage detected; 3 non-Latin languages pass clean |
 | L2.10 | Context-window truncation drops the evidence | ✅ covered | P14 assembly — required evidence is seated before the ranking | cited evidence that cannot fit is a block; a budget that fits drops 0 |
 | L2.11 | Lost in the middle | ✅ covered | P14 assembly — salience reordering | ranked order [0, 1, 2, 3, 4, 5] reordered to [0, 2, 4, 5, 3, 1] — strongest at both edges |
-| L2.12 | Memory contamination across sessions | ✅ covered | tenancy isolates storage; P14 binds memory to its subject | memory about another end user is a block; unbound memory is reported; the principal's own memory passes clean |
+| L2.12 | Memory contamination across sessions | ◐ partial | memory_binding_breach() checks subject/principal on caller-supplied entries at call time | memory about another end user is a block; unbound memory is reported; the principal's own memory passes clean |
 | L2.13 | Retrieval quality drifts over time | ✅ covered | P14 retrieval metrics against a recorded baseline | nDCG 1.0 -> 0.5 reported as retrieval-regression; an unchanged run reports nothing |
 | L2.14 | Corrupt document ingested | ✅ covered | P14 document quality gate at ingestion | corrupt scored 0.40 (mojibake); clean prose scored 1.00 with no findings |
 | | **L3 reasoning and planning** | | | |
@@ -124,7 +124,7 @@ once in anger.
 | | **L5 output and disclosure** | | | |
 | L5.19 | The answer claims more precision or authority than it has | ✅ covered | P18 register check — specificity licensed by epistemic standing | a stated dose is blocked as an instruction regardless of accuracy, while the same question answered generally  |
 | | **L7 human interface** | | | |
-| L7.1 | Should have escalated and did not | ✅ covered | P11-2 missed-escalation detection | 1 missed of 1 |
+| L7.1 | Should have escalated and did not | ✅ covered | P11-2 missed-escalation detection | 1 missed of 2 |
 | L7.2 | Escalated with no context | ✅ covered | P11-6 handoff completeness | missing ['conversation_summary', 'attempted_actions', 'blocking_reason', 'customer_reference'] |
 | L7.3 | Loops instead of escalating | ✅ covered | P11-4 | loop_without_handoff=True |
 | L7.4 | Claims resolution that did not happen | ✅ covered | P11-5 false resolution | the user continued after the resolution claim |
@@ -140,7 +140,7 @@ once in anger.
 | L8.5 | Model version changes underneath | ◐ partial | P4 drift + version recording | Versions are recorded per decision and drift is measured on scores. No alert on a version change itself. |
 | L8.6 | Prompt change regresses quality | ✅ covered | P4 CI gating with direction-aware scorers | passed=False, 1 absolute failure(s) |
 | L8.7 | Shadow agent in production | ✅ covered | P1-6 shadow detection | 1 shadow agent(s) |
-| L8.8 | Latency budget blown by the guardrails | ✅ covered | P3-13 request-level ledger + fast path | 32 KB document at p50 13.6 ms (budget 100 ms) |
+| L8.8 | Latency budget blown by the guardrails | ✅ covered | P3-13 request-level ledger + fast path | 32 KB document at p50 13.5 ms (budget 100 ms) |
 | L8.9 | Policy misconfiguration | ✅ covered | P12 lint with six codes | 3 finding(s): ['duplicate-id', 'illegal-loosening', 'unconditional'] |
 | L8.10 | Rate-limit or quota exhaustion | ✅ covered | P15-4 admission control that sheds work, never governance | over-limit traffic is refused rather than admitted unchecked, batch is shed before interactive, operator traff |
 | L8.11 | A guardrail is down and nobody can tell | ✅ covered | PL-7 declared fail modes — visible, bounded, and impossible for some controls | a fail-open request is allowed and recorded so it can be re-examined; after 300s past a 120s budget it convert |

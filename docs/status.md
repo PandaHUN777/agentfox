@@ -14,8 +14,8 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 19 ◐ |
 | **Absent** | 0 ✗ |
 | **Weighted coverage** | **77%** *(partial counts half)* |
-| **Tests** | 1023 |
-| **Lines** | 51,675 (src + tests) |
+| **Tests** | 1061 |
+| **Lines** | 54,084 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -25,18 +25,18 @@ in [traceability.md](traceability.md).
 | ID | Pillar | Capability | Status | Tests | Note |
 |---|---|---|---|---|---|
 | `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 8 | connector-based estate discovery (P1-8) absent |
-| `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 14 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
-| `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 11 | no live IdP; Entra/Okta integration (P2-8) absent |
-| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 47 | model-based detectors wired but need an opt-in weights download |
-| `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 37 | cascade analysis is exactly as good as the trigger declarations it is given — an undeclared webhook stays invisible, and shell analysis remains a deny-list rather than a parser |
-| `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 14 | OpenFGA adapter is a declared seam, not an implementation |
+| `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ◐ partial | 16 | canary rollout (P12-6) and non-developer authoring (P12-7) absent |
+| `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 12 | no live IdP; Entra/Okta integration (P2-8) absent |
+| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 48 | model-based detectors wired but need an opt-in weights download |
+| `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 38 | cascade analysis is exactly as good as the trigger declarations it is given — an undeclared webhook stays invisible, and shell analysis remains a deny-list rather than a parser |
+| `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 16 | OpenFGA adapter is a declared seam, not an implementation |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 52 |  |
-| `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 36 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
-| `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ◐ partial | 27 | the quality-check logic (`context_integrity.py`) is built and tested in isolation, but no route or enforcement path calls it yet — it does not currently gate anything in the running system. Semantic chunk-boundary repair and automatic re-extraction of a corrupt document are also not built |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 35 | Ragas adapter built (`I-8`) but not reachable from any route — no model-based groundedness or annotation queue |
+| `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 40 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
+| `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ◐ partial | 27 | gates the ingestion and assembly path. Semantic chunk-boundary repair and automatic re-extraction of a corrupt document are not built — a finding is reported and the decision to drop the document belongs to the operator |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 37 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ◐ partial | 22 | attributes a failure to the step that originated the value and measures what each handoff dropped. Both work on constraints that were written down — an expectation the human held and never typed is invisible here, and no trace analysis recovers it |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 17 |  |
-| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 36 |  |
+| `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 37 |  |
 | `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 20 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 16 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
@@ -46,14 +46,14 @@ in [traceability.md](traceability.md).
 | `PL-5` | Platform | Async workers | ◐ partial | — | in-process with retries and a dead letter that is public state rather than a log line. The interface is the deliverable; a Redis or SQS implementation belongs behind it, and building that before anyone runs this at that scale would be committing to infrastructure early |
 | `PL-6` | Platform | HA-ready persistence | ◐ partial | — | pooling and pre-ping ship, and SQLite is refused at startup for a multi-worker deployment rather than surfacing as intermittent latency. Actual scale-out under load is still untested |
 | `PL-7` | Platform | Service-level fail-open | ◐ partial | 20 | fail-open is legitimate and must be visible, bounded and impossible for some controls. Admission control sheds work rather than governance. What is not built: distributed state, so the fail-open budget and the rate limit are per-process and a multi-worker deployment gets N times the declared budget |
-| `PL-9` | Platform | Authentication and operator tokens | ◐ partial | 38 | OIDC/SCIM absent; tokens and the dev-mode gate ship |
+| `PL-9` | Platform | Authentication and operator tokens | ◐ partial | 43 | OIDC/SCIM absent; tokens and the dev-mode gate ship |
 | `P18` | 18 Tool Contract | Semantic contract: data access, result fidelity, register, source arbitration | ◐ partial | 60 | governs the gap between the request, the rows a tool touched and the answer. Data-access scoping is exactly as good as the ScopeRule declarations it is given — an undeclared table is reported, never assumed safe. Register checks are lexical and licensed per domain; they judge standing, not content, and a licensed operator turns them off deliberately |
 | `PL-10` | Platform | Operator actions recorded in the decision chain | ◐ partial | 11 | the registry of privileged operations is declared and the check is structural, so a new operator surface without an audit call fails the suite. system_scope is the stated exception: it lifts tenant isolation and so has no tenant chain to write to, which needs a separate system-level chain |
 | `PL-8` | Platform | Tenant isolation enforced at the session | ✅ built | 15 |  |
 | `X-1` | Adoption | One-line auto-instrumentation | ✅ built | 12 |  |
-| `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 14 |  |
+| `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 20 |  |
 | `P16` | 16 Business rules | Business-process guardrails and the guardrail catalogue | ◐ partial | 32 | policy compilation is deterministic: 86% of a tuned document and 64% of a held-out one compile with no question. Prose with no parseable structure ("be courteous") is reported as inexpressible rather than guessed at; a model-assisted path for those sentences is not built |
-| `X-4` | Adoption | Protective controls reachable without writing code | ✅ built | 6 |  |
+| `X-4` | Adoption | Protective controls reachable without writing code | ✅ built | 8 |  |
 | `X-3` | Adoption | Control-plane onboarding and attention-first home | ✅ built | 6 |  |
 | `I-1` | Integration | LangGraph-native SDK | ✅ built | 2 |  |
 | `I-2` | Integration | MCP inline governance | ✅ built | 15 |  |

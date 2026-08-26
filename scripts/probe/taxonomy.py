@@ -370,12 +370,15 @@ SCENARIOS: list[Scenario] = [
         "L2 retrieval and context",
         "Memory contamination across sessions",
         "One user's data surfaces in another's conversation via memory.",
-        control='tenancy isolates storage; P14 binds memory to its subject',
-        expect="covered",
+        control='memory_binding_breach() checks subject/principal on caller-supplied entries at call time',
+        expect="partial",
         note=(
-            "Cross-tenant memory was already prevented. Within a tenant the boundary is "
-            "the subject the memory is about, and an entry with no subject is reported "
-            "rather than allowed through."
+            "Cross-tenant memory was already prevented, and within a tenant the boundary is "
+            "the subject the memory is about — an entry with no subject is reported rather "
+            "than allowed through. But this checks a list the caller hands in on each call; "
+            "there is no persistent memory store, no content validation on the write path, "
+            "no provenance weighting on a retrieved entry, and no expiry for one nobody has "
+            "verified (OWASP ASI06; PRD v4 addendum SS1.2)."
         ),
         probe="probe_memory_binding",
         tags=["F8"],
