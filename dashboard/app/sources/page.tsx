@@ -83,15 +83,12 @@ export default async function Sources({
       <h1>Sources</h1>
       <p className="sub">
         Which of your sources are systems of record, and which are somebody&rsquo;s
-        notebook. Groundedness cannot tell the difference — an answer faithfully
-        grounded in a deprecated page scores perfectly. A stale, deprecated, or
-        off-domain source raises a <Link href="/findings">finding</Link> the next
-        time an <Link href="/agents">agent</Link> is grounded in it. Most enterprise
-        agents pull from more than a website — connect a database or an internal
-        knowledge base below so validation can check the real thing, not just a name.
-        This registers the <strong>data</strong> agents read from. Looking to
-        discover the agents themselves from a codebase or a live API instead?
-        That&rsquo;s <Link href="/start?tab=connect">Connect</Link>.
+        notebook — a stale or off-domain one raises a{" "}
+        <Link href="/findings">finding</Link> the next time an{" "}
+        <Link href="/agents">agent</Link> is grounded in it. This registers the{" "}
+        <strong>data</strong> agents read from; to discover the agents themselves
+        from a codebase or live API, that&rsquo;s{" "}
+        <Link href="/start?tab=connect">Connect</Link>.
       </p>
 
       {review_error && <div className="error">{review_error}</div>}

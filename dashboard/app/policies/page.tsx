@@ -65,16 +65,6 @@ async function RulesTab({ agent }: { agent?: string }) {
 
   return (
     <>
-      <p className="small muted" style={{ marginTop: -4, marginBottom: 16 }}>
-        Every policy starts in <strong>observe</strong> mode: it watches and records
-        what it would have blocked, without actually blocking anything, so you can
-        check it's not too trigger-happy before switching it to{" "}
-        <strong>enforce</strong>, where it actually stops matching requests. A policy
-        that starts blocking things the moment it's turned on is how a real safety
-        rule ends up disabled by an annoyed engineer within a week — this two-step
-        exists to prevent that.
-      </p>
-
       {proposed.length > 0 && (
         <>
           <h2>Pending review</h2>
@@ -148,7 +138,14 @@ async function RulesTab({ agent }: { agent?: string }) {
         ) : (
         <table>
           <thead>
-            <tr><th>policy</th><th>description</th><th>version</th><th>mode</th><th className="num">rules</th></tr>
+            <tr>
+              <th>policy</th><th>description</th><th>version</th>
+              <th>
+                mode
+                <InfoTip text="Every policy starts in observe: it watches and records what it would have blocked, without blocking anything, so you can check it's not too trigger-happy before switching it to enforce. A policy that starts blocking the moment it's turned on is how a real safety rule ends up disabled by an annoyed engineer within a week." />
+              </th>
+              <th className="num">rules</th>
+            </tr>
           </thead>
           <tbody>
             {policies.policies.map((p: any) => (
@@ -260,14 +257,9 @@ async function GuardrailTuningTab({ agent }: { agent?: string }) {
 
   return (
     <>
-      <p className="small muted" style={{ marginTop: -4, marginBottom: 16 }}>
-        Guardrails are the automated checks that run on every message an agent sends
-        or receives — catching things like a leaked password, a manipulated prompt,
-        or an unsafe answer before a person sees it. This tab is for tuning them: are
-        they actually catching real problems, are they slowing agents down, and are
-        any of them wrong often enough that someone quietly turned them off (a
-        "suppression," below) — which is worth knowing, since a check nobody trusts
-        might as well not exist.
+      <p className="small muted" style={{ marginTop: 4, marginBottom: 12 }}>
+        Are these checks catching real problems, slowing agents down, or quietly
+        turned off by someone who stopped trusting them?
       </p>
 
       <form action="/policies" method="GET" className="chipbar" style={{ marginBottom: 4 }}>

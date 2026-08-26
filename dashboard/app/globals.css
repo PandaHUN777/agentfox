@@ -466,6 +466,14 @@ pre {
 
 .scroll-x { overflow-x: auto; }
 
+/* A connected GitHub account (or any long picked-from-a-live-source list) can run
+   to 50-100+ rows — without a cap the table pushes the rest of the page an
+   arbitrary distance down instead of scrolling in place. Sticky header keeps
+   the column labels visible while scrolling instead of scrolling out of view
+   on row 1. */
+.table-scroll { max-height: 480px; overflow-y: auto; }
+.table-scroll thead th { position: sticky; top: 0; background: var(--panel); z-index: 1; }
+
 /* --- Onboarding and attention -------------------------------------------
    The first screen decides whether a governance tool is adopted or closed, so
    "nothing connected" and "nothing wrong" must never render the same way. */

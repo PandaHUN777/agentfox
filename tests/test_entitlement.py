@@ -210,7 +210,7 @@ def test_the_report_says_so_when_nothing_has_been_measured(isolated_db):
     with session_scope() as session:
         report = over_permission_report(session)
     assert report["requests"] == 0
-    assert "no idea whether that person is allowed" in report["note"]
+    assert "until the agent is told who's asking" in report["note"]
 
 
 # ---------------------------------------------------------------------------
@@ -393,7 +393,7 @@ def test_the_over_permission_endpoint_is_readable_before_any_setup(client):
 
 def test_the_cli_explains_the_empty_state(isolated_db):
     result = runner.invoke(app, ["entitlement", "report"])
-    assert "no idea whether that person is allowed" in " ".join(result.output.split())
+    assert "until the agent is told who's asking" in " ".join(result.output.split())
 
 
 def test_the_cli_registers_principals_and_grants(isolated_db):

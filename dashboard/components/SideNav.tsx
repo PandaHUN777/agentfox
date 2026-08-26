@@ -36,16 +36,3 @@ export function SideNav({
     </>
   );
 }
-
-export function GlossaryLink() {
-  const pathname = usePathname();
-  return (
-    <Link
-      href="/glossary"
-      className={pathname === "/glossary" ? "active" : ""}
-      style={{ marginTop: 4, fontSize: 12 }}
-    >
-      <span>Glossary — what the jargon means</span>
-    </Link>
-  );
-}

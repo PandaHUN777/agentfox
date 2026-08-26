@@ -66,12 +66,9 @@ export default async function Compliance({
         {catalogLoaded
           ? "One control set mapped to seven frameworks. Control status is "
           : "One control set maps to seven frameworks, once the catalog below is loaded. Control status is "}
-        <strong>computed from telemetry</strong> — detector coverage, decision coverage,
-        audit-chain verification — not attested on a form. Control codes and
-        cross-references (<span className="mono">NOM-AUD-01</span>,{" "}
-        <span className="mono">P5-1</span>) and plain-language definitions of terms
-        like "entitlement" or "escalation" are decoded on the{" "}
-        <Link href="/glossary">Glossary</Link> page.
+        <strong>computed from telemetry</strong>, not attested on a form. Unfamiliar
+        terms or codes like <span className="mono">NOM-AUD-01</span> are decoded on
+        the <Link href="/glossary">Glossary</Link> page.
       </p>
 
       {review_error && <div className="error">{review_error}</div>}
@@ -99,7 +96,6 @@ export default async function Compliance({
       <DraftCaveat />
 
       <div className="cards">
-        <Stat n={controls.controls.length} label="controls" />
         <Stat n={counts.effective || 0} label="effective" tone="ok" />
         <Stat n={counts.degraded || 0} label="degraded" tone="warn" />
         <Stat n={counts.failing || 0} label="failing" tone={counts.failing ? "bad" : "ok"} />

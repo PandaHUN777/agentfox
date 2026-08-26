@@ -10,7 +10,7 @@ import { Wordmark } from "@/components/Logo";
 import { AccountMenu } from "@/components/AccountMenu";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandSearch } from "@/components/CommandSearch";
-import { GlossaryLink, SideNav } from "@/components/SideNav";
+import { SideNav } from "@/components/SideNav";
 import { TopbarStats } from "@/components/TopbarStats";
 import "./globals.css";
 
@@ -82,6 +82,7 @@ const NAV_SEARCH_ONLY: { label: string; href: string; group: string }[] = [
   { label: "Guardrail tuning", href: "/policies?tab=guardrails", group: "Policies" },
   { label: "Escalation", href: "/approvals?tab=escalation", group: "Approvals" },
   { label: "Board view", href: "/compliance?tab=board", group: "Compliance" },
+  { label: "Glossary", href: "/glossary", group: "Reference" },
 ];
 
 const NAV_FLAT = NAV.flatMap(({ group, items }) =>
@@ -121,7 +122,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <small>agent governance control plane</small>
               </div>
               <SideNav nav={NAV} />
-              <GlossaryLink />
               <ThemeToggle />
             </nav>
             <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>

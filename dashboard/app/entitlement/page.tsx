@@ -53,12 +53,9 @@ export default async function Entitlement() {
     <>
       <h1>Entitlement</h1>
       <p className="sub">
-        If two different employees ask the same agent the same question, do they get
-        the same answer — even when one of them isn't supposed to see everything the
-        other can? Most agents run under one shared identity, so a permission check
-        that "passes" can still hand someone information meant for a different
-        person or team. This page tells you whether that's actually being checked,
-        and how often something got held back because it should have been.
+        Most agents run under one shared identity, so a permission check that
+        "passes" can still hand someone information meant for a different person
+        or team. This page shows whether that's actually being checked.
       </p>
 
       {report.requests === 0 ? (
@@ -66,9 +63,8 @@ export default async function Entitlement() {
           <div className="hero-title">Nobody is being checked yet</div>
           <p>{report.note}</p>
           <p className="small muted">
-            To turn this on: add the people/teams below, tell us what each one is
-            and isn't allowed to see (a "grant"), and this page fills in
-            automatically once real requests start being checked against it.
+            To turn this on: add people/teams below with what they're cleared to
+            see, and this page fills in as real requests get checked against it.
           </p>
         </div>
       ) : (

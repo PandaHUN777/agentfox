@@ -104,12 +104,7 @@ async function ApprovalsTab({ status: rawStatus }: { status?: string }) {
 
   return (
     <>
-      <p className="small muted" style={{ marginTop: -4, marginBottom: 16 }}>
-        Human sign-off on one specific tool call — distinct from the Escalation
-        tab's hand-offs, which transfer a whole conversation.
-      </p>
-
-      <div className="chipbar" style={{ marginBottom: 4 }}>
+      <div className="chipbar" style={{ marginTop: 4, marginBottom: 4 }}>
         <span className="chipbar-label">status:</span>
         {STATUSES.map((s) => (
           <Link key={s} href={`/approvals?status=${s}`} className={`chip${status === s ? " active" : ""}`}>
@@ -204,11 +199,9 @@ async function EscalationTab({ agent }: { agent?: string }) {
 
   return (
     <>
-      <p className="small muted" style={{ marginTop: -4, marginBottom: 16 }}>
-        Everyone ships the mechanism to escalate. This tab answers the question
-        nobody else asks: which conversations met an escalation condition and
-        never got a human? Click any conversation below to see the actual
-        transcript and exactly which turn triggered it.
+      <p className="small muted" style={{ marginTop: 4, marginBottom: 12 }}>
+        Which conversations met an escalation condition and never got a human.
+        Click any conversation to see the transcript and which turn triggered it.
       </p>
 
       <form action="/approvals" method="GET" className="chipbar" style={{ marginBottom: 4 }}>
