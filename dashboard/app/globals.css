@@ -91,6 +91,8 @@
   --ok-bg: #052e16;
   --warn: #fbbf24;
   --warn-bg: #3b2f0a;
+  --escalate: #fb923c;
+  --escalate-bg: #431407;
   --bad: #f87171;
   --bad-bg: #3b0d0d;
   --dim-bg: #1f2229;
@@ -290,21 +292,38 @@ nav.side a.active svg { opacity: 1; }
 
 main { flex: 1; padding: 28px 32px 64px; max-width: 1400px; min-width: 0; }
 
-h1 { font-size: 23px; margin: 0 0 4px; letter-spacing: -0.02em; font-weight: 680; }
+h1 { font-size: 25px; margin: 0 0 4px; letter-spacing: -0.024em; font-weight: 700; }
 h2 { font-size: 15px; margin: 30px 0 12px; letter-spacing: -0.01em; font-weight: 640; }
 h3 { font-size: 13px; margin: 20px 0 8px; color: var(--muted); font-weight: 620; }
 .sub { color: var(--muted); margin: 0 0 22px; font-size: 13px; max-width: 78ch; }
 
 .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 .card {
+  position: relative;
   background: var(--elevated);
   border: 1px solid var(--hairline);
   border-radius: var(--r-3);
-  padding: 15px 17px;
+  padding: 15px 17px 15px 20px;
   box-shadow: var(--e-1);
+}
+/* A severity stripe on the card edge, not just a colored digit — the state
+   should read before the number does, the way a real status card works. */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  border-radius: var(--r-3) 0 0 var(--r-3);
+  background: transparent;
 }
 .card .n { font-size: 26px; font-weight: 680; letter-spacing: -0.02em; }
 .card .l { color: var(--muted); font-size: 11.5px; margin-top: 3px; }
+.card.bad { background: color-mix(in srgb, var(--bad-bg) 32%, var(--elevated)); border-color: color-mix(in srgb, var(--bad) 28%, var(--hairline)); }
+.card.warn { background: color-mix(in srgb, var(--warn-bg) 32%, var(--elevated)); border-color: color-mix(in srgb, var(--warn) 28%, var(--hairline)); }
+.card.ok { border-color: color-mix(in srgb, var(--ok) 22%, var(--hairline)); }
+.card.bad::before { background: var(--bad); }
+.card.warn::before { background: var(--warn); }
+.card.ok::before { background: var(--ok); }
 .card.bad .n { color: var(--bad); }
 .card.warn .n { color: var(--warn); }
 .card.ok .n { color: var(--ok); }
