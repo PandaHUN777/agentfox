@@ -157,22 +157,83 @@ that already exist rather than opening new gaps:
 
 ---
 
-## Part II — Dashboard UX: what two competitors validate or suggest
+## Part II — Dashboard UX: complexity audit against two competitors
 
-Distilled from the earlier live review of Decawork (funded competitor, same category) and EVO
-(Apache-2.0, dashboard source read directly at `plugins/evo/src/evo/static/`). Design language
-differs by product; the patterns below are the ones with real functional teeth, not cosmetics.
+The complaint that prompted this section was not vague — *"we are over complex and shitty ui,
+they are much more cleaner and optimized."* That deserved evidence, not a defense, so the live
+product was screenshotted page by page (Overview, Guardrails, Approvals, Compliance) and
+compared directly against Decawork's mockup and EVO's dashboard rather than judged on taste.
+The complaint holds. Three concrete, repeating patterns, ranked by how much they actually cost
+a reader — not five items of undifferentiated "polish."
+
+### 2.1 Confirmed broken — fixed this turn
+
+**Table cells holding raw, unsummarized backend text.** Two live instances, same root cause:
+the UI printed exactly what the API returned instead of summarizing it and pushing detail
+behind a click.
+
+- `/approvals` — the `reason` column concatenated every fired policy rule's full sentence with
+  `"; "`. A real row ran to **seven lines** next to five one-line columns
+  (`dashboard/app/approvals/page.tsx`, `a.reason` rendered raw). **Fixed:** shows the first
+  rule's reason, truncated to one line, plus a `+N more` count; full text on hover — the same
+  summary-first split the table already used for `arguments` one column over.
+- `/guardrails` — every `unavailable` detector printed its `unavailable_reason` as a permanent
+  3–4 line paragraph inline in the table, whether the reader asked or not
+  (`dashboard/app/guardrails/page.tsx`). **Fixed:** moved into `InfoTip`, the click-to-reveal
+  component this session already built for exactly this job and had sitting unused right next
+  to the bug. Nine detector rows now render at uniform one-line height; on the live page this
+  cut the table's rendered height by roughly half.
+
+Neither fix removed information — both moved it from *always visible* to *available on click*,
+which is precisely the "summary visible, detail on demand" split Decawork's inline-expand audit
+rows and EVO's collapsible panel already validate (§2.3 below). This is the general fix, not
+two isolated patches: **any table cell whose content is a sentence rather than a value is the
+same bug**, and it is worth a pass over every table in the app, not just these two.
+
+### 2.2 Confirmed, not yet fixed — a design call, not a bug
+
+**Compliance is the worst offender and needs a decision, not a patch.** Before a reader reaches
+the actual controls table, the live page renders, in order: an intro paragraph, a yellow
+"framework mappings are DRAFT" banner, **seven** stat cards across two rows, a tab bar, a
+color legend, and a second blue "41 of 41 controls have never been computed" callout — six
+distinct scaffolding elements before any real content
+(`dashboard/app/compliance/page.tsx`). Compare to Decawork's own product-preview mockup, which
+goes from a tab bar straight into a dense table, or EVO's topbar stat-strip, which states four
+numbers with no explanatory sentence attached because the labels ("Best Score," "Active") don't
+need one.
+
+Proposed cut, in order of confidence:
+1. Merge the two callout boxes into one — the DRAFT warning and the never-computed note say
+   related things and currently cost two full-width boxes.
+2. Cut the stat-card row from seven to the three that drive a decision (controls / not
+   computed / effective) and move the rest behind a click, same pattern as §2.1.
+3. Replace the legend row with a single `InfoTip` on the "status" column header — the four
+   color dots are exactly the kind of "explain a UI convention once" job `InfoTip` exists for.
+
+This one is held for confirmation rather than shipped, because unlike §2.1 it is not a table
+cell rendering the wrong thing — it is a genuine editorial call about how much scaffolding a
+compliance officer needs before the numbers, and that is worth a yes rather than an assumption.
+
+### 2.3 Nav density
+
+Sixteen flat sidebar items across five unlabeled-weight groups, versus Decawork's seven-item
+nav or EVO's near-absent sidebar (a topbar carries the state instead). Not fixed — reducing nav
+surface usually means consolidating pages, which is a bigger call than a table-cell fix and is
+flagged here rather than acted on unilaterally.
+
+### 2.4 Additive polish, not fixes
+
+Distilled from the earlier live review of Decawork and EVO's dashboard source
+(`plugins/evo/src/evo/static/`). None of these were broken — they're patterns worth adopting,
+ranked by functional value rather than cosmetics.
 
 | # | Item | Source | What it is |
 |---|---|---|---|
-| 1 | **Inline-expandable trace/finding rows** | Decawork's Audit tab | Click a row to expand Arguments / Rule fired / Approver / Upstream response in place, no navigation. Nometria's Traces/Findings always jump to a full detail page — fine for a deep dive, slower for "scan twenty, look closely at one." |
-| 2 | **Countdown-style expiry** | Decawork's token table | "7h 12m" instead of a static timestamp, on anything time-boxed: `/settings/tokens`, Guardrails suppressions, Approvals `expires_at`. A countdown makes imminent expiry visible without doing date arithmetic in your head. |
-| 3 | **Persistent stat-strip in the topbar** | EVO's `#topbar` | Best Score / Experiments / Frontier / Active, always visible regardless of scroll — not buried in page-body cards. Fits Overview or Board view better than a page that isn't a single live-monitoring session. |
-| 4 | **Collapsible/resizable docked panel, state persisted** | EVO's score-over-time chart | Drag-to-resize, collapse-to-bar/expand/maximize, choice remembered in `localStorage` across sessions. Candidate: the Trace timeline, or a live feed panel. |
-| 5 | **Approval-tag color** | Decawork's decision badges | They use orange, not amber, for "requires approval" — reads more urgent, avoids the generic-warning-yellow cliché. Minor; a one-line CSS-token change if adopted. |
-
-None of these were flagged as broken — they're additive polish, ranked by how much functional
-difference they'd make (#1 and #2 have real teeth; #5 is cosmetic).
+| 1 | **Inline-expandable trace/finding rows** | Decawork's Audit tab | Click a row to expand Arguments / Rule fired / Approver / Upstream response in place, no navigation. Nometria's Traces/Findings always jump to a full detail page — fine for a deep dive, slower for "scan twenty, look closely at one." Directly generalizes §2.1's fix from "shrink the cell" to "expand the row." |
+| 2 | **Countdown-style expiry** | Decawork's token table | "7h 12m" instead of a static timestamp, on anything time-boxed: `/settings/tokens`, Guardrails suppressions, Approvals `expires_at`. |
+| 3 | **Persistent stat-strip in the topbar** | EVO's `#topbar` | Best Score / Experiments / Frontier / Active, always visible regardless of scroll — not buried in page-body cards. |
+| 4 | **Collapsible/resizable docked panel, state persisted** | EVO's score-over-time chart | Drag-to-resize, collapse-to-bar/expand/maximize, choice remembered in `localStorage` across sessions. |
+| 5 | **Approval-tag color** | Decawork's decision badges | Orange, not amber, for "requires approval" — reads more urgent, avoids the generic-warning-yellow cliché. Cosmetic. |
 
 ---
 
@@ -197,9 +258,12 @@ ASI04 signature verification on MCP registration (§1.4) · ASI10 periodic re-at
 cadence (§1.4) · explicit ASI05 non-goal statement in PRD v3 §10.3 (§1.4, also a one-line fix,
 do it alongside the L2.12 correction)
 
-### Tranche 7 — dashboard UX backlog
-Items 1–2 from Part II first (real functional value); items 3–4 next (Overview/Board view and
-Trace timeline specifically); item 5 whenever someone is already touching that CSS.
+### Tranche 7 — dashboard UX
+§2.1 table-cell audit across the rest of the app (Approvals and Guardrails done; sweep
+Findings, Traces, Compliance, Escalation for the same pattern) · §2.2 Compliance page cut,
+pending confirmation · §2.4 items 1–2 next (real functional value); items 3–4 after (Overview/
+Board view and Trace timeline specifically); item 5 whenever someone is already touching that
+CSS. §2.3 nav density is flagged, not scheduled — it implies page consolidation, a bigger call.
 
 ### Non-goals this addendum reinforces
 Sandboxing an agent's own code execution (§1.4, ASI05) remains explicitly out of scope — this
