@@ -41,7 +41,7 @@ export function AccountMenu({
             <span className="small">{role}</span>
           </div>
         )}
-        <Link href="/settings/tokens" className="account-menu-row" style={{ display: "block" }}>
+        <Link href="/start?tab=tokens" className="account-menu-row" style={{ display: "block" }}>
           API tokens
         </Link>
         <form action="/api/auth/logout" method="POST">

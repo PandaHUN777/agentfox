@@ -1,17 +1,9 @@
-import { TokenManager } from "@/components/TokenManager";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default function TokensPage() {
-  return (
-    <>
-      <h1>API tokens</h1>
-      <p className="sub">
-        For the CLI and SDK — a token acts as you, scoped to your workspace. Set it as{" "}
-        <code className="mono">NOMETRIA_API_TOKEN</code> or pass it as a bearer token to
-        the gateway directly.
-      </p>
-      <TokenManager />
-    </>
-  );
+/**
+ * API tokens used to be its own nav item; it's now the "API tokens" tab on
+ * the Start here page. This keeps old links and bookmarks working.
+ */
+export default function TokensRedirect() {
+  redirect("/start?tab=tokens");
 }

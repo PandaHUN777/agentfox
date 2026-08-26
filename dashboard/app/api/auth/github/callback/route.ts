@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
     body: JSON.stringify({ access_token: githubToken }),
   });
 
-  const res = NextResponse.redirect(new URL("/start", origin));
+  const res = NextResponse.redirect(new URL("/start?tab=connect", origin));
   res.cookies.delete(STATE_COOKIE);
   res.cookies.set(SESSION_COOKIE, token, {
     httpOnly: true,

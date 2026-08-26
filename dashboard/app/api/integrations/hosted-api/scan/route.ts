@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
   const purpose = String(form.get("purpose") || "");
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
 
-  const target = new URL("/settings/integrations", req.nextUrl.origin);
+  const target = new URL("/start", req.nextUrl.origin);
+  target.searchParams.set("tab", "connect");
   if (!token || !endpoint_url) {
     target.searchParams.set("scan_error", "missing endpoint URL or session");
     return NextResponse.redirect(target);

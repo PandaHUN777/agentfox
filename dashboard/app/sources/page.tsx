@@ -91,7 +91,7 @@ export default async function Sources({
         knowledge base below so validation can check the real thing, not just a name.
         This registers the <strong>data</strong> agents read from. Looking to
         discover the agents themselves from a codebase or a live API instead?
-        That&rsquo;s <Link href="/settings/integrations">Connect</Link>.
+        That&rsquo;s <Link href="/start?tab=connect">Connect</Link>.
       </p>
 
       {review_error && <div className="error">{review_error}</div>}

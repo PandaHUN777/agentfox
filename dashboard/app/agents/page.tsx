@@ -77,7 +77,7 @@ export default async function Agents({
         </summary>
         <p className="small muted" style={{ marginTop: 6, marginBottom: 8 }}>
           For an agent that doesn't live in a scanned repo, or hasn't been connected yet — see{" "}
-          <Link href="/settings/integrations">Connect</Link> for the repo-scan path instead.
+          <Link href="/start?tab=connect">Connect</Link> for the repo-scan path instead.
         </p>
         <form action="/api/agents" method="POST" className="stack" style={{ maxWidth: 480 }}>
           <div>
@@ -118,7 +118,7 @@ export default async function Agents({
           <h2>Pending review</h2>
           <Panel
             title="Proposed by a repo scan"
-            note="inert until approved — see /settings/integrations"
+            note="inert until approved — see the Connect tab on Start here"
           >
             <table>
               <thead>
