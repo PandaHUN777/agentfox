@@ -61,40 +61,41 @@ export function SourceAddFlow() {
         </p>
       </div>
 
-      <div>
-        <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
-          Name this source (what your team calls it)
-        </label>
-        <input
-          type="text"
-          name="key"
-          required
-          placeholder="e.g. price-book, help-center-articles"
-          style={inputStyle}
-        />
-      </div>
+      <div className="field-grid">
+        <div>
+          <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+            Name this source (what your team calls it)
+          </label>
+          <input
+            type="text"
+            name="key"
+            required
+            placeholder="e.g. price-book, help-center-articles"
+            style={inputStyle}
+          />
+        </div>
 
-      <div>
-        <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
-          What kind of source is it?
-        </label>
-        <select name="tier" defaultValue="unverified" style={inputStyle}>
-          {TIER_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </div>
+        <div>
+          <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+            What kind of source is it?
+          </label>
+          <select name="tier" defaultValue="unverified" style={inputStyle}>
+            {TIER_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
-        <div style={{ flex: 1, minWidth: 200 }}>
+        <div>
           <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
             Who owns it? (email)
           </label>
           <input type="email" name="owner" placeholder="finance@yourcompany.com" style={inputStyle} />
         </div>
-        <div style={{ flex: 1, minWidth: 160 }}>
+
+        <div>
           <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
             How often is it updated?
           </label>

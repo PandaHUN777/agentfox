@@ -146,7 +146,7 @@ export default async function Sources({
             </div>
           )}
 
-          <div style={{ marginBottom: 20, maxWidth: 640 }}>
+          <div style={{ marginBottom: 20 }}>
             <Panel title="Add a source">
               <SourceAddFlow />
             </Panel>

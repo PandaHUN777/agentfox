@@ -419,6 +419,14 @@ pre {
 .stack > * + * { margin-top: 16px; }
 .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
+/* A form's inputs shouldn't stretch edge-to-edge on a wide page (an input the
+   width of the viewport is unreadable and looks like a bug), but the panel
+   holding them should still match the width of every sibling panel — the
+   fields fill the space in columns instead of leaving it empty beside a
+   narrow single-column stack. */
+.field-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px 16px; }
+.field-grid > .span-2 { grid-column: span 2; }
+
 .span-tree { font-family: var(--mono); font-size: 12px; }
 .span-tree .line { padding: 3px 0; display: flex; gap: 10px; align-items: baseline; }
 .span-tree .kind { width: 84px; color: var(--muted); flex: 0 0 84px; }

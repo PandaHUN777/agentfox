@@ -41,6 +41,9 @@ export function AccountMenu({
             <span className="small">{role}</span>
           </div>
         )}
+        <Link href="/start?tab=connect" className="account-menu-row" style={{ display: "block" }}>
+          Connect a source
+        </Link>
         <Link href="/start?tab=tokens" className="account-menu-row" style={{ display: "block" }}>
           API tokens
         </Link>

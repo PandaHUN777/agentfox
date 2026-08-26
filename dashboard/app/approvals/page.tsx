@@ -416,9 +416,9 @@ async function EscalationTab({ agent }: { agent?: string }) {
         observe-first (see the counter-metric above). Fields not present in the JSON fall
         back to the platform default shown as a placeholder.
       </p>
-      <form action="/api/escalation/policy" method="POST" className="panel body stack" style={{ maxWidth: 560 }}>
-        <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
-          <div style={{ flex: 1, minWidth: 140 }}>
+      <form action="/api/escalation/policy" method="POST" className="panel body stack">
+        <div className="field-grid">
+          <div>
             <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Owner role</label>
             <input
               type="text"
@@ -427,7 +427,7 @@ async function EscalationTab({ agent }: { agent?: string }) {
               style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
             />
           </div>
-          <div style={{ flex: 1, minWidth: 140 }}>
+          <div>
             <label className="small muted" style={{ display: "block", marginBottom: 4 }}>SLA (minutes)</label>
             <input
               type="number"
@@ -438,7 +438,7 @@ async function EscalationTab({ agent }: { agent?: string }) {
               style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
             />
           </div>
-          <div style={{ flex: 1, minWidth: 140 }}>
+          <div>
             <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Mode</label>
             <select
               name="mode"

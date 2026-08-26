@@ -67,9 +67,24 @@ const NAV: { group: string; items: [string, string][] }[] = [
   },
 ];
 
+/**
+ * Destinations that used to be their own sidebar item before the nav was
+ * consolidated into tabs — findable by name in search even though the
+ * sidebar itself only shows the parent page. Losing a sidebar item is not
+ * the same as losing the ability to find the thing by typing its name.
+ */
+const NAV_SEARCH_ONLY: { label: string; href: string; group: string }[] = [
+  { label: "Connect GitHub", href: "/start?tab=connect", group: "Start here" },
+  { label: "Connect a hosted API", href: "/start?tab=connect", group: "Start here" },
+  { label: "API tokens", href: "/start?tab=tokens", group: "Start here" },
+  { label: "Guardrail tuning", href: "/policies?tab=guardrails", group: "Policies" },
+  { label: "Escalation", href: "/approvals?tab=escalation", group: "Approvals" },
+  { label: "Board view", href: "/compliance?tab=board", group: "Compliance" },
+];
+
 const NAV_FLAT = NAV.flatMap(({ group, items }) =>
   items.map(([label, href]) => ({ label, href, group: group || "Home" })),
-);
+).concat(NAV_SEARCH_ONLY);
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const signedIn = Boolean((await cookies()).get(SESSION_COOKIE)?.value);
