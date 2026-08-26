@@ -11,7 +11,7 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from sqlalchemy import select
@@ -148,6 +148,135 @@ def create_app() -> FastAPI:
             "detector_versions": {k: d.version for k, d in all_detectors().items()},
             "egress_allowed": settings.allow_egress,
         }
+
+    @app.post("/api/_migrate_memory_and_agent_messaging", tags=["platform"])
+    def migrate_memory_and_agent_messaging(
+        session: Session = Depends(db), user=Depends(current_user)
+    ) -> dict[str, Any]:
+        """One-off: apply migrations e8ccd382d2b9 (memory_entries) and 389c6fd36296
+        (agent_signing_keys, agent_message_log) directly — the deployed wheel does
+        not bundle migrations/, so this stands in for `alembic upgrade head` for
+        these tables. Idempotent; safe to remove once run.
+
+        Owner-only, unlike the prior one-off migration routes this session added
+        (which only required `current_user`, i.e. any authenticated role) — this
+        one runs raw DDL against production, and that should need more than "any
+        signed-in account," not less, even for a route meant to live for minutes.
+        """
+        if user.role != "owner":
+            raise HTTPException(403, "owner role required to run a schema migration")
+        from sqlalchemy import text
+
+        session.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS memory_entries (
+                    id VARCHAR(40) NOT NULL PRIMARY KEY,
+                    agent_id VARCHAR(40),
+                    subject VARCHAR(200),
+                    content TEXT NOT NULL,
+                    taint_source VARCHAR(32) NOT NULL,
+                    provenance JSON NOT NULL,
+                    decision_id VARCHAR(40),
+                    verified_by VARCHAR(200),
+                    expires_at TIMESTAMPTZ,
+                    revoked_at TIMESTAMPTZ,
+                    created_at TIMESTAMPTZ NOT NULL,
+                    updated_at TIMESTAMPTZ NOT NULL,
+                    org_id VARCHAR(64) NOT NULL
+                )
+                """
+            )
+        )
+        session.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_memory_entries_scope "
+                "ON memory_entries (agent_id, subject)"
+            )
+        )
+        session.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_memory_entries_agent_id ON memory_entries (agent_id)")
+        )
+        session.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_memory_entries_expires_at ON memory_entries (expires_at)"
+            )
+        )
+        session.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_memory_entries_org_id ON memory_entries (org_id)")
+        )
+
+        session.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS agent_signing_keys (
+                    id VARCHAR(40) NOT NULL PRIMARY KEY,
+                    agent_id VARCHAR(40) NOT NULL,
+                    key_encrypted TEXT NOT NULL,
+                    created_by VARCHAR(200),
+                    revoked_at TIMESTAMPTZ,
+                    created_at TIMESTAMPTZ NOT NULL,
+                    updated_at TIMESTAMPTZ NOT NULL,
+                    org_id VARCHAR(64) NOT NULL
+                )
+                """
+            )
+        )
+        session.execute(
+            text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_agent_signing_keys_agent_id "
+                "ON agent_signing_keys (agent_id)"
+            )
+        )
+        session.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_agent_signing_keys_org_id ON agent_signing_keys (org_id)"
+            )
+        )
+
+        session.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS agent_message_log (
+                    id VARCHAR(40) NOT NULL PRIMARY KEY,
+                    sender_slug VARCHAR(120) NOT NULL,
+                    recipient_slug VARCHAR(120),
+                    nonce VARCHAR(64) NOT NULL,
+                    signed BOOLEAN NOT NULL,
+                    signature_valid BOOLEAN,
+                    agent_card_match BOOLEAN NOT NULL,
+                    decision_id VARCHAR(40),
+                    trace_id VARCHAR(40),
+                    created_at TIMESTAMPTZ NOT NULL,
+                    updated_at TIMESTAMPTZ NOT NULL,
+                    org_id VARCHAR(64) NOT NULL,
+                    CONSTRAINT ux_agent_message_sender_nonce UNIQUE (org_id, sender_slug, nonce)
+                )
+                """
+            )
+        )
+        session.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_agent_message_log_sender_slug "
+                "ON agent_message_log (sender_slug)"
+            )
+        )
+        session.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS ix_agent_message_log_trace_id ON agent_message_log (trace_id)"
+            )
+        )
+        session.execute(
+            text("CREATE INDEX IF NOT EXISTS ix_agent_message_log_org_id ON agent_message_log (org_id)")
+        )
+        session.commit()
+
+        result = session.execute(text("UPDATE alembic_version SET version_num = '389c6fd36296'"))
+        if result.rowcount == 0:
+            session.execute(text("INSERT INTO alembic_version (version_num) VALUES ('389c6fd36296')"))
+        session.commit()
+
+        return {"migrated": True}
 
     @app.get("/api/detectors", tags=["platform"])
     def detectors(session: Session = Depends(db), _u=Depends(current_user)) -> dict[str, Any]:
