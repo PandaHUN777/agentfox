@@ -59,8 +59,10 @@ from .auth_cli import register as _register_auth  # noqa: E402
 from .business_cli import register as _register_business  # noqa: E402
 from .controls_cli import register as _register_controls  # noqa: E402
 from .onboarding import register as _register_onboarding  # noqa: E402
+from .quickscan import register as _register_quickscan  # noqa: E402
 
 _register_onboarding(app)
+_register_quickscan(app)
 _register_auth(app)
 _register_controls(app)
 _register_business(app)
