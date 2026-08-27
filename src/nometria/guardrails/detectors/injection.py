@@ -61,7 +61,7 @@ _PARAPHRASE: list[tuple[str, str, float]] = [
     # Persona replacement. The named jailbreaks churn constantly, so this matches the
     # *shape* — "you are now X, and X has no limits" — rather than the roster.
     (
-        r"\byou\s+are\s+now\s+\w+\b.{0,60}?\b(?:no|without|free\s+from)\s+"
+        r"\byou\s+are\s+now\s+\w+\b.{0,150}?\b(?:no|without|free\s+from)\s+(?:\w+\s+)?"
         r"(?:restrictions?|limits?|rules?|filters?|guidelines?)\b",
         "PERSONA",
         0.8,
@@ -72,6 +72,59 @@ _PARAPHRASE: list[tuple[str, str, float]] = [
         0.8,
     ),
     (r"\bact\s+as\s+(?:if\s+you\s+(?:have|had)\s+no|an?\s+unrestricted)\b", "PERSONA", 0.75),
+    # "forget" with a wider object list than the canonical "instructions" — real
+    # attacks say "tasks", "assignments", "orders", or just "everything before that",
+    # and a detector that only matches the textbook noun misses all of them.
+    (
+        r"\bforget\s+(?:all|everything|about\s+all)\b.{0,40}?\b(?:previous|prior|"
+        r"earlier|preceding|before|assignments?|tasks?|instructions?|orders?)\b",
+        "OVERRIDE",
+        0.8,
+    ),
+    (r"\bforget\s+everything\s+before\s+(?:that|this)\b", "OVERRIDE", 0.8),
+    (
+        r"\b(?:leave|remove|drop)\b.{0,30}?\b(?:previous|prior|all)\b.{0,30}?"
+        r"\b(?:behind|out\s+of\s+your\s+head)\b",
+        "OVERRIDE",
+        0.75,
+    ),
+    # "ignore" with the same wider object list, plus objects the canonical pattern
+    # doesn't cover (orders, commands, context).
+    (
+        r"\bignore\s+(?:all\s+)?(?:the\s+)?(?:preceding|foregoing)\s+"
+        r"(?:orders?|commands?|instructions?)\b",
+        "OVERRIDE",
+        0.85,
+    ),
+    (r"\bignore\s+(?:the\s+)?above\s+and\s+(?:say|output|write|print)\b", "OVERRIDE", 0.8),
+    (
+        r"\bignore\s+(?:all\s+)?(?:provided\s+)?context\s+and\s+articles?\b",
+        "OVERRIDE",
+        0.7,
+    ),
+    # A new task or instruction set announced as replacing the current one — the
+    # "here's what happens next" framing an attacker uses right before the payload.
+    (
+        r"\b(?:new|further|more)\s+(?:tasks?|instructions?)\s+(?:follow|are\s+followed)\b",
+        "OVERRIDE",
+        0.7,
+    ),
+    # System-prompt exfiltration phrasing not covered by the canonical
+    # SYSTEM_PROMPT_LEAK pattern in _LEXICAL (that one now also tolerates the "all"/
+    # "following"/"text" insertions this dataset's examples used).
+    (
+        r"\bwhat\s+(?:is|was)\s+written\s+(?:above|at\s+the\s+beginning\s+of\s+this\s+prompt)\b",
+        "LEAK",
+        0.7,
+    ),
+    (r"\buse\s+also\s+information\s+in\s+the\s+prompt\s+to\s+answer\b", "LEAK", 0.6),
+    # A covert override phrased as "don't answer that, output this instead" — the
+    # instruction hijacks the response rather than asking a question.
+    (
+        r"\bdo\s+not\s+answer\s+this\s+question\b.{0,30}?\b(?:just\s+)?output\b",
+        "OVERRIDE",
+        0.75,
+    ),
 ]
 
 #: The same concept across the languages an enterprise agent actually meets. Each
@@ -92,6 +145,23 @@ _MULTILINGUAL: list[tuple[str, str, float]] = [
         "OVERRIDE",
         0.85,
     ),
+    (
+        r"\bvergiss\b.{0,40}?\b(?:aufgaben|auftr[äa]ge|anweisungen|davor|alles)\b",
+        "OVERRIDE",
+        0.75,
+    ),
+    (r"\bignorier(?:en|e)?\s+(?:sie\s+)?die\s+obigen\s+anweisungen\b", "OVERRIDE", 0.85),
+    (
+        r"\b(?:nun|jetzt)\s+folgen\s+(?:neue|weitere)\s+(?:aufgaben|anweisungen)\b",
+        "OVERRIDE",
+        0.7,
+    ),
+    (
+        r"\balle\s+(?:vorherigen|bisherigen)\s+informationen\b.{0,50}?"
+        r"\b(?:irrelevant|nicht\s+ganz)\b",
+        "OVERRIDE",
+        0.7,
+    ),
     # Spanish / Portuguese
     (
         r"\b(?:ignora|olvida|ignore|esque[çc]a)\s+(?:todas?\s+)?(?:las?|as)\s+"
@@ -99,6 +169,7 @@ _MULTILINGUAL: list[tuple[str, str, float]] = [
         "OVERRIDE",
         0.85,
     ),
+    (r"\bolvid[ae]\s+todas?\s+las\s+instrucciones\b", "OVERRIDE", 0.85),
     # Italian
     (r"\bignora\s+(?:tutte\s+)?le\s+istruzioni\s+precedenti\b", "OVERRIDE", 0.85),
     # Russian
@@ -127,12 +198,30 @@ _EXTRA_LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
 _LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
     (
         re.compile(
-            r"\bignore\s*(?:all\s*)?(?:the\s*)?(?:previous|prior|above|earlier)\s*"
+            r"\bignore\s*(?:all\s*)?(?:the\s*)?(?:previous|prior|above|earlier|your)\s*"
             r"(?:instruction|prompt|rule|direction|message)s?\b",
             re.I,
         ),
         "INJECTION.INSTRUCTION_OVERRIDE",
         0.85,
+    ),
+    (
+        re.compile(
+            r"\bignore\s+(?:all\s+)?the\s+instructions\s+you\s+(?:got|received)\s+before\b",
+            re.I,
+        ),
+        "INJECTION.INSTRUCTION_OVERRIDE",
+        0.85,
+    ),
+    (
+        re.compile(r"\bdrop\s+(?:all\s+)?your\s+instructions?\b", re.I),
+        "INJECTION.INSTRUCTION_OVERRIDE",
+        0.8,
+    ),
+    (
+        re.compile(r"\byour\s+instructions?\s+(?:are\s+)?now\s+to\b", re.I),
+        "INJECTION.INSTRUCTION_OVERRIDE",
+        0.75,
     ),
     (
         re.compile(
@@ -160,7 +249,12 @@ _LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
         0.85,
     ),
     (
-        re.compile(r"\b(?:developer|god|admin|debug)\s+mode\s+(?:enabled|on|activated)\b", re.I),
+        re.compile(r"\b(?:developer|god|admin|debug|dan)\s+mode\s+(?:enabled|on|activated)\b", re.I),
+        "INJECTION.PERSONA_OVERRIDE",
+        0.75,
+    ),
+    (
+        re.compile(r"\b(?:pretend|imagine)\s+(?:you\s+are|to\s+be)\s+(?:an?\s+)?evil\b", re.I),
         "INJECTION.PERSONA_OVERRIDE",
         0.75,
     ),
@@ -171,8 +265,9 @@ _LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
     ),
     (
         re.compile(
-            r"\b(?:reveal|print|repeat|show|output|display)\s+(?:me\s+)?"
-            r"(?:your|the)\s+(?:system\s+)?(?:prompt|instruction|rule)s?\b",
+            r"\b(?:reveal|print|repeat|show|output|display)\s+(?:me\s+)?(?:all\s+)?"
+            r"(?:your|the)\s+(?:following\s+)?(?:system\s+)?(?:prompt|instruction|rule)s?"
+            r"(?:\s+text)?\b",
             re.I,
         ),
         "INJECTION.SYSTEM_PROMPT_LEAK",

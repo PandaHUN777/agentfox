@@ -14,8 +14,8 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 18 ◐ |
 | **Absent** | 0 ✗ |
 | **Weighted coverage** | **78%** *(partial counts half)* |
-| **Tests** | 1093 |
-| **Lines** | 55,807 (src + tests) |
+| **Tests** | 1104 |
+| **Lines** | 56,460 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -33,7 +33,7 @@ in [traceability.md](traceability.md).
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 52 |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 40 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ◐ partial | 27 | gates the ingestion and assembly path. Semantic chunk-boundary repair and automatic re-extraction of a corrupt document are not built — a finding is reported and the decision to drop the document belongs to the operator |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 37 | no Ragas adapter, model-based groundedness or annotation queue |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 38 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ◐ partial | 22 | attributes a failure to the step that originated the value and measures what each handoff dropped. Both work on constraints that were written down — an expectation the human held and never typed is invisible here, and no trace analysis recovers it |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 17 |  |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 37 |  |
@@ -51,12 +51,12 @@ in [traceability.md](traceability.md).
 | `PL-10` | Platform | Operator actions recorded in the decision chain | ◐ partial | 11 | the registry of privileged operations is declared and the check is structural, so a new operator surface without an audit call fails the suite. system_scope is the stated exception: it lifts tenant isolation and so has no tenant chain to write to, which needs a separate system-level chain |
 | `PL-8` | Platform | Tenant isolation enforced at the session | ✅ built | 15 |  |
 | `X-1` | Adoption | One-line auto-instrumentation | ✅ built | 13 |  |
-| `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 20 |  |
+| `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 25 |  |
 | `P16` | 16 Business rules | Business-process guardrails and the guardrail catalogue | ◐ partial | 32 | policy compilation is deterministic: 86% of a tuned document and 64% of a held-out one compile with no question. Prose with no parseable structure ("be courteous") is reported as inexpressible rather than guessed at; a model-assisted path for those sentences is not built |
 | `X-4` | Adoption | Protective controls reachable without writing code | ✅ built | 8 |  |
 | `X-3` | Adoption | Control-plane onboarding and attention-first home | ✅ built | 6 |  |
 | `I-1` | Integration | LangGraph-native SDK | ✅ built | 3 |  |
-| `I-2` | Integration | MCP inline governance | ✅ built | 15 |  |
+| `I-2` | Integration | MCP inline governance | ✅ built | 16 |  |
 | `I-3` | Integration | FastAPI middleware and dependency | ✅ built | 7 |  |
 | `I-4` | Integration | LangSmith correlation | ✅ built | 7 |  |
 | `I-5` | Integration | OpenTelemetry | ✅ built | 1 |  |
