@@ -88,6 +88,7 @@ class Detector(Protocol):
     key: str
     version: str
     surfaces: tuple[str, ...]
+    timeout_ms: int | None
 
     def available(self) -> bool:
         """False when an optional dependency or model weight is absent.
@@ -95,6 +96,11 @@ class Detector(Protocol):
         Unavailable detectors degrade the pipeline rather than failing it — that is
         what makes the offline default (X-3) work without pretending coverage exists.
         """
+        ...
+
+    def warm(self) -> None:
+        """Pay any first-call cost now, off the request path. No-op for most
+        detectors; see :meth:`BaseDetector.warm`."""
         ...
 
     def detect(self, content: str, context: DetectionContext) -> DetectorResult: ...
@@ -110,8 +116,22 @@ class BaseDetector:
     #: Set by detectors that normalise internally, so this class does not do it twice.
     handles_views: bool = False
 
+    #: None means "use the pipeline's default (`detector_timeout_ms`)". A detector
+    #: that genuinely needs longer — a real model forward pass, not a regex scan —
+    #: declares that here rather than the pipeline granting everyone more rope,
+    #: which would blunt the whole point of a per-detector budget (P3-6).
+    timeout_ms: int | None = None
+
     def available(self) -> bool:  # pragma: no cover - overridden by adapters
         return True
+
+    def warm(self) -> None:
+        """Pay any first-call cost (loading a model into memory, say) now, off the
+        request path. No-op by default; a detector backed by something with real
+        startup cost overrides this. `detector_timeout_ms` is short enough (P3-6)
+        that a detector which only gets slow once, on its very first call, would
+        otherwise silently degrade the first real request after every process
+        start — see :meth:`warm_all`."""
 
     def detect(self, content: str, context: DetectionContext) -> DetectorResult:
         detections = self._detect(content or "", context)
@@ -229,3 +249,10 @@ def all_detectors() -> dict[str, Detector]:
 
 def available_detectors() -> dict[str, Detector]:
     return {k: d for k, d in _REGISTRY.items() if d.available()}
+
+
+def warm_all() -> None:
+    """Call once at process startup (see `gateway.app.lifespan`). Only detectors
+    with real first-call cost do anything here; everything else is a no-op."""
+    for detector in available_detectors().values():
+        detector.warm()

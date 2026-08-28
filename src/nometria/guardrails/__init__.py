@@ -8,7 +8,11 @@ their dependency (and, for classifiers, their weights) are actually present.
 
 from __future__ import annotations
 
-from .adapters.classifiers import GraniteGuardianDetector, RestrictedClassifierDetector
+from .adapters.classifiers import (
+    GraniteGuardianDetector,
+    PromptInjectionClassifierDetector,
+    RestrictedClassifierDetector,
+)
 from .adapters.presidio import PresidioPiiDetector
 from .adapters.rails import GuardrailsAiDetector, NemoRailsDetector
 from .base import (
@@ -25,6 +29,7 @@ from .base import (
     redact_sample,
     register_detector,
     taint_rank,
+    warm_all,
 )
 from .detectors.injection import InjectionHeuristicDetector
 from .detectors.pii import NativePiiDetector, redact_content
@@ -43,6 +48,7 @@ register_detector(JsonSchemaDetector())
 
 # --- Wrapped OSS, available when installed ---
 register_detector(PresidioPiiDetector())
+register_detector(PromptInjectionClassifierDetector())
 register_detector(GraniteGuardianDetector())
 register_detector(NemoRailsDetector())
 register_detector(GuardrailsAiDetector())
@@ -67,6 +73,7 @@ __all__ = [
     "NemoRailsDetector",
     "PipelineResult",
     "PresidioPiiDetector",
+    "PromptInjectionClassifierDetector",
     "RestrictedClassifierDetector",
     "SafetyLexiconDetector",
     "SecretsDetector",
@@ -81,4 +88,5 @@ __all__ = [
     "redact_sample",
     "register_detector",
     "taint_rank",
+    "warm_all",
 ]

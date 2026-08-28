@@ -80,6 +80,13 @@ async def lifespan(app: FastAPI):
         settings.default_policy_mode,
         settings.allow_egress,
     )
+    # Pay any model-loading cost now, off the request path — a classifier detector
+    # that only gets slow once, on its very first call, would otherwise silently
+    # degrade the first real request every time this process starts (P3-6's 40ms
+    # per-detector timeout is nowhere near enough to also cover loading a model).
+    from ..guardrails import warm_all
+
+    warm_all()
     yield
 
 

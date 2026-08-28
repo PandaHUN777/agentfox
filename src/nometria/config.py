@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     # Appendix A.4: restricted-licence model adapters refuse to load without this.
     accept_restricted_model_licenses: bool = False
     granite_guardian_model: str = "ibm-granite/granite-guardian-3.0-2b"
+    # Apache-2.0, ~86M params, no licence gate — but a real CPU forward pass still
+    # costs tens of ms per call versus a regex scan's fractions of one, and every
+    # concurrent request pays it independently (P3-6's budget is per-request, not a
+    # shared inference queue). Opt-in via `enabled_detectors`, same reasoning as
+    # Granite Guardian: a customer must choose the latency/recall trade-off, not
+    # inherit it from a default.
+    prompt_injection_classifier_model: str = "protectai/deberta-v3-base-prompt-injection-v2"
 
     # --- Entitlement (P10) -----------------------------------------------
     # native | openfga. The seam exists because no winner does: customers running

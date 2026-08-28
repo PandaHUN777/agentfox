@@ -268,6 +268,27 @@ def test_pipeline_selects_by_surface():
     assert "schema.json" in {d.key for d in pipeline.select("output")}
 
 
+def test_injection_classifier_registered_but_not_enabled_by_default():
+    """Registered (so it's usable when the classifiers extra is installed and the
+    weights are present) but not in the default `enabled_detectors` — a real CPU
+    forward pass shouldn't be a default cost every deployment pays without
+    choosing to (config.py's `prompt_injection_classifier_model` docstring)."""
+    from nometria.config import get_settings
+    from nometria.guardrails import all_detectors
+
+    assert "injection.classifier" in all_detectors()
+    assert "injection.classifier" not in get_settings().enabled_detectors
+
+
+def test_warm_all_is_a_safe_no_op_without_optional_deps():
+    """Every detector available by default has nothing expensive to warm — this
+    just proves `warm_all()` doesn't error, which it would if `Detector.warm()`
+    weren't safe to call on the plain heuristic/native detectors."""
+    from nometria.guardrails import warm_all
+
+    warm_all()  # no assertion needed: not raising is the test
+
+
 # ---------------------------------------------------------------------------
 # Taint (P3-4)
 # ---------------------------------------------------------------------------

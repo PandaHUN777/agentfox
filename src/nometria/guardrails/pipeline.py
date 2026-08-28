@@ -134,9 +134,12 @@ class DetectorPipeline:
         for future, detector in futures.items():
             elapsed_ms = (time.perf_counter() - started) * 1000
             remaining_ms = effective_budget - elapsed_ms
-            # Never give a single detector more than its own timeout, and never more
-            # than what is left of the whole-pipeline budget.
-            allowance = min(self.detector_timeout_ms, max(remaining_ms, 0.0))
+            # Never give a single detector more than its own timeout — the
+            # detector's own declared ceiling if it has one, else the pipeline
+            # default — and never more than what is left of the whole-pipeline
+            # budget.
+            own_timeout_ms = getattr(detector, "timeout_ms", None) or self.detector_timeout_ms
+            allowance = min(own_timeout_ms, max(remaining_ms, 0.0))
 
             if allowance <= 0:
                 result.results.append(

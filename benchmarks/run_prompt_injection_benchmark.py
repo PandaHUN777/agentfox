@@ -2,30 +2,34 @@
 
     uv run python benchmarks/run_prompt_injection_benchmark.py
 
-Runs Nometria's real, shipping detector pipeline — the exact
-`InjectionHeuristicDetector` in `src/nometria/guardrails/detectors/injection.py`,
-the same code that sits in front of production traffic — against
-`deepset/prompt-injections` (Hugging Face, apache-2.0, 662 labeled examples,
-license/source in `data/README.md`). No network calls happen here; the dataset
-was fetched once (see `fetch_dataset.py`) and is committed under `data/` so
-anyone can re-run this file offline and get the same numbers.
+Scores Nometria's real, shipping detectors against `deepset/prompt-injections`
+(Hugging Face, apache-2.0, 662 labeled examples, license/source in
+`data/README.md`). The dataset was fetched once (see `fetch_dataset.py`) and is
+committed under `data/`, so anyone can re-run this file and get the same numbers —
+the classifier config needs `pip install nometria[classifiers]` and a one-time model
+download (~350MB, `protectai/deberta-v3-base-prompt-injection-v2`, apache-2.0);
+everything else is fully offline.
 
-Methodology, stated because it matters for how to read the result: the detector's
-regex patterns were manually extended this session by inspecting false negatives
-from `data/train.json` only. `data/test.json` was never read during that process —
-it exists purely as a held-out check. So this script reports THREE numbers, and the
-"held_out" one is the one to trust:
+Two configurations, because the honest answer to "how good is detection" depends
+which one a deployment actually runs:
 
-  - held_out   — scored on test.json alone. Never seen during tuning. This is the
-                 honest estimate of how the detector performs on new text.
-  - train      — scored on train.json alone. Inflated by tuning; reported for
-                 transparency about the gap between "the set I looked at" and
-                 "a new example," not as a claim of quality.
-  - combined   — both splits together, for anyone who wants the raw total.
+  - heuristic            — `injection.heuristic` alone. What ships enabled by
+                            default (`enabled_detectors` in config.py) — zero extra
+                            dependencies, sub-millisecond.
+  - heuristic_classifier  — adds `injection.classifier`
+                            (protectai/deberta-v3-base-prompt-injection-v2), a model
+                            trained specifically for this task rather than
+                            hand-written patterns. Opt-in: real per-call latency
+                            (tens of ms on CPU) and a ~350MB one-time download, so
+                            it's not the default — see config.py's
+                            `prompt_injection_classifier_model` docstring for the
+                            trade-off.
 
-Writes one `results/prompt_injection_{split}_predictions.json` per split (every
-example + verdict) and `results/prompt_injection_summary.json` (all three
-aggregates, plus which detector/dataset/commit produced them).
+Each configuration is scored on all three splits (held_out/train/combined), same
+train/test discipline as before: `injection.heuristic`'s patterns were tuned by
+reading train.json's false negatives only; the classifier is a pretrained model,
+never fit to this dataset at all, so there's no tuning-leakage question for it —
+but it's scored the same way for a clean comparison.
 """
 
 from __future__ import annotations
@@ -34,7 +38,7 @@ import json
 import time
 from pathlib import Path
 
-from nometria.guardrails import DetectionContext, DetectorPipeline
+from nometria.guardrails import DetectionContext, DetectorPipeline, get_detector, warm_all
 
 DATA_DIR = Path(__file__).parent / "data"
 RESULTS_DIR = Path(__file__).parent / "results"
@@ -86,38 +90,65 @@ def score(rows: list[dict], pipeline: DetectorPipeline) -> tuple[dict, list[dict
     return summary, predictions
 
 
+def score_all_splits(pipeline: DetectorPipeline, train_rows, test_rows) -> dict:
+    held_out, held_out_predictions = score(test_rows, pipeline)
+    train, train_predictions = score(train_rows, pipeline)
+    combined, combined_predictions = score(train_rows + test_rows, pipeline)
+    return {
+        "held_out": held_out,
+        "train": train,
+        "combined": combined,
+        "_predictions": {
+            "held_out": held_out_predictions,
+            "train": train_predictions,
+            "combined": combined_predictions,
+        },
+    }
+
+
 def main() -> None:
     train_rows = load_split("train.json")
     test_rows = load_split("test.json")
-    pipeline = DetectorPipeline()
 
-    train_summary, train_predictions = score(train_rows, pipeline)
-    test_summary, test_predictions = score(test_rows, pipeline)
-    combined_summary, combined_predictions = score(train_rows + test_rows, pipeline)
+    heuristic = get_detector("injection.heuristic")
+    assert heuristic is not None
+
+    configs: dict[str, DetectorPipeline] = {
+        "heuristic": DetectorPipeline(detectors=[heuristic]),
+    }
+
+    classifier = get_detector("injection.classifier")
+    if classifier is not None and classifier.available():
+        warm_all()
+        configs["heuristic_classifier"] = DetectorPipeline(detectors=[heuristic, classifier])
+    else:
+        print(
+            "injection.classifier unavailable (pip install nometria[classifiers] and "
+            "download the model) — only scoring the heuristic-only config.\n"
+        )
 
     summary = {
-        "detector": "nometria.guardrails.detectors.injection.InjectionHeuristicDetector "
-        "(via DetectorPipeline)",
         "dataset": "deepset/prompt-injections",
         "dataset_url": "https://huggingface.co/datasets/deepset/prompt-injections",
         "dataset_license": "apache-2.0",
-        "methodology": "patterns manually extended using train.json false negatives only; "
-        "test.json held out and never inspected — 'held_out' is the number to trust",
-        "held_out": test_summary,
-        "train": train_summary,
-        "combined": combined_summary,
+        "methodology": "injection.heuristic's patterns were manually extended using "
+        "train.json false negatives only; test.json held out and never inspected — "
+        "'held_out' is the number to trust. injection.classifier is a pretrained "
+        "model, never fit to this dataset.",
+        "configs": {},
     }
 
     RESULTS_DIR.mkdir(exist_ok=True)
+    for config_name, pipeline in configs.items():
+        result = score_all_splits(pipeline, train_rows, test_rows)
+        predictions = result.pop("_predictions")
+        summary["configs"][config_name] = result
+        for split_name, preds in predictions.items():
+            (RESULTS_DIR / f"prompt_injection_{config_name}_{split_name}_predictions.json").write_text(
+                json.dumps(preds, indent=2)
+            )
+
     (RESULTS_DIR / "prompt_injection_summary.json").write_text(json.dumps(summary, indent=2))
-    for split_name, predictions in (
-        ("held_out", test_predictions),
-        ("train", train_predictions),
-        ("combined", combined_predictions),
-    ):
-        (RESULTS_DIR / f"prompt_injection_{split_name}_predictions.json").write_text(
-            json.dumps(predictions, indent=2)
-        )
     print(json.dumps(summary, indent=2))
 
 

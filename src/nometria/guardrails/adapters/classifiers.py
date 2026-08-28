@@ -49,9 +49,24 @@ class _TransformersClassifier(BaseDetector):
 
     @functools.cached_property
     def _pipeline(self):  # pragma: no cover - requires optional dependency
+        import torch
         from transformers import pipeline
 
+        # PyTorch's default intra-op thread pool sizes itself to the machine's core
+        # count, which is right for one big batched job and wrong here: the
+        # detector pipeline already parallelises across *detectors* with its own
+        # ThreadPoolExecutor (P3-6), so every concurrent classifier call spawns
+        # its own multi-threaded forward pass on top of that. The two thread pools
+        # fight over the same cores — measured effect was ~22ms per call in
+        # isolation ballooning past the 75ms timeout under concurrent/sustained
+        # load. One torch thread per call is the standard fix for many-small-calls
+        # serving, as opposed to few-large-batches.
+        torch.set_num_threads(1)
         return pipeline("text-classification", model=self.model_id, top_k=None)
+
+    def warm(self) -> None:  # pragma: no cover - requires optional dependency
+        if self.available():
+            self._pipeline("")
 
     def _detect(self, content: str, context: DetectionContext) -> list[Detection]:
         if not content:
@@ -76,6 +91,30 @@ class _TransformersClassifier(BaseDetector):
                 )
             )
         return out
+
+
+class PromptInjectionClassifierDetector(_TransformersClassifier):
+    """A model trained specifically on prompt injection, not a general safety
+    classifier pressed into service for it — the same technique (and, in some
+    deployments, literally the same underlying model) most competitor guardrail
+    products use for this exact task, rather than `injection.heuristic`'s
+    hand-written patterns. Apache-2.0, ~86M parameters — small and CPU-feasible next
+    to Granite Guardian's 2B, so it's a realistic default rather than an opt-in-only
+    heavyweight.
+    """
+
+    key = "injection.classifier"
+    version = "1.0"
+    surfaces = ("input", "retrieved", "tool_result", "output", "memory_write", "agent_message")
+    label_map = {
+        "injection": "INJECTION.JAILBREAK",
+    }
+    # A real forward pass on CPU, not a regex scan — 40ms (the pipeline default,
+    # calibrated for heuristics) isn't enough headroom even once the model is warm.
+    timeout_ms = 75
+
+    def __init__(self, model_id: str | None = None) -> None:
+        self.model_id = model_id or get_settings().prompt_injection_classifier_model
 
 
 class GraniteGuardianDetector(_TransformersClassifier):
