@@ -103,6 +103,20 @@ class DetectorPipeline:
         )
         self._explicit = detectors
         self._pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="nom-detect")
+        # A timed-out future's worker thread keeps running — Python cannot pre-empt
+        # it (see the FutureTimeout handler below) — so a detector whose calls
+        # occasionally exceed its own timeout leaves behind a straggler that
+        # permanently occupies a pool slot until it eventually finishes. Under
+        # sustained load that accumulates: enough stragglers exhaust the pool, and
+        # then even the fast, always-on detectors (heuristic/pii/secrets/safety)
+        # can't get a worker and start timing out too — a slow *opt-in* classifier
+        # should never be able to take down the always-on safety net. Detectors
+        # that declare their own `timeout_ms` (real per-call cost — currently the
+        # model-backed ones) get a separate pool so their stragglers can only ever
+        # starve each other, never the cheap detectors this one shares nothing with.
+        self._heavy_pool = ThreadPoolExecutor(
+            max_workers=max_workers, thread_name_prefix="nom-detect-heavy"
+        )
 
     # -- selection -------------------------------------------------------
     def select(self, surface: str) -> list[Detector]:
@@ -129,7 +143,9 @@ class DetectorPipeline:
             return result
 
         started = time.perf_counter()
-        futures = {self._pool.submit(self._run_one, d, content, context): d for d in detectors}
+        futures = {
+            self._pool_for(d).submit(self._run_one, d, content, context): d for d in detectors
+        }
 
         for future, detector in futures.items():
             elapsed_ms = (time.perf_counter() - started) * 1000
@@ -183,6 +199,9 @@ class DetectorPipeline:
         result.duration_ms = (time.perf_counter() - started) * 1000
         return result
 
+    def _pool_for(self, detector: Detector) -> ThreadPoolExecutor:
+        return self._heavy_pool if getattr(detector, "timeout_ms", None) else self._pool
+
     @staticmethod
     def _run_one(detector: Detector, content: str, context: DetectionContext) -> DetectorResult:
         started = time.perf_counter()
@@ -192,6 +211,7 @@ class DetectorPipeline:
 
     def shutdown(self) -> None:
         self._pool.shutdown(wait=False)
+        self._heavy_pool.shutdown(wait=False)
 
 
 def fail_verdict(fail_mode: str | None = None) -> str:

@@ -246,6 +246,55 @@ def test_pipeline_degrades_rather_than_hanging():
     assert elapsed_ms < 200, f"caller waited {elapsed_ms:.0f}ms on a 20ms timeout"
 
 
+def test_a_stuck_heavy_detector_cannot_starve_the_fast_pool():
+    """A timed-out future's worker thread keeps running (Python can't pre-empt it) —
+    so a detector that declares its own `timeout_ms` (real per-call cost, e.g. a
+    model forward pass) must run in a pool separate from the fast, always-on
+    detectors. Otherwise enough stragglers from *one slow opt-in detector* can
+    exhaust a shared pool and start timing out fast detectors that were never slow
+    themselves — reproduced directly here with a single-worker pool: if the two
+    detectors shared it, the fast one would queue behind the stuck slow one and
+    time out too."""
+
+    class StuckHeavyDetector:
+        key, version, surfaces = "stuck.heavy", "1", ("input",)
+        timeout_ms = 20
+
+        def available(self):
+            return True
+
+        def detect(self, content, context):
+            time.sleep(1.0)  # never finishes within any budget used below
+            raise AssertionError("should not be awaited to completion")
+
+    class FastDetector:
+        key, version, surfaces = "fast.test", "1", ("input",)
+        timeout_ms = None
+
+        def available(self):
+            return True
+
+        def detect(self, content, context):
+            from nometria.guardrails.base import DetectorResult
+
+            return DetectorResult(detector_key=self.key, version=self.version)
+
+    pipeline = DetectorPipeline(
+        detectors=[StuckHeavyDetector(), FastDetector()],
+        budget_ms=50,
+        detector_timeout_ms=20,
+        max_workers=1,
+    )
+    # Run several requests back-to-back — each leaves the heavy pool's one worker
+    # occupied by a straggler that will not finish for a full second.
+    for _ in range(5):
+        result = pipeline.run("x", DetectionContext())
+        fast_result = next(r for r in result.results if r.detector_key == "fast.test")
+        assert fast_result.status == "ok", (
+            "the fast detector was starved by the stuck heavy one — pool isolation failed"
+        )
+
+
 def test_pipeline_records_detector_error_without_failing_request():
     class BrokenDetector:
         key, version, surfaces = "broken.test", "1", ("input",)

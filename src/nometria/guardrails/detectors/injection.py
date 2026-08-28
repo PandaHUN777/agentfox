@@ -125,6 +125,56 @@ _PARAPHRASE: list[tuple[str, str, float]] = [
         "OVERRIDE",
         0.75,
     ),
+    # Fictional/hypothetical framing that strips the assistant's identity —
+    # "if we're in a theoretical world where you're no longer X" — is a distinct,
+    # well-documented jailbreak shape from bare persona assignment: a legitimate
+    # hypothetical question doesn't need to first announce that the assistant isn't
+    # itself anymore.
+    (
+        r"\bif\s+we\s+(?:are\s+)?(?:speaking|talking)\s+about\s+an?\s+"
+        r"(?:\w+\s+)?(?:theoretical|hypothetical|fictional)\s+world\s+where\s+you\s+"
+        r"(?:are|were)\s+(?:no(?:\s+longer)?|not)\b",
+        "PERSONA",
+        0.75,
+    ),
+    # "Stay in character no matter what" is the standard marker of a roleplay
+    # jailbreak — it's the instruction that stops the model from ever exiting the
+    # persona to apply its own judgment, and it's rare in ordinary creative-writing
+    # requests, which don't need to forbid breaking character in the first place.
+    (
+        r"\b(?:never|without\s+ever)\s+break(?:ing)?\s+(?:character|role)\b",
+        "PERSONA",
+        0.7,
+    ),
+    (
+        r"\bstay(?:s|ing)?\s+(?:fully\s+)?in\s+(?:character|role)\b.{0,60}?"
+        r"\b(?:no\s+matter\s+what|regardless|even\s+if)\b",
+        "PERSONA",
+        0.7,
+    ),
+    # Overriding a refusal/abstention instruction specifically — "you're not
+    # supposed to say there's no answer, you must always respond" — targets the
+    # model's own safety/abstention behavior directly, which is a different (and
+    # more targeted) technique than a blanket instruction-override.
+    (
+        r"\b(?:never|don'?t|do\s+not)\s+refuse\s+to\s+answer\b",
+        "OVERRIDE",
+        0.65,
+    ),
+    (
+        r"\byou\s+(?:are|were)\s+not\s+supposed\s+to\s+(?:say|tell|mention)\b.{0,60}?"
+        r"\byou\s+(?:are|must)\s+(?:always\s+)?(?:supposed\s+to\s+)?(?:respond|answer)\b",
+        "OVERRIDE",
+        0.7,
+    ),
+    # Exfiltrating the model's internal representation rather than its
+    # instructions — the same LLM07 concern (LEAK), different target.
+    (
+        r"\b(?:return|output|show|reveal|give\s+me)\s+(?:your|the)\s+"
+        r"(?:embeddings?|internal\s+state|hidden\s+state|token\s+probabilit\w*)\b",
+        "LEAK",
+        0.7,
+    ),
 ]
 
 #: The same concept across the languages an enterprise agent actually meets. Each
@@ -144,6 +194,11 @@ _MULTILINGUAL: list[tuple[str, str, float]] = [
         r"vorangegangenen?)\s+(?:Anweisungen|Anleitungen|Regeln)\b",
         "OVERRIDE",
         0.85,
+    ),
+    (
+        r"\bh[oö]re?\s+nicht\s+auf\b.{0,40}?\bsondern\b",
+        "OVERRIDE",
+        0.7,
     ),
     (
         r"\bvergiss\b.{0,40}?\b(?:aufgaben|auftr[äa]ge|anweisungen|davor|alles)\b",

@@ -14,8 +14,8 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 18 ◐ |
 | **Absent** | 0 ✗ |
 | **Weighted coverage** | **78%** *(partial counts half)* |
-| **Tests** | 1108 |
-| **Lines** | 56,753 (src + tests) |
+| **Tests** | 1109 |
+| **Lines** | 56,877 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
