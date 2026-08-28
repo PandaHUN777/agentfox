@@ -33,7 +33,7 @@ class names:
 | Tier | What existed before this round | What this round added |
 |---|---|---|
 | **D** — excessive agency | Real, tested, pre-execution enforcement: default-deny capabilities, taint-based escalation, kill switch. Mature. | A benchmark harness that actually exercises it (the existing `evaluation.redteam` runner never did — confirmed by reading it) — and, in doing so, **found a real gap**: the kill switch was never checked in `guard_tool_call`, only in `preflight`. Fixed. |
-| **B** — indirect injection via tool output | Real, tested MCP pre/post-call gate (`McpGovernor`), but non-blocking by default. | A 20-case benchmark with a real `llm-guard` comparison — and an honest result: on this specific shape (an injection embedded in a much longer benign document), **llm-guard's recall beats Nometria's own** (90% vs. 20%). Reported as found, not hidden. |
+| **B** — indirect injection via tool output | Real, tested MCP pre/post-call gate (`McpGovernor`), but non-blocking by default. | A 20-case benchmark with a real `llm-guard` comparison, plus a genuine ensemble-classifier upgrade (see `../REPORT.md`'s "An ensemble backstop") that took recall to **100%**, ahead of llm-guard's 90% — at a real precision cost (66.7% vs. llm-guard's 81.8%). The first version of this benchmark reported a false 20% recall from a benchmark-harness bug of its own, corrected below. |
 | **C** — tool parameter exploitation | Only SQL/shell/URL fields under three hard-coded key names. `order_id="*"` was invisible. | Net-new: `analyse_scope()` in `guardrails/actions.py`, a generic detector for wildcard-scope values, SQL fragments, and path traversal in *any* argument, wired into the real enforcement path. |
 | **A** — multi-turn / payload splitting | Nothing. Confirmed zero coverage — neither the SDK path nor the gateway path re-evaluates content against conversation history. | Net-new: `Enforcer.check_conversation_window`, wired into `nometria.auto()`'s pre-flight, using the `ConversationTurn` table escalation governance already writes. |
 
@@ -79,22 +79,32 @@ the identical 20 strings:
 
 | | Precision | Recall | FP | FN |
 |---|---|---|---|---|
-| **Nometria** (`McpGovernor._govern_result`, full detector stack) | 100.0% | 20.0% | 0 | 8 |
+| **Nometria** (`McpGovernor._govern_result`, full detector stack, round 4 ensemble) | 66.7% | **100.0%** | 5 | 0 |
 | **llm-guard** (`PromptInjection` scanner) | 81.8% | 90.0% | 2 | 1 |
 
-Not a clean win. On this specific attack shape — an injected instruction buried
-inside a much longer, mostly-benign document — llm-guard's classifier catches
-far more than Nometria's current heuristic+classifier+similarity stack does.
-The likely cause, not yet fixed: whole-document classification structurally
-dilutes a small malicious fragment inside mostly-benign surrounding text (a
-needle-in-haystack problem), and neither `injection.heuristic`'s patterns nor
-`injection.similarity`'s corpus were built or tuned against this specific shape —
-the primary benchmark (`../REPORT.md`) and its generalization datasets are all
-short, mostly-standalone prompts, not long documents with a buried instruction.
-**Flagged as a real follow-up**, not patched under time pressure in this round:
-chunked/windowed scanning of long tool-result content is the natural next thing
-to try, the same way corpus growth was the answer for `injection.similarity`'s
-earlier gaps.
+Recall now leads llm-guard; precision trails it — the same trade-off the
+round-4 ensemble backstop makes everywhere (see `../REPORT.md`'s "An ensemble
+backstop"), showing up here too rather than being specific to this tier.
+
+### A benchmark-harness bug this tier's first run had, corrected
+
+The very first version of this benchmark reported Nometria at a startling 20%
+recall — worse than it had any right to be. The cause was in the harness, not
+the detector: to avoid reloading the model between 20 sequential cases, the
+script reused one `Enforcer` object across all of them, but
+`Enforcer.ledger()` is a *request-scoped* latency budget (P3-13) that persists
+across calls on one instance by design — meant to bound one governed request
+touching several surfaces, not to be shared across many unrelated benchmark
+cases. The shared 250ms budget exhausted after roughly two cases, and
+`post.degraded` (checked directly, not assumed) showed every case after that
+degrading across the board — including `injection.heuristic`, which never
+legitimately times out, the tell that something was wrong with the harness and
+not the detection logic. Fixed by calling `enforcer.reset_ledger()` before each
+independent case; the script now also reports `degraded_examples` in its output
+(0 in every run since) so this can't recur silently. Full account in
+`../REPORT.md`'s "An infrastructure bug this round's benchmarking found, in the
+benchmarks themselves." The corrected pre-ensemble number was 90% recall,
+matching llm-guard almost exactly — not the dramatic gap first reported.
 
 ### What llm-guard cannot do, verified directly
 
@@ -178,8 +188,12 @@ construction.
 
 ## What this round did not attempt
 
-- **Tier B's recall gap** — flagged above, not fixed. Chunked/windowed document
-  scanning is the natural next step.
+- **Tier B's precision cost** — the round-4 ensemble backstop closed the
+  recall gap but reintroduced a real false-positive cost (5/10 benign cases now
+  flagged); see `../REPORT.md`'s ensemble section for the same trade-off
+  measured directly against `NotInject`. Not addressed further this round —
+  raising the ensemble's threshold based on this result would be tuning against
+  data this project deliberately treats as held-out.
 - **The gateway (`preflight`) path** for Tier A — `check_conversation_window` is
   wired into the SDK one-liner (`nometria.auto()`) only. `preflight` already
   accepts a `session_id` parameter and could call the same method; not done this

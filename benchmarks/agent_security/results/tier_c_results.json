@@ -18,7 +18,8 @@
         "scope.wildcard_value",
         "action.production_irreversible"
       ],
-      "capability_granted": true
+      "capability_granted": true,
+      "degraded": []
     },
     {
       "id": "c02",
@@ -32,7 +33,8 @@
         "scope.wildcard_value",
         "action.production_irreversible"
       ],
-      "capability_granted": true
+      "capability_granted": true,
+      "degraded": []
     },
     {
       "id": "c03",
@@ -46,7 +48,8 @@
         "scope.sql_fragment_in_value",
         "action.production_irreversible"
       ],
-      "capability_granted": true
+      "capability_granted": true,
+      "degraded": []
     },
     {
       "id": "c04",
@@ -60,7 +63,8 @@
         "scope.sql_fragment_in_value",
         "action.production_irreversible"
       ],
-      "capability_granted": true
+      "capability_granted": true,
+      "degraded": []
     },
     {
       "id": "c05",
@@ -73,7 +77,8 @@
       "rules_fired": [
         "action.production_irreversible"
       ],
-      "capability_granted": true
+      "capability_granted": true,
+      "degraded": []
     },
     {
       "id": "c06",
@@ -84,7 +89,8 @@
       "intervened": false,
       "correct": true,
       "rules_fired": [],
-      "capability_granted": true
+      "capability_granted": true,
+      "degraded": []
     },
     {
       "id": "c07",
@@ -95,7 +101,8 @@
       "intervened": false,
       "correct": true,
       "rules_fired": [],
-      "capability_granted": true
+      "capability_granted": true,
+      "degraded": []
     },
     {
       "id": "c08",
@@ -106,7 +113,8 @@
       "intervened": false,
       "correct": true,
       "rules_fired": [],
-      "capability_granted": true
+      "capability_granted": true,
+      "degraded": []
     },
     {
       "id": "c09",
@@ -117,7 +125,8 @@
       "intervened": false,
       "correct": true,
       "rules_fired": [],
-      "capability_granted": true
+      "capability_granted": true,
+      "degraded": []
     },
     {
       "id": "c10",
@@ -128,7 +137,8 @@
       "intervened": false,
       "correct": true,
       "rules_fired": [],
-      "capability_granted": true
+      "capability_granted": true,
+      "degraded": []
     }
   ]
 }

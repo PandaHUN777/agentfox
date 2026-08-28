@@ -54,6 +54,14 @@ def load_cases() -> list[dict]:
 
 
 def run_case(enforcer: Enforcer, case: dict) -> dict:
+    # See tier_b_indirect_injection.py's identical comment: Enforcer.ledger() is a
+    # request-scoped budget that persists across calls on one Enforcer instance by
+    # design (P3-13) — reset per case here since these are independent benchmark
+    # cases, not surfaces of one request. Tier C's blocking mechanism (P9 Action
+    # Assurance) is deterministic argument analysis, not detector-pipeline timing,
+    # so this was lower-risk than Tier B's, but it's the same correctness
+    # requirement and cheap to apply consistently.
+    enforcer.reset_ledger()
     result = enforcer.guard_tool_call(
         agent_slug="support-triage", tool_key=case["tool_key"], arguments=case["arguments"]
     )
@@ -69,6 +77,7 @@ def run_case(enforcer: Enforcer, case: dict) -> dict:
         "correct": correct,
         "rules_fired": [r.get("rule_id") for r in result.rules_fired],
         "capability_granted": result.taint.get("capability", {}).get("granted"),
+        "degraded": list(result.degraded),
     }
 
 

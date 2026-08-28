@@ -3,6 +3,10 @@
 **Headline number: heuristic + classifier + similarity together get held-out recall
 to 66.7% (up from an unmodified regex detector's 0%), at 100% precision throughout.**
 Every number here, good and modest, comes from a script anyone can run themselves.
+Round 4 added a second, ensembled classifier model — see "An ensemble backstop"
+below for what it buys (large recall gains on two independent generalization
+datasets) and what it costs (most of round 3's over-defense fix, on the one
+dataset built to test exactly that).
 
 ## Why this document exists
 
@@ -18,7 +22,8 @@ uv run python benchmarks/run_generalization_benchmark.py
 
 The first reproduces the `heuristic` config fully offline; the classifier/similarity
 configs additionally need `pip install nometria[classifiers]` and one-time model
-downloads (~350MB `leolee99/PIGuard`, ~90MB `sentence-transformers/all-MiniLM-L6-v2`).
+downloads (~350MB `leolee99/PIGuard`, ~350MB `protectai/deberta-v3-base-prompt-injection-v2`
+for the round-4 ensemble backstop, ~90MB `sentence-transformers/all-MiniLM-L6-v2`).
 Both scripts detect what's available and skip configs they can't run. The primary
 dataset is committed in this repo (`data/train.json`, `data/test.json` —
 `data/README.md` has source/license); the second script's three independent
@@ -53,16 +58,20 @@ either cost.
   structural signals, `src/nometria/guardrails/detectors/injection.py`. Zero extra
   dependencies, sub-millisecond, and what ships **enabled by default**.
 - **Detector, config `heuristic_classifier`**: the same heuristic plus
-  `injection.classifier` — **`leolee99/PIGuard`** (MIT, ~86M params), a DeBERTa-v3-base
-  model trained specifically for this task and specifically designed to resist the
-  over-defense problem plain fine-tuned classifiers have (see "The over-defense
-  problem" below — this is a round-3 change from the model this benchmark shipped
-  with previously, `protectai/deberta-v3-base-prompt-injection-v2`; the swap
-  rationale and full before/after evidence is its own section). This is the same
-  *technique* — and in some deployments literally the same model family —
-  competitor guardrail products use. **Opt-in**, not default: a real CPU forward
-  pass costs tens of milliseconds per call versus the heuristic's fractions of one,
-  and that's a trade-off a deployment should choose, not inherit.
+  `injection.classifier` — as of round 4, an **ensemble of two models**, not one.
+  Primary: **`leolee99/PIGuard`** (MIT, ~86M params), a DeBERTa-v3-base model
+  trained specifically for this task and specifically designed to resist the
+  over-defense problem plain fine-tuned classifiers have (round 3's swap; see "The
+  over-defense problem" below). Secondary backstop, consulted only when the
+  primary finds nothing: **`protectai/deberta-v3-base-prompt-injection-v2`** — the
+  model this benchmark shipped with through round 2, at a high 0.92 confidence bar
+  (not invented here — it's llm-guard's own default threshold for scoring this
+  exact model, read directly from its source; see "An ensemble backstop" below for
+  the full rationale and its real cost). This is the same *technique* — and in
+  some deployments literally the same model family — competitor guardrail products
+  use. **Opt-in**, not default: a real CPU forward pass costs tens of milliseconds
+  per call versus the heuristic's fractions of one, and that's a trade-off a
+  deployment should choose, not inherit.
 - **Detector, config `heuristic_similarity`**: the heuristic plus
   `injection.similarity` — local cosine-similarity matching against
   `guardrails/data/injection_corpus.json`, a synthetic corpus of known attack/benign
@@ -86,19 +95,28 @@ either cost.
 | `heuristic` | train | 546 | 97.1% | 33.5% | 0.498 | 0.0% |
 | `heuristic` | combined | 662 | 97.7% | 31.9% | 0.481 | 0.0% |
 | `heuristic_classifier` | **held_out** | 116 | 100.0% | **66.7%** | 0.800 | 0.0% |
-| `heuristic_classifier` | train | 546 | 98.9% | 87.2% | 0.927 | 3.3% |
-| `heuristic_classifier` | combined | 662 | 99.1% | 83.7% | 0.907 | 1.8% |
+| `heuristic_classifier` | train | 546 | 97.4% | **90.6%** | 0.939 | 0.9% |
+| `heuristic_classifier` | combined | 662 | 97.8% | **85.2%** | 0.911 | 0.8% |
 | `heuristic_similarity` | **held_out** | 116 | 100.0% | 26.7% | 0.421 | 0.0% |
 | `heuristic_similarity` | train | 546 | 97.2% | 34.0% | 0.504 | 0.0% |
 | `heuristic_similarity` | combined | 662 | 97.7% | 32.3% | 0.486 | 0.0% |
 | `heuristic_classifier_similarity` | **held_out** | 116 | **100.0%** | **66.7%** | **0.800** | 0.0% |
-| `heuristic_classifier_similarity` | train | 546 | 98.9% | 89.2% | 0.938 | 2.4% |
-| `heuristic_classifier_similarity` | combined | 662 | 99.1% | 84.0% | 0.910 | 1.7% |
+| `heuristic_classifier_similarity` | train | 546 | 97.4% | **91.1%** | 0.942 | 0.9% |
+| `heuristic_classifier_similarity` | combined | 662 | 97.8% | **85.5%** | 0.913 | 0.9% |
 
 \* Fraction of examples where a detector timed out and was scored as "no
 detection" rather than a genuine clean pass — see "A second infrastructure bug"
 below for what this means and why it's disclosed here instead of silently folded
 into the recall number.
+
+**Round 4 note**: `held_out` is unchanged from round 3 (66.7%, 0% degraded) —
+PIGuard alone already caught everything catchable there, so the new ensemble
+backstop (below) had nothing left to add on this specific split. The real gains
+are on `train`/`combined`: recall jumped from 87–89% (round 3) to 90.6–91.1%
+(round 4) — the secondary model catching genuine attacks PIGuard missed, at a
+real precision cost (97.4–97.8% vs. round 3's 98.9–99.1%) — see "An ensemble
+backstop" below for the full trade-off, including the much larger cost on the
+`notinject` false-positive stress test.
 
 **`held_out` is the number to trust** — `injection.heuristic`'s patterns were tuned
 by reading `train.json`'s false negatives (never `test.json`); `injection.classifier`
@@ -231,41 +249,41 @@ either detector (full sourcing in `data_generalization/README.md`):
   positive by construction — the precision stress test the other two files can't
   give.
 
-### Results
+### Results (round 4: PIGuard + protectai/deberta ensemble backstop)
 
 | Config | Dataset | n | Precision | Recall | FP |
 |---|---|---|---|---|---|
 | `heuristic` | spml | 500 | 100.0% | 9.2% | 0 |
 | `heuristic` | yanismiraoui | 1034 | 100.0% | 0.5% | 0 |
 | `heuristic` | notinject | 339 | — | — | 0 |
-| `heuristic_classifier` | spml | 500 | 100.0% | 28.0% | 0 |
-| `heuristic_classifier` | yanismiraoui | 1034 | 100.0% | 74.1% | 0 |
-| `heuristic_classifier` | notinject | 339 | — | — | **39 (11.5%)** |
-| `heuristic_classifier_similarity` | spml | 500 | 100.0% | 28.4% | 0 |
-| `heuristic_classifier_similarity` | yanismiraoui | 1034 | 100.0% | 75.5% | 0 |
-| `heuristic_classifier_similarity` | notinject | 339 | — | — | **40 (11.8%)** |
+| `heuristic_classifier` | spml | 500 | 92.6% | **85.2%** | 17 |
+| `heuristic_classifier` | yanismiraoui | 1034 | 100.0% | **98.6%** | 0 |
+| `heuristic_classifier` | notinject | 339 | — | — | **140 (41.3%)** |
+| `heuristic_classifier_similarity` | spml | 500 | 92.7% | **86.8%** | 17 |
+| `heuristic_classifier_similarity` | yanismiraoui | 1034 | 100.0% | **98.6%** | 0 |
+| `heuristic_classifier_similarity` | notinject | 339 | — | — | **140 (41.3%)** |
 
-The honest headline here isn't a clean win. Compared to `protectai/deberta` (the
-classifier this benchmark shipped with through round 2), **PIGuard trades recall on
-these two differently-shaped datasets for a much lower false-positive rate on the
-over-defense stress test**:
+This is round 4's number, after adding the ensemble backstop described in "An
+ensemble backstop" below — read that section for the full trade-off story. In
+short: recall on `spml` and `yanismiraoui` recovered dramatically (see the
+before/after table there), and the `notinject` false-positive rate paid nearly
+the full round-3 gain back. Neither table is the whole picture alone; both
+sections should be read together.
 
-| | spml recall | yanismiraoui recall | notinject FP |
-|---|---|---|---|
-| `heuristic_classifier_similarity`, protectai/deberta (round 2) | 63.6% | 98.4% | 148/339 (43.7%) |
-| `heuristic_classifier_similarity`, PIGuard (round 3) | 28.4% | 75.5% | 40/339 (11.8%) |
+**Round 2→3→4, in one place** (the classifier model's evolution, all three
+generalization datasets and the primary benchmark, held-out recall):
 
-Recall on `spml` fell by more than half; recall on `yanismiraoui` fell by ~23
-points. That's a real cost, not a rounding error, and it's reported here rather
-than only showing the axes where PIGuard wins. Whether this trade-off is the right
-one depends on what a deployment is more afraid of — missing a genuinely novel
-attack phrasing, or a support bot that starts refusing to discuss compiler warnings
-because they contain the word "ignore." For this project specifically, the decision
-to swap was driven by the primary benchmark and the over-defense finding below,
-both of which are the failure modes this project has spent the most effort
-characterizing — but a deployment with different risk tolerance has grounds to
-prefer the older model, and nothing here means `protectai/deberta` is
-unconditionally worse.
+| | spml recall | yanismiraoui recall | notinject FP | deepset held_out recall |
+|---|---|---|---|---|
+| `protectai/deberta` alone (round 2) | 63.6% | 98.4% | 148/339 (43.7%) | 41.7% |
+| PIGuard alone (round 3) | 28.4% | 75.5% | 40/339 (11.8%) | 66.7% |
+| **PIGuard + protectai backstop (round 4)** | **86.8%** | **98.6%** | **140/339 (41.3%)** | **66.7%** |
+
+No single row wins on every column, and that's the honest point: round 3 traded
+generalization recall for over-defense resistance; round 4 buys most of that
+recall back at most of the over-defense cost. `deepset`'s own held-out recall —
+the number this project's headline is built on — stayed at round 3's improved
+level throughout, since PIGuard alone already saturates what's catchable there.
 
 ## The over-defense problem, and the PIGuard swap
 
@@ -306,6 +324,98 @@ cost documented above. PIGuard ships custom modeling code rather than a stock
 transformers architecture, so this is the one detector with `trust_remote_code =
 True` — deliberately opt-in per-class, not a blanket default (see
 `_TransformersClassifier.trust_remote_code`'s docstring).
+
+## An ensemble backstop: one model's blind spot is rarely the other's
+
+Round 3 swapped from `protectai/deberta-v3-base-prompt-injection-v2` to PIGuard
+for a clean-looking reason — better on both axes that mattered most (primary
+benchmark recall, NotInject false positives) — but the generalization section
+above already showed that isn't the whole story: on `spml` and `yanismiraoui`,
+two other independent datasets, PIGuard's recall was markedly *worse* than
+`protectai/deberta`'s. Picking one model and shipping it means eating whichever
+dataset it happens to be weak on.
+
+**Design**: `PromptInjectionClassifierDetector` now runs PIGuard as the primary
+check on every call, exactly as before. Only when PIGuard finds nothing does it
+also run `protectai/deberta-v3-base-prompt-injection-v2` as a backstop — and
+only counts that as a detection if its score clears **0.92**. That threshold is
+not tuned against any of this project's own datasets; it's copied directly from
+`llm_guard.input_scanners.prompt_injection.PromptInjection`'s own default
+(`threshold: float = 0.92`, read from its source, not guessed) — llm-guard ships
+this exact model as its default prompt-injection scanner and picked that bar
+specifically because the model over-triggers at a lower one. Using an externally
+anchored threshold, rather than sweeping our own held-out sets for a number that
+looks best, is the same discipline the top-K retrieval negative result and the
+model swap itself were held to.
+
+### The gain: real, and it's the gain the generalization datasets asked for
+
+| Dataset | Recall, PIGuard alone (round 3) | Recall, ensemble (round 4) |
+|---|---|---|
+| `spml` | 28.4% | **86.8%** |
+| `yanismiraoui` | 75.5% | **98.6%** |
+| `deepset` train/combined | 87–89% | **90.6–91.1%** |
+
+`yanismiraoui` recall is now within 0.2 points of what `protectai/deberta` got
+running alone in round 2 (98.6% vs. 98.4%) — the ensemble recovered essentially
+all of the recall the round-3 swap gave up, while keeping PIGuard as the primary
+decision-maker for everything it already handles well.
+
+### The cost: also real, and it lands specifically where PIGuard's whole point was
+
+| | `notinject` false positives |
+|---|---|
+| `protectai/deberta` alone (round 2 finding) | 143/339 (42.2%) |
+| PIGuard alone (round 3) | 39/339 (11.5%) |
+| **Ensemble, PIGuard + protectai/deberta backstop @ 0.92 (round 4)** | **140/339 (41.3%)** |
+
+This is close to a full reversion of round 3's headline improvement. Even at
+llm-guard's own conservative 0.92 bar, `protectai/deberta` scores the great
+majority of NotInject's trigger-word-stuffed *benign* prompts above it — its
+over-defense problem on this specific dataset shape isn't a marginal-confidence
+issue a stricter threshold can filter out, it's confidently wrong on most of
+them. Raising the threshold further wasn't attempted: NotInject, `spml`, and
+`yanismiraoui` are this project's held-out generalization check, and hand-tuning
+the ensemble's threshold against them after seeing this result would be the
+exact tuning-leakage this project has avoided everywhere else (see "held_out is
+the number to trust" above, and the top-K retrieval section's identical
+discipline). 0.92 stays the shipped default because it has a real justification
+independent of our own data, not because it scores best on it.
+
+**Net read, stated plainly**: the ensemble is a genuine, measured trade — large
+recall gains on two independent generalization datasets and on `deepset`'s own
+train/combined splits, paid for with most of round 3's over-defense fix. Whether
+that trade is worth making depends on what a deployment fears more: a novel
+attack phrasing PIGuard alone would miss, or a support bot that starts treating
+"can I ignore this compiler warning" as an attack four times in ten. The
+secondary backstop is a real, opt-out-able config
+(`prompt_injection_classifier_secondary_model` in `src/nometria/config.py` — set
+to `None`/`""` to run PIGuard alone, reverting to round 3's numbers exactly), not
+a forced default a deployment can't see or change.
+
+### An infrastructure bug this round's benchmarking found, in the benchmarks themselves
+
+The very first re-run of Tier B in `benchmarks/agent_security/` (indirect
+injection via tool output — see that directory's `README.md`) reported 20%
+recall for Nometria against llm-guard's 90%, alarmingly far behind. Reading
+`post.degraded` on each case (rather than trusting the headline number) showed
+why: most of the malicious cases had `injection.classifier` and
+`injection.similarity` marked degraded, including — on several cases —
+`injection.heuristic`, which never legitimately times out. The benchmark script
+reused one `Enforcer` object across all 20 independent cases (to avoid reloading
+the model between them), but `Enforcer.ledger()` is a *request-scoped* budget
+(P3-13) that persists across calls on one instance by design — it exists to
+bound one governed request touching several surfaces, not to be shared across
+many unrelated benchmark cases. The shared 250ms budget exhausted after roughly
+two cases, and every case after that degraded regardless of its actual content.
+**Corrected Tier B recall: 90%** (matching llm-guard almost exactly before the
+ensemble backstop above, 100% after it) — see
+`benchmarks/agent_security/README.md` for the full corrected tier-by-tier
+results. Fixed by calling `enforcer.reset_ledger()` before each independent
+case, applied to both `tier_b_indirect_injection.py` and
+`tier_c_tool_params.py`; both scripts now also report `degraded_examples` in
+their output so this class of false confidence surfaces immediately rather than
+needing to be rediscovered.
 
 ## A second infrastructure bug: the pipeline's own budget was silently overriding the detector's declared timeout
 
@@ -474,3 +584,13 @@ doesn't get taken at face value just because it's favorable.
 - `../src/nometria/guardrails/data/injection_corpus.json` — the synthetic anchor
   corpus `injection.similarity` matches against. Growing this file (and
   re-running) is the whole improvement path for that detector — no retraining.
+- `../src/nometria/guardrails/adapters/classifiers.py` —
+  `PromptInjectionClassifierDetector`, including the round-4 ensemble backstop
+  and the reasoning for its threshold.
+- `../src/nometria/config.py` — `prompt_injection_classifier_secondary_model`,
+  the config knob that turns the ensemble backstop off (set to `None`/`""` to
+  run PIGuard alone, round 3's exact behavior).
+- `../benchmarks/agent_security/` — the four-tier agent-runtime-security
+  benchmark suite (multi-turn injection, indirect injection, tool-parameter
+  exploitation, excessive agency), including a real `llm-guard` comparison and
+  its own `README.md`.

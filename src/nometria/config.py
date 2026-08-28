@@ -38,15 +38,21 @@ class Settings(BaseSettings):
     # the shared pipeline ceiling is lower than it. Measured real-world cost for
     # the two model-backed detectors together: ~24ms typical, up to ~133ms on the
     # longest real documents in `deepset/prompt-injections` — 100ms was clipping
-    # even ordinary-length inputs into silent, undisclosed degradation. 200ms
-    # covers the measured worst case with margin, while staying under
-    # `request_budget_ms` below.
-    enforcement_budget_ms: int = 200
+    # even ordinary-length inputs into silent, undisclosed degradation. Raised
+    # again to 300ms after `injection.classifier` grew an ensemble secondary-
+    # model backstop (a second sequential forward pass on the common "primary
+    # found nothing" path) — measured up to ~153ms end-to-end alongside
+    # similarity under load; 300ms keeps real margin over that while staying
+    # under `request_budget_ms` below (also raised to preserve the invariant
+    # that one surface's budget can't exceed the whole request's).
+    enforcement_budget_ms: int = 300
     detector_timeout_ms: int = 40
     # P3-13: the *request*-level ceiling across every surface a single governed call
     # touches. The per-call budget alone is a comfortable lie — one completion
-    # evaluates several messages, the output and every tool call.
-    request_budget_ms: int = 250
+    # evaluates several messages, the output and every tool call. Raised alongside
+    # `enforcement_budget_ms` so a single surface's budget can never exceed the
+    # whole request's.
+    request_budget_ms: int = 350
     # R3: observe-by-default. Enforcement is something a customer turns on
     # deliberately, after simulating it (P2-7).
     default_policy_mode: str = "observe"  # observe | enforce
@@ -87,6 +93,15 @@ class Settings(BaseSettings):
     # protectai/deberta model — see PromptInjectionClassifierDetector's docstring
     # for the benchmarked reason (better recall AND far fewer false positives).
     prompt_injection_classifier_model: str = "leolee99/PIGuard"
+    # MIT, ~86M params. High-bar ensemble backstop for the primary classifier
+    # above — see PromptInjectionClassifierDetector's docstring for why a second
+    # model, and why this specific one (it's the model this project moved away
+    # from as primary, precisely because of its over-triggering; used here only
+    # above `secondary_threshold`, only when the primary found nothing). Set to
+    # "" / None to disable and run PIGuard alone.
+    prompt_injection_classifier_secondary_model: str | None = (
+        "protectai/deberta-v3-base-prompt-injection-v2"
+    )
     # Apache-2.0, ~22M params — embeds text locally for cosine-similarity matching
     # against `guardrails/data/injection_corpus.json`. Same opt-in reasoning as the
     # classifier above; unlike the classifier, this one improves by editing that

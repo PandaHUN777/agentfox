@@ -22,6 +22,10 @@ import functools
 from ...config import get_settings
 from ..base import BaseDetector, Detection, DetectionContext, redact_sample
 
+#: Distinguishes "caller didn't pass this" (use the configured default) from an
+#: explicit `None` (caller wants it off) — see `PromptInjectionClassifierDetector.__init__`.
+_UNSET = object()
+
 
 class _TransformersClassifier(BaseDetector):
     model_id: str = ""
@@ -137,15 +141,100 @@ class PromptInjectionClassifierDetector(_TransformersClassifier):
     # same request (GIL/CPU time-sharing between two concurrent torch forward
     # passes, not pool exhaustion — see REPORT.md's timeout-masking finding,
     # discovered because the previous 75ms ceiling was silently dropping a real
-    # fraction of classifier detections as false "no detection" results).
-    timeout_ms = 150
+    # fraction of classifier detections as false "no detection" results). Raised
+    # again after adding the ensemble secondary-model backstop: the common case
+    # where the primary finds nothing now pays a second sequential forward pass,
+    # measured at up to ~153ms end-to-end alongside similarity under load.
+    timeout_ms = 250
     # PIGuard ships its own `modeling_piguard.py` in the model repo rather than
     # using a stock transformers architecture — trusted because it's the specific,
     # named, reputable model this class exists to wrap, not a general default.
     trust_remote_code = True
 
-    def __init__(self, model_id: str | None = None) -> None:
-        self.model_id = model_id or get_settings().prompt_injection_classifier_model
+    # --- Ensemble backstop ------------------------------------------------
+    # PIGuard's own benchmarking made it the clear primary — better recall AND
+    # far fewer false positives on the primary benchmark and on NotInject (see
+    # docstring above) — but it isn't uniformly better. On two OTHER
+    # independent, never-tuned-against generalization datasets (SPML,
+    # yanismiraoui), PIGuard's recall is markedly lower than
+    # `protectai/deberta-v3-base-prompt-injection-v2`'s: 63.6%->28.4% and
+    # 98.4%->75.5% respectively on the swap (`../../benchmarks/REPORT.md`).
+    # Rather than pick one model and eat the other's blind spot, a second model
+    # runs as a high-bar backstop — consulted only when the primary found
+    # nothing, and only fires above `secondary_threshold`. That threshold
+    # (0.92) is not invented here: it's llm-guard's own default for scoring
+    # this exact model (`llm_guard.input_scanners.prompt_injection.PromptInjection`,
+    # read directly from its source, not guessed), chosen there specifically
+    # because this model is prone to over-triggering at a lower bar — which
+    # matches this project's own NotInject finding for it (42.2% false-positive
+    # rate at the 0.5 bar `_detect` uses for the primary model). Using the
+    # secondary only as a high-confidence backstop, never as a co-equal OR,
+    # is what keeps that liability from simply re-entering through the back
+    # door.
+    secondary_model_id: str | None = None
+    secondary_threshold: float = 0.92
+
+    def __init__(
+        self, model_id: str | None = None, secondary_model_id: str | None | object = _UNSET
+    ) -> None:
+        settings = get_settings()
+        self.model_id = model_id or settings.prompt_injection_classifier_model
+        # `_UNSET` (not passed) means "use the configured default"; an explicit
+        # `None` means "disable the backstop" — the two must stay distinguishable,
+        # or a caller trying to turn the ensemble off silently keeps it on.
+        self.secondary_model_id = (
+            settings.prompt_injection_classifier_secondary_model
+            if secondary_model_id is _UNSET
+            else secondary_model_id
+        )
+
+    @functools.cached_property
+    def _secondary_pipeline(self):  # pragma: no cover - requires optional dependency
+        if not self.secondary_model_id:
+            return None
+        import torch
+        from transformers import pipeline
+
+        torch.set_num_threads(1)
+        return pipeline("text-classification", model=self.secondary_model_id, top_k=None)
+
+    def warm(self) -> None:  # pragma: no cover - requires optional dependency
+        super().warm()
+        if self.available() and self.secondary_model_id:
+            pipe = self._secondary_pipeline
+            if pipe is not None:
+                pipe("")
+
+    def _detect(self, content: str, context: DetectionContext) -> list[Detection]:
+        primary = super()._detect(content, context)
+        if primary or not self.secondary_model_id:
+            return primary
+        pipe = self._secondary_pipeline
+        if pipe is None or not content:
+            return primary
+        scores = pipe(content[:4000])
+        rows = scores[0] if scores and isinstance(scores[0], list) else scores
+        for row in rows or []:
+            label = str(row.get("label", ""))
+            score = float(row.get("score", 0.0))
+            if label.lower() != "injection" or score < self.secondary_threshold:
+                continue
+            return [
+                Detection(
+                    entity_type="INJECTION.JAILBREAK",
+                    score=score,
+                    end=len(content),
+                    sample=redact_sample(content, keep=12),
+                    owasp_id="LLM09",
+                    detail={
+                        "engine": self.key,
+                        "model": self.secondary_model_id,
+                        "label": label,
+                        "role": "ensemble_secondary_backstop",
+                    },
+                )
+            ]
+        return []
 
 
 class GraniteGuardianDetector(_TransformersClassifier):

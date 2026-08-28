@@ -373,6 +373,75 @@ def test_injection_classifier_registered_but_not_enabled_by_default():
     assert "injection.classifier" not in get_settings().enabled_detectors
 
 
+def test_ensemble_secondary_is_not_consulted_when_the_primary_already_fired():
+    """The secondary backstop exists to catch what PIGuard misses, not to run on
+    every call — consulting it unconditionally would double the common-case
+    latency for zero benefit. Faked pipelines (no real model download/load) so
+    this is fast and deterministic."""
+    from nometria.guardrails.adapters.classifiers import PromptInjectionClassifierDetector
+    from nometria.guardrails.base import DetectionContext
+
+    detector = PromptInjectionClassifierDetector(secondary_model_id="fake/secondary")
+    detector.__dict__["_pipeline"] = lambda text: [
+        [{"label": "injection", "score": 0.99}, {"label": "safe", "score": 0.01}]
+    ]
+    secondary_calls = []
+    detector.__dict__["_secondary_pipeline"] = lambda text: secondary_calls.append(text) or [
+        [{"label": "injection", "score": 0.99}, {"label": "safe", "score": 0.01}]
+    ]
+
+    result = detector.detect("anything", DetectionContext(surface="input"))
+    assert result.detections and result.detections[0].entity_type == "INJECTION.JAILBREAK"
+    assert secondary_calls == [], "secondary pipeline should never run when the primary already fired"
+
+
+def test_ensemble_secondary_backstop_fires_above_its_own_threshold():
+    """When the primary finds nothing, the secondary is consulted — but only
+    counts as a detection above its own (stricter) threshold, not the primary's
+    0.5 bar."""
+    from nometria.guardrails.adapters.classifiers import PromptInjectionClassifierDetector
+    from nometria.guardrails.base import DetectionContext
+
+    detector = PromptInjectionClassifierDetector(secondary_model_id="fake/secondary")
+    detector.secondary_threshold = 0.92
+    detector.__dict__["_pipeline"] = lambda text: [
+        [{"label": "safe", "score": 0.99}, {"label": "injection", "score": 0.01}]
+    ]
+
+    # Below the secondary's own threshold: primary found nothing, secondary is
+    # unconvinced too — no detection.
+    detector.__dict__["_secondary_pipeline"] = lambda text: [
+        [{"label": "injection", "score": 0.7}, {"label": "safe", "score": 0.3}]
+    ]
+    below = detector.detect("borderline text", DetectionContext(surface="input"))
+    assert not below.detections
+
+    # Above the secondary's threshold: this is the actual backstop firing.
+    detector.__dict__["_secondary_pipeline"] = lambda text: [
+        [{"label": "injection", "score": 0.95}, {"label": "safe", "score": 0.05}]
+    ]
+    above = detector.detect("text piguard missed", DetectionContext(surface="input"))
+    assert above.detections
+    assert above.detections[0].entity_type == "INJECTION.JAILBREAK"
+    assert above.detections[0].detail["role"] == "ensemble_secondary_backstop"
+
+
+def test_ensemble_secondary_backstop_can_be_disabled():
+    """`secondary_model_id=None` must fully disable the backstop — no secondary
+    call attempted, primary-only behaviour identical to before the ensemble
+    existed (the same config knob a deployment uses to opt back out)."""
+    from nometria.guardrails.adapters.classifiers import PromptInjectionClassifierDetector
+    from nometria.guardrails.base import DetectionContext
+
+    detector = PromptInjectionClassifierDetector(secondary_model_id=None)
+    detector.__dict__["_pipeline"] = lambda text: [
+        [{"label": "safe", "score": 0.99}, {"label": "injection", "score": 0.01}]
+    ]
+    result = detector.detect("anything", DetectionContext(surface="input"))
+    assert not result.detections
+    assert detector._secondary_pipeline is None
+
+
 def test_injection_similarity_registered_but_not_enabled_by_default():
     from nometria.config import get_settings
     from nometria.guardrails import all_detectors

@@ -91,6 +91,18 @@ def score_nometria(cases: list[dict]) -> list[dict]:
         # signal this tier measures. This keeps the capability axis constant (always
         # granted) so what varies across cases is the text, not the tool identity.
         for case in cases:
+            # P3-13's request-level ledger (Enforcer.ledger()) persists on the
+            # Enforcer instance across calls by design — it's meant to bound one
+            # governed request touching several surfaces, not to be shared across
+            # many independent benchmark cases. Reusing one Enforcer here (for
+            # model-cache reuse — see the warm_all() call above) without resetting
+            # it made the shared 250ms budget exhaust after ~2 cases, degrading
+            # every detector including the sub-millisecond heuristic on every case
+            # after that. Found by checking `post.degraded` directly, not assumed:
+            # this silently produced a false "20% recall" the first time this
+            # script ran. Reset per case so each one gets its own fresh budget,
+            # same as it would as a genuinely separate request in production.
+            governor.enforcer.reset_ledger()
             post = governor._govern_result("kb.search", "kb.search", case["text"])
             flagged = post.blocked or post.escalated or bool(post.entities)
             results.append(
@@ -100,6 +112,7 @@ def score_nometria(cases: list[dict]) -> list[dict]:
                     "flagged": flagged,
                     "effective_verdict": post.effective_verdict,
                     "entities": post.entities,
+                    "degraded": list(post.degraded),
                 }
             )
     wipe_db(db_path)
@@ -127,6 +140,7 @@ def confusion(results: list[dict]) -> dict:
     fn = sum(1 for r in results if not r["flagged"] and r["label"] == 1)
     precision = tp / (tp + fp) if (tp + fp) else None
     recall = tp / (tp + fn) if (tp + fn) else None
+    degraded_examples = sum(1 for r in results if r.get("degraded"))
     return {
         "n": len(results),
         "tp": tp,
@@ -135,6 +149,10 @@ def confusion(results: list[dict]) -> dict:
         "fn": fn,
         "precision": round(precision, 4) if precision is not None else None,
         "recall": round(recall, 4) if recall is not None else None,
+        # A degraded case was scored as "no detection" regardless of what it
+        # actually contained — see the reset_ledger() comment above for why this
+        # matters here specifically.
+        "degraded_examples": degraded_examples,
     }
 
 
