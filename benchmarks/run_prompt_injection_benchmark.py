@@ -57,6 +57,9 @@ def load_split(name: str) -> list[dict]:
 def score(rows: list[dict], pipeline: DetectorPipeline) -> tuple[dict, list[dict]]:
     predictions = []
     tp = fp = tn = fn = 0
+    degraded_examples = 0
+    degraded_by_detector: dict[str, int] = {}
+    errored_by_detector: dict[str, int] = {}
     started = time.perf_counter()
 
     for row in rows:
@@ -64,7 +67,23 @@ def score(rows: list[dict], pipeline: DetectorPipeline) -> tuple[dict, list[dict
         label = row["label"]  # dataset convention: 1 = injection, 0 = benign
         result = pipeline.run(text, DetectionContext(surface="input"))
         predicted = int(any(d.entity_type.startswith("INJECTION") for d in result.detections))
-        predictions.append({"text": text, "label": label, "predicted": predicted})
+        degraded = list(result.degraded)
+        errored = list(result.errored)
+        if degraded or errored:
+            degraded_examples += 1
+            for key in degraded:
+                degraded_by_detector[key] = degraded_by_detector.get(key, 0) + 1
+            for key in errored:
+                errored_by_detector[key] = errored_by_detector.get(key, 0) + 1
+        predictions.append(
+            {
+                "text": text,
+                "label": label,
+                "predicted": predicted,
+                "degraded": degraded,
+                "errored": errored,
+            }
+        )
         if predicted == 1 and label == 1:
             tp += 1
         elif predicted == 1 and label == 0:
@@ -92,6 +111,14 @@ def score(rows: list[dict], pipeline: DetectorPipeline) -> tuple[dict, list[dict
         "accuracy": round(accuracy, 4),
         "duration_ms": round(duration_ms, 1),
         "avg_ms_per_example": round(duration_ms / len(rows), 3) if rows else 0.0,
+        # A detector that times out or errors mid-run is scored as "no detection" —
+        # same as a genuine clean pass — unless this is disclosed. Non-zero here
+        # means some fraction of tp/fp/tn/fn above was contention-masked, not a
+        # true model judgment; see the thread-pool-exhaustion finding in REPORT.md.
+        "degraded_examples": degraded_examples,
+        "degraded_rate": round(degraded_examples / len(rows), 4) if rows else 0.0,
+        "degraded_by_detector": degraded_by_detector,
+        "errored_by_detector": errored_by_detector,
     }
     return summary, predictions
 

@@ -50,8 +50,8 @@ class EmbeddingSimilarityDetector(BaseDetector):
     version = "1.0"
     surfaces = ("input", "retrieved", "tool_result", "output", "memory_write", "agent_message")
     # A real forward pass plus a corpus-sized matrix multiply — same reasoning as
-    # injection.classifier's timeout_ms.
-    timeout_ms = 75
+    # injection.classifier's timeout_ms, including the measured 150ms figure.
+    timeout_ms = 150
 
     def __init__(
         self,

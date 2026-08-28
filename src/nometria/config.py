@@ -31,7 +31,17 @@ class Settings(BaseSettings):
 
     # --- Enforcement (Pillar 3) -----------------------------------------
     # NFR-1: hard budget for the whole pre-flight pipeline, and per detector.
-    enforcement_budget_ms: int = 100
+    # Was 100 — raised after benchmarking `injection.classifier`/`injection.similarity`
+    # under real dataset load found this *pipeline*-level cap silently overriding
+    # each detector's own, higher `timeout_ms`: `allowance = min(own_timeout_ms,
+    # remaining_ms)` in pipeline.py means a detector's declared budget is a lie if
+    # the shared pipeline ceiling is lower than it. Measured real-world cost for
+    # the two model-backed detectors together: ~24ms typical, up to ~133ms on the
+    # longest real documents in `deepset/prompt-injections` — 100ms was clipping
+    # even ordinary-length inputs into silent, undisclosed degradation. 200ms
+    # covers the measured worst case with margin, while staying under
+    # `request_budget_ms` below.
+    enforcement_budget_ms: int = 200
     detector_timeout_ms: int = 40
     # P3-13: the *request*-level ceiling across every surface a single governed call
     # touches. The per-call budget alone is a comfortable lie — one completion
@@ -68,13 +78,15 @@ class Settings(BaseSettings):
     # Appendix A.4: restricted-licence model adapters refuse to load without this.
     accept_restricted_model_licenses: bool = False
     granite_guardian_model: str = "ibm-granite/granite-guardian-3.0-2b"
-    # Apache-2.0, ~86M params, no licence gate — but a real CPU forward pass still
+    # MIT, ~86M params, no licence gate — but a real CPU forward pass still
     # costs tens of ms per call versus a regex scan's fractions of one, and every
     # concurrent request pays it independently (P3-6's budget is per-request, not a
     # shared inference queue). Opt-in via `enabled_detectors`, same reasoning as
     # Granite Guardian: a customer must choose the latency/recall trade-off, not
-    # inherit it from a default.
-    prompt_injection_classifier_model: str = "protectai/deberta-v3-base-prompt-injection-v2"
+    # inherit it from a default. leolee99/PIGuard, not the more commonly cited
+    # protectai/deberta model — see PromptInjectionClassifierDetector's docstring
+    # for the benchmarked reason (better recall AND far fewer false positives).
+    prompt_injection_classifier_model: str = "leolee99/PIGuard"
     # Apache-2.0, ~22M params — embeds text locally for cosine-similarity matching
     # against `guardrails/data/injection_corpus.json`. Same opt-in reasoning as the
     # classifier above; unlike the classifier, this one improves by editing that

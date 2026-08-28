@@ -27,6 +27,12 @@ class _TransformersClassifier(BaseDetector):
     model_id: str = ""
     label_map: dict[str, str] = {}
     restricted: bool = False
+    #: A model shipping custom modeling code (not a stock transformers architecture)
+    #: needs this to load at all. Left False by default — executing a model repo's
+    #: Python is a real trust boundary, so a subclass opts in explicitly rather than
+    #: this being silently on for everyone. Only ever set for a specific, named,
+    #: reputable model_id (see PromptInjectionClassifierDetector).
+    trust_remote_code: bool = False
 
     def available(self) -> bool:
         if self.restricted and not get_settings().restricted_models_allowed:
@@ -62,7 +68,12 @@ class _TransformersClassifier(BaseDetector):
         # load. One torch thread per call is the standard fix for many-small-calls
         # serving, as opposed to few-large-batches.
         torch.set_num_threads(1)
-        return pipeline("text-classification", model=self.model_id, top_k=None)
+        return pipeline(
+            "text-classification",
+            model=self.model_id,
+            top_k=None,
+            trust_remote_code=self.trust_remote_code,
+        )
 
     def warm(self) -> None:  # pragma: no cover - requires optional dependency
         if self.available():
@@ -98,9 +109,19 @@ class PromptInjectionClassifierDetector(_TransformersClassifier):
     classifier pressed into service for it — the same technique (and, in some
     deployments, literally the same underlying model) most competitor guardrail
     products use for this exact task, rather than `injection.heuristic`'s
-    hand-written patterns. Apache-2.0, ~86M parameters — small and CPU-feasible next
-    to Granite Guardian's 2B, so it's a realistic default rather than an opt-in-only
-    heavyweight.
+    hand-written patterns.
+
+    Uses `leolee99/PIGuard` (MIT), the over-defense-mitigated successor proposed
+    in "InjecGuard: Benchmarking and Mitigating Over-defense in Prompt Injection
+    Guardrail Models" (arXiv:2410.22770), swapped in after this project's own
+    benchmarking (see `benchmarks/REPORT.md`) showed it beating the previous
+    default (`protectai/deberta-v3-base-prompt-injection-v2`) on both axes at
+    once: held-out recall on `deepset/prompt-injections` at 100% precision
+    (31.7% -> 66.7%), and — more importantly — the true false-positive rate on
+    `leolee99/NotInject` (339 benign prompts stuffed with injection-sounding
+    vocabulary, purpose-built to catch keyword-reactive guardrails) dropping
+    from 42.2% to 11.5%. Ships custom modeling code, so this is the one
+    detector with `trust_remote_code = True`.
     """
 
     key = "injection.classifier"
@@ -111,7 +132,17 @@ class PromptInjectionClassifierDetector(_TransformersClassifier):
     }
     # A real forward pass on CPU, not a regex scan — 40ms (the pipeline default,
     # calibrated for heuristics) isn't enough headroom even once the model is warm.
-    timeout_ms = 75
+    # Measured directly: solo warm latency is ~23ms, but p90 climbs to ~57ms and
+    # observed max to ~85ms once `injection.similarity` runs alongside it in the
+    # same request (GIL/CPU time-sharing between two concurrent torch forward
+    # passes, not pool exhaustion — see REPORT.md's timeout-masking finding,
+    # discovered because the previous 75ms ceiling was silently dropping a real
+    # fraction of classifier detections as false "no detection" results).
+    timeout_ms = 150
+    # PIGuard ships its own `modeling_piguard.py` in the model repo rather than
+    # using a stock transformers architecture — trusted because it's the specific,
+    # named, reputable model this class exists to wrap, not a general default.
+    trust_remote_code = True
 
     def __init__(self, model_id: str | None = None) -> None:
         self.model_id = model_id or get_settings().prompt_injection_classifier_model

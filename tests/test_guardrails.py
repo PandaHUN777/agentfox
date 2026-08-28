@@ -295,6 +295,50 @@ def test_a_stuck_heavy_detector_cannot_starve_the_fast_pool():
         )
 
 
+def test_detector_own_timeout_ms_is_honored_up_to_the_pipeline_budget():
+    """A detector's declared `timeout_ms` should win over the pipeline's lower
+    default `detector_timeout_ms` — but only as long as the overall `budget_ms`
+    actually leaves that much room. Found via benchmarking: `injection.classifier`
+    declared `timeout_ms = 150`, yet was still degrading on ordinary inputs,
+    because `enforcement_budget_ms` (the whole-pipeline ceiling) defaulted to 100 —
+    lower than the detector's own declared budget — so `allowance = min(own_timeout_ms,
+    remaining_ms)` silently clipped it to ~100ms regardless of what the detector
+    declared. Two cases here: budget generous enough honors the detector's own
+    ceiling; budget too tight clips it exactly like the real bug did."""
+
+    class SlowishDetector:
+        key, version, surfaces = "slowish.test", "1", ("input",)
+        timeout_ms = 80  # higher than the pipeline's own default (20 below)
+
+        def available(self):
+            return True
+
+        def detect(self, content, context):
+            time.sleep(0.05)  # 50ms: within its own 80ms ceiling
+            from nometria.guardrails.base import DetectorResult
+
+            return DetectorResult(detector_key=self.key, version=self.version)
+
+    # Budget comfortably covers the detector's own declared timeout.
+    generous = DetectorPipeline(
+        detectors=[SlowishDetector()], budget_ms=200, detector_timeout_ms=20
+    )
+    result = generous.run("x", DetectionContext())
+    assert result.results[0].status == "ok", (
+        "a detector's own timeout_ms should be honored when the pipeline budget allows it"
+    )
+
+    # Budget lower than the detector's own declared timeout clips it — the exact
+    # mechanism that silently degraded injection.classifier before the fix.
+    tight = DetectorPipeline(detectors=[SlowishDetector()], budget_ms=30, detector_timeout_ms=20)
+    result = tight.run("x", DetectionContext())
+    assert "slowish.test" in result.degraded, (
+        "a pipeline-level budget lower than the detector's own timeout_ms should still "
+        "clip its allowance — this is what made the old 100ms default silently degrade "
+        "the classifier/similarity detectors on ordinary-length inputs"
+    )
+
+
 def test_pipeline_records_detector_error_without_failing_request():
     class BrokenDetector:
         key, version, surfaces = "broken.test", "1", ("input",)

@@ -1,0 +1,155 @@
+{
+  "datasets": {
+    "spml": "reshabhs/SPML_Chatbot_Prompt_Injection (MIT, 500-row stratified sample)",
+    "yanismiraoui": "yanismiraoui/prompt_injections (apache-2.0, recall-only, 7 languages)",
+    "notinject": "leolee99/NotInject (MIT, all-benign, false-positive stress test)"
+  },
+  "note": "None of these datasets informed injection.heuristic's patterns or injection.similarity's corpus \u2014 this measures generalization, not fit.",
+  "configs": {
+    "heuristic": {
+      "spml": {
+        "n": 500,
+        "tp": 23,
+        "fp": 0,
+        "tn": 250,
+        "fn": 227,
+        "precision": 1.0,
+        "recall": 0.092,
+        "duration_ms": 216.6,
+        "avg_ms_per_example": 0.433,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
+      },
+      "yanismiraoui": {
+        "n": 1034,
+        "tp": 5,
+        "fp": 0,
+        "tn": 0,
+        "fn": 1029,
+        "precision": 1.0,
+        "recall": 0.0048,
+        "duration_ms": 94.7,
+        "avg_ms_per_example": 0.092,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
+      },
+      "notinject": {
+        "n": 339,
+        "tp": 0,
+        "fp": 0,
+        "tn": 339,
+        "fn": 0,
+        "precision": null,
+        "recall": null,
+        "duration_ms": 31.3,
+        "avg_ms_per_example": 0.092,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
+      }
+    },
+    "heuristic_classifier": {
+      "spml": {
+        "n": 500,
+        "tp": 70,
+        "fp": 0,
+        "tn": 250,
+        "fn": 180,
+        "precision": 1.0,
+        "recall": 0.28,
+        "duration_ms": 25010.9,
+        "avg_ms_per_example": 50.022,
+        "degraded_examples": 29,
+        "degraded_rate": 0.058,
+        "degraded_by_detector": {
+          "injection.classifier": 29
+        },
+        "errored_by_detector": {}
+      },
+      "yanismiraoui": {
+        "n": 1034,
+        "tp": 766,
+        "fp": 0,
+        "tn": 0,
+        "fn": 268,
+        "precision": 1.0,
+        "recall": 0.7408,
+        "duration_ms": 26608.1,
+        "avg_ms_per_example": 25.733,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
+      },
+      "notinject": {
+        "n": 339,
+        "tp": 0,
+        "fp": 39,
+        "tn": 300,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": null,
+        "duration_ms": 9608.0,
+        "avg_ms_per_example": 28.342,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
+      }
+    },
+    "heuristic_classifier_similarity": {
+      "spml": {
+        "n": 500,
+        "tp": 71,
+        "fp": 0,
+        "tn": 250,
+        "fn": 179,
+        "precision": 1.0,
+        "recall": 0.284,
+        "duration_ms": 23550.2,
+        "avg_ms_per_example": 47.1,
+        "degraded_examples": 23,
+        "degraded_rate": 0.046,
+        "degraded_by_detector": {
+          "injection.classifier": 23
+        },
+        "errored_by_detector": {}
+      },
+      "yanismiraoui": {
+        "n": 1034,
+        "tp": 781,
+        "fp": 0,
+        "tn": 0,
+        "fn": 253,
+        "precision": 1.0,
+        "recall": 0.7553,
+        "duration_ms": 28094.1,
+        "avg_ms_per_example": 27.17,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
+      },
+      "notinject": {
+        "n": 339,
+        "tp": 0,
+        "fp": 40,
+        "tn": 299,
+        "fn": 0,
+        "precision": 0.0,
+        "recall": null,
+        "duration_ms": 10364.5,
+        "avg_ms_per_example": 30.574,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
+      }
+    }
+  }
+}

@@ -15,8 +15,12 @@
         "recall": 0.2667,
         "f1": 0.4211,
         "accuracy": 0.6207,
-        "duration_ms": 20.0,
-        "avg_ms_per_example": 0.172
+        "duration_ms": 19.9,
+        "avg_ms_per_example": 0.171,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
       },
       "train": {
         "n": 546,
@@ -28,8 +32,12 @@
         "recall": 0.335,
         "f1": 0.4982,
         "accuracy": 0.7491,
-        "duration_ms": 88.2,
-        "avg_ms_per_example": 0.162
+        "duration_ms": 87.3,
+        "avg_ms_per_example": 0.16,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
       },
       "combined": {
         "n": 662,
@@ -41,49 +49,70 @@
         "recall": 0.3194,
         "f1": 0.4814,
         "accuracy": 0.7266,
-        "duration_ms": 104.8,
-        "avg_ms_per_example": 0.158
+        "duration_ms": 105.0,
+        "avg_ms_per_example": 0.159,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
       }
     },
     "heuristic_classifier": {
       "held_out": {
         "n": 116,
-        "tp": 27,
+        "tp": 40,
         "fp": 0,
         "tn": 56,
-        "fn": 33,
+        "fn": 20,
         "precision": 1.0,
-        "recall": 0.45,
-        "f1": 0.6207,
-        "accuracy": 0.7155,
-        "duration_ms": 5663.6,
-        "avg_ms_per_example": 48.824
+        "recall": 0.6667,
+        "f1": 0.8,
+        "accuracy": 0.8276,
+        "duration_ms": 5562.1,
+        "avg_ms_per_example": 47.949,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
       },
       "train": {
         "n": 546,
-        "tp": 96,
-        "fp": 5,
-        "tn": 338,
-        "fn": 107,
-        "precision": 0.9505,
-        "recall": 0.4729,
-        "f1": 0.6316,
-        "accuracy": 0.7949,
-        "duration_ms": 20657.7,
-        "avg_ms_per_example": 37.835
+        "tp": 177,
+        "fp": 2,
+        "tn": 341,
+        "fn": 26,
+        "precision": 0.9888,
+        "recall": 0.8719,
+        "f1": 0.9267,
+        "accuracy": 0.9487,
+        "duration_ms": 22493.2,
+        "avg_ms_per_example": 41.196,
+        "degraded_examples": 18,
+        "degraded_rate": 0.033,
+        "degraded_by_detector": {
+          "injection.classifier": 18,
+          "injection.heuristic": 1
+        },
+        "errored_by_detector": {}
       },
       "combined": {
         "n": 662,
-        "tp": 130,
-        "fp": 6,
-        "tn": 393,
-        "fn": 133,
-        "precision": 0.9559,
-        "recall": 0.4943,
-        "f1": 0.6516,
-        "accuracy": 0.79,
-        "duration_ms": 20898.4,
-        "avg_ms_per_example": 31.569
+        "tp": 220,
+        "fp": 2,
+        "tn": 397,
+        "fn": 43,
+        "precision": 0.991,
+        "recall": 0.8365,
+        "f1": 0.9072,
+        "accuracy": 0.932,
+        "duration_ms": 24812.6,
+        "avg_ms_per_example": 37.481,
+        "degraded_examples": 12,
+        "degraded_rate": 0.0181,
+        "degraded_by_detector": {
+          "injection.classifier": 12
+        },
+        "errored_by_detector": {}
       }
     },
     "heuristic_similarity": {
@@ -97,8 +126,12 @@
         "recall": 0.2667,
         "f1": 0.4211,
         "accuracy": 0.6207,
-        "duration_ms": 803.3,
-        "avg_ms_per_example": 6.925
+        "duration_ms": 848.9,
+        "avg_ms_per_example": 7.318,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
       },
       "train": {
         "n": 546,
@@ -110,8 +143,12 @@
         "recall": 0.3399,
         "f1": 0.5036,
         "accuracy": 0.7509,
-        "duration_ms": 3467.1,
-        "avg_ms_per_example": 6.35
+        "duration_ms": 3983.3,
+        "avg_ms_per_example": 7.295,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
       },
       "combined": {
         "n": 662,
@@ -123,49 +160,70 @@
         "recall": 0.3232,
         "f1": 0.4857,
         "accuracy": 0.7281,
-        "duration_ms": 4159.7,
-        "avg_ms_per_example": 6.284
+        "duration_ms": 4157.6,
+        "avg_ms_per_example": 6.28,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
       }
     },
     "heuristic_classifier_similarity": {
       "held_out": {
         "n": 116,
-        "tp": 29,
+        "tp": 40,
         "fp": 0,
         "tn": 56,
-        "fn": 31,
+        "fn": 20,
         "precision": 1.0,
-        "recall": 0.4833,
-        "f1": 0.6517,
-        "accuracy": 0.7328,
-        "duration_ms": 3633.6,
-        "avg_ms_per_example": 31.324
+        "recall": 0.6667,
+        "f1": 0.8,
+        "accuracy": 0.8276,
+        "duration_ms": 3810.1,
+        "avg_ms_per_example": 32.845,
+        "degraded_examples": 0,
+        "degraded_rate": 0.0,
+        "degraded_by_detector": {},
+        "errored_by_detector": {}
       },
       "train": {
         "n": 546,
-        "tp": 102,
-        "fp": 6,
-        "tn": 337,
-        "fn": 101,
-        "precision": 0.9444,
-        "recall": 0.5025,
-        "f1": 0.6559,
-        "accuracy": 0.804,
-        "duration_ms": 18393.8,
-        "avg_ms_per_example": 33.688
+        "tp": 181,
+        "fp": 2,
+        "tn": 341,
+        "fn": 22,
+        "precision": 0.9891,
+        "recall": 0.8916,
+        "f1": 0.9378,
+        "accuracy": 0.956,
+        "duration_ms": 18570.9,
+        "avg_ms_per_example": 34.013,
+        "degraded_examples": 13,
+        "degraded_rate": 0.0238,
+        "degraded_by_detector": {
+          "injection.classifier": 13,
+          "injection.similarity": 1
+        },
+        "errored_by_detector": {}
       },
       "combined": {
         "n": 662,
-        "tp": 131,
-        "fp": 6,
-        "tn": 393,
-        "fn": 132,
-        "precision": 0.9562,
-        "recall": 0.4981,
-        "f1": 0.655,
-        "accuracy": 0.7915,
-        "duration_ms": 21866.8,
-        "avg_ms_per_example": 33.031
+        "tp": 221,
+        "fp": 2,
+        "tn": 397,
+        "fn": 42,
+        "precision": 0.991,
+        "recall": 0.8403,
+        "f1": 0.9095,
+        "accuracy": 0.9335,
+        "duration_ms": 21907.4,
+        "avg_ms_per_example": 33.093,
+        "degraded_examples": 11,
+        "degraded_rate": 0.0166,
+        "degraded_by_detector": {
+          "injection.classifier": 11
+        },
+        "errored_by_detector": {}
       }
     }
   }

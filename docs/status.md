@@ -14,8 +14,8 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 18 ◐ |
 | **Absent** | 0 ✗ |
 | **Weighted coverage** | **78%** *(partial counts half)* |
-| **Tests** | 1109 |
-| **Lines** | 56,877 (src + tests) |
+| **Tests** | 1110 |
+| **Lines** | 56,964 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -38,7 +38,7 @@ in [traceability.md](traceability.md).
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 17 |  |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 37 |  |
 | `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 20 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
-| `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 16 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
+| `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 17 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
 | `PL-2` | Platform | Database migrations | ✅ built | 2 |  |
 | `PL-3` | Platform | Kill switch and quarantine | ✅ built | 14 |  |
