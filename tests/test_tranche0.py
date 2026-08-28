@@ -264,6 +264,24 @@ def test_control_check_precedes_policy(seeded, enforcer):
     assert result.blocked
 
 
+def test_quarantine_blocks_tool_calls_not_just_completions(seeded, enforcer):
+    """`guard_tool_call` is the path MCP/SDK integrations use to gate an actual tool
+    execution — `McpGovernor.call` and `NometriaGuard.tool_node` both call it
+    directly, without going through `preflight` first. Found via benchmarking: an
+    otherwise-valid, in-budget tool call from a quarantined agent went straight
+    through, because `_control_verdict` was only wired into `preflight`. The kill
+    switch's own docstring says "checked before anything else in the request path"
+    — this makes that true for the tool-execution path too, not just completions."""
+    quarantine(seeded, "payments-ops", reason="investigating", actor="marcus@example.com")
+    result = enforcer.guard_tool_call(
+        agent_slug="payments-ops",
+        tool_key="payments.refund",
+        arguments={"amount": 100, "currency": "USD"},
+    )
+    assert result.effective_verdict == "block"
+    assert result.rules_fired[0]["rule_id"] == "agent.quarantined"
+
+
 def test_resume_restores_service(seeded, enforcer):
     quarantine(seeded, "support-triage", actor="ops")
     resume(seeded, "support-triage", reason="cleared", actor="ops")

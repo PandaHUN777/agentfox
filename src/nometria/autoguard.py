@@ -334,8 +334,42 @@ def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
                 trace=trace,
             )
             trace_id = trace.id
+            blocking_result = inbound
             blocked = inbound.blocked
             reason = inbound.reason
+
+            # Tier A — payload splitting / multi-turn jailbreaks: the check above
+            # only ever sees THIS call's own messages array. An attacker who spreads
+            # a payload across several separate calls in the same conversation (each
+            # individually innocuous) defeats it completely. Only runs when the
+            # caller supplied a stable session_id — the same precondition escalation
+            # governance already has for turn continuity — so a caller with no
+            # session concept pays nothing extra and loses nothing it had before.
+            if state.session_id:
+                new_user_text = next(
+                    (
+                        str(m.get("content") or "")
+                        for m in reversed(messages)
+                        if str(m.get("role")) == "user"
+                    ),
+                    "",
+                )
+                if new_user_text:
+                    window_result = enforcer.check_conversation_window(
+                        agent_slug=state.agent,
+                        session_id=state.session_id,
+                        new_user_text=new_user_text,
+                        trace=trace,
+                    )
+                    if window_result.blocked and not blocked:
+                        blocked = True
+                        window_result.reason = (
+                            f"multi-turn: {window_result.reason}"
+                            if window_result.reason
+                            else "multi-turn conversation window flagged an injection"
+                        )
+                        blocking_result = window_result
+                        reason = window_result.reason
     except Exception as exc:  # never take the caller's request down
         log.warning("nometria: pre-flight failed, allowing the call: %s", exc)
         _IN_NOMETRIA.reset(token)
@@ -343,7 +377,7 @@ def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
 
     try:
         if blocked and state.mode == "enforce":
-            raise Blocked(inbound)
+            raise Blocked(blocking_result)
         response = call()
     finally:
         _IN_NOMETRIA.reset(token)

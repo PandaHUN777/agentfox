@@ -777,6 +777,21 @@ class Enforcer:
     ) -> EnforcementResult:
         """Authorise a tool call on the full execution path (P3-4, P2-2, P9)."""
         agent, identity, _ = self.resolve(agent_slug, credential)
+
+        # PL-3: a killed or quarantined agent must not execute tools either, not
+        # just be denied new completions. `preflight` already checks this before an
+        # agent reaches the model — but an integration that calls `guard_tool_call`
+        # directly (McpGovernor, NometriaGuard.tool_node, any multi-step agentic
+        # loop that already has a tool call decided) bypasses `preflight` entirely,
+        # and this check was missing here. Found by benchmarking Tier D excessive-
+        # agency scenarios: a quarantined agent's otherwise-valid, in-budget tool
+        # call went straight through. Checked before anything else, same as
+        # `preflight`, because "we killed this agent" is an operational fact, not a
+        # policy outcome that a dry run should soften.
+        control = self._control_verdict(agent)
+        if control is not None:
+            return control
+
         tracker = tracker or TaintTracker(trace_id=trace.id if trace else None)
         marks = tracker.taint_arguments(arguments, provenance)
         argument_taint = {path: mark.source for path, mark in marks.items()}
@@ -831,6 +846,59 @@ class Enforcer:
             result.taint["dry_run"] = True
             result.verdict = "allow"
         return result
+
+    def check_conversation_window(
+        self,
+        *,
+        agent_slug: str,
+        session_id: str,
+        new_user_text: str,
+        window: int = 6,
+        trace: Trace | None = None,
+    ) -> EnforcementResult:
+        """Tier A — payload-splitting / multi-turn jailbreak defense.
+
+        Every other detection path in this file evaluates one message (`evaluate`)
+        or one tool call (`guard_tool_call`) in isolation. That is a real, named gap:
+        an attacker can split a payload across several turns — each individually
+        innocuous — that only reads as an attack once assembled ("payload
+        splitting", OWASP LLM01; see also Microsoft's "Crescendo" multi-turn
+        jailbreak, arXiv:2404.01833, which escalates gradually rather than splitting
+        a single payload but defeats per-message evaluation the same way). Found by
+        actually checking: neither `autoguard.py`'s `_govern` (joins one call's own
+        `messages` array, but never a previous *separate* call) nor the gateway's
+        `preflight` (loops per-message, never joins) re-evaluates content against
+        conversation history.
+
+        This closes it using the substrate that already exists for a different
+        reason — `ConversationTurn`, written by escalation governance (P11) — by
+        joining the last `window` turns' `user_text` with the new message and
+        running the same detector pipeline over the assembled text. Requires the
+        caller to supply a stable `session_id` across turns (the same requirement
+        `record_turn` already has); without one, this degrades to evaluating the
+        new message alone, harmlessly.
+        """
+        from .models import ConversationTurn
+
+        agent, identity, _ = self.resolve(agent_slug)
+        prior = list(
+            reversed(
+                self.session.scalars(
+                    select(ConversationTurn)
+                    .where(ConversationTurn.session_id == session_id)
+                    .order_by(ConversationTurn.turn_index.desc())
+                    .limit(window)
+                ).all()
+            )
+        )
+        joined = "\n".join([t.user_text for t in prior if t.user_text] + [new_user_text])
+        return self.evaluate(
+            agent=agent,
+            identity=identity,
+            content=joined,
+            surface="input",
+            trace=trace,
+        )
 
     def _verified_state_gate(
         self, result: EnforcementResult, verified_state: dict[str, Any] | None

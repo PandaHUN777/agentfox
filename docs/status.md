@@ -14,8 +14,8 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 18 ◐ |
 | **Absent** | 0 ✗ |
 | **Weighted coverage** | **78%** *(partial counts half)* |
-| **Tests** | 1110 |
-| **Lines** | 56,964 (src + tests) |
+| **Tests** | 1128 |
+| **Lines** | 57,318 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -41,7 +41,7 @@ in [traceability.md](traceability.md).
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 17 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
 | `PL-2` | Platform | Database migrations | ✅ built | 2 |  |
-| `PL-3` | Platform | Kill switch and quarantine | ✅ built | 14 |  |
+| `PL-3` | Platform | Kill switch and quarantine | ✅ built | 15 |  |
 | `PL-4` | Platform | Agent loop governance | ◐ partial | 18 | governs the run rather than the step: identical re-issued calls, alternating cycles, and steps producing no new observation. All three are visible without understanding the task, which is what keeps it deterministic — an agent that is wrong but varied still looks like an agent working |
 | `PL-5` | Platform | Async workers | ◐ partial | — | in-process with retries and a dead letter that is public state rather than a log line. The interface is the deliverable; a Redis or SQS implementation belongs behind it, and building that before anyone runs this at that scale would be committing to infrastructure early |
 | `PL-6` | Platform | HA-ready persistence | ◐ partial | — | pooling and pre-ping ship, and SQLite is refused at startup for a multi-worker deployment rather than surfacing as intermittent latency. Actual scale-out under load is still untested |

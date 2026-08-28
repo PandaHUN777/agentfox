@@ -409,6 +409,92 @@ def analyse_http(method: str, url: str, body: Any = None) -> ActionAnalysis:
 
 
 # ---------------------------------------------------------------------------
+# Generic parameter scope anomalies (Tier C — over-privilege via ordinary params)
+# ---------------------------------------------------------------------------
+
+#: A benign-sounding request ("show me my order details") can still get translated
+#: into an over-broad tool call (`look_up_order(order_id="*")`) — the danger sits in
+#: an *ordinary-named* argument the three keyed analysers above never look at,
+#: because nothing about the key name ("order_id") suggests it needs SQL/shell/URL
+#: scrutiny. This runs on every string argument regardless of key, the same way
+#: `injection.heuristic` runs on every message regardless of who's talking.
+#: A wildcard/unbounded-scope value where a specific identifier was expected — the
+#: whole-collection-instead-of-one-record shape, expressed as a parameter value
+#: instead of an HTTP method (that shape is already covered by `analyse_http`).
+_WILDCARD_VALUES = {"*", "%", "%%", "all", "any", "everything"}
+#: SQL-injection-shaped content arriving in a field nobody declared as SQL. If a
+#: caller names their field `sql`/`query`, `analyse_sql` already gives it a real
+#: parse; this is the backstop for the field that was never expected to carry SQL
+#: at all, e.g. an `order_id` argument holding `1 OR 1=1`.
+_SQLI_FRAGMENT_RE = re.compile(
+    r"(\bOR\b\s+[\w'\"]+\s*=\s*[\w'\"]+|;\s*(DROP|DELETE|UPDATE|INSERT)\b|--\s|\bUNION\b\s+\bSELECT\b)",
+    re.IGNORECASE,
+)
+#: Path traversal in a value that isn't a declared URL/path argument either.
+_PATH_TRAVERSAL_RE = re.compile(r"\.\.[/\\]")
+
+
+def analyse_scope(key: str, value: str) -> ActionAnalysis | None:
+    """One ordinary argument, checked for over-broad-scope or injected-value
+    shapes. Returns `None` when nothing is found — most arguments, most of the
+    time — rather than an empty-but-present analysis."""
+    stripped = value.strip()
+    if not stripped:
+        return None
+    analysis = ActionAnalysis(dialect="scope", parsed=True, operation=UNKNOWN)
+    analysis.normalised = [stripped]
+    analysis.targets = [key]
+
+    if stripped.lower() in _WILDCARD_VALUES:
+        analysis.operation = DESTRUCTIVE
+        analysis.blast_radius = "unbounded"
+        analysis.reversible = False
+        analysis.risks.append(
+            ActionRisk(
+                "scope.wildcard_value",
+                # "critical", not "high": a legitimate identifier argument is never
+                # literally the string "*"/"all"/"any" — this is as unambiguous as
+                # `sql.destructive_ddl`, so it gets the same automatic-block
+                # treatment (enforcement.py's P9 "a critical action risk stands on
+                # its own" rule) rather than depending on an operator to author a
+                # policy rule for it first.
+                "critical",
+                f"argument '{key}' is a wildcard/unbounded-scope value ('{stripped}') "
+                "where a specific identifier was expected — this widens the call from "
+                "one record to every record the underlying tool can reach",
+                {"key": key, "value": stripped},
+            )
+        )
+    elif _SQLI_FRAGMENT_RE.search(value):
+        analysis.operation = ADMIN
+        analysis.blast_radius = "unbounded"
+        analysis.reversible = False
+        analysis.risks.append(
+            ActionRisk(
+                "scope.sql_fragment_in_value",
+                "critical",
+                f"argument '{key}' contains a SQL-injection-shaped fragment though it "
+                "was never declared as a SQL parameter",
+                {"key": key},
+            )
+        )
+    elif _PATH_TRAVERSAL_RE.search(value):
+        analysis.operation = WRITE
+        analysis.blast_radius = "unbounded"
+        analysis.risks.append(
+            ActionRisk(
+                "scope.path_traversal",
+                "high",
+                f"argument '{key}' contains a path-traversal sequence",
+                {"key": key},
+            )
+        )
+    else:
+        return None
+    return analysis
+
+
+# ---------------------------------------------------------------------------
 # Dispatch and policy shaping
 # ---------------------------------------------------------------------------
 
@@ -434,6 +520,14 @@ def analyse_arguments(
             elif lowered in _URL_KEYS:
                 method = str(arguments.get("method") or arguments.get("http_method") or "GET")
                 out.append(analyse_http(method, value, arguments.get("body")))
+            else:
+                # Not a declared SQL/shell/URL field — still worth a lightweight
+                # generic check, since the over-privilege shape (`order_id="*"`)
+                # lives in ordinary-named parameters the three checks above never
+                # look at at all.
+                scope = analyse_scope(key, value)
+                if scope is not None:
+                    out.append(scope)
     return out
 
 

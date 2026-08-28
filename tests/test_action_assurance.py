@@ -18,6 +18,7 @@ import pytest
 from nometria.guardrails.actions import (
     analyse_arguments,
     analyse_http,
+    analyse_scope,
     analyse_shell,
     analyse_sql,
     environment_risk,
@@ -207,6 +208,59 @@ def test_no_artefacts_means_no_summary():
 
 
 # ---------------------------------------------------------------------------
+# Generic parameter scope anomalies — Tier C: over-privilege via ordinary params.
+# The blueprint case: `look_up_order(order_id="*")` — a benign-sounding request
+# translated into an over-broad tool call through a field no key-name dispatch
+# (_SQL_KEYS/_SHELL_KEYS/_URL_KEYS) would ever look at.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("value", ["*", "%", "all", "ALL", "any", "everything"])
+def test_wildcard_scope_values_are_flagged_critical(value):
+    analysis = analyse_scope("order_id", value)
+    assert analysis is not None
+    assert analysis.blocked  # severity == critical, same tier as sql.destructive_ddl
+    assert analysis.risks[0].code == "scope.wildcard_value"
+
+
+def test_sql_fragment_in_an_arbitrary_field_is_still_caught():
+    """`order_id` was never declared as a SQL parameter — `analyse_sql` never sees
+    it — but the injected fragment is just as real."""
+    analysis = analyse_scope("order_id", "1 OR 1=1")
+    assert analysis is not None
+    assert analysis.blocked
+    assert analysis.risks[0].code == "scope.sql_fragment_in_value"
+
+
+def test_path_traversal_in_an_arbitrary_field_is_flagged():
+    analysis = analyse_scope("filename", "../../etc/passwd")
+    assert analysis is not None
+    assert analysis.risks[0].code == "scope.path_traversal"
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "12345",
+        "ord_9f2a1c",
+        "customer wants a refund on order 12345",
+        "everything looks fine, please proceed",  # "everything" as a substring, not the whole value
+    ],
+)
+def test_ordinary_values_are_not_flagged(value):
+    assert analyse_scope("order_id", value) is None
+
+
+def test_analyse_arguments_routes_unnamed_fields_through_scope_analysis():
+    """The exact blueprint shape: a benign tool, an ordinary-named argument, an
+    over-broad value — caught without the caller having declared `order_id` as
+    anything special."""
+    analyses = analyse_arguments({"order_id": "*"})
+    assert len(analyses) == 1
+    assert analyses[0].risks[0].code == "scope.wildcard_value"
+
+
+# ---------------------------------------------------------------------------
 # The enforcement path
 # ---------------------------------------------------------------------------
 
@@ -239,6 +293,40 @@ def test_a_bounded_statement_through_the_same_tool_is_allowed(seeded, enforcer, 
     )
     assert not result.blocked
     assert result.taint["action"]["operation"] == "read"
+
+
+def test_a_wildcard_value_in_an_ordinary_argument_is_blocked_through_a_granted_tool(seeded):
+    """The over-privilege shape: `crm.lookup` is a plain, granted, read-only
+    capability — nothing about the tool itself is dangerous. The danger is a
+    benign-sounding request translated into `order_id="*"`, a field no SQL/shell/
+    URL key-name dispatch would ever inspect."""
+    from nometria.enforcement import Enforcer
+
+    agent = seeded.query(Agent).filter_by(slug="support-triage").one()
+    identity = ensure_identity(seeded, agent)
+    grant_capability(seeded, identity, "crm.lookup", max_taint="user")
+    result = Enforcer(seeded).guard_tool_call(
+        agent_slug="support-triage",
+        tool_key="crm.lookup",
+        arguments={"order_id": "*"},
+    )
+    assert result.blocked
+    assert result.taint["capability"]["granted"] is True, "the tool itself was authorised"
+    assert "scope.wildcard_value" in {r["rule_id"] for r in result.rules_fired}
+
+
+def test_an_ordinary_lookup_by_id_through_the_same_tool_is_allowed(seeded):
+    from nometria.enforcement import Enforcer
+
+    agent = seeded.query(Agent).filter_by(slug="support-triage").one()
+    identity = ensure_identity(seeded, agent)
+    grant_capability(seeded, identity, "crm.lookup", max_taint="user")
+    result = Enforcer(seeded).guard_tool_call(
+        agent_slug="support-triage",
+        tool_key="crm.lookup",
+        arguments={"order_id": "12345"},
+    )
+    assert not result.blocked
 
 
 def test_the_action_summary_is_recorded_on_the_decision(seeded, enforcer, db_agent):
