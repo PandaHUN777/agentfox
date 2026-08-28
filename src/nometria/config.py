@@ -75,6 +75,11 @@ class Settings(BaseSettings):
     # Granite Guardian: a customer must choose the latency/recall trade-off, not
     # inherit it from a default.
     prompt_injection_classifier_model: str = "protectai/deberta-v3-base-prompt-injection-v2"
+    # Apache-2.0, ~22M params — embeds text locally for cosine-similarity matching
+    # against `guardrails/data/injection_corpus.json`. Same opt-in reasoning as the
+    # classifier above; unlike the classifier, this one improves by editing that
+    # corpus file, no retraining required.
+    embedding_similarity_model: str = "sentence-transformers/all-MiniLM-L6-v2"
 
     # --- Entitlement (P10) -----------------------------------------------
     # native | openfga. The seam exists because no winner does: customers running

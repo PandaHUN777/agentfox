@@ -6,24 +6,30 @@ Scores Nometria's real, shipping detectors against `deepset/prompt-injections`
 (Hugging Face, apache-2.0, 662 labeled examples, license/source in
 `data/README.md`). The dataset was fetched once (see `fetch_dataset.py`) and is
 committed under `data/`, so anyone can re-run this file and get the same numbers —
-the classifier config needs `pip install nometria[classifiers]` and a one-time model
-download (~350MB, `protectai/deberta-v3-base-prompt-injection-v2`, apache-2.0);
+the classifier/similarity configs need `pip install nometria[classifiers]` and
+one-time model downloads (~350MB deberta, ~90MB MiniLM, both apache-2.0);
 everything else is fully offline.
 
-Two configurations, because the honest answer to "how good is detection" depends
-which one a deployment actually runs:
+Configurations, because the honest answer to "how good is detection" depends which
+one a deployment actually runs — each is opt-in on top of the default:
 
-  - heuristic            — `injection.heuristic` alone. What ships enabled by
-                            default (`enabled_detectors` in config.py) — zero extra
-                            dependencies, sub-millisecond.
-  - heuristic_classifier  — adds `injection.classifier`
-                            (protectai/deberta-v3-base-prompt-injection-v2), a model
-                            trained specifically for this task rather than
-                            hand-written patterns. Opt-in: real per-call latency
-                            (tens of ms on CPU) and a ~350MB one-time download, so
-                            it's not the default — see config.py's
-                            `prompt_injection_classifier_model` docstring for the
-                            trade-off.
+  - heuristic                        — `injection.heuristic` alone. Regex and
+                                        structural signals. What ships enabled by
+                                        default, zero extra dependencies,
+                                        sub-millisecond.
+  - heuristic_classifier             — adds `injection.classifier`
+                                        (protectai/deberta-v3-base-prompt-injection-v2),
+                                        a model trained specifically for this task.
+  - heuristic_similarity             — adds `injection.similarity`, local
+                                        cosine-similarity matching against a
+                                        synthetic corpus of known attack/benign
+                                        examples (sentence-transformers/all-MiniLM-L6-v2).
+  - heuristic_classifier_similarity  — all three together.
+
+Each of the classifier/similarity configs costs real per-call latency (tens of ms
+on CPU) and a one-time download, which is why neither is the default — see
+config.py's `prompt_injection_classifier_model` / `embedding_similarity_model`
+docstrings for the trade-off.
 
 Each configuration is scored on all three splits (held_out/train/combined), same
 train/test discipline as before: `injection.heuristic`'s patterns were tuned by
@@ -118,13 +124,29 @@ def main() -> None:
     }
 
     classifier = get_detector("injection.classifier")
-    if classifier is not None and classifier.available():
+    similarity = get_detector("injection.similarity")
+    if (classifier is not None and classifier.available()) or (
+        similarity is not None and similarity.available()
+    ):
         warm_all()
-        configs["heuristic_classifier"] = DetectorPipeline(detectors=[heuristic, classifier])
+        if classifier is not None and classifier.available():
+            configs["heuristic_classifier"] = DetectorPipeline(detectors=[heuristic, classifier])
+        if similarity is not None and similarity.available():
+            configs["heuristic_similarity"] = DetectorPipeline(detectors=[heuristic, similarity])
+        if (
+            classifier is not None
+            and classifier.available()
+            and similarity is not None
+            and similarity.available()
+        ):
+            configs["heuristic_classifier_similarity"] = DetectorPipeline(
+                detectors=[heuristic, classifier, similarity]
+            )
     else:
         print(
-            "injection.classifier unavailable (pip install nometria[classifiers] and "
-            "download the model) — only scoring the heuristic-only config.\n"
+            "injection.classifier / injection.similarity unavailable (pip install "
+            "nometria[classifiers] and download the models) — only scoring the "
+            "heuristic-only config.\n"
         )
 
     summary = {
@@ -134,7 +156,9 @@ def main() -> None:
         "methodology": "injection.heuristic's patterns were manually extended using "
         "train.json false negatives only; test.json held out and never inspected — "
         "'held_out' is the number to trust. injection.classifier is a pretrained "
-        "model, never fit to this dataset.",
+        "model, never fit to this dataset. injection.similarity matches against a "
+        "synthetic corpus (guardrails/data/injection_corpus.json) authored "
+        "independently of this benchmark's dataset.",
         "configs": {},
     }
 

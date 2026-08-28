@@ -13,6 +13,7 @@ from .adapters.classifiers import (
     PromptInjectionClassifierDetector,
     RestrictedClassifierDetector,
 )
+from .adapters.embeddings import EmbeddingSimilarityDetector
 from .adapters.presidio import PresidioPiiDetector
 from .adapters.rails import GuardrailsAiDetector, NemoRailsDetector
 from .base import (
@@ -49,6 +50,7 @@ register_detector(JsonSchemaDetector())
 # --- Wrapped OSS, available when installed ---
 register_detector(PresidioPiiDetector())
 register_detector(PromptInjectionClassifierDetector())
+register_detector(EmbeddingSimilarityDetector())
 register_detector(GraniteGuardianDetector())
 register_detector(NemoRailsDetector())
 register_detector(GuardrailsAiDetector())
@@ -65,6 +67,7 @@ __all__ = [
     "Detector",
     "DetectorPipeline",
     "DetectorResult",
+    "EmbeddingSimilarityDetector",
     "GraniteGuardianDetector",
     "GuardrailsAiDetector",
     "InjectionHeuristicDetector",

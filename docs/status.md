@@ -14,8 +14,8 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 18 ◐ |
 | **Absent** | 0 ✗ |
 | **Weighted coverage** | **78%** *(partial counts half)* |
-| **Tests** | 1106 |
-| **Lines** | 56,572 (src + tests) |
+| **Tests** | 1108 |
+| **Lines** | 56,753 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -27,7 +27,7 @@ in [traceability.md](traceability.md).
 | `P1` | 1 Registry | Registry, shadow discovery, observed lineage | ◐ partial | 8 | connector-based estate discovery (P1-8) absent |
 | `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ✅ built | 18 | non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 12 | no live IdP; Entra/Okta integration (P2-8) absent |
-| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 53 | model-based detectors wired but need an opt-in weights download |
+| `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 55 | model-based detectors wired but need an opt-in weights download |
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 38 | cascade analysis is exactly as good as the trigger declarations it is given — an undeclared webhook stays invisible, and shell analysis remains a deny-list rather than a parser |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 16 | OpenFGA adapter is a declared seam, not an implementation |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 52 |  |

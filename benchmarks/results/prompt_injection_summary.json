@@ -2,7 +2,7 @@
   "dataset": "deepset/prompt-injections",
   "dataset_url": "https://huggingface.co/datasets/deepset/prompt-injections",
   "dataset_license": "apache-2.0",
-  "methodology": "injection.heuristic's patterns were manually extended using train.json false negatives only; test.json held out and never inspected \u2014 'held_out' is the number to trust. injection.classifier is a pretrained model, never fit to this dataset.",
+  "methodology": "injection.heuristic's patterns were manually extended using train.json false negatives only; test.json held out and never inspected \u2014 'held_out' is the number to trust. injection.classifier is a pretrained model, never fit to this dataset. injection.similarity matches against a synthetic corpus (guardrails/data/injection_corpus.json) authored independently of this benchmark's dataset.",
   "configs": {
     "heuristic": {
       "held_out": {
@@ -15,8 +15,8 @@
         "recall": 0.1667,
         "f1": 0.2857,
         "accuracy": 0.569,
-        "duration_ms": 17.9,
-        "avg_ms_per_example": 0.154
+        "duration_ms": 16.6,
+        "avg_ms_per_example": 0.143
       },
       "train": {
         "n": 546,
@@ -28,8 +28,8 @@
         "recall": 0.3251,
         "f1": 0.4871,
         "accuracy": 0.7454,
-        "duration_ms": 75.6,
-        "avg_ms_per_example": 0.139
+        "duration_ms": 74.3,
+        "avg_ms_per_example": 0.136
       },
       "combined": {
         "n": 662,
@@ -41,8 +41,8 @@
         "recall": 0.289,
         "f1": 0.4457,
         "accuracy": 0.7145,
-        "duration_ms": 92.3,
-        "avg_ms_per_example": 0.139
+        "duration_ms": 89.9,
+        "avg_ms_per_example": 0.136
       }
     },
     "heuristic_classifier": {
@@ -56,34 +56,116 @@
         "recall": 0.4167,
         "f1": 0.5882,
         "accuracy": 0.6983,
-        "duration_ms": 4377.1,
-        "avg_ms_per_example": 37.733
+        "duration_ms": 4371.0,
+        "avg_ms_per_example": 37.681
       },
       "train": {
         "n": 546,
-        "tp": 55,
-        "fp": 4,
-        "tn": 339,
-        "fn": 148,
-        "precision": 0.9322,
-        "recall": 0.2709,
-        "f1": 0.4198,
-        "accuracy": 0.7216,
-        "duration_ms": 27989.7,
-        "avg_ms_per_example": 51.263
+        "tp": 98,
+        "fp": 6,
+        "tn": 337,
+        "fn": 105,
+        "precision": 0.9423,
+        "recall": 0.4828,
+        "f1": 0.6384,
+        "accuracy": 0.7967,
+        "duration_ms": 18292.4,
+        "avg_ms_per_example": 33.503
       },
       "combined": {
         "n": 662,
-        "tp": 119,
+        "tp": 124,
         "fp": 6,
         "tn": 393,
-        "fn": 144,
-        "precision": 0.952,
-        "recall": 0.4525,
-        "f1": 0.6134,
-        "accuracy": 0.7734,
-        "duration_ms": 24329.6,
-        "avg_ms_per_example": 36.752
+        "fn": 139,
+        "precision": 0.9538,
+        "recall": 0.4715,
+        "f1": 0.631,
+        "accuracy": 0.781,
+        "duration_ms": 20494.5,
+        "avg_ms_per_example": 30.958
+      }
+    },
+    "heuristic_similarity": {
+      "held_out": {
+        "n": 116,
+        "tp": 10,
+        "fp": 0,
+        "tn": 56,
+        "fn": 50,
+        "precision": 1.0,
+        "recall": 0.1667,
+        "f1": 0.2857,
+        "accuracy": 0.569,
+        "duration_ms": 778.9,
+        "avg_ms_per_example": 6.715
+      },
+      "train": {
+        "n": 546,
+        "tp": 67,
+        "fp": 2,
+        "tn": 341,
+        "fn": 136,
+        "precision": 0.971,
+        "recall": 0.33,
+        "f1": 0.4926,
+        "accuracy": 0.7473,
+        "duration_ms": 3423.6,
+        "avg_ms_per_example": 6.27
+      },
+      "combined": {
+        "n": 662,
+        "tp": 77,
+        "fp": 2,
+        "tn": 397,
+        "fn": 186,
+        "precision": 0.9747,
+        "recall": 0.2928,
+        "f1": 0.4503,
+        "accuracy": 0.716,
+        "duration_ms": 4045.6,
+        "avg_ms_per_example": 6.111
+      }
+    },
+    "heuristic_classifier_similarity": {
+      "held_out": {
+        "n": 116,
+        "tp": 25,
+        "fp": 0,
+        "tn": 56,
+        "fn": 35,
+        "precision": 1.0,
+        "recall": 0.4167,
+        "f1": 0.5882,
+        "accuracy": 0.6983,
+        "duration_ms": 3675.7,
+        "avg_ms_per_example": 31.687
+      },
+      "train": {
+        "n": 546,
+        "tp": 99,
+        "fp": 6,
+        "tn": 337,
+        "fn": 104,
+        "precision": 0.9429,
+        "recall": 0.4877,
+        "f1": 0.6429,
+        "accuracy": 0.7985,
+        "duration_ms": 18469.1,
+        "avg_ms_per_example": 33.826
+      },
+      "combined": {
+        "n": 662,
+        "tp": 123,
+        "fp": 6,
+        "tn": 393,
+        "fn": 140,
+        "precision": 0.9535,
+        "recall": 0.4677,
+        "f1": 0.6276,
+        "accuracy": 0.7795,
+        "duration_ms": 21831.5,
+        "avg_ms_per_example": 32.978
       }
     }
   }

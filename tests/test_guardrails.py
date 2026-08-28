@@ -280,6 +280,29 @@ def test_injection_classifier_registered_but_not_enabled_by_default():
     assert "injection.classifier" not in get_settings().enabled_detectors
 
 
+def test_injection_similarity_registered_but_not_enabled_by_default():
+    from nometria.config import get_settings
+    from nometria.guardrails import all_detectors
+
+    assert "injection.similarity" in all_detectors()
+    assert "injection.similarity" not in get_settings().enabled_detectors
+
+
+def test_injection_similarity_corpus_is_bundled_and_well_formed():
+    """The corpus this detector matches against ships with the package — a missing
+    or malformed file should fail loudly in CI, not silently degrade production."""
+    import json
+
+    from nometria.guardrails.adapters.embeddings import _CORPUS_PATH
+
+    assert _CORPUS_PATH.exists()
+    data = json.loads(_CORPUS_PATH.read_text())
+    assert len(data["attack"]) > 20
+    assert len(data["benign"]) > 20
+    for row in data["attack"] + data["benign"]:
+        assert row["text"].strip()
+
+
 def test_warm_all_is_a_safe_no_op_without_optional_deps():
     """Every detector available by default has nothing expensive to warm — this
     just proves `warm_all()` doesn't error, which it would if `Detector.warm()`
