@@ -15,6 +15,16 @@ contradicted by 34 passing tests against a real `NometriaGuard` implementation �
 this document, not other planning docs, should be treated as the source of truth, and that it in
 turn needs re-verification whenever claimed as evidence for something new.
 
+**A second, independent correction, scoped to Part 2 specifically:** the five PRD variants that
+existed on 2026-08-18 (`PRD.md`, `PRD-v2.md`, `PRD-consolidated.md`, `PRD-v3-consolidated.md`,
+`PRD-v4-addendum.md`) have since been consolidated into a single `PRD.md` — the version cited
+throughout this update. Checking Part 2's "this invalidates parts of the PRD" claim against that
+consolidated PRD found most of it was **already fixed same-day** in the version written
+2026-08-18, before this document's own market-move research even shipped. Part 2 below has been
+corrected in place to show exactly what was already fixed, what's a genuine gap, and what's just
+missing — the "stub-only" pattern in this note is the same *category* of finding: work that
+exists but isn't where the summary claims it is.
+
 ---
 
 ## Verdict
@@ -34,8 +44,13 @@ The gap is not in the moat. The gap is, and remains, in everything that surround
 **Fourth finding, added after a second pass on real deployment failures** — see the companion
 [failure-modes.md](failure-modes.md), also updated 2026-08-29. Benchmarking against vendor
 feature lists was the wrong lens. Measured against how enterprise agents *actually* fail, we
-covered **1 of 50 failure modes outright** on 2026-08-18; a re-audit now finds **40 of 50 ✅**,
-3 partial, 5 built-but-not-wired (all of F6), and 2 genuinely still absent. A study of 10,000+
+covered **1 of 50 failure modes outright** on 2026-08-18; a re-audit now finds **40 of 57 ✅**
+against a taxonomy that grew to 57 catalogued modes (a seventh family, F8 context/retrieval
+integrity, was added from the PRD), 3 partial, **11 built-but-not-wired** (all of F6 plus all of
+F8 except F8.3 — F8 has the same "built, not called from a live request" problem as F6, just
+less visible since it's reachable through a separate opt-in endpoint), and 3 genuinely still
+absent (F3.8, F7.7, F8.3). A separate, independent audit also found **5 more failure modes no
+version of this taxonomy had ever catalogued** — see failure-modes.md's F9. A study of 10,000+
 failure events found **<10% are hallucination-related**, while **31.1% are escalation/resolution
 breakdowns** and execution/action failures are **up 62%** — those two categories (F5 escalation,
 F3 action semantics) are now among the most-covered families in the taxonomy, not the least.
@@ -104,18 +119,53 @@ SSO/SAML: 2 references — a seam, not an integration. Questionnaires: 2 referen
 
 ## Part 2 — The market moved under us
 
-Our three source documents were dated "as of mid-2026" but missed a wave of consolidation. **This invalidates parts of the PRD and Appendix A.**
+**Update — 2026-08-29.** The table below still holds as a list of real market events. But
+"this invalidates parts of the PRD and Appendix A" needs a correction: it's ambiguous
+about *which* PRD, and that ambiguity matters. There were, on 2026-08-18, five PRD
+documents in `docs/` (`PRD.md`, `PRD-v2.md`, `PRD-consolidated.md`,
+`PRD-v3-consolidated.md`, `PRD-v4-addendum.md`). **The version that mattered —
+`PRD-v3-consolidated.md`, dated the same day as this document — already incorporated
+four of the six events below**, apparently from the same research pass that produced
+this document. The four older variants have since been retired and their content folded
+into a single `docs/PRD.md`, which is what the citations below point to. Presenting the
+market-move finding as an open invalidation, without naming which PRD was stale, reads
+as a bigger unresolved gap than what's actually left. Here is what's genuinely still
+open, event by event:
 
-| Event | Date | Impact on us |
+| Event | Date | Status against `PRD.md` (current consolidated PRD) |
 |---|---|---|
-| **promptfoo → OpenAI** | 9 Mar 2026 | 🔴 **Critical.** Our chosen wrapped CI-eval runner is now owned by a model provider and embedded into OpenAI Frontier. Appendix A's own rule — *"risky to build your differentiation on a competitor's roadmap"* — now applies to a project we put on the critical path. It remains open source under its current licence, but must be reclassified. |
-| **OpenAI Frontier launched** | 5 Feb 2026 | 🔴 **Critical.** Enterprise agent platform with identity, permissions, audit trails, compliance controls and evaluation built in. Fortune 500 adopters (HP, Intuit, Oracle, State Farm, Thermo Fisher, Uber). A far larger platform-risk event than AgentKit, which our PRD treated as *the* pivotal event. |
-| **Lakera → Check Point** (~$300M) | Q4 2025 | 🟠 Our PRD positions Lakera as an independent point tool to out-flank. It is now inside a major security suite — the "neutrality vs. suite lock-in" argument now applies to Check Point too. |
-| **Galileo → Cisco** | late 2025 | 🟠 Cisco AI Defense now combines Robust Intelligence + Galileo evals + network enforcement + DefenseClaw sandboxing. |
-| **Weights & Biases → CoreWeave** | 2025 | 🟡 Eval tooling consolidating into compute providers. |
-| **Microsoft Entra Agent ID + Agent 365** | GA through 2026 | 🔴 **Critical.** Agent identity, lifecycle, entitlement management, Conditional Access, access packages, time-bound access, named human owner. This *is* our Pillar 2, shipped by the identity incumbent every enterprise already runs. |
+| **promptfoo → OpenAI** | 9 Mar 2026 | ✅ **Already corrected.** [`appendix-a-oss-register.md:19`](appendix-a-oss-register.md) downgrades it `REUSE ★ → REFERENCE ⚠`, dated 2026-08-18, with the note *"a model provider now owns our CI-eval substrate."* [`PRD.md:233`](PRD.md) already reads *"Dropped from the critical path; optional adapter only."* Nothing left to fix here — this row can be closed. |
+| **OpenAI Frontier launched** | 5 Feb 2026 | 🟠 **Partially reflected — two specific lines still need qualifying.** The consolidation table at [line 234](PRD.md) already calls it *"bigger platform-risk event than AgentKit."* But the camps table at **line 342** still asserts model providers are *"not a compliance product"* — directly contradicted by line 234's own description of Frontier shipping compliance controls a few lines earlier. And [**line 722**](PRD.md)'s claim that computing status from telemetry is *"a claim only an inline platform can make"* is weakened by the fact that Frontier is itself now an inline, provider-run platform. Neither claim is fully false — Nometria's cross-vendor-neutrality argument ([line 390](PRD.md)) still holds against a single-provider platform — but both need a qualifying clause, not silence. |
+| **Lakera → Check Point** (~$300M) | Q4 2025 | ✅ **Already corrected.** Every reference already reads "Check Point (+Lakera)," correctly placed under Security suites. The "point tool to out-flank" framing this row worries about only ever existed in the oldest, now-retired PRD draft. |
+| **Galileo → Cisco** | late 2025 | ✅ **Already corrected.** The PRD already reads "Galileo (Cisco)" throughout, folded into Security suites. |
+| **Weights & Biases → CoreWeave** | 2025 | 🟡 **Genuinely missing — a completeness gap, not an invalidation.** It's in [`appendix-a-oss-register.md:90`](appendix-a-oss-register.md)'s changelog only. The PRD's actual competitive tables — the consolidation table ([line 229-238](PRD.md)) and Pillar 4's OSS/Commercial columns ([line 636-637](PRD.md), which lists Galileo, Cleanlab, Braintrust, Arize, Fiddler, Patronus) — never mention it. The PRD never made a claim about W&B's independence, so there's nothing to retract; it just needs adding. |
+| **Microsoft Entra Agent ID + Agent 365** | GA through 2026 | ✅ **Already the correct strategic response.** The PRD states plainly: *"Microsoft Entra Agent ID will win agent identity"* ([line 387](PRD.md)), backed by a concrete requirement `P2-8` ([line 477](PRD.md)) and risk-register entry `R3` ([line 1087](PRD.md)). |
 
-**Consequence:** the "agent-native security is still forming and open" premise is weaker than the PRD assumes. Three of the four camps are now consolidating into incumbents with distribution.
+**Net correction:** of six events, **four were already fixed same-day** in the version
+of the PRD that mattered, **one is a completeness gap** (add the W&B row), and **one is a
+real, narrow contradiction inside the PRD's own text** (lines 342 and 722 need qualifying
+against the PRD's own line 234). "This invalidates parts of the PRD" overstated the
+residual problem — what's left is two sentences to edit and one row to add, not a
+structural rethink.
+
+**A second, related correction to this document's own Part 3.** Part 3 below criticizes
+the PRD for modelling *"two camps"* where the real market has four. But that "two camps"
+language only ever existed in the oldest, now-retired PRD draft. The PRD already models
+**five camps** (§4.1, [line 334](PRD.md)) — Observability & eval, Agent security,
+Security suites, AI governance platforms, and **Model providers** as a fifth camp,
+specifically to capture OpenAI Frontier and Microsoft Entra. That's a finer breakdown
+than even this document's own four-camp table in Part 3, which omits "Model providers"
+entirely — despite this same Part 2 treating Frontier and Entra as the two most critical
+consolidation events. Part 3's camps table is the one that's under-counting, not the PRD.
+
+**Consequence, revised:** the "agent-native security is still forming and open" premise
+was already being corrected in the PRD in step with these events, not left stale. The
+real lesson isn't "the PRD is behind the market" — it's that a same-day fix in one PRD
+revision doesn't automatically retire the concern in every document that cites the old
+picture, including this one, and that the fix can get lost when several PRD variants
+exist side by side (as they did until the post-2026-08-18 consolidation into a single
+`PRD.md`). Three of the five camps are consolidating into incumbents with distribution;
+that structural read still stands.
 
 ---
 
@@ -242,7 +292,7 @@ These are real, tested, and largely unclaimed by the field:
 
 **Strategic read:** Gartner explicitly notes most governance platforms lack runtime enforcement, and the security pure-plays lack compliance depth. **Our original thesis is still correct.** We are losing on the surrounding product, not on the idea.
 
-**Added 2026-08-29 — new items earned since the original list:** entitlement-aware disclosure control (F4), destructive-action blast-radius analysis (F3), answerability/abstention (F1), source authority/citation binding (F2), and escalation governance with owner+SLA routing (F5) are now real, tested, and — per [failure-modes.md](failure-modes.md) — cover 40 of 50 modes in the taxonomy that actually predicts production failures. None of the four camps in Part 3 advertises this combination. This is now as defensible a claim as the original four items, and arguably more commercially legible: it maps directly to named incidents (the 1.9M-row wipe, the Copilot oversharing pattern) rather than to abstract architecture properties.
+**Added 2026-08-29 — new items earned since the original list:** entitlement-aware disclosure control (F4), destructive-action blast-radius analysis (F3), answerability/abstention (F1), source authority/citation binding (F2), and escalation governance with owner+SLA routing (F5) are now real, tested, and — per [failure-modes.md](failure-modes.md) — cover 40 of 57 modes in the taxonomy that actually predicts production failures. None of the four camps in Part 3 advertises this combination. This is now as defensible a claim as the original four items, and arguably more commercially legible: it maps directly to named incidents (the 1.9M-row wipe, the Copilot oversharing pattern) rather than to abstract architecture properties. **Caveat before selling F6 or F8 (context integrity) as covered: don't.** Both are built and individually tested but wired into nothing a live request touches — see failure-modes.md's `◐-unwired` status. They're a demo-able roadmap item, not a shipped control, until wired.
 
 ---
 
@@ -278,14 +328,15 @@ What a Tier-B/C buyer will require before signing, and our status. Updated 2026-
 - **Phase A — Make it deployable (Tier 0).** ✅ **substantially done.** Streaming, migrations, kill switch, and HA are real and verified. Agent-loop governance, async workers, and per-service graceful degradation are built and tested but **stub-only** — not called from the live path. Closing them is now wiring work, not design or build work.
 - **Phase B — Make it buyable (Tier 1).** ◐ **mostly done.** Multi-tenancy enforcement, operator audit log, and a writable/authenticated dashboard are closed. Rate limiting is stub-only (same pattern as Phase A). SSO/SCIM and KMS remain partial. The SOC 2 clock still hasn't been started — it's organisational, not engineering, and remains the longest pole by far.
 - **Phase C — Qualify for the category (Tier 2).** ◐ **meaningfully advanced, not complete.** Dynamic risk scoring and escalation task-routing are now real (moved off "0 refs"). The finding→HITL escalation gap (2.7) is fully closed. Estate-scale connectors (Salesforce/ServiceNow/M365) and a general workflow/approvals engine remain the honest gaps — what exists today is real but narrower than the Gartner MQ criterion asks for.
-- **Phase D — Differentiate on real failure modes, not competitor features.** ✅ **done, and it's now the strongest part of the story.** Per [failure-modes.md](failure-modes.md), all four families named here (entitlement-aware data access, action semantics/blast radius, answerability & abstention, source authority) plus escalation governance (F5) are built and tested — 40 of 50 failure modes now covered vs. 1 of 50 when this phase was proposed. Sandboxing and business-platform coverage remain deliberately skipped, unchanged from the original call.
+- **Phase D — Differentiate on real failure modes, not competitor features.** ✅ **done, and it's now the strongest part of the story** — with one honest asterisk. Per [failure-modes.md](failure-modes.md), all four families named here (entitlement-aware data access, action semantics/blast radius, answerability & abstention, source authority) plus escalation governance (F5) are built, tested, and **live on the request path** — 40 of 57 failure modes now covered vs. 1 of 50 when this phase was proposed. The asterisk: a seventh family, context/retrieval integrity (F8), turned out to have the same built-but-unwired problem as F6 below. Sandboxing and business-platform coverage remain deliberately skipped, unchanged from the original call.
 
 **What's actually left, in priority order:**
 
-1. **Wire the stub-only modules** (`agent_loop.py`, `jobs.py`, `availability.py`'s rate limiter/fail-policy, and all of F6's `commitments.py`/`register.py`) into the live request path. This is the single highest-leverage remaining item in this whole document — the logic exists and is tested, it just isn't called.
+1. **Wire the stub-only modules** — `agent_loop.py`, `jobs.py`, `availability.py`'s rate limiter/fail-policy, all of F6's `commitments.py`/`register.py`, and all of F8's `context_integrity.py`. This is the single highest-leverage remaining item in this whole document — the logic exists and is tested for eleven separate failure modes across F6 and F8, it just isn't called from anywhere a live request passes through.
 2. **Start the SOC 2 / ISO 27001 / pentest clock.** Still the longest pole, still entirely organisational, still unstarted.
-3. **Close the two genuinely absent failure modes** (F3.8 composed privilege escalation, F7.7 cross-turn self-contradiction) — real, scoped, moderate-effort builds, not XL.
-4. **Decide on Salesforce/ServiceNow/M365 estate connectors** — the one remaining Tier 2 gap that's a real, if large, build rather than organisational work or a wiring fix.
+3. **Close the three genuinely absent failure modes** (F3.8 composed privilege escalation, F7.7 cross-turn self-contradiction, F8.3 stale index) — real, scoped, moderate-effort builds, not XL.
+4. **Build the five modes an independent audit found that this taxonomy never catalogued** — failure-modes.md's F9 (invalid logical inference, sycophancy, non-English quality parity, crescendo manipulation, context stuffing), each with a concrete detection design that reuses already-wired infrastructure.
+5. **Decide on Salesforce/ServiceNow/M365 estate connectors** — the one remaining Tier 2 gap that's a real, if large, build rather than organisational work or a wiring fix.
 
 Two decisions from the original document remain genuinely unresolved:
 
