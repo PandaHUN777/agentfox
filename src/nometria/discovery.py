@@ -222,6 +222,39 @@ class ScanReport:
             "errors": self.errors,
         }
 
+    def to_submission_payload(self, *, source: str) -> dict[str, Any]:
+        """The redacted subset of this report that `nometria check --submit` /
+        `nometria quickscan --submit` are allowed to send to a control plane.
+
+        `to_json()` is for the local `--json` flag and keeps everything, including
+        each site's file, line and `detail` — `detail` is the one field that can carry
+        literal source text (a shell command line, an f-string). None of that belongs
+        off this machine. What crosses the wire is only: counts, which frameworks were
+        detected, and — for the three kinds a scan can turn into a proposed agent —
+        which top-level directory each one lives in, exactly the granularity the
+        connected-repo scan (``routes/integrations.py``) already groups proposals by.
+        No file path deeper than its first component, no line numbers, no detail
+        text, no error messages.
+        """
+
+        def top_dir(rel_path: str) -> str:
+            parts = Path(rel_path).parts
+            return parts[0] if parts else "root"
+
+        return {
+            "source": source,
+            "label": Path(self.root).resolve().name or "repo",
+            "files_scanned": self.files_scanned,
+            "frameworks": self.frameworks,
+            "coverage": round(self.coverage, 3),
+            "counts": self.by_kind(),
+            "sites": [
+                {"kind": s.kind, "top_dir": top_dir(s.file), "provider": s.provider}
+                for s in self.sites
+                if s.kind in ("agent_definition", "tool", "model_call")
+            ],
+        }
+
     def next_step(self) -> str:
         """One sentence telling the operator what to do next.
 

@@ -130,19 +130,30 @@ def check(
     fail_on_ungoverned: bool = typer.Option(
         False, "--fail", help="Exit non-zero if any model call is ungoverned (for CI)."
     ),
+    submit: bool | None = typer.Option(
+        None,
+        "--submit/--no-submit",
+        help="Send a redacted summary (counts and structure only, never file "
+        "contents) to a running control plane for a fuller dashboard report. "
+        "Optional — omit both flags to be asked interactively.",
+    ),
 ) -> None:
     """Scan a repository and highlight everything worth governing.
 
     Static only: reads the source, never imports or runs it. Importing the target
     would execute arbitrary code from a repo the operator may not trust, and would
     fail on anything with an import-time side effect — which is most real
-    applications.
+    applications. Stays entirely local unless `--submit` (or an interactive "yes")
+    opts into sending a redacted summary — see `cli/submit.py`.
     """
     from ..discovery import scan
+    from .submit import maybe_submit_report
 
     report = scan(path)
     if as_json:
         console.print_json(json.dumps(report.to_json(), default=str))
+        if submit:
+            maybe_submit_report(report, source="check", explicit=True, console=Console(stderr=True))
         raise typer.Exit(1 if fail_on_ungoverned and report.ungoverned else 0)
 
     console.print(f"[bold]Scanned[/] {report.files_scanned} files in [dim]{report.root}[/]")
@@ -189,6 +200,9 @@ def check(
     console.print(
         Panel(report.next_step(), border_style="cyan", title="[bold]Next[/]", title_align="left")
     )
+
+    maybe_submit_report(report, source="check", explicit=submit, console=console)
+
     if fail_on_ungoverned and report.ungoverned:
         raise typer.Exit(1)
 
