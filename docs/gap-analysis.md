@@ -3,6 +3,17 @@
 **Date:** 2026-08-18 · **Scope:** Nometria Control Plane MVP v0.1 (18.7k LOC, 178 tests)
 **Question:** what stops us selling this to an enterprise, and where do we stand against the field?
 
+**Reading this in 2026-08-29 or later:** this snapshot predates roughly fifteen commits
+of build-out (`ba3d977` real auth, `PL-1..PL-3` streaming/migrations/kill-switch,
+`4f8369f` escalation, `f06dc73`/`65ee7d4`/`e49b88d`/`58b6a47` the four F1–F4 failure
+families) documented in [failure-modes.md](failure-modes.md)'s 2026-08-29 update and in
+the auto-generated [status.md](status.md). Most of **Part 4's Tier 0** (streaming, DB
+migrations, kill switch, real auth) is now built. Treat the **Verdict**, **Part 1 audit**,
+and **Tier 0/1 gap register** below as historical — current state lives in status.md,
+[coverage-map.md](coverage-map.md), and [traceability.md](traceability.md). **Part 2
+below has been corrected in place** to reflect what PRD-v3-consolidated.md (written the
+same day) already fixed versus what is still genuinely open.
+
 ---
 
 ## Verdict
@@ -69,18 +80,48 @@ SSO/SAML: 2 references — a seam, not an integration. Questionnaires: 2 referen
 
 ## Part 2 — The market moved under us
 
-Our three source documents were dated "as of mid-2026" but missed a wave of consolidation. **This invalidates parts of the PRD and Appendix A.**
+**Update — 2026-08-29.** The table below still holds as a list of real market events. But
+"this invalidates parts of the PRD and Appendix A" needs a correction: it's ambiguous
+about *which* PRD, and that ambiguity matters. There were, by this point, five PRD
+documents in `docs/` (`PRD.md`, `PRD-v2.md`, `PRD-consolidated.md`,
+`PRD-v3-consolidated.md`, `PRD-v4-addendum.md`). **`PRD-v3-consolidated.md` and
+`appendix-a-oss-register.md` are dated the same day as this document (2026-08-18)** and
+already incorporate four of the six events below — apparently the same research pass
+that produced this document fed a same-day PRD revision. Presenting this as an open
+invalidation, without naming which PRD is stale, reads as a bigger unresolved gap than
+what's actually left. Here is what's genuinely still open, event by event:
 
-| Event | Date | Impact on us |
+| Event | Date | Status against `PRD-v3-consolidated.md` (current canonical PRD) |
 |---|---|---|
-| **promptfoo → OpenAI** | 9 Mar 2026 | 🔴 **Critical.** Our chosen wrapped CI-eval runner is now owned by a model provider and embedded into OpenAI Frontier. Appendix A's own rule — *"risky to build your differentiation on a competitor's roadmap"* — now applies to a project we put on the critical path. It remains open source under its current licence, but must be reclassified. |
-| **OpenAI Frontier launched** | 5 Feb 2026 | 🔴 **Critical.** Enterprise agent platform with identity, permissions, audit trails, compliance controls and evaluation built in. Fortune 500 adopters (HP, Intuit, Oracle, State Farm, Thermo Fisher, Uber). A far larger platform-risk event than AgentKit, which our PRD treated as *the* pivotal event. |
-| **Lakera → Check Point** (~$300M) | Q4 2025 | 🟠 Our PRD positions Lakera as an independent point tool to out-flank. It is now inside a major security suite — the "neutrality vs. suite lock-in" argument now applies to Check Point too. |
-| **Galileo → Cisco** | late 2025 | 🟠 Cisco AI Defense now combines Robust Intelligence + Galileo evals + network enforcement + DefenseClaw sandboxing. |
-| **Weights & Biases → CoreWeave** | 2025 | 🟡 Eval tooling consolidating into compute providers. |
-| **Microsoft Entra Agent ID + Agent 365** | GA through 2026 | 🔴 **Critical.** Agent identity, lifecycle, entitlement management, Conditional Access, access packages, time-bound access, named human owner. This *is* our Pillar 2, shipped by the identity incumbent every enterprise already runs. |
+| **promptfoo → OpenAI** | 9 Mar 2026 | ✅ **Already corrected.** [`appendix-a-oss-register.md:19`](appendix-a-oss-register.md) downgrades it `REUSE ★ → REFERENCE ⚠`, dated 2026-08-18, with the note *"a model provider now owns our CI-eval substrate."* [`PRD-v3-consolidated.md:227`](PRD-v3-consolidated.md) already reads *"Dropped from the critical path; optional adapter only."* Nothing left to fix here — this row can be closed. |
+| **OpenAI Frontier launched** | 5 Feb 2026 | 🟠 **Partially reflected — two specific lines still need qualifying.** The consolidation table at [line 228](PRD-v3-consolidated.md) already calls it *"bigger than AgentKit."* But the camps table at **line 336** still asserts model providers are *"not a compliance product"* — directly contradicted by line 228's own description of Frontier shipping compliance controls two pages earlier. And **line 716**'s claim that computing status from telemetry is *"a claim only an inline platform can make"* is weakened by the fact that Frontier is itself now an inline, provider-run platform. Neither claim is fully false — Nometria's cross-vendor-neutrality argument (line 384) still holds against a single-provider platform — but both need a qualifying clause, not silence. |
+| **Lakera → Check Point** (~$300M) | Q4 2025 | ✅ **Already corrected.** Every reference in v3 already reads "Check Point (+Lakera)," correctly placed under Security suites. The "point tool to out-flank" framing this row worries about only ever existed in the superseded `PRD.md`. |
+| **Galileo → Cisco** | late 2025 | ✅ **Already corrected.** v3 already reads "Galileo (Cisco)" throughout, folded into Security suites. |
+| **Weights & Biases → CoreWeave** | 2025 | 🟡 **Genuinely missing — a completeness gap, not an invalidation.** It's in [`appendix-a-oss-register.md:90`](appendix-a-oss-register.md)'s changelog only. The PRD's actual competitive tables — the consolidation table (line 223-232) and Pillar 4's OSS/Commercial columns (line 630-631, which lists Galileo, Cleanlab, Braintrust, Arize, Fiddler, Patronus) — never mention it. The PRD never made a claim about W&B's independence, so there's nothing to retract; it just needs adding. |
+| **Microsoft Entra Agent ID + Agent 365** | GA through 2026 | ✅ **Already the correct strategic response.** v3 states plainly: *"Microsoft Entra Agent ID will win agent identity — they own the directory. Our Pillar 2 should integrate with it, not compete"* (line 381-382), backed by a concrete requirement `P2-8` (line 471) and risk-register entry `R3` (line 1081). |
 
-**Consequence:** the "agent-native security is still forming and open" premise is weaker than the PRD assumes. Three of the four camps are now consolidating into incumbents with distribution.
+**Net correction:** of six events, **four were already fixed same-day** in the canonical
+PRD, **one is a completeness gap** (add the W&B row), and **one is a real, narrow
+contradiction inside the PRD's own text** (lines 336 and 716 need qualifying against the
+PRD's own line 228). "This invalidates parts of the PRD" overstated the residual problem
+— what's left is two sentences to edit and one row to add, not a structural rethink.
+
+**A second, related correction to this document's own Part 3.** Part 3 below criticizes
+the PRD for modelling *"two camps"* where the real market has four. But `PRD.md`'s "two
+camps" language is from the **oldest, superseded** PRD version. `PRD-v3-consolidated.md`
+already models **five camps** (§4.1, line 328) — Observability & eval, Agent security,
+Security suites, AI governance platforms, and **Model providers** as a fifth camp,
+specifically to capture OpenAI Frontier and Microsoft Entra. That's a finer breakdown
+than even this document's own four-camp table in Part 3, which omits "Model providers"
+entirely — despite this same Part 2 treating Frontier and Entra as the two most critical
+consolidation events. Part 3's camps table is the one that's under-counting, not the PRD.
+
+**Consequence, revised:** the "agent-native security is still forming and open" premise
+was already being corrected in the PRD in step with these events, not left stale. The
+real lesson isn't "the PRD is behind the market" — it's that a same-day fix in one PRD
+revision doesn't automatically retire the concern in every document that cites the old
+picture, including this one. Three of the five camps are consolidating into incumbents
+with distribution; that structural read still stands.
 
 ---
 
