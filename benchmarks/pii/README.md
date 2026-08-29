@@ -3,7 +3,7 @@
 **Sequential dataset-sourcing build-out** (see `docs/dataset-sourcing.md`) — all three sourced PII datasets built, then a second round of fixes applied against what the numbers actually showed (see "Fixes applied" below). Scores both PII detectors that ship in `src/nometria/guardrails/`:
 
 - `pii.native` (`detectors/pii.py`) — regex-only, jurisdiction packs (US/UK/EU/India), no NER.
-- `pii.presidio` (`adapters/presidio.py`) — wraps Microsoft Presidio; `PERSON`/`LOCATION`/`DATE_TIME`/`US_DRIVER_LICENSE` excluded by policy default (`DEFAULT_EXCLUDED`) as "noisy in agent traffic."
+- `pii.presidio` (`adapters/presidio.py`) — wraps Microsoft Presidio; `PERSON`/`LOCATION`/`DATE_TIME`/`US_DRIVER_LICENSE`/`US_PASSPORT` excluded by policy default (`DEFAULT_EXCLUDED`) as "noisy in agent traffic."
 
 1. [presidio-research `synth_dataset_v2.json`](https://github.com/microsoft/presidio-research) (MIT) — span-labeled synthetic sentences, scores both detectors directly, with and without the default exclusion.
 2. [`gretelai/synthetic_pii_finance_multilingual`](https://huggingface.co/datasets/gretelai/synthetic_pii_finance_multilingual) (Apache-2.0) — full-length synthetic financial documents, 7 languages, 59 document formats. The hardest of the three — dense, code-heavy documents stress precision much more than Dataset 1's short sentences.
@@ -22,21 +22,25 @@ uv run python benchmarks/pii/run_tab_benchmark.py
 
 ## Fixes applied
 
-The first pass across all three datasets surfaced five real, distinct failure patterns — each investigated down to concrete examples (not just aggregate percentages) before deciding what, if anything, to fix. Three are product fixes in `src/nometria/guardrails/`; one is a benchmark scoring-methodology correction; one is disclosed but deliberately left unfixed. All three benchmarks were re-run after the product fixes to confirm real, not assumed, impact.
+Two rounds so far, both triggered by asking "what's actually failing, and why" rather than stopping at the aggregate percentage. Round 1 covered all three datasets; round 2 went back into Dataset 2 specifically, since it had the worst numbers and the most remaining unexplained false positives. Six product/methodology decisions total — four fixes, two deliberately left unfixed and disclosed instead. All affected benchmarks were re-run after each product fix to confirm real, not assumed, impact.
 
-| # | Pattern | Where found | Fix | Kind |
-|---|---|---|---|---|
-| 1 | `US_DRIVER_LICENSE` precision collapse (3.2% / 0.9% across two datasets) | Datasets 1 & 2 | Added to `DEFAULT_EXCLUDED` in `adapters/presidio.py` | Product |
-| 2 | `DATE_TIME` → `PII.DATE_OF_BIRTH` taxonomy conflation | Datasets 1, 2 & 3 | Presidio's `DATE_TIME` now maps to a new `PII.DATE_TIME` type; `PII.DATE_OF_BIRTH` stays owned by `pii.native`'s birthdate-specific regex | Product |
-| 3 | Native DOB regex misses period-separated dates (0% recall on German) | Dataset 2 | Widened the separator character class from `[/-]` to `[/.-]` | Product |
-| 4 | `US_SSN` false positives have a clean, exploitable confidence signature | Dataset 2 | Added a per-entity `min_score` gate (0.1) for `US_SSN` in `adapters/presidio.py` | Product |
-| 5 | 66.5% of "LOCATION false positives" (Dataset 1) are correct hits landing inside out-of-scope `STREET_ADDRESS` ground truth | Dataset 1 & 2 | Benchmark scoring now excludes predictions fully contained in a `STREET_ADDRESS` span from the FP count, tracked separately as `excluded` | Benchmark methodology |
-| — | A weaker, more ambiguous version of #5 on TAB (35.6% of LOCATION FPs land inside `ORG` spans, e.g. `"the Republic of Turkey"`) | Dataset 3 | **Not fixed** — whether an institutional/legal-entity phrase is a location or an organization is a genuine judgment call, not an obvious miscredit like a city name inside a mailing address. Disclosed, not auto-excluded. | Disclosed only |
+| # | Round | Pattern | Where found | Fix | Kind |
+|---|---|---|---|---|---|
+| 1 | 1 | `US_DRIVER_LICENSE` precision collapse (3.2% / 0.9% across two datasets) | Datasets 1 & 2 | Added to `DEFAULT_EXCLUDED` | Product |
+| 2 | 1 | `DATE_TIME` → `PII.DATE_OF_BIRTH` taxonomy conflation | Datasets 1, 2 & 3 | Presidio's `DATE_TIME` now maps to a new `PII.DATE_TIME` type; `PII.DATE_OF_BIRTH` stays owned by `pii.native`'s birthdate-specific regex | Product |
+| 3 | 1 | Native DOB regex misses period-separated dates (0% recall on German) | Dataset 2 | Widened the separator character class from `[/-]` to `[/.-]` | Product |
+| 4 | 1 | `US_SSN` false positives have a clean, exploitable confidence signature | Dataset 2 | Added a per-entity `min_score` gate (0.1) | Product |
+| 5 | 1 | 66.5% of "LOCATION false positives" (Dataset 1) are correct hits landing inside out-of-scope `STREET_ADDRESS` ground truth | Dataset 1 & 2 | Benchmark scoring now excludes predictions fully contained in a `STREET_ADDRESS` span from the FP count, tracked separately as `excluded` | Benchmark methodology |
+| 6 | 2 | `US_PASSPORT` precision collapse (10.7%), same shape as `US_DRIVER_LICENSE` | Dataset 2 | Added to `DEFAULT_EXCLUDED` | Product |
+| — | 1 | A weaker, more ambiguous version of #5 on TAB (35.6% of LOCATION FPs land inside `ORG` spans, e.g. `"the Republic of Turkey"`) | Dataset 3 | **Not fixed** — genuine judgment call, not an obvious miscredit. Disclosed, not auto-excluded. | Disclosed only |
+| — | 2 | `US_PHONE`: same no-clean-threshold shape as `US_PASSPORT`/`US_DRIVER_LICENSE` (24.2% precision) | Dataset 2 | **Not fixed** — phone numbers are high-value PII; the recall cost of a blanket exclusion outweighs the noise cost, unlike the other two low-support, low-urgency categories | Disclosed only |
+| — | 2 | `CREDIT_CARD` recall gap (62.5% miss rate) | Dataset 2 | **Not a defect** — 9 of 11 sampled misses fail Luhn checksum validation; Presidio is correctly rejecting checksum-invalid numbers the synthetic dataset generator produced. Nothing to fix. | Disclosed only |
 
 ### Why each fix is narrow, not a blanket change
 
-- **#1 and #4 were decided by looking at raw confidence scores, not just outcomes.** `US_SSN`'s false positives (bare 9-digit codes — account numbers, routing numbers — in dense EDI/BAI/FIX-format documents) scored **exactly 0.05** in 444 of 453 cases, against 69 of 76 true positives scoring 0.4–0.85 — a clean, near-total separation, so a score gate is a precise fix. `US_DRIVER_LICENSE` was checked the same way and *rejected* for a score-gate fix: true and false positives are scored across the *same* tiers (0.01, 0.3, 0.4, 0.65) with no clean cut point, so a threshold there would just be arbitrary. That's why #1 is a blanket exclusion (like PERSON/LOCATION/DATE_TIME already were) rather than a threshold.
-- **#5's containment exclusion is scoped to `STREET_ADDRESS` specifically**, not "any out-of-scope ground truth span" — that would be far too broad and could hide genuine detector errors (e.g. a `PERSON` detector firing on a company name inside an out-of-scope `company`-labeled span *is* a real error worth counting). `STREET_ADDRESS` earns the exception because the pattern is unambiguous: a city or country name embedded in a mailing address block is, definitionally, a real location — there's no judgment call the way there is with the TAB/`ORG` case below, which is disclosed instead of auto-excluded for exactly that reason.
+- **#1, #4, and #6 were all decided by looking at raw confidence scores, not just outcomes** — and the same diagnostic gave three different answers. `US_SSN`'s false positives (bare 9-digit codes in dense EDI/BAI/FIX-format documents) scored **exactly 0.05** in 444 of 453 cases, against 69 of 76 true positives scoring 0.4–0.85 — a clean, near-total separation, so a score gate is a precise fix (#4). `US_DRIVER_LICENSE`'s true and false positives are scored across the *same* tiers (0.01, 0.3, 0.4, 0.65) with no clean cut point (#1), and `US_PASSPORT` shows the identical overlapping pattern (0.05, 0.1, 0.4, 0.45 tiers, both TP and FP in each) — a threshold for either would just be arbitrary, so both are blanket exclusions instead. **`US_PHONE` was checked the same way and shows the same no-clean-threshold shape as #1/#6** (0.4 and 0.75 tiers both carry hundreds of TP and FP) — but wasn't excluded, because unlike a passport or driver's license number, a phone number is common, high-value PII that a real deployment usually wants caught even at mediocre precision; the recall trade-off that made #1/#6 clearly worth it doesn't hold here.
+- **#5's containment exclusion is scoped to `STREET_ADDRESS` specifically**, not "any out-of-scope ground truth span" — that would be far too broad and could hide genuine detector errors (e.g. a `PERSON` detector firing on a company name inside an out-of-scope `company`-labeled span *is* a real error worth counting). `STREET_ADDRESS` earns the exception because the pattern is unambiguous: a city or country name embedded in a mailing address block is, definitionally, a real location — there's no judgment call the way there is with the TAB/`ORG` case, which is disclosed instead of auto-excluded for exactly that reason.
+- **The `CREDIT_CARD` finding isn't a fix at all, deliberately.** Presidio's Luhn-checksum validation is the *correct* behavior for a PII detector — flagging every random 15-16-digit string as a credit card would be worse, not better. The "failure" here is entirely in the synthetic dataset (checksum-invalid fake numbers), not the product. Recorded here so the recall number isn't misread as a detector gap when it's actually the detector doing its job.
 
 ### Combined before/after, all three datasets
 
@@ -44,13 +48,13 @@ The first pass across all three datasets surfaced five real, distinct failure pa
 |---|---|---|---|
 | 1. presidio-research | `pii.presidio` (default) | 63.8% → **90.2%** | 15.3% → 15.1% |
 | 1. presidio-research | `pii.presidio` (full) | 54.4% → **65.2%** | 75.6% → 75.6% |
-| 2. gretelai multilingual | `pii.presidio` (default) | 15.2% → **43.8%** | 19.9% → 19.1% |
+| 2. gretelai multilingual | `pii.presidio` (default) | 15.2% → **51.9%** | 19.9% → 18.2% |
 | 2. gretelai multilingual | `pii.presidio` (full) | 16.3% → **21.7%** | 70.1% → 68.5% |
 | 2. gretelai multilingual | `pii.native` `DATE_OF_BIRTH`, German only | 0.0% → **68.0%** recall | — |
 | 2. gretelai multilingual | `pii.presidio` `US_SSN` (full policy) | 14.4% → **87.3%** precision | 49.7% → 45.1% |
 | 3. TAB | `pii.presidio` (full) | unchanged (83.6%) | unchanged (86.9%) |
 
-Recall moves down by a point or two on the default-policy rows — an honest, expected side effect of #2 (Presidio's own `DATE_TIME` output no longer masquerades as `DATE_OF_BIRTH`, so it stops contributing occasional accidental true positives against that ground-truth bucket) and #4 (a handful of genuine SSNs scored exactly at the 0.05 tier and are now filtered out along with the false positives). Both trades are disclosed in the per-dataset sections below, not hidden in the aggregate.
+Recall moves down a few points on the default-policy rows — an honest, expected side effect of #2 (Presidio's own `DATE_TIME` output no longer masquerades as `DATE_OF_BIRTH`), #4 (a handful of genuine SSNs scored exactly at the 0.05 tier are filtered out along with the false positives), and #6 (132 genuine passport numbers are no longer detected at all by default, the same trade-off #1 already made for driver's licenses). All three trades are disclosed in the per-dataset sections below, not hidden in the aggregate.
 
 ---
 
@@ -107,12 +111,12 @@ The remaining 79 genuine (non-address) false positives show two real, unfixed pa
 
 5,594 full-length synthetic financial documents (test split), 7 languages (English, French, German, Dutch, Spanish, Italian, Swedish), 59 document formats spanning natural prose (Email, Employment Contract, Privacy Policy) and dense structured/machine formats (EDI, SWIFT Message, FIX Protocol, MT940, XBRL, BAI Format, CSV). Documents average ~1,300 characters — 10-20x longer than Dataset 1's single sentences. Same three detector configurations as Dataset 1.
 
-### Results, all 5,594 rows (post-fix)
+### Results, all 5,594 rows (post-fix, both rounds)
 
 | Config | Precision | Recall | F1 | TP | FP | FN | Excluded* |
 |---|---|---|---|---|---|---|---|
 | `pii.native` | 37.1% | 17.1% | 23.4% | 2,480 | 4,209 | 12,000 | 1 |
-| `pii.presidio` (default policy) | 43.8% | 19.1% | 26.6% | 2,769 | 3,547 | 11,711 | 8 |
+| `pii.presidio` (default policy) | 51.9% | 18.2% | 27.0% | 2,637 | 2,442 | 11,843 | 8 |
 | `pii.presidio` (nothing excluded) | 21.7% | 68.5% | 33.0% | 9,921 | 35,795 | 4,559 | 1,854 |
 
 \* Same containment exclusion as Dataset 1 — see "Fixes applied".
@@ -145,9 +149,17 @@ The pre-fix numbers looked bad in aggregate (default-policy precision 15.2%) but
 
 Spot-checking the actual German `date_of_birth` span text found the cause directly: `'12.02.1969'`, `'01.01.1980'`, `'15.06.1998'` — German-locale dates in this dataset are period-separated (`DD.MM.YYYY`), a separator the regex's old character class (`[/-]`) never matched. **Fixed**: widened to `[/.-]`. German recall went from a hard 0% to 68.0% — the remaining gap (8 of 25 misses) is other date shapes (spelled-out months, etc.) not addressed by this fix.
 
-### What held up well, and one lower-priority weak spot surfaced by the fix round
+### What held up well
 
-`PII.EMAIL` (96.4%/95.6%), `PII.IBAN` (96.8%/74.4%), and `PII.IP_ADDRESS` (90.8%/89.9%) perform close to their Dataset 1 numbers regardless of document type or language. Newly visible now that the three larger problems are fixed: **`US_PASSPORT` sits at 10.7% precision** (132 TP, 1,105 FP) at both default and full policy — not touched in this round (no clean score-gate signal was checked for it, and it wasn't part of the original three-cause investigation), flagged here as the next candidate for the same score-distribution diagnostic that fixed `US_SSN`.
+`PII.EMAIL` (96.4%/95.6%), `PII.IBAN` (96.8%/74.4%), and `PII.IP_ADDRESS` (90.8%/89.9%) perform close to their Dataset 1 numbers regardless of document type or language.
+
+### Round 2: three more entity types investigated, one more fixed, two deliberately left alone
+
+Fixing the three biggest problems in round 1 made the next tier of issues visible — the same "look at concrete examples and score distributions, not just the aggregate" process was applied to the three next-worst default-policy categories.
+
+- **`US_PASSPORT`: 10.7% precision (132 TP, 1,105 FP), same shape as `US_DRIVER_LICENSE`.** Almost every false positive was the literal string `'123456789'` or a similar generic 9-digit code from EDI/FIX/BAI-format documents — the same "dense financial documents are full of plausible-looking numeric IDs" pattern as `US_SSN`, but the confidence-score distribution didn't cooperate this time: true and false positives both land across the 0.05/0.1/0.4/0.45 tiers with no clean cut point (checked directly, same method that worked for `US_SSN`). **Fixed** by adding `US_PASSPORT` to `DEFAULT_EXCLUDED` — same reasoning as `US_DRIVER_LICENSE`: low support (136 spans), no separating signal, and passport numbers are a lower-urgency category than the alternative. Default-policy `US_PASSPORT` FP dropped from 1,105 to 0.
+- **`US_PHONE`: 24.2% precision (744 TP, 2,335 FP) — investigated, deliberately not excluded.** Same false-positive shape again (`'1234567890'`, FIX-protocol timestamp/sequence codes like `'20210315-15'`, EDI segment numbers) and the same no-clean-threshold score profile as `US_PASSPORT`. The difference is what's at stake: phone numbers are common, legitimate, high-value PII that a real agent deployment (customer support transcripts, contact forms, KYC flows) usually needs caught — excluding this by default the way `US_DRIVER_LICENSE`/`US_PASSPORT` were would trade away a genuinely important detection capability to fix a precision number, the wrong trade for a category this central. Left as a disclosed, open problem — a locale-aware format validator or a stronger context-word requirement are the more promising future directions, not a threshold or an exclusion.
+- **`CREDIT_CARD`: 37.5% recall (45 TP, 75 FN) — investigated, turned out not to be a defect at all.** Sampling the actual missed values (`'3438 9558 0875 281'`, `'1234-5678-9012-3456'`, `'3007-5662-3449-2611'`) and checking them against the Luhn checksum algorithm found that 9 of 11 fail validation. Presidio's `CREDIT_CARD` recognizer validates the checksum internally, and correctly rejects numbers that don't pass it — real credit card numbers always satisfy Luhn; these are synthetic placeholders that were never generated to be checksum-valid. This is the dataset's limitation, not the detector's: a recognizer that flagged every checksum-invalid 16-digit string as a credit card would be *less* correct, not more. No fix applied or needed.
 
 ### Methodology notes
 
@@ -197,6 +209,6 @@ Recall is highest exactly where it matters most — `DIRECT` identifiers, the me
 - Same span-overlap scoring, same direct-detector-call methodology as Datasets 1 and 2.
 - **Only `test` (127 rows) was used** — `train` (1,014 rows) and `dev` (127 rows) exist in the same source repo and could extend this sample if a larger real-text run is wanted later.
 
-### PII benchmarking: build-out and fix round complete
+### PII benchmarking: build-out and two fix rounds complete
 
-All three sourced datasets (`docs/dataset-sourcing.md`) are built and re-verified after fixes. Combined picture: `EMAIL`/`IBAN`/`IP_ADDRESS` are reliably strong regardless of document type, language, or synthetic-vs-real. `PERSON`/`LOCATION`/`DATE_TIME`/`US_DRIVER_LICENSE` (all excluded by default) show real, now-quantified recall and precision trade-offs — some domain-dependent (`DATE_TIME`), some just a weak underlying recognizer (`US_DRIVER_LICENSE`, `US_PASSPORT`, both real candidates for future work), and one (`LOCATION`) partly a benchmark scoring artifact that's now corrected rather than a real detector defect. `US_SSN` moved from a genuine weak spot to one of the strongest categories after a single, narrowly-scoped score-gate fix — the clearest evidence in this round that "identify the actual failing cases, not just the aggregate number" finds fixes that a blanket threshold or blanket exclusion would miss.
+All three sourced datasets (`docs/dataset-sourcing.md`) are built and re-verified after fixes. Combined picture: `EMAIL`/`IBAN`/`IP_ADDRESS` are reliably strong regardless of document type, language, or synthetic-vs-real. `PERSON`/`LOCATION`/`DATE_TIME`/`US_DRIVER_LICENSE`/`US_PASSPORT` (all excluded by default) show real, now-quantified recall and precision trade-offs — some domain-dependent (`DATE_TIME`), some just a weak underlying recognizer with no separating signal (`US_DRIVER_LICENSE`, `US_PASSPORT`), and one (`LOCATION`) partly a benchmark scoring artifact that's now corrected rather than a real detector defect. `US_SSN` moved from a genuine weak spot to one of the strongest categories after a single, narrowly-scoped score-gate fix. `US_PHONE` shows the identical noisy pattern as the two excluded categories but was deliberately left alone — the recall trade-off isn't worth it for a category this commonly needed. `CREDIT_CARD`'s apparent recall gap turned out not to be a gap at all once the actual missed values were checked against the Luhn algorithm. The throughline across both rounds: every fix (or deliberate non-fix) here traces back to a concrete example or a score distribution, not an aggregate percentage — the two are diagnosis and evidence, not the same thing.

@@ -43,12 +43,20 @@ _ENTITY_MAP = {
 
 #: Presidio's PERSON/LOCATION/DATE_TIME recognisers are noisy in agent traffic;
 #: excluded by default and re-enabled per policy. A guardrail with poor precision
-#: gets switched off (PRD R3). US_DRIVER_LICENSE joins them per
-#: benchmarks/pii/README.md: 3.2%/0.9% precision across two independent
-#: datasets — its low-specificity alphanumeric-ID pattern fires on account
-#: numbers, reference IDs, and other short codes far more often than on actual
-#: driver's licenses.
-DEFAULT_EXCLUDED = {"PERSON", "LOCATION", "DATE_TIME", "US_DRIVER_LICENSE"}
+#: gets switched off (PRD R3). US_DRIVER_LICENSE and US_PASSPORT join them per
+#: benchmarks/pii/README.md: both are low-specificity numeric/alphanumeric-ID
+#: patterns that fire on account numbers, reference IDs, and other short codes
+#: in dense documents far more often than on the real thing (3.2%/0.9%
+#: precision for driver's license across two datasets; 10.7% for passport),
+#: and — unlike US_SSN — neither has a confidence-score tier that cleanly
+#: separates true from false positives, so a `_MIN_SCORE` threshold isn't an
+#: option (checked directly; see README). US_PHONE has the identical
+#: no-clean-threshold problem at comparable precision (24.2%) but is
+#: deliberately *not* excluded here: phone numbers are common, high-value PII
+#: in real agent traffic, and losing that recall by default would cost more
+#: than the noise costs — left as a disclosed, open problem instead of a
+#: blanket exclusion.
+DEFAULT_EXCLUDED = {"PERSON", "LOCATION", "DATE_TIME", "US_DRIVER_LICENSE", "US_PASSPORT"}
 
 #: Presidio's own confidence score is discrete, not continuous, and for some
 #: recognisers the low tier is cleanly separable from real hits rather than a

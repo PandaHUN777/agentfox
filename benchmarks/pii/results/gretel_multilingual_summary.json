@@ -705,12 +705,12 @@
     },
     {
       "config": "pii.presidio.default",
-      "tp": 2769,
-      "fp": 3547,
-      "fn": 11711,
-      "precision": 0.4384,
-      "recall": 0.1912,
-      "f1": 0.2663,
+      "tp": 2637,
+      "fp": 2442,
+      "fn": 11843,
+      "precision": 0.5192,
+      "recall": 0.1821,
+      "f1": 0.2696,
       "excluded_contained_in_street_address": 8,
       "by_type": {
         "PII.CREDIT_CARD": {
@@ -770,12 +770,12 @@
           "f1": 0.0
         },
         "PII.US_PASSPORT": {
-          "tp": 132,
-          "fp": 1105,
-          "fn": 4,
-          "precision": 0.1067,
-          "recall": 0.9706,
-          "f1": 0.1923
+          "tp": 0,
+          "fp": 0,
+          "fn": 136,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
         },
         "PII.US_PHONE": {
           "tp": 744,
@@ -853,12 +853,12 @@
             "f1": 0.0
           },
           "PII.US_PASSPORT": {
-            "tp": 5,
-            "fp": 75,
-            "fn": 0,
-            "precision": 0.0625,
-            "recall": 1.0,
-            "f1": 0.1176
+            "tp": 0,
+            "fp": 0,
+            "fn": 5,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
           },
           "PII.US_PHONE": {
             "tp": 54,
@@ -935,12 +935,12 @@
             "f1": 0.0
           },
           "PII.US_PASSPORT": {
-            "tp": 76,
-            "fp": 656,
-            "fn": 1,
-            "precision": 0.1038,
-            "recall": 0.987,
-            "f1": 0.1879
+            "tp": 0,
+            "fp": 0,
+            "fn": 77,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
           },
           "PII.US_PHONE": {
             "tp": 408,
@@ -1017,12 +1017,12 @@
             "f1": 0.0
           },
           "PII.US_PASSPORT": {
-            "tp": 10,
-            "fp": 83,
-            "fn": 0,
-            "precision": 0.1075,
-            "recall": 1.0,
-            "f1": 0.1942
+            "tp": 0,
+            "fp": 0,
+            "fn": 10,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
           },
           "PII.US_PHONE": {
             "tp": 81,
@@ -1099,12 +1099,12 @@
             "f1": 0.0
           },
           "PII.US_PASSPORT": {
-            "tp": 13,
-            "fp": 70,
-            "fn": 0,
-            "precision": 0.1566,
-            "recall": 1.0,
-            "f1": 0.2708
+            "tp": 0,
+            "fp": 0,
+            "fn": 13,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
           },
           "PII.US_PHONE": {
             "tp": 36,
@@ -1181,12 +1181,12 @@
             "f1": 0.0
           },
           "PII.US_PASSPORT": {
-            "tp": 10,
-            "fp": 69,
-            "fn": 0,
-            "precision": 0.1266,
-            "recall": 1.0,
-            "f1": 0.2247
+            "tp": 0,
+            "fp": 0,
+            "fn": 10,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
           },
           "PII.US_PHONE": {
             "tp": 59,
@@ -1263,12 +1263,12 @@
             "f1": 0.0
           },
           "PII.US_PASSPORT": {
-            "tp": 7,
-            "fp": 74,
-            "fn": 2,
-            "precision": 0.0864,
-            "recall": 0.7778,
-            "f1": 0.1556
+            "tp": 0,
+            "fp": 0,
+            "fn": 9,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
           },
           "PII.US_PHONE": {
             "tp": 55,
@@ -1345,12 +1345,12 @@
             "f1": 0.0
           },
           "PII.US_PASSPORT": {
-            "tp": 11,
-            "fp": 78,
-            "fn": 1,
-            "precision": 0.1236,
-            "recall": 0.9167,
-            "f1": 0.2178
+            "tp": 0,
+            "fp": 0,
+            "fn": 12,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
           },
           "PII.US_PHONE": {
             "tp": 51,
