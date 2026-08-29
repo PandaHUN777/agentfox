@@ -1,12 +1,12 @@
 # PII detection, benchmarked
 
-**Sequential dataset-sourcing build-out** (see `docs/dataset-sourcing.md`) — all three sourced PII datasets built. Scores both PII detectors that ship in `src/nometria/guardrails/`:
+**Sequential dataset-sourcing build-out** (see `docs/dataset-sourcing.md`) — all three sourced PII datasets built, then a second round of fixes applied against what the numbers actually showed (see "Fixes applied" below). Scores both PII detectors that ship in `src/nometria/guardrails/`:
 
 - `pii.native` (`detectors/pii.py`) — regex-only, jurisdiction packs (US/UK/EU/India), no NER.
-- `pii.presidio` (`adapters/presidio.py`) — wraps Microsoft Presidio; `PERSON`/`LOCATION`/`DATE_TIME` excluded by policy default (`DEFAULT_EXCLUDED`) as "noisy in agent traffic."
+- `pii.presidio` (`adapters/presidio.py`) — wraps Microsoft Presidio; `PERSON`/`LOCATION`/`DATE_TIME`/`US_DRIVER_LICENSE` excluded by policy default (`DEFAULT_EXCLUDED`) as "noisy in agent traffic."
 
 1. [presidio-research `synth_dataset_v2.json`](https://github.com/microsoft/presidio-research) (MIT) — span-labeled synthetic sentences, scores both detectors directly, with and without the default exclusion.
-2. [`gretelai/synthetic_pii_finance_multilingual`](https://huggingface.co/datasets/gretelai/synthetic_pii_finance_multilingual) (Apache-2.0) — full-length synthetic financial documents, 7 languages, 59 document formats. Precision collapses relative to Dataset 1 — a real, disclosed finding about document structure, not just a locale gap.
+2. [`gretelai/synthetic_pii_finance_multilingual`](https://huggingface.co/datasets/gretelai/synthetic_pii_finance_multilingual) (Apache-2.0) — full-length synthetic financial documents, 7 languages, 59 document formats. The hardest of the three — dense, code-heavy documents stress precision much more than Dataset 1's short sentences.
 3. [Text Anonymization Benchmark (TAB)](https://github.com/NorskRegnesentral/text-anonymization-benchmark) (MIT) — 127 real (not synthetic) ECHR court judgments, multi-annotator labeled. The one dataset in this suite that tests NER on natural prose — and the one where full-policy Presidio performs best of all three.
 
 ```bash
@@ -20,45 +20,86 @@ uv run python benchmarks/pii/fetch_tab.py
 uv run python benchmarks/pii/run_tab_benchmark.py
 ```
 
+## Fixes applied
+
+The first pass across all three datasets surfaced five real, distinct failure patterns — each investigated down to concrete examples (not just aggregate percentages) before deciding what, if anything, to fix. Three are product fixes in `src/nometria/guardrails/`; one is a benchmark scoring-methodology correction; one is disclosed but deliberately left unfixed. All three benchmarks were re-run after the product fixes to confirm real, not assumed, impact.
+
+| # | Pattern | Where found | Fix | Kind |
+|---|---|---|---|---|
+| 1 | `US_DRIVER_LICENSE` precision collapse (3.2% / 0.9% across two datasets) | Datasets 1 & 2 | Added to `DEFAULT_EXCLUDED` in `adapters/presidio.py` | Product |
+| 2 | `DATE_TIME` → `PII.DATE_OF_BIRTH` taxonomy conflation | Datasets 1, 2 & 3 | Presidio's `DATE_TIME` now maps to a new `PII.DATE_TIME` type; `PII.DATE_OF_BIRTH` stays owned by `pii.native`'s birthdate-specific regex | Product |
+| 3 | Native DOB regex misses period-separated dates (0% recall on German) | Dataset 2 | Widened the separator character class from `[/-]` to `[/.-]` | Product |
+| 4 | `US_SSN` false positives have a clean, exploitable confidence signature | Dataset 2 | Added a per-entity `min_score` gate (0.1) for `US_SSN` in `adapters/presidio.py` | Product |
+| 5 | 66.5% of "LOCATION false positives" (Dataset 1) are correct hits landing inside out-of-scope `STREET_ADDRESS` ground truth | Dataset 1 & 2 | Benchmark scoring now excludes predictions fully contained in a `STREET_ADDRESS` span from the FP count, tracked separately as `excluded` | Benchmark methodology |
+| — | A weaker, more ambiguous version of #5 on TAB (35.6% of LOCATION FPs land inside `ORG` spans, e.g. `"the Republic of Turkey"`) | Dataset 3 | **Not fixed** — whether an institutional/legal-entity phrase is a location or an organization is a genuine judgment call, not an obvious miscredit like a city name inside a mailing address. Disclosed, not auto-excluded. | Disclosed only |
+
+### Why each fix is narrow, not a blanket change
+
+- **#1 and #4 were decided by looking at raw confidence scores, not just outcomes.** `US_SSN`'s false positives (bare 9-digit codes — account numbers, routing numbers — in dense EDI/BAI/FIX-format documents) scored **exactly 0.05** in 444 of 453 cases, against 69 of 76 true positives scoring 0.4–0.85 — a clean, near-total separation, so a score gate is a precise fix. `US_DRIVER_LICENSE` was checked the same way and *rejected* for a score-gate fix: true and false positives are scored across the *same* tiers (0.01, 0.3, 0.4, 0.65) with no clean cut point, so a threshold there would just be arbitrary. That's why #1 is a blanket exclusion (like PERSON/LOCATION/DATE_TIME already were) rather than a threshold.
+- **#5's containment exclusion is scoped to `STREET_ADDRESS` specifically**, not "any out-of-scope ground truth span" — that would be far too broad and could hide genuine detector errors (e.g. a `PERSON` detector firing on a company name inside an out-of-scope `company`-labeled span *is* a real error worth counting). `STREET_ADDRESS` earns the exception because the pattern is unambiguous: a city or country name embedded in a mailing address block is, definitionally, a real location — there's no judgment call the way there is with the TAB/`ORG` case below, which is disclosed instead of auto-excluded for exactly that reason.
+
+### Combined before/after, all three datasets
+
+| Dataset | Config | Precision (before → after) | Recall (before → after) |
+|---|---|---|---|
+| 1. presidio-research | `pii.presidio` (default) | 63.8% → **90.2%** | 15.3% → 15.1% |
+| 1. presidio-research | `pii.presidio` (full) | 54.4% → **65.2%** | 75.6% → 75.6% |
+| 2. gretelai multilingual | `pii.presidio` (default) | 15.2% → **43.8%** | 19.9% → 19.1% |
+| 2. gretelai multilingual | `pii.presidio` (full) | 16.3% → **21.7%** | 70.1% → 68.5% |
+| 2. gretelai multilingual | `pii.native` `DATE_OF_BIRTH`, German only | 0.0% → **68.0%** recall | — |
+| 2. gretelai multilingual | `pii.presidio` `US_SSN` (full policy) | 14.4% → **87.3%** precision | 49.7% → 45.1% |
+| 3. TAB | `pii.presidio` (full) | unchanged (83.6%) | unchanged (86.9%) |
+
+Recall moves down by a point or two on the default-policy rows — an honest, expected side effect of #2 (Presidio's own `DATE_TIME` output no longer masquerades as `DATE_OF_BIRTH`, so it stops contributing occasional accidental true positives against that ground-truth bucket) and #4 (a handful of genuine SSNs scored exactly at the 0.05 tier and are now filtered out along with the false positives). Both trades are disclosed in the per-dataset sections below, not hidden in the aggregate.
+
+---
+
 ## Dataset 1 — presidio-research `synth_dataset_v2.json`
 
 1,500 synthetic, template-generated sentences, span-labeled with 17 entity types. Three detector configurations scored: `pii.native`, `pii.presidio` at its shipping default policy, and `pii.presidio` with nothing excluded (isolates exactly what the default costs).
 
-### Results, all 1,500 rows
+### Results, all 1,500 rows (post-fix)
 
-| Config | Precision | Recall | F1 | TP | FP | FN |
-|---|---|---|---|---|---|---|
-| `pii.native` | 96.6% | 14.7% | 25.5% | 253 | 9 | 1467 |
-| `pii.presidio` (default policy — ships as-is) | 63.8% | 15.3% | 24.7% | 263 | 149 | 1457 |
-| `pii.presidio` (nothing excluded) | 54.4% | 75.6% | 63.3% | 1300 | 1089 | 420 |
+| Config | Precision | Recall | F1 | TP | FP | FN | Excluded* |
+|---|---|---|---|---|---|---|---|
+| `pii.native` | 96.4% | 14.1% | 24.7% | 243 | 9 | 1477 | 0 |
+| `pii.presidio` (default policy — ships as-is) | 90.2% | 15.1% | 25.8% | 259 | 28 | 1461 | 1 |
+| `pii.presidio` (nothing excluded) | 65.2% | 75.6% | 70.0% | 1300 | 693 | 420 | 396 |
+
+\* Predicted spans that land fully inside an out-of-scope `STREET_ADDRESS` ground-truth span — correct detections this benchmark has no ground truth to credit, not detector errors. See "Fixes applied" above.
 
 Full per-entity-type breakdown: [`results/summary.json`](results/summary.json).
 
 ### The default exclusion's cost, measured directly
 
-This is the number `docs/dataset-sourcing.md` flagged this dataset as the way to produce: `PERSON`/`LOCATION`/`DATE_TIME` together are 1,387 of the 1,750 in-scope labeled spans in this dataset (79%). With the default policy, `pii.presidio` finds **0** of them — recall on all three is exactly 0%, because they're filtered out before scoring, not because Presidio misses them. With nothing excluded, the same engine on the same input finds 1,037 of those 1,387 (PERSON 831/857 recall = 83.1%, LOCATION 206/411 = 50.1%, DATE_TIME 119/119 = 100.0%). That's the real, disclosed trade-off the default makes: precision protection against noisy categories, paid for with a 79%-of-labeled-spans recall floor on exactly those categories, by design, until a caller opts into the full policy.
+`PERSON`/`LOCATION`/`DATE_TIME` together are 1,387 of the 1,750 in-scope labeled spans in this dataset (79%). With the default policy, `pii.presidio` finds **0** of them — recall on all three is exactly 0%, because they're filtered out before scoring, not because Presidio misses them. With nothing excluded, the same engine on the same input finds 1,037 of those 1,387 (PERSON 712/857 recall = 83.1%, LOCATION 206/411 = 50.1%, DATE_TIME 119/119 = 100.0%). That's the real, disclosed trade-off the default makes: precision protection against noisy categories, paid for with a 79%-of-labeled-spans recall floor on exactly those categories, by design, until a caller opts into the full policy.
 
-### Two real precision problems, found in the "nothing excluded" run
+### How the two product-level precision problems were found and fixed
 
-Turning the exclusion off to measure its cost also surfaced two weak spots in Presidio's own recognizers, not in Nometria's wrapper code — worth disclosing since they'd directly affect anyone who does enable the full policy:
+Turning the exclusion off to measure its cost surfaced two weak spots in Presidio's own recognizers:
 
-- **`DATE_TIME` → `PII.DATE_OF_BIRTH` is a semantic mismatch, not just a noisy recognizer.** Presidio's `DATE_TIME` recognizer flags *any* date-shaped mention in text — "the meeting is on March 3rd," "founded in 1998" — not specifically a person's birthdate. Nometria's adapter maps it straight to `PII.DATE_OF_BIRTH` (`adapters/presidio.py::_ENTITY_MAP`). Recall on the dataset's actual `DATE_TIME` spans is 100% (119/119), but precision is 21.3% (119 TP against 440 FP) — most of the "detections" are real dates that aren't birthdates. The fix isn't a threshold; it's that the taxonomy conflates two different things under one label. Left as a disclosed finding, not fixed here — this benchmark's job is to measure and report, not to redesign the taxonomy mid-run.
-- **`US_DRIVER_LICENSE` is precision 3.2%** (4 TP, 120 FP) in both Presidio configurations that had it enabled. Presidio's driver's-license recognizer is a low-specificity regex (alphanumeric-ID shaped) that fires on this dataset's other alphanumeric IDs (credit card fragments, template placeholders) far more often than on the 5 actual driver's-license spans present. Support is small (5 labeled spans total) so this shouldn't be over-read, but it's consistent with driver's-license formats being genuinely hard to distinguish from other short alphanumeric strings without state-specific format knowledge, which Presidio's generic recognizer doesn't have.
+- **`DATE_TIME` → `PII.DATE_OF_BIRTH` was a semantic mismatch, not just a noisy recognizer.** Presidio's `DATE_TIME` recognizer flags *any* date-shaped mention — "the meeting is on March 3rd," "founded in 1998" — not specifically a person's birthdate. The old mapping (`adapters/presidio.py::_ENTITY_MAP`) claimed every one of those was a birthdate: 100% recall against the dataset's `DATE_TIME` spans, but only 21.3% precision (119 TP against 440 FP). **Fixed**: Presidio's `DATE_TIME` now maps to a new `PII.DATE_TIME` canonical type instead of overclaiming `PII.DATE_OF_BIRTH`; `pii.native`'s own birthdate-shaped regex keeps that name. Post-fix, this bucket (now honestly named `PII.DATE_TIME`, ground truth remapped to match) sits at 27.9% precision, 100% recall — the modest further gain over the pre-fix 21.3% comes from the `STREET_ADDRESS`-containment scoring fix (some date mentions were embedded in address blocks), not from the rename itself, which is a relabeling, not a behavior change.
+- **`US_DRIVER_LICENSE` was precision 3.2%** (4 TP, 120 FP) in both Presidio configurations that had it enabled — a low-specificity alphanumeric-ID pattern firing on this dataset's other alphanumeric IDs (credit card fragments, template placeholders) far more often than on the 5 actual driver's-license spans present. **Fixed**: added to `DEFAULT_EXCLUDED` alongside PERSON/LOCATION/DATE_TIME (see "Fixes applied" for why a score threshold wasn't used here instead). Support is small (5 labeled spans) so this dataset alone wouldn't justify the fix — Dataset 2 confirming the identical pattern at 0.9% precision on a much larger sample is what made it clearly worth doing.
+
+### LOCATION's real precision, after correcting a benchmark scoring artifact
+
+Before the fix, raw `LOCATION` precision looked weak (46.5%, 237 FP). Investigating individual false positives — not just the aggregate number — found that 157 of those 237 (66.5%) were `LONDON`, `Hungary`, `Öntésmajor`, and similar **correct** location detections landing inside a `STREET_ADDRESS` ground-truth span (e.g. `"14 Crown Street Kishiev Squares\n Suite 321\n LONDON\n United Kingdom 75419"` — Presidio correctly spots `LONDON`, but this benchmark has no ground truth to credit it against, since `STREET_ADDRESS` is out of scope). **Fixed** (benchmark scoring, not product code): predictions fully contained in an out-of-scope `STREET_ADDRESS` span are now excluded from the FP count rather than penalized. Post-fix, `LOCATION` precision at full policy is **72.0%** (80 FP, down from 237) — a much more honest number for what Presidio's LOCATION recognizer actually does.
+
+The remaining 79 genuine (non-address) false positives show two real, unfixed patterns: partial street-name fragments (`"Botley Road St."`, `"Marina Fort Street"`) and surname/place-name ambiguity (`"Yefremova"`, `"Henderson"`, `"Ström"`, `"Salinas"` — real surnames that are also plausible place names). Both are inherent to Presidio's own NER model, not something fixable at the wrapper layer without a custom model.
 
 ### What `pii.native`'s regex misses, and why that's expected for some of it
 
 - **`PERSON` and `LOCATION`: 0% recall by construction.** `pii.native` is regex-only; there's no NER in a regex engine. This isn't a bug to fix, it's the entire reason the Presidio adapter exists in the same detector stack — disclosed here so the number isn't misread as a defect.
-- **`DATE_OF_BIRTH`: 8.4% recall (10/119).** Native's DOB regex expects specific numeric date formats; this dataset's dates are mostly natural-language ("March 3, 1990", "the 3rd of March") or non-US-ordered, which the regex doesn't match. Lower priority than the PERSON/LOCATION gap since `pii.presidio` (full policy) already covers this category at 100% recall when enabled.
-- **`US_PHONE`: 20.6% recall (19/92).** Similar story — the regex is tuned to a narrower set of US phone formats than this dataset's variety (extensions, international-looking prefixes, spacing conventions) actually contains.
-- **Everything else** (`EMAIL`, `CREDIT_CARD`, `US_SSN`, `IBAN`, `IP_ADDRESS`) — native performs at or near parity with Presidio, 92.6%+ recall, ≥98% precision. These are exactly the well-structured, format-constrained categories regex is good at.
+- **`US_PHONE`: 20.6% recall (19/92).** The regex is tuned to a narrower set of US phone formats than this dataset's variety (extensions, international-looking prefixes, spacing conventions) actually contains.
+- **Everything else** (`EMAIL`, `CREDIT_CARD`, `US_SSN`, `IBAN`, `IP_ADDRESS`) — native performs at or near parity with Presidio, 92%+ recall, ≥98% precision. These are exactly the well-structured, format-constrained categories regex is good at.
 
 ### Methodology notes
 
 - **Scoring**: character-span overlap (any overlap between a predicted span and a ground-truth span of the same canonical type counts as a match), greedy one-to-one per document — standard for PII/NER evaluation, where finding the right entity matters more than matching its exact character boundaries. Not exact-boundary match.
-- **Scope**: this dataset labels several entity types Nometria's detectors never claim to cover at all — `STREET_ADDRESS`, `ORGANIZATION`, `TITLE`, `AGE`, `NRP`, `ZIP_CODE`, `DOMAIN_NAME`. Those spans are dropped from ground truth entirely (`GT_ENTITY_MAP` in the run script); scoring a detector as wrong for not detecting a category it was never built for would misrepresent it, not evaluate it.
+- **Scope**: this dataset labels several entity types Nometria's detectors never claim to cover at all — `STREET_ADDRESS`, `ORGANIZATION`, `TITLE`, `AGE`, `NRP`, `ZIP_CODE`, `DOMAIN_NAME`. Those spans are dropped from ground truth entirely (`GT_ENTITY_MAP` in the run script); scoring a detector as wrong for not detecting a category it was never built for would misrepresent it, not evaluate it. `STREET_ADDRESS` gets one further, narrower treatment — see the containment-exclusion fix above.
 - **One deliberate proxy**: presidio-research labels country/city mentions `GPE` rather than `LOCATION`. Mapped 1:1 onto `PII.LOCATION` since it's the closest match and the dataset has no separate `LOCATION` label — a disclosed scope decision, not a hidden one.
-- **Direct detector calls, not via `DetectorPipeline`**: calling `pii.presidio` through the pipeline marks it "degraded" (timed out) on its first call even after `warm_all()` — the same latency-ceiling measurement artifact `benchmarks/REPORT.md` documents for the injection classifier (a shared timeout budget silently drops a slow-but-correct first call). Calling `.detect()` directly on the detector object avoids it: the underlying spaCy/Presidio model loads once (~3s) on the very first call in a process, then every subsequent call is single-digit-to-low-double-digit milliseconds — the full 1,500-row × 3-config run completes in under 30 seconds.
-- **Dataset is synthetic**, not real personal data — Presidio's own template-based generator. Doesn't test real-world formatting noise (OCR errors, redaction artifacts, code-switched text) the way a real-text dataset (e.g. the Text Anonymization Benchmark, sourced but not yet built — see `docs/dataset-sourcing.md`) would.
+- **Direct detector calls, not via `DetectorPipeline`**: calling `pii.presidio` through the pipeline marks it "degraded" (timed out) on its first call even after `warm_all()` — the same latency-ceiling measurement artifact `benchmarks/REPORT.md` documents for the injection classifier (a shared timeout budget silently drops a slow-but-correct first call). Calling `.detect()` directly on the detector object avoids it: the underlying spaCy/Presidio model loads once (~3s) on the very first call in a process, then every subsequent call is single-digit-to-low-double-digit milliseconds.
+- **Dataset is synthetic**, not real personal data — Presidio's own template-based generator. Doesn't test real-world formatting noise the way Dataset 3 (real text) does.
 
 ---
 
@@ -66,56 +107,59 @@ Turning the exclusion off to measure its cost also surfaced two weak spots in Pr
 
 5,594 full-length synthetic financial documents (test split), 7 languages (English, French, German, Dutch, Spanish, Italian, Swedish), 59 document formats spanning natural prose (Email, Employment Contract, Privacy Policy) and dense structured/machine formats (EDI, SWIFT Message, FIX Protocol, MT940, XBRL, BAI Format, CSV). Documents average ~1,300 characters — 10-20x longer than Dataset 1's single sentences. Same three detector configurations as Dataset 1.
 
-### Results, all 5,594 rows
+### Results, all 5,594 rows (post-fix)
 
-| Config | Precision | Recall | F1 | TP | FP | FN |
-|---|---|---|---|---|---|---|
-| `pii.native` | 38.8% | 17.0% | 23.7% | 2,463 | 3,889 | 12,017 |
-| `pii.presidio` (default policy) | 15.2% | 19.9% | 17.3% | 2,883 | 16,071 | 11,597 |
-| `pii.presidio` (nothing excluded) | 16.3% | 70.1% | 26.5% | 10,151 | 51,981 | 4,329 |
+| Config | Precision | Recall | F1 | TP | FP | FN | Excluded* |
+|---|---|---|---|---|---|---|---|
+| `pii.native` | 37.1% | 17.1% | 23.4% | 2,480 | 4,209 | 12,000 | 1 |
+| `pii.presidio` (default policy) | 43.8% | 19.1% | 26.6% | 2,769 | 3,547 | 11,711 | 8 |
+| `pii.presidio` (nothing excluded) | 21.7% | 68.5% | 33.0% | 9,921 | 35,795 | 4,559 | 1,854 |
+
+\* Same containment exclusion as Dataset 1 — see "Fixes applied".
 
 Full per-entity-type and per-language breakdown: [`results/gretel_multilingual_summary.json`](results/gretel_multilingual_summary.json).
 
-### The headline finding: precision collapses on this document shape, and it isn't primarily a language problem
+### The headline finding, before the fix: precision collapse driven by three identifiable causes, not a vague "hard dataset"
 
-Recall holds up close to Dataset 1's numbers (70.1% vs 75.6% for the full-policy config), but precision falls off a cliff — 54.4% → 16.3% full-policy, 63.8% → 15.2% default-policy. Two entity types drive almost all of it:
+The pre-fix numbers looked bad in aggregate (default-policy precision 15.2%) but broke down into three concrete, independently-fixable causes once individual false positives were examined instead of just the summary percentage:
 
-- **`US_DRIVER_LICENSE`: 0.9% precision at the default policy** (107 TP against 12,073 FP). Presidio's driver's-license recognizer is a low-specificity alphanumeric-ID pattern (already flagged as weak in Dataset 1, at a much smaller scale — 3.2% precision there). This dataset is full of structurally similar alphanumeric codes that aren't driver's licenses — account numbers, reference IDs, SWIFT/BIC codes, transaction IDs — and it fires on nearly all of them. At this precision, a caller who enables this recognizer gets almost pure noise.
-- **`DATE_TIME` → `PII.DATE_OF_BIRTH`: 1.6% precision at the full policy** (223 TP against 13,889 FP; the default policy excludes this type entirely, so it contributes 0 FP there but also 0 TP). This is the same taxonomy conflation Dataset 1 surfaced (Presidio's `DATE_TIME` recognizer flags any date-shaped mention, not specifically a birthdate) — confirmed again here with a much larger, financial-document-heavy sample, where dates (statement dates, due dates, transaction dates) are extremely common and almost none of them are birthdates.
+1. **`US_DRIVER_LICENSE`: 0.9% precision at the default policy** (107 TP against 12,073 FP) — the same low-specificity alphanumeric-ID pattern from Dataset 1, at ~40x the scale. This dataset is full of structurally similar codes (account numbers, reference IDs, SWIFT/BIC codes, transaction IDs) that aren't driver's licenses. **Fixed** by the same `DEFAULT_EXCLUDED` addition as Dataset 1 — this was the confirming evidence that made the fix clearly worth shipping.
+2. **`DATE_TIME` → `PII.DATE_OF_BIRTH` conflation** — pre-fix, 1.6% precision at full policy (223 TP against 13,889 FP), since almost every date mention in a financial document (statement dates, due dates, transaction dates) got labeled a birthdate. **Fixed** by the same taxonomy rename as Dataset 1. This dataset uniquely separates a genuine `date_of_birth` label from generic `date`/`time`/`date_time` labels, so post-fix, Presidio's own `DATE_TIME` output (now correctly typed `PII.DATE_TIME`) simply stops being scored against the `date_of_birth` ground-truth bucket at all — only `pii.native`'s regex is scored there now, which is the honest scope for what each engine actually claims to detect.
+3. **`US_SSN`: 14.4% precision at full policy** (76 TP against 453 FP) — bare 9-digit codes from EDI/BAI/FIX-format documents (account numbers, routing numbers) matching the SSN pattern. **Fixed** by the score-gate (min 0.1): false positives scored exactly 0.05 in 444/453 cases, true positives scored 0.4–0.85 in 69/76 cases. Post-fix: **87.3% precision** (10 FP, down from 453), recall 45.1% (down from 49.7% — the 7 true positives that also scored 0.05 are the honest cost of this fix).
 
-**Is this a language-mismatch problem or a document-format problem?** Both contribute, but document format dominates. `pii.presidio` runs with `language="en"` throughout (the product's shipping default), so English text should be its best case — and English rows still account for the majority of both problem categories' false positives (8,978 of 13,889 `DATE_OF_BIRTH` FPs, 6,397 of 12,073 `US_DRIVER_LICENSE` FPs — English is ~53% of rows but a larger share of these two FP counts). The structured, code-dense financial document formats in this dataset trigger these two pattern-based recognizers heavily regardless of language; multilingual coverage is a real, separate, smaller effect (see below), not the primary driver of the precision drop.
+**Was this a language-mismatch problem?** Checked directly and mostly ruled out: `pii.presidio` runs with `language="en"` throughout (the shipping default), and English rows accounted for the *majority* of both the `DATE_TIME` and `US_DRIVER_LICENSE` false positives pre-fix (English is ~53% of rows but a larger share of each). The dense, code-heavy document *formats* — not the language — were driving the problem; multilingual coverage is a real, smaller, separate effect (see below), not the primary cause.
 
-### A real, disclosed native-detector finding: the DOB regex is separator-specific, not just format-specific
+### A real, fixed native-detector finding: the DOB regex was separator-specific, not just format-specific
 
-`pii.native`'s `DATE_OF_BIRTH` regex (`detectors/pii.py`) matches day-month-year with a `/` or `-` separator only. This dataset's actual date strings let us test that directly, broken out by language — recall on labeled `date_of_birth` spans:
+`pii.native`'s `DATE_OF_BIRTH` regex matched day-month-year with a `/` or `-` separator only. Recall on labeled `date_of_birth` spans, broken out by language:
 
-| Language | Support | Recall |
+| Language | Support | Recall (before → after) |
 |---|---|---|
-| French | 15 | 80.0% |
-| Italian | 30 | 66.7% |
-| English | 143 | 52.4% |
-| Spanish | 19 | 47.4% |
-| Dutch | 5 | 40.0% |
-| Swedish | 13 | 38.5% |
-| **German** | **25** | **0.0%** |
+| French | 15 | 80.0% (unchanged) |
+| Italian | 30 | 66.7% (unchanged) |
+| **German** | **25** | **0.0% → 68.0%** |
+| English | 143 | 52.4% (unchanged) |
+| Spanish | 19 | 47.4% (unchanged) |
+| Dutch | 5 | 40.0% (unchanged) |
+| Swedish | 13 | 38.5% (unchanged) |
 
-German is a hard 0%, not just low. Spot-checking the actual German `date_of_birth` span text confirms why: `'12.02.1969'`, `'01.01.1980'`, `'15.06.1998'` — German-locale dates in this dataset are period-separated (`DD.MM.YYYY`), a separator the regex's character class (`[/-]`) never matches. This is a concrete, fixable gap (add `.` to the separator class), not a vague "multilingual is hard" statement — left as a disclosed finding rather than fixed in this benchmarking pass.
+Spot-checking the actual German `date_of_birth` span text found the cause directly: `'12.02.1969'`, `'01.01.1980'`, `'15.06.1998'` — German-locale dates in this dataset are period-separated (`DD.MM.YYYY`), a separator the regex's old character class (`[/-]`) never matched. **Fixed**: widened to `[/.-]`. German recall went from a hard 0% to 68.0% — the remaining gap (8 of 25 misses) is other date shapes (spelled-out months, etc.) not addressed by this fix.
 
-### What held up well
+### What held up well, and one lower-priority weak spot surfaced by the fix round
 
-`PII.EMAIL` (96.4% precision / 95.6% recall, presidio), `PII.IBAN` (96.8%/74.4%), and `PII.IP_ADDRESS` (90.8%/89.9%) perform close to their Dataset 1 numbers despite the much harder document shape — these are well-structured, format-constrained categories where both engines are reliable regardless of document type or language. `PII.US_SSN` is a clear exception worth flagging in the other direction: Presidio's SSN precision fell from ~100% (Dataset 1) to 14.4% here, almost certainly the same "dense financial documents are full of other 9-digit-shaped numbers" effect driving the driver's-license and date problems, at a smaller scale.
+`PII.EMAIL` (96.4%/95.6%), `PII.IBAN` (96.8%/74.4%), and `PII.IP_ADDRESS` (90.8%/89.9%) perform close to their Dataset 1 numbers regardless of document type or language. Newly visible now that the three larger problems are fixed: **`US_PASSPORT` sits at 10.7% precision** (132 TP, 1,105 FP) at both default and full policy — not touched in this round (no clean score-gate signal was checked for it, and it wasn't part of the original three-cause investigation), flagged here as the next candidate for the same score-distribution diagnostic that fixed `US_SSN`.
 
 ### Methodology notes
 
-- **Absolute FP/FN counts aren't directly comparable to Dataset 1's** — these documents are 10-20x longer, so any constant per-character false-positive rate produces much larger raw counts. Precision and recall (which normalize for volume) are the fair comparison; both moved sharply in the same direction the raw counts suggest, so this isn't purely a length artifact.
-- **`password`/`api_key` labels exist in this dataset** (101 and 91 labeled spans respectively) but are deliberately out of scope for this PII benchmark — they're secrets, not personal data, and scoring them against `pii.*` detectors would misrepresent both the dataset and the detectors. Flagged here as a candidate input for a future *secrets*-detection benchmark against `detectors/secrets.py`, not built in this pass.
-- Same span-overlap scoring, same `GT_ENTITY_MAP` scoping discipline, same direct-detector-call methodology as Dataset 1 — see that section and the run script's docstring for the full rationale.
+- **Absolute FP/FN counts aren't directly comparable to Dataset 1's** — these documents are 10-20x longer, so any constant per-character false-positive rate produces much larger raw counts. Precision and recall (which normalize for volume) are the fair comparison.
+- **`password`/`api_key` labels exist in this dataset** (101 and 91 labeled spans respectively) but are deliberately out of scope for this PII benchmark — they're secrets, not personal data. Flagged as a candidate input for a future *secrets*-detection benchmark against `detectors/secrets.py`, not built in this pass.
+- Same span-overlap scoring, same `GT_ENTITY_MAP` scoping discipline, same direct-detector-call methodology, same `STREET_ADDRESS`-containment exclusion as Dataset 1.
 
 ---
 
 ## Dataset 3 — Text Anonymization Benchmark (TAB), real ECHR case law
 
-127 real European Court of Human Rights judgments (`echr_test.json`), the only dataset in this suite built from real text rather than synthetic or templated generation. Multiple human annotators per document (1-10); ground truth is the union across annotators, deduplicated on exact span boundaries — a disclosed simplification of TAB's own weighted evaluation protocol, not a reproduction of it. In-scope types here are `PERSON`, `LOC` (→ `PII.LOCATION`), and `DATETIME` (→ `PII.DATE_OF_BIRTH`, same disclosed conflation as the other two datasets) — `ORG`, `DEM`, `CODE`, `MISC`, `QUANTITY` have no corresponding Nometria detector and are dropped from ground truth.
+127 real European Court of Human Rights judgments (`echr_test.json`), the only dataset in this suite built from real text rather than synthetic or templated generation. Multiple human annotators per document (1-10); ground truth is the union across annotators, deduplicated on exact span boundaries — a disclosed simplification of TAB's own weighted evaluation protocol, not a reproduction of it. In-scope types here are `PERSON`, `LOC` (→ `PII.LOCATION`), and `DATETIME` (→ `PII.DATE_TIME`, matching the taxonomy fix — see "Fixes applied") — `ORG`, `DEM`, `CODE`, `MISC`, `QUANTITY` have no corresponding Nometria detector and are dropped from ground truth.
 
 ### Results, all 127 rows
 
@@ -125,15 +169,19 @@ German is a hard 0%, not just low. Spot-checking the actual German `date_of_birt
 | `pii.presidio` (default policy) | — | 0.0% | — | 0 | 0 | 4,799 |
 | `pii.presidio` (nothing excluded) | 83.6% | 86.9% | 85.2% | 4,168 | 820 | 631 |
 
-`pii.native` and the default-policy config score exactly 0% recall **by construction**, not as a finding: every in-scope type here (`PERSON`/`LOCATION`/`DATE_OF_BIRTH`) is either unsupported by regex alone or excluded by the shipping default policy. This dataset's entire in-scope surface is the part the default policy turns off — full per-entity-type breakdown: [`results/tab_summary.json`](results/tab_summary.json).
+Unchanged by the fix round — the `DATE_TIME` rename is a relabeling with no behavior change here (TAB's own label was already generic, matching what `PII.DATE_TIME` now honestly represents), and TAB has no `street_address` category for the containment fix to apply to. `pii.native` and the default-policy config score exactly 0% recall **by construction**: every in-scope type here is either unsupported by regex alone or excluded by the shipping default policy. Full per-entity-type breakdown: [`results/tab_summary.json`](results/tab_summary.json).
 
 ### The best full-policy result of the three datasets — and a real explanation for why
 
-83.6% precision / 86.9% recall is meaningfully better than both Dataset 1 (54.4%/75.6%) and Dataset 2 (16.3%/70.1%). The most striking single number: `DATE_TIME` → `PII.DATE_OF_BIRTH` precision is **90.8%** here (2,715 TP / 276 FP), against 21.3% on Dataset 1 and 1.6% on Dataset 2. This flips the "DATE_TIME is inherently noisy" framing from the other two write-ups into something more precise: **the conflation's cost depends heavily on document domain, not just on the taxonomy mismatch itself.** Real ECHR judgments' date mentions are overwhelmingly tied to the people in the case (birth dates, dates of events central to the individual's history) rather than the generic transaction/statement dates that dominate Dataset 2's financial documents — so the same "any DATE_TIME = DATE_OF_BIRTH" mapping that was mostly wrong in a financial-document context turns out to be mostly right in a legal-narrative context. Coherent, natural, single-language prose is also simply closer to what a general-purpose NER model was trained on than either templated synthetic sentences or dense multilingual structured documents — consistent with `PERSON` (85.5%/78.6%) and `LOCATION` (56.2%/74.2%) both landing at or above their Dataset 1/2 numbers too, `LOCATION` precision aside (the one category that stays the weakest across all three datasets).
+83.6% precision / 86.9% recall is meaningfully better than both Dataset 1 (65.2%/75.6%) and Dataset 2 (21.7%/68.5%). The most striking single number: `DATE_TIME` precision is **90.8%** here (2,715 TP / 276 FP), against 27.9% on Dataset 1 and (pre-fix) 1.6% on Dataset 2. Real ECHR judgments' date mentions are overwhelmingly tied to the people in the case (birth dates, dates of events central to the individual's history) rather than the generic transaction/statement dates that dominate Dataset 2's financial documents — so the *same* engine, on genuinely different document domains, produces a completely different precision number for the identical entity type. Coherent, natural, single-language prose is also simply closer to what a general-purpose NER model was trained on than either templated synthetic sentences or dense multilingual structured documents — consistent with `PERSON` (85.5%/78.6%) and `LOCATION` (56.2%/74.2%) both landing at or above their Dataset 1/2 numbers too, `LOCATION` precision aside (the one category that stays the weakest across all three datasets even after the containment fix).
+
+### A weaker, more ambiguous version of the STREET_ADDRESS pattern — disclosed, not fixed
+
+The same diagnostic that found Dataset 1's `STREET_ADDRESS`-containment artifact was run against TAB: 35.6% of raw `LOCATION` false positives (129 of 362) land inside an out-of-scope `ORG`-labeled span. But the actual text is different in kind, not just degree — `"the Republic of Turkey"`, `"the United Kingdom of Great Britain"`, `"the Third Section"`, `"the Aydın Magistrate's Court"`. Whether a country referred to as a state party to a legal case is a `LOCATION` or an `ORG` is a genuine, defensible annotation-convention choice — unlike a city name inside a mailing address, where "this is a real location" isn't in dispute. **Left unfixed and reported as-is**: applying the same containment exclusion here would launder a real ambiguity into a clean-looking number, which is a worse failure than a slightly pessimistic one.
 
 ### The number that matters most for a real anonymization use case
 
-TAB's own `identifier_type` field ranks re-identification risk — `DIRECT` means the mention alone identifies the person (a name, a case number used as an identifier); `QUASI` means identifying only combined with other mentions; `NO_MASK` means not actually identifying despite the entity type (e.g. a judge referenced by institutional role). Recall on full-policy Presidio, broken out by this field:
+TAB's own `identifier_type` field ranks re-identification risk — `DIRECT` means the mention alone identifies the person (a name, a case number used as an identifier); `QUASI` means identifying only combined with other mentions; `NO_MASK` means not actually identifying despite the entity type. Recall on full-policy Presidio, broken out by this field:
 
 | Identifier type | Support | Recall |
 |---|---|---|
@@ -141,14 +189,14 @@ TAB's own `identifier_type` field ranks re-identification risk — `DIRECT` mean
 | `QUASI` | 3,914 | 88.8% |
 | `NO_MASK` | 657 | 71.7% |
 
-Recall is highest exactly where it matters most — `DIRECT` identifiers, the mentions that alone would re-identify someone, are caught 96.9% of the time. `NO_MASK` mentions (entity-shaped but not actually identifying) being caught least often is also the right direction for a detector to err in — those are the ones where a miss costs nothing.
+Recall is highest exactly where it matters most — `DIRECT` identifiers, the mentions that alone would re-identify someone, are caught 96.9% of the time. `NO_MASK` mentions being caught least often is also the right direction for a detector to err in — those are the ones where a miss costs nothing.
 
 ### Methodology notes
 
-- **Ground truth is a union-across-annotators simplification**, not TAB's full weighted risk protocol (`evaluation.py` in the source repo, which the TAB paper uses for its own headline numbers). Different annotators occasionally mark slightly different boundaries for what is clearly the same real mention; each distinct boundary survives as a separate ground-truth span here, which very likely inflates the false-negative count somewhat versus a boundary-tolerant merge. Disclosed, not corrected — correcting it would mean reimplementing TAB's own evaluation logic rather than benchmarking Nometria's detectors.
+- **Ground truth is a union-across-annotators simplification**, not TAB's full weighted risk protocol (`evaluation.py` in the source repo). Different annotators occasionally mark slightly different boundaries for the same real mention; each distinct boundary survives as a separate ground-truth span here, which very likely inflates the false-negative count somewhat versus a boundary-tolerant merge. Disclosed, not corrected.
 - Same span-overlap scoring, same direct-detector-call methodology as Datasets 1 and 2.
 - **Only `test` (127 rows) was used** — `train` (1,014 rows) and `dev` (127 rows) exist in the same source repo and could extend this sample if a larger real-text run is wanted later.
 
-### PII benchmarking: build-out complete
+### PII benchmarking: build-out and fix round complete
 
-All three sourced datasets (`docs/dataset-sourcing.md`) are now built. Combined picture across all three: `EMAIL`/`IBAN`/`IP_ADDRESS` are reliably strong regardless of document type, language, or synthetic-vs-real; `PERSON`/`LOCATION`/`DATE_TIME` (excluded by default) show real, now-quantified recall and precision trade-offs that vary by domain rather than being uniformly "noisy"; and `US_DRIVER_LICENSE` is a consistently weak Presidio recognizer across every dataset tested (3.2% precision on Dataset 1, 0.9% on Dataset 2) worth flagging for anyone considering enabling it.
+All three sourced datasets (`docs/dataset-sourcing.md`) are built and re-verified after fixes. Combined picture: `EMAIL`/`IBAN`/`IP_ADDRESS` are reliably strong regardless of document type, language, or synthetic-vs-real. `PERSON`/`LOCATION`/`DATE_TIME`/`US_DRIVER_LICENSE` (all excluded by default) show real, now-quantified recall and precision trade-offs — some domain-dependent (`DATE_TIME`), some just a weak underlying recognizer (`US_DRIVER_LICENSE`, `US_PASSPORT`, both real candidates for future work), and one (`LOCATION`) partly a benchmark scoring artifact that's now corrected rather than a real detector defect. `US_SSN` moved from a genuine weak spot to one of the strongest categories after a single, narrowly-scoped score-gate fix — the clearest evidence in this round that "identify the actual failing cases, not just the aggregate number" finds fixes that a blanket threshold or blanket exclusion would miss.

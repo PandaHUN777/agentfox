@@ -15,13 +15,16 @@ rationale) — differences specific to this dataset:
   default — nothing in the product auto-detects document language today), so
   this run also directly measures what a language mismatch costs, not just PII
   detection in the abstract.
-- **A cleaner isolation of the DATE_TIME/DATE_OF_BIRTH taxonomy conflation** than
-  dataset 1: this dataset separately labels `date_of_birth` from generic `date`/
-  `time`/`date_time` mentions. `date_of_birth` is the only one mapped into scope
-  here — a predicted `PII.DATE_OF_BIRTH` span landing on a generic `date`/`time`
-  span (out of scope, dropped from ground truth) counts as a false positive,
-  which is the correct outcome and re-surfaces the same finding from dataset 1
-  with a sharper, non-proxied signal.
+- **A cleaner isolation of what used to be the DATE_TIME/DATE_OF_BIRTH taxonomy
+  conflation** than dataset 1: this dataset separately labels `date_of_birth`
+  from generic `date`/`time`/`date_time` mentions. `date_of_birth` is the only
+  one mapped into scope here (`PII.DATE_OF_BIRTH`). Since the taxonomy fix in
+  `adapters/presidio.py` (see README "Fixes applied"), Presidio's own generic
+  `DATE_TIME` recognizer now emits `PII.DATE_TIME`, a different canonical type
+  than this bucket — so `pii.presidio` no longer contributes any TP or FP here
+  at all; only `pii.native`'s birthdate-shaped regex is scored against this
+  ground-truth bucket now, which is the honest scope for what each engine
+  actually claims to detect.
 - **`password`/`api_key` labels exist in this dataset but are deliberately out of
   scope here** — those are secrets, not PII; scoring them against `pii.*`
   detectors would misrepresent what's being tested. They're listed in the output
@@ -83,6 +86,19 @@ def gt_spans_for_row(row: dict) -> list[tuple[int, int, str]]:
     return out
 
 
+def street_address_spans_for_row(row: dict) -> list[tuple[int, int]]:
+    """street_address ground-truth spans — out of scope (no Nometria address
+    detector) but often *contain* a real, separately-real city/country mention
+    a LOCATION recognizer correctly finds. Same containment-exclusion rule as
+    `run_presidio_research_benchmark.py`, verified there (66.5% of raw
+    LOCATION false positives were confirmed-correct hits inside one of
+    these) — see README "Fixes applied".
+    """
+    return [
+        (s["start"], s["end"]) for s in row["spans"] if s["label"] == "street_address"
+    ]
+
+
 def pred_spans(detections, canonical_types: set[str]) -> list[tuple[int, int, str]]:
     return [
         (d.start, d.end, d.entity_type)
@@ -91,14 +107,17 @@ def pred_spans(detections, canonical_types: set[str]) -> list[tuple[int, int, st
     ]
 
 
-def score_row(gt, pred) -> tuple[int, int, int, dict[str, list[int]]]:
+def score_row(gt, pred, containment_exclude: list[tuple[int, int]] = ()) -> tuple[int, int, int, int, dict[str, list[int]]]:
+    """See run_presidio_research_benchmark.py's score_row for the containment-
+    exclusion rationale — a predicted span fully inside a street_address span
+    is neither TP nor FP, tracked separately as `excluded`."""
     per_type: dict[str, list[int]] = {}
 
     def bucket(t: str) -> list[int]:
         return per_type.setdefault(t, [0, 0, 0])
 
     matched_pred: set[int] = set()
-    tp = fp = fn = 0
+    tp = fp = fn = excluded = 0
     for gs, ge, gt_type in gt:
         match_idx = None
         for i, (ps, pe, pt) in enumerate(pred):
@@ -114,11 +133,15 @@ def score_row(gt, pred) -> tuple[int, int, int, dict[str, list[int]]]:
         else:
             fn += 1
             bucket(gt_type)[2] += 1
-    for i, (_, _, pt) in enumerate(pred):
-        if i not in matched_pred:
-            fp += 1
-            bucket(pt)[1] += 1
-    return tp, fp, fn, per_type
+    for i, (ps, pe, pt) in enumerate(pred):
+        if i in matched_pred:
+            continue
+        if any(a_s <= ps and pe <= a_e for a_s, a_e in containment_exclude):
+            excluded += 1
+            continue
+        fp += 1
+        bucket(pt)[1] += 1
+    return tp, fp, fn, excluded, per_type
 
 
 def merge_per_type(total, part) -> None:
@@ -143,7 +166,7 @@ def summarize(tp: int, fp: int, fn: int) -> dict:
 
 def run_config(name: str, detector, rows: list[dict], ctx: DetectionContext) -> dict:
     canonical_types = set(GT_ENTITY_MAP.values())
-    total_tp = total_fp = total_fn = 0
+    total_tp = total_fp = total_fn = total_excluded = 0
     per_type: dict[str, list[int]] = {}
     # language -> canonical_type -> [tp, fp, fn], for the DATE_OF_BIRTH-format
     # hypothesis and any other locale-coverage question.
@@ -151,12 +174,14 @@ def run_config(name: str, detector, rows: list[dict], ctx: DetectionContext) -> 
 
     for i, row in enumerate(rows):
         gt = gt_spans_for_row(row)
+        street_addrs = street_address_spans_for_row(row)
         detections = detector.detect(row["text"], ctx)
         pred = pred_spans(detections.detections, canonical_types)
-        tp, fp, fn, part = score_row(gt, pred)
+        tp, fp, fn, excluded, part = score_row(gt, pred, street_addrs)
         total_tp += tp
         total_fp += fp
         total_fn += fn
+        total_excluded += excluded
         merge_per_type(per_type, part)
         merge_per_type(per_lang_type[row["language"]], part)
         if (i + 1) % 500 == 0:
@@ -168,7 +193,13 @@ def run_config(name: str, detector, rows: list[dict], ctx: DetectionContext) -> 
         for lang, types in sorted(per_lang_type.items())
     }
     overall = summarize(total_tp, total_fp, total_fn)
-    return {"config": name, **overall, "by_type": by_type, "by_language": by_language}
+    return {
+        "config": name,
+        **overall,
+        "excluded_contained_in_street_address": total_excluded,
+        "by_type": by_type,
+        "by_language": by_language,
+    }
 
 
 def main() -> None:
@@ -201,11 +232,11 @@ def main() -> None:
     out_path.write_text(json.dumps(summary, indent=2))
     print(f"\nWrote {out_path}\n")
 
-    print(f"{'config':<24}{'precision':<12}{'recall':<12}{'f1':<12}{'tp':<8}{'fp':<8}{'fn':<8}")
+    print(f"{'config':<24}{'precision':<12}{'recall':<12}{'f1':<12}{'tp':<8}{'fp':<8}{'fn':<8}{'excl':<6}")
     for r in results:
         print(
             f"{r['config']:<24}{r['precision']:<12}{r['recall']:<12}{r['f1']:<12}"
-            f"{r['tp']:<8}{r['fp']:<8}{r['fn']:<8}"
+            f"{r['tp']:<8}{r['fp']:<8}{r['fn']:<8}{r['excluded_contained_in_street_address']:<6}"
         )
 
 

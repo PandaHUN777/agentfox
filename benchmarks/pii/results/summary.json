@@ -25,12 +25,13 @@
   "results": [
     {
       "config": "pii.native",
-      "tp": 253,
+      "tp": 243,
       "fp": 9,
-      "fn": 1467,
-      "precision": 0.9656,
-      "recall": 0.1471,
-      "f1": 0.2553,
+      "fn": 1477,
+      "excluded_contained_in_street_address": 0,
+      "precision": 0.9643,
+      "recall": 0.1413,
+      "f1": 0.2465,
       "by_type": {
         "PII.CREDIT_CARD": {
           "tp": 126,
@@ -40,13 +41,13 @@
           "recall": 0.9265,
           "f1": 0.9545
         },
-        "PII.DATE_OF_BIRTH": {
-          "tp": 10,
+        "PII.DATE_TIME": {
+          "tp": 0,
           "fp": 0,
-          "fn": 109,
-          "precision": 1.0,
-          "recall": 0.084,
-          "f1": 0.155
+          "fn": 119,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
         },
         "PII.EMAIL": {
           "tp": 49,
@@ -116,12 +117,13 @@
     },
     {
       "config": "pii.presidio.default",
-      "tp": 263,
-      "fp": 149,
-      "fn": 1457,
-      "precision": 0.6383,
-      "recall": 0.1529,
-      "f1": 0.2467,
+      "tp": 259,
+      "fp": 28,
+      "fn": 1461,
+      "excluded_contained_in_street_address": 1,
+      "precision": 0.9024,
+      "recall": 0.1506,
+      "f1": 0.2581,
       "by_type": {
         "PII.CREDIT_CARD": {
           "tp": 105,
@@ -131,7 +133,7 @@
           "recall": 0.7721,
           "f1": 0.8714
         },
-        "PII.DATE_OF_BIRTH": {
+        "PII.DATE_TIME": {
           "tp": 0,
           "fp": 0,
           "fn": 119,
@@ -180,20 +182,20 @@
           "f1": 0.0
         },
         "PII.US_DRIVER_LICENSE": {
-          "tp": 4,
-          "fp": 120,
-          "fn": 1,
-          "precision": 0.0323,
-          "recall": 0.8,
-          "f1": 0.062
+          "tp": 0,
+          "fp": 0,
+          "fn": 5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
         },
         "PII.US_PHONE": {
           "tp": 54,
-          "fp": 24,
+          "fp": 23,
           "fn": 38,
-          "precision": 0.6923,
+          "precision": 0.7013,
           "recall": 0.587,
-          "f1": 0.6353
+          "f1": 0.6391
         },
         "PII.US_SSN": {
           "tp": 16,
@@ -208,11 +210,12 @@
     {
       "config": "pii.presidio.full",
       "tp": 1300,
-      "fp": 1089,
+      "fp": 693,
       "fn": 420,
-      "precision": 0.5442,
+      "excluded_contained_in_street_address": 396,
+      "precision": 0.6523,
       "recall": 0.7558,
-      "f1": 0.6328,
+      "f1": 0.7002,
       "by_type": {
         "PII.CREDIT_CARD": {
           "tp": 105,
@@ -222,13 +225,13 @@
           "recall": 0.7721,
           "f1": 0.8714
         },
-        "PII.DATE_OF_BIRTH": {
+        "PII.DATE_TIME": {
           "tp": 119,
-          "fp": 440,
+          "fp": 308,
           "fn": 0,
-          "precision": 0.2129,
+          "precision": 0.2787,
           "recall": 1.0,
-          "f1": 0.351
+          "f1": 0.4359
         },
         "PII.EMAIL": {
           "tp": 49,
@@ -256,19 +259,19 @@
         },
         "PII.LOCATION": {
           "tp": 206,
-          "fp": 237,
+          "fp": 80,
           "fn": 205,
-          "precision": 0.465,
+          "precision": 0.7203,
           "recall": 0.5012,
-          "f1": 0.4824
+          "f1": 0.5911
         },
         "PII.PERSON": {
           "tp": 712,
-          "fp": 263,
+          "fp": 157,
           "fn": 145,
-          "precision": 0.7303,
+          "precision": 0.8193,
           "recall": 0.8308,
-          "f1": 0.7773
+          "f1": 0.825
         },
         "PII.US_DRIVER_LICENSE": {
           "tp": 4,
@@ -280,11 +283,11 @@
         },
         "PII.US_PHONE": {
           "tp": 54,
-          "fp": 24,
+          "fp": 23,
           "fn": 38,
-          "precision": 0.6923,
+          "precision": 0.7013,
           "recall": 0.587,
-          "f1": 0.6353
+          "f1": 0.6391
         },
         "PII.US_SSN": {
           "tp": 16,

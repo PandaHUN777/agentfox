@@ -27,7 +27,12 @@ _ENTITY_MAP = {
     "IP_ADDRESS": "PII.IP_ADDRESS",
     "PERSON": "PII.PERSON",
     "LOCATION": "PII.LOCATION",
-    "DATE_TIME": "PII.DATE_OF_BIRTH",
+    # Presidio's DATE_TIME recognizer flags any date-shaped mention (a statement
+    # date, an event date), not specifically a birthdate — mapping it to
+    # PII.DATE_OF_BIRTH overclaims what was actually found (benchmarked: 1.6-21.3%
+    # precision against that label in benchmarks/pii/). PII.DATE_TIME names it for
+    # what it is; `detectors/pii.py`'s own regex still owns PII.DATE_OF_BIRTH.
+    "DATE_TIME": "PII.DATE_TIME",
     "MEDICAL_LICENSE": "PII.MEDICAL_LICENSE",
     "UK_NHS": "PII.UK_NHS",
     "UK_NINO": "PII.UK_NINO",
@@ -38,8 +43,26 @@ _ENTITY_MAP = {
 
 #: Presidio's PERSON/LOCATION/DATE_TIME recognisers are noisy in agent traffic;
 #: excluded by default and re-enabled per policy. A guardrail with poor precision
-#: gets switched off (PRD R3).
-DEFAULT_EXCLUDED = {"PERSON", "LOCATION", "DATE_TIME"}
+#: gets switched off (PRD R3). US_DRIVER_LICENSE joins them per
+#: benchmarks/pii/README.md: 3.2%/0.9% precision across two independent
+#: datasets — its low-specificity alphanumeric-ID pattern fires on account
+#: numbers, reference IDs, and other short codes far more often than on actual
+#: driver's licenses.
+DEFAULT_EXCLUDED = {"PERSON", "LOCATION", "DATE_TIME", "US_DRIVER_LICENSE"}
+
+#: Presidio's own confidence score is discrete, not continuous, and for some
+#: recognisers the low tier is cleanly separable from real hits rather than a
+#: gradient. Benchmarked on gretelai/synthetic_pii_finance_multilingual
+#: (benchmarks/pii/README.md): US_SSN's 0.05 ("regex matched, no context words
+#: nearby") tier accounts for 444 of 453 false positives — bare 9-digit codes
+#: in dense financial documents (account numbers, routing numbers) — against
+#: only 7 of 76 true positives at that same tier. Filtering it out trades ~9%
+#: of this recogniser's recall for roughly a 6x precision gain. Not applied
+#: elsewhere: US_DRIVER_LICENSE's true and false positives are scored across
+#: the *same* tiers with no clean cut point (see README), so a threshold
+#: there would just be arbitrary — that recogniser is excluded by default
+#: instead (see DEFAULT_EXCLUDED above).
+_MIN_SCORE: dict[str, float] = {"US_SSN": 0.1}
 
 
 @functools.lru_cache(maxsize=1)
@@ -72,6 +95,8 @@ class PresidioPiiDetector(BaseDetector):
         out: list[Detection] = []
         for r in results:
             if r.entity_type in self.excluded:
+                continue
+            if r.score < _MIN_SCORE.get(r.entity_type, 0.0):
                 continue
             out.append(
                 Detection(

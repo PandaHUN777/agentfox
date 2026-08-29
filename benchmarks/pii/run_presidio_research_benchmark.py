@@ -64,7 +64,11 @@ GT_ENTITY_MAP = {
     "IBAN_CODE": "PII.IBAN",
     "IP_ADDRESS": "PII.IP_ADDRESS",
     "PERSON": "PII.PERSON",
-    "DATE_TIME": "PII.DATE_OF_BIRTH",
+    # This dataset's own label is generic "DATE_TIME" (any date-shaped
+    # mention), not specifically a birthdate — mapped to PII.DATE_TIME to
+    # match the taxonomy fix in adapters/presidio.py (was PII.DATE_OF_BIRTH;
+    # that mapping is what the fix corrected, see README "Fixes applied").
+    "DATE_TIME": "PII.DATE_TIME",
     "GPE": "PII.LOCATION",  # proxy — see module docstring
 }
 
@@ -87,6 +91,21 @@ def gt_spans_for_row(row: dict) -> list[tuple[int, int, str]]:
     return out
 
 
+def street_address_spans_for_row(row: dict) -> list[tuple[int, int]]:
+    """STREET_ADDRESS ground-truth spans — out of scope (no Nometria address
+    detector) but often *contain* a real, separately-real city/country mention
+    a LOCATION recognizer correctly finds. See `score_row`'s containment
+    exclusion and README "Fixes applied" — verified directly: 66.5% of raw
+    LOCATION false positives (157/236) were confirmed-correct hits landing
+    inside one of these spans, not detector errors.
+    """
+    return [
+        (s["start_position"], s["end_position"])
+        for s in row["spans"]
+        if s["entity_type"] == "STREET_ADDRESS"
+    ]
+
+
 def pred_spans(detections, canonical_types: set[str]) -> list[tuple[int, int, str]]:
     return [
         (d.start, d.end, d.entity_type)
@@ -96,11 +115,20 @@ def pred_spans(detections, canonical_types: set[str]) -> list[tuple[int, int, st
 
 
 def score_row(
-    gt: list[tuple[int, int, str]], pred: list[tuple[int, int, str]]
-) -> tuple[int, int, int, dict[str, list[int]]]:
+    gt: list[tuple[int, int, str]],
+    pred: list[tuple[int, int, str]],
+    containment_exclude: list[tuple[int, int]] = (),
+) -> tuple[int, int, int, int, dict[str, list[int]]]:
     """Greedy one-to-one span-overlap matching, per canonical type.
 
-    Returns (tp, fp, fn, per_type) where per_type[canonical_type] = [tp, fp, fn].
+    An unmatched predicted span fully contained inside a
+    `containment_exclude` span (STREET_ADDRESS ground truth here — see
+    `street_address_spans_for_row`) is neither a TP nor an FP: it's outside
+    what this benchmark's ground truth can credit, not a detector error.
+    Tracked separately as `excluded` so it never silently vanishes from the
+    numbers.
+
+    Returns (tp, fp, fn, excluded, per_type) where per_type[canonical_type] = [tp, fp, fn].
     """
     per_type: dict[str, list[int]] = {}
 
@@ -108,7 +136,7 @@ def score_row(
         return per_type.setdefault(t, [0, 0, 0])
 
     matched_pred: set[int] = set()
-    tp = fp = fn = 0
+    tp = fp = fn = excluded = 0
     for gs, ge, gt_type in gt:
         match_idx = None
         for i, (ps, pe, pt) in enumerate(pred):
@@ -124,11 +152,15 @@ def score_row(
         else:
             fn += 1
             bucket(gt_type)[2] += 1
-    for i, (_, _, pt) in enumerate(pred):
-        if i not in matched_pred:
-            fp += 1
-            bucket(pt)[1] += 1
-    return tp, fp, fn, per_type
+    for i, (ps, pe, pt) in enumerate(pred):
+        if i in matched_pred:
+            continue
+        if any(a_s <= ps and pe <= a_e for a_s, a_e in containment_exclude):
+            excluded += 1
+            continue
+        fp += 1
+        bucket(pt)[1] += 1
+    return tp, fp, fn, excluded, per_type
 
 
 def merge_per_type(total: dict[str, list[int]], part: dict[str, list[int]]) -> None:
@@ -148,16 +180,18 @@ def prf1(tp: int, fp: int, fn: int) -> tuple[float, float, float]:
 
 def run_config(name: str, detector, rows: list[dict], ctx: DetectionContext) -> dict:
     canonical_types = set(GT_ENTITY_MAP.values())
-    total_tp = total_fp = total_fn = 0
+    total_tp = total_fp = total_fn = total_excluded = 0
     per_type: dict[str, list[int]] = {}
     for i, row in enumerate(rows):
         gt = gt_spans_for_row(row)
+        street_addrs = street_address_spans_for_row(row)
         detections = detector.detect(row["full_text"], ctx)
         pred = pred_spans(detections.detections, canonical_types)
-        tp, fp, fn, part = score_row(gt, pred)
+        tp, fp, fn, excluded, part = score_row(gt, pred, street_addrs)
         total_tp += tp
         total_fp += fp
         total_fn += fn
+        total_excluded += excluded
         merge_per_type(per_type, part)
         if (i + 1) % 250 == 0:
             print(f"  [{name}] {i + 1}/{len(rows)} rows")
@@ -173,6 +207,7 @@ def run_config(name: str, detector, rows: list[dict], ctx: DetectionContext) -> 
     return {
         "config": name,
         "tp": total_tp, "fp": total_fp, "fn": total_fn,
+        "excluded_contained_in_street_address": total_excluded,
         "precision": round(precision, 4),
         "recall": round(recall, 4),
         "f1": round(f1, 4),
@@ -209,11 +244,11 @@ def main() -> None:
     out_path.write_text(json.dumps(summary, indent=2))
     print(f"\nWrote {out_path}\n")
 
-    print(f"{'config':<24}{'precision':<12}{'recall':<12}{'f1':<12}{'tp':<8}{'fp':<8}{'fn':<8}")
+    print(f"{'config':<24}{'precision':<12}{'recall':<12}{'f1':<12}{'tp':<8}{'fp':<8}{'fn':<8}{'excl':<6}")
     for r in results:
         print(
             f"{r['config']:<24}{r['precision']:<12}{r['recall']:<12}{r['f1']:<12}"
-            f"{r['tp']:<8}{r['fp']:<8}{r['fn']:<8}"
+            f"{r['tp']:<8}{r['fp']:<8}{r['fn']:<8}{r['excluded_contained_in_street_address']:<6}"
         )
 
 

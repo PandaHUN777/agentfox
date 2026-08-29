@@ -28,8 +28,11 @@ _GLOBAL: list[Rule] = [
     ("PII.CREDIT_CARD", re.compile(r"\b(?:\d[ -]?){13,19}\b"), 0.95),
     ("PII.IBAN", re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b"), 0.9),
     (
+        # `.` added alongside `/`/`-`: German-locale dates in
+        # benchmarks/pii/'s multilingual dataset are DD.MM.YYYY-separated and
+        # were missed entirely (0% recall) without it.
         "PII.DATE_OF_BIRTH",
-        re.compile(r"\b(?:0?[1-9]|[12]\d|3[01])[/-](?:0?[1-9]|1[0-2])[/-](?:19|20)\d{2}\b"),
+        re.compile(r"\b(?:0?[1-9]|[12]\d|3[01])[/.-](?:0?[1-9]|1[0-2])[/.-](?:19|20)\d{2}\b"),
         0.4,
     ),
 ]

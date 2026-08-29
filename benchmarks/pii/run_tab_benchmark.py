@@ -49,7 +49,11 @@ RESULTS_DIR = Path(__file__).parent / "results"
 GT_ENTITY_MAP = {
     "PERSON": "PII.PERSON",
     "LOC": "PII.LOCATION",
-    "DATETIME": "PII.DATE_OF_BIRTH",  # same disclosed conflation as datasets 1 & 2
+    # TAB's own label is generic "DATETIME" (any date mention in the judgment,
+    # not specifically a birthdate) — mapped to PII.DATE_TIME to match the
+    # taxonomy fix in adapters/presidio.py (was PII.DATE_OF_BIRTH; see
+    # README "Fixes applied").
+    "DATETIME": "PII.DATE_TIME",
 }
 
 OUT_OF_SCOPE_SEEN: set[str] = set()
