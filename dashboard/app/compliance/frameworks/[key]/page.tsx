@@ -6,11 +6,11 @@ export const dynamic = "force-dynamic";
 
 /**
  * A control-to-framework mapping is a regulatory claim ("this control satisfies
- * EU AI Act Art. 9"), and evidence.build() deliberately excludes any mapping still
- * marked "draft" (Appendix B §B.6) — presenting an unreviewed mapping as evidence
- * is worse than no evidence. This page is where that review actually happens; it
- * didn't exist before, which is why every mapping in a fresh deployment stays
- * draft forever and no evidence package can ever carry a framework claim.
+ * EU AI Act Art. 9"). evidence.build() ships every mapping, but any still marked
+ * "draft" (Appendix B §B.6) carries a "DRAFT — UNVERIFIED / NOT LEGAL ADVICE" chip
+ * rather than being silently dropped, so an auditor can see exactly what is
+ * outstanding. This page is where the underlying review actually happens — until
+ * a mapping is reviewed here, it keeps carrying that chip in every package.
  */
 export default async function FrameworkReview({
   params,
@@ -44,9 +44,10 @@ export default async function FrameworkReview({
         {coverage.controls_mapped} of {coverage.controls_total} controls mapped,{" "}
         {coverage.mappings_reviewed} of {coverage.mappings_total} mappings reviewed.
         Reviewing a mapping is a human confirming the control really does satisfy
-        that framework clause — evidence packages exclude anything still marked
-        draft, so this is what unlocks a real compliance claim rather than a
-        computed guess.
+        that framework clause — evidence packages carry anything still marked
+        draft with a DRAFT — UNVERIFIED / NOT LEGAL ADVICE chip, so this is what
+        turns it into a real compliance claim rather than a flagged, computed
+        guess.
       </p>
 
       {review_error && <div className="error">{review_error}</div>}

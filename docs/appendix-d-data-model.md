@@ -96,7 +96,7 @@ digest         = SHA-256(f"{seq}|{occurred_at_iso}|{action}|{payload_digest}|{pr
 **`simulation_runs`** — `policy_version_id`, `candidate_body`, `scope_json`, `replayed_count`, `diff_json` (`newly_blocked|newly_allowed|newly_escalated|unchanged`), `run_by` (P2-7).
 
 **`controls`** — `key` (`NOM-RTG-01`), `title`, `objective`, `family`, `pillar`, `implemented_by[]` (FR ids), `evidence_sources[]`, `status_rule_json`, `catalog_version`.
-**`framework_mappings`** — `control_key`, `framework` (`eu-ai-act|nist-ai-rmf|iso-42001|soc2|owasp-llm|owasp-agentic|mitre-atlas`), `reference` (`Art. 15`, `MEASURE 2.7`, `LLM01`…), `note`, `review_status` (`draft|reviewed`), `reviewed_by?`, `reviewed_at?`. **`draft` mappings are excluded from evidence packages** (Appendix B §B.6).
+**`framework_mappings`** — `control_key`, `framework` (`eu-ai-act|nist-ai-rmf|iso-42001|soc2|owasp-llm|owasp-agentic|mitre-atlas`), `reference` (`Art. 15`, `MEASURE 2.7`, `LLM01`…), `note`, `review_status` (`draft|reviewed`), `reviewed_by?`, `reviewed_at?`. **`draft` mappings ship in evidence packages chip-labeled `DRAFT — UNVERIFIED / NOT LEGAL ADVICE`** rather than being excluded (Appendix B §B.6).
 **`control_statuses`** — `control_key`, `scope_json`, `status` (`effective|degraded|failing|not_implemented|not_applicable`), `computed_at`, `evidence_json`, `rationale`. Computed, never attested (P6-4).
 **`risk_assessments`** — `agent_id`, `eu_ai_act_class`, `inherent_risk`, `mitigations_json`, `residual_risk`, `assessor`, `assessed_at`, `next_review_at`, `answers_json`, `signed_off_by?`.
 **`obligations`** — `framework`, `reference`, `title`, `effective_date`, `applies_when_json`, and derived `in_scope_agent_ids[]`, `status` (P6-5).

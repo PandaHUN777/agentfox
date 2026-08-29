@@ -87,7 +87,7 @@ Taxonomy anchors: OWASP LLM Top 10 (2025), OWASP Agentic Threats T1–T15, MITRE
 |---|---|
 | Our audit chain has a bug ⇒ every compliance claim is void | Chain verification is unit- and property-tested against insertion, deletion, reordering and mutation; verification is a pure function over exported rows |
 | A detector silently stops running and controls report `effective` | `DetectorRun.status` is recorded per request; NOM-RTG-06 makes degradation a *finding*; control status computed from coverage, not from configuration |
-| Draft framework mappings presented as authoritative | `review_status` gate; DRAFT badge in UI; drafts excluded from evidence packages (Appendix B §B.6) |
+| Draft framework mappings presented as authoritative | `review_status` gate; DRAFT badge in UI; drafts ship in evidence packages chip-labeled `DRAFT — UNVERIFIED / NOT LEGAL ADVICE` rather than excluded (Appendix B §B.6) |
 | We claim coverage we do not have | Declared gap list per framework (Appendix B §B.4), rendered next to every coverage claim |
 
 ### E.2.4 Privileged position abuse
