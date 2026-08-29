@@ -3,7 +3,7 @@ was tuned against, or does it just know `deepset/prompt-injections` by heart?
 
     uv run python benchmarks/run_generalization_benchmark.py
 
-Three independent public datasets (`data_generalization/README.md` has sources,
+Four independent public datasets (`data_generalization/README.md` has sources,
 licenses, and why each was picked), none of which `injection.heuristic`'s
 patterns or `injection.similarity`'s corpus were ever tuned against:
 
@@ -19,6 +19,14 @@ patterns or `injection.similarity`'s corpus were ever tuned against:
                     my code?"). Every detection here is a false positive by
                     construction — this is the file that tests whether recall
                     gains from earlier rounds came at precision's expense.
+  - trustairlab  — 2,810 real, organic prompts scraped from jailbreak-focused
+                    Discord/Reddit/etc. communities (1,405 confirmed jailbreaks,
+                    1,405 same-community prompts not flagged as one). The
+                    hardest negative set of the four: "not flagged as jailbreak
+                    by the source community" is not the same claim as "verified
+                    benign" (NotInject's) — expect more label noise here than
+                    the other three, and read the precision number with that in
+                    mind (see `data_generalization/README.md`).
 
 Same three configs as the primary benchmark (heuristic / +classifier /
 +classifier+similarity), scored with the exact same shipping code.
@@ -108,20 +116,39 @@ def main() -> None:
         "spml": load("spml_sample.json"),
         "yanismiraoui": load("yanismiraoui.json"),
         "notinject": load("notinject.json"),
+        "trustairlab": load("trustairlab.json"),
     }
 
     heuristic = get_detector("injection.heuristic")
     assert heuristic is not None
-    configs: dict[str, DetectorPipeline] = {"heuristic": DetectorPipeline(detectors=[heuristic])}
+    # A timed-out detector call's worker thread keeps running to completion —
+    # Python cannot pre-empt it (pipeline.py's own docstring) — and every
+    # concurrent straggler holds its input tensors and activations in memory
+    # until it finishes. `trustairlab`'s longer prompts push far more calls
+    # past their per-detector timeout than the other three datasets ever did
+    # (see REPORT.md's latency-ceiling section), so a full `max_workers=8`
+    # pool lets far more stragglers accumulate concurrently than a shorter
+    # dataset ever would — observed directly as swap climbing 0 -> 5GB in
+    # under 9 minutes at the default worker count. `max_workers=2` bounds how
+    # many stragglers can be in flight at once, at the cost of a slower run,
+    # not a smaller one — this is a benchmark-script mitigation, not a fix to
+    # the underlying accumulation, which is a real production-pipeline
+    # concern under sustained long-input load and is flagged as such rather
+    # than silently worked around.
+    configs: dict[str, DetectorPipeline] = {
+        "heuristic": DetectorPipeline(detectors=[heuristic], max_workers=2)
+    }
 
     classifier = get_detector("injection.classifier")
     similarity = get_detector("injection.similarity")
     if classifier is not None and classifier.available():
         warm_all()
-        configs["heuristic_classifier"] = DetectorPipeline(detectors=[heuristic, classifier])
+        configs["heuristic_classifier"] = DetectorPipeline(
+            detectors=[heuristic, classifier], max_workers=2
+        )
         if similarity is not None and similarity.available():
             configs["heuristic_classifier_similarity"] = DetectorPipeline(
-                detectors=[heuristic, classifier, similarity]
+                detectors=[heuristic, classifier, similarity], max_workers=2
             )
     else:
         print("injection.classifier unavailable — only scoring the heuristic-only config.\n")
@@ -146,6 +173,20 @@ def main() -> None:
             (RESULTS_DIR / f"{config_name}_{ds_name}_predictions.json").write_text(
                 json.dumps(predictions, indent=2)
             )
+        # `ThreadPoolExecutor.shutdown(wait=False)` doesn't kill a straggler
+        # already running (Python can't pre-empt it — same reason a single
+        # detector call can outlive its own timeout, see pipeline.py) — but it
+        # does stop each config's pipeline from leaving its pools around to
+        # pile up underneath the *next* config's pools for the rest of this
+        # process's life. Skipping this let round 6's addition of a
+        # much-longer-average-length dataset (`trustairlab`, mean 2,156 chars
+        # vs. the others' short prompts) generate enough concurrent stragglers
+        # that CPU contention cascaded into every detector call timing out —
+        # for the rest of that dataset, and for every dataset in every config
+        # after it, including ones that would otherwise have run cleanly. See
+        # REPORT.md's "generalization" section for the full story and how it
+        # was caught.
+        pipeline.shutdown()
 
     (RESULTS_DIR / "summary.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary, indent=2))
