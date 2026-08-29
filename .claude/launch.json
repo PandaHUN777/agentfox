@@ -2,9 +2,21 @@
   "version": "0.0.1",
   "configurations": [
     {
+      "name": "gateway",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/architsharma/guardrails/.claude/worktrees/benchmarking-publication-strategy-efd0db && NOMETRIA_DATABASE_URL=sqlite:////tmp/nometria_pg_verify.db NOMETRIA_PLAYGROUND_CORS_ORIGIN=http://localhost:3000 uv run uvicorn nometria.gateway.app:app --host 127.0.0.1 --port 8080"
+      ],
+      "port": 8080
+    },
+    {
       "name": "dashboard",
       "runtimeExecutable": "bash",
-      "runtimeArgs": ["-c", "cd /Users/architsharma/guardrails/dashboard && npm run dev"],
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/architsharma/guardrails/.claude/worktrees/benchmarking-publication-strategy-efd0db/dashboard && NOMETRIA_API_URL=http://127.0.0.1:8080 NOMETRIA_PLAYGROUND_API_URL=http://127.0.0.1:8080 npm run dev"
+      ],
       "port": 3000
     }
   ]

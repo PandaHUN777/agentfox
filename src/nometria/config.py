@@ -59,6 +59,13 @@ class Settings(BaseSettings):
     # P3-7: what happens when a detector errors or blows its budget.
     fail_mode: str = "open"  # open | closed
 
+    # --- Public playground demo -------------------------------------------
+    # An extra CORS origin for the public, unauthenticated playground page
+    # (`gateway/routes/playground.py`) when the dashboard and gateway are not
+    # same-origin in the deployed environment. Additive to the hardcoded
+    # localhost origins in `gateway/app.py`, never a replacement for them.
+    playground_cors_origin: str | None = None
+
     # --- Cost & reliability (P15) ----------------------------------------
     # Degradation ladder, preferred-first. Empty means no fallback: fail rather than
     # silently serve from a model the agent was never evaluated against.

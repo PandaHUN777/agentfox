@@ -61,6 +61,12 @@ services:
       # database and be held by the customer (NFR-7, Appendix E.2.2).
       NOMETRIA_AUDIT_SIGNING_KEY: change-me-before-any-real-deployment
       NOMETRIA_EVIDENCE_DIR: /var/nometria/evidence
+      # The public playground page (dashboard/app/playground) calls this origin
+      # directly from the visitor's browser, unauthenticated — additive to the
+      # hardcoded localhost origins in gateway/app.py, not a replacement. Only
+      # needed once the dashboard is actually reachable from somewhere other than
+      # this same machine.
+      NOMETRIA_PLAYGROUND_CORS_ORIGIN: http://localhost:3000
     ports:
       - "8080:8080"
     volumes:
@@ -84,6 +90,12 @@ services:
       # at any control plane.
       NOMETRIA_API_URL: http://gateway:8080
       NOMETRIA_USER: admin@example.com
+      # The one deliberate exception to "server-to-server only": the public
+      # playground page is a Client Component, so it fetches from the *visitor's
+      # browser*, not from this container — it needs an address the browser can
+      # reach (the published host port), not the internal Docker DNS name above.
+      # Same value as the published `gateway` port mapping below.
+      NOMETRIA_PLAYGROUND_API_URL: http://localhost:8080
     ports:
       - "3000:3000"
     depends_on:
