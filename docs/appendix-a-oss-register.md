@@ -1,8 +1,8 @@
 # Appendix A — OSS Dependency Register
 
-Companion to [PRD §12](PRD.md#12-open-source-strategy). Every project surveyed, with licence, health, verdict, the pillar it serves, and — critically — **our exposure** if it changes status.
+Companion to [the PRD](PRD.md)'s [§7.4 OSS decisions](PRD.md#74-oss-decisions). Every project surveyed, with licence, health, verdict, the pillar it serves, and — critically — **our exposure** if it changes status.
 
-**Scan date:** Aug 2026. **Re-verify quarterly** (§12.3). Two projects on this list changed status within the preceding twelve months, which is the whole reason the adapter seam in [PRD §9.4](PRD.md#94-the-build-vs-reuse-seam) exists.
+**Scan date:** Aug 2026. **Re-verify quarterly.** Two projects on this list changed status within the preceding twelve months, which is the whole reason the adapter seam in [the PRD's §7.2 The swappable seam](PRD.md#72-the-swappable-seam) exists.
 
 Legend — **Verdict:** `REUSE` wrap it · `REUSE ★` best-in-class pick · `REUSE ⚠` usable but licence-restricted · `REFERENCE` study, do not depend · `ADOPT` taxonomy, not code.
 **Exposure:** what breaks for us if the project dies, changes licence, or is acquired.

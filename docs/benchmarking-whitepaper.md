@@ -1,0 +1,132 @@
+# Nometria: A Governance Control Plane for AI Agents, and What We've Proven About It
+
+**Date:** 2026-08-29 · **Status:** first edition.
+
+**How to read this document:** it's organized around the product, not around benchmark runs. For every capability, we say what it does, why it matters, how we know it works, and how it differs from what else is on the market. The rule we hold ourselves to throughout: every number we cite as "benchmarked" has a public, licensed dataset and a script anyone can re-run — link included.
+
+---
+
+## 1. What Nometria is
+
+Nometria is a control plane that sits in front of AI agents in production — as an inline gateway or a one-line SDK wrapper — and governs what they're allowed to do, catches what they get wrong, and proves what happened afterward. It's built around four things happening at once, on every governed call: **detect** (is this content malicious, off-scope, or unsafe), **enforce** (is this action within the agent's actual entitlements, and is it reversible if wrong), **evaluate** (did the agent's answer hold up — grounded, complete, correctly abstained when it should have), and **prove** (a tamper-evident record of all of the above that an auditor can verify independently, without trusting us).
+
+## 2. The insight that shaped what we built
+
+Most of the market — competitors and the industry conversation both — treats "AI safety" as primarily a prompt-injection problem: can someone jailbreak the model into saying something bad. A study of over 10,000 real AI agent failure events (ChatSee, published July 2026) says that's not where production agents actually break: **hallucination-related failures are under 10%** of the total, while **resolution and escalation breakdowns are 31.1%** — the single largest category — and **execution/action failures are up 62%** year over year. Named incidents back this up directly: an AI coding agent that wiped 1.9M rows because it was pointed at production instead of staging; Microsoft 365 Copilot surfacing an entire M&A conversation to someone with valid read permissions but no reason to see it — described by its own investigators as "a governance failure rather than a security breach... every permission check passed."
+
+That's the thesis this product is built on, and it shows up directly in what we built: strong prompt-injection detection because it's real and worth having (Sections 3–4), but built alongside — not instead of — entitlement-aware disclosure control, destructive-action blast-radius analysis, and escalation governance, the categories the failure data says actually dominate.
+
+## 3. What makes Nometria different (the USPs)
+
+Seven things, each real, tested, and — as far as our own competitive research could find — not offered together by any single competitor:
+
+1. **Argument-provenance taint tracking.** Every tool-call argument carries where its value actually came from — a user, a retrieved document, another tool's output — and capability checks can be conditioned on that provenance, not just the argument's face value. The closest public competitor claim (Zenity's "intent-based detection examines the full execution path") doesn't go this granular. This is what lets containment hold **after** a content-detector fails — the tool call itself is still checked against what its arguments are actually made of.
+2. **A tamper-evident audit chain with a standalone, stdlib-only verifier.** No competitor we found ships a hash-chained audit log an auditor can verify themselves, offline, without trusting our software to tell the truth about itself. Mutation, deletion, reorder, and checkpoint forgery are all independently detectable — a 60-second live demo for a regulated buyer.
+3. **Control status computed from telemetry, not attested.** Most of the AI-governance category (per Gartner's own MQ commentary) collects self-reported attestations. Ours computes control status from what actually happened — a broken audit chain forces the audit control to `failing`, automatically, not on a schedule someone remembers to run.
+4. **Declared gaps per framework, published rather than hidden.** Every one of 41 controls across 7 compliance frameworks ships with an explicit list of what it does *not* cover. This is unusual, and disproportionately credible in an audit conversation.
+5. **Policy simulation before enforcement.** New policy versions replay against real recorded traffic and report what would newly break, before anyone turns enforcement on.
+6. **Self-host by default, zero required egress.** The main SaaS governance platforms (Zenity, Credo AI, OneTrust) are SaaS-only. For a regulated buyer that can't send its traffic to a third party, this is a structural, not incremental, difference.
+7. **Governing correctness as part of governance, not as a separate eval product.** Silent-failure detection (a 6-signal ensemble that discriminates "confidently wrong" from "correctly abstained") lives in the same enforcement path as the security controls, not bolted on from a separate observability tool.
+
+Section 6 has the fuller competitive-landscape breakdown; the full audit is in [`docs/gap-analysis.md`](gap-analysis.md).
+
+## 4. Capability by capability: what it does, what we proved, what's real insight
+
+Each entry below follows the same shape: what the capability does and why it's there, how we know it works, and how it differs from what competitors offer.
+
+### 4.1 Prompt-injection & content-safety detection
+
+**What it does.** A three-layer detector — fast regex heuristics, a fine-tuned classifier ensemble, and local embedding-similarity matching against a curated attack corpus — screens every input, output, tool argument, tool result, and retrieved chunk for injection/jailbreak attempts.
+
+**Benchmarked — yes, most extensively of anything in this document.** Primary dataset [`deepset/prompt-injections`](https://huggingface.co/datasets/deepset/prompt-injections) (662 examples): held-out recall went from **0% → 66.7%** across four rounds of measured changes, at **100% precision held throughout** — zero false positives at every step. Generalization confirmed against four further independent, license-clean datasets the detectors were never tuned against (5,345 examples total: [`spml`](https://huggingface.co/datasets/reshabhs/SPML_Chatbot_Prompt_Injection), [`yanismiraoui`](https://huggingface.co/datasets/yanismiraoui/prompt_injections), [`notinject`](https://huggingface.co/datasets/leolee99/NotInject), [`trustairlab`](https://huggingface.co/datasets/TrustAIRLab/in-the-wild-jailbreak-prompts)): recall of 98.0–98.6% on two of them, with the honest cost disclosed on the other two (see below). Full methodology and every round: [`benchmarks/REPORT.md`](../benchmarks/REPORT.md).
+
+**Real insight this surfaced, reported honestly:** the classifier model swap that roughly doubled primary-benchmark recall (`protectai/deberta` → `leolee99/PIGuard`) also cut a dangerous over-defense problem by more than two-thirds — the old model flagged 42.2% of a dedicated benign-but-trigger-word-laden stress-test dataset as attacks; PIGuard alone cut that to 11.5%. But adding a secondary-model ensemble backstop to recover generalization recall on `spml`/`yanismiraoui` gave most of that over-defense fix back (false-positive rate rose to 41.3% on the same stress test). We shipped this as a disclosed, opt-out-able trade-off (`prompt_injection_classifier_secondary_model`), not a hidden cost — a deployment chooses which failure mode it fears more.
+
+**Vendor context, not our score:** [Lakera's PINT benchmark](https://github.com/lakeraai/pint-benchmark) reports named-vendor numbers (Lakera Guard 95.2%, AWS Bedrock Guardrails 89.2%, Azure Prompt Shield 89.1%) but its dataset was never public and the repo is now archived — we can't reproduce a PINT score, so we don't claim one. Not directly comparable to our own numbers (different dataset, self-reported); cited only so a reader has market context.
+
+### 4.2 Agent-runtime security — structural attacks a text scanner can't see
+
+**What it does and why it's different.** A stateless text scanner (LLM Guard and everything built on the same pattern) evaluates one string at a time, with no memory of the conversation and no visibility into tool-call structure. This is a real, useful control, but it has no axis at all for state, tool-call structure, or capability enforcement. We built and benchmarked four tiers specifically to cover what that architecture structurally cannot: multi-turn payload splitting, indirect injection via tool output, tool-parameter exploitation, and excessive-agency/privilege escalation.
+
+**Benchmarked — yes, against a real, independently-installed `llm-guard`, not an asserted comparison.**
+
+| Tier | What it tests | Nometria | LLM Guard |
+|---|---|---|---|
+| A — multi-turn / payload splitting | "Ignore all previous instructions" split across 3 separate API calls | 2/2 correct — none of the 3 fragments fires alone, only the assembled window | Flags all 3 fragments individually — not multi-turn awareness, just over-triggering |
+| B — indirect injection via tool output | 20 cases: hidden instructions, poisoned MCP tool descriptions | 100.0% recall / 66.7% precision | 90.0% recall / 81.8% precision |
+| C — tool-parameter exploitation | Wildcard scope, SQL fragments, path traversal in unnamed arguments | 10/10 correct | Cannot participate — scans text, not structured JSON |
+| D — excessive agency / privilege escalation | 6 scenarios against real shipped capability grants | 6/6 correct | Cannot participate — no capability model |
+
+Full methodology: [`benchmarks/agent_security/README.md`](../benchmarks/agent_security/README.md).
+
+**Real insight this surfaced:** a poisoned tool result that a follow-up tool call tries to act on is caught independent of whether the content-level detector fires on the poisoned text at all — the follow-up call is separately gated because its argument's *provenance* (tool output, not user input) triggers a human-oversight escalation on its own. This is the taint-tracking USP from Section 3 made concrete, not just asserted: a stateless scanner has no mechanism to gate a subsequent, separate tool call based on where an earlier piece of content came from.
+
+### 4.3 Destructive-action & blast-radius analysis (database and irreversible-action safety)
+
+**What it does and why it matters.** Deterministic parsing (not an LLM checking its own SQL) of generated database statements and tool calls — classifying operation type, targets, estimated affected rows, reversibility, and environment — with policy expressed on blast radius rather than argument values. This is the control aimed directly at incidents like the 1.9M-row production wipe named in Section 2. Live on the enforcement path (`guardrails/actions.py`, wired into `enforcement.py`): tautology-as-unbounded-`WHERE` detection, comment/stacked-statement evasion, environment binding, state-verification preconditions.
+
+**One mode still genuinely open:** composed privilege escalation — a read tool's output feeding a second tool's authorization boundary in a way neither tool alone permits. Nothing today tracks cross-tool data flow at the orchestration layer to catch this; it's named as a real, scoped gap, not rounded off.
+
+### 4.4 Entitlement & disclosure control
+
+**What it does and why it matters.** Propagates the actual end-user's identity through retrieval and tool calls, and checks that a response only contains what *that specific person* is entitled to see — not what the agent's own service identity can reach. This is the exact failure named in Section 2's Copilot incident: every permission check passing while the wrong human still sees everything. Real and live on the enforcement path (`entitlement.py`, `tenancy.py`), including cross-tenant isolation enforced structurally at the session level rather than per-query.
+
+### 4.5 Answerability & abstention
+
+**What it does.** A declared knowledge boundary per agent — which systems it can reach, what time range, which question types are answerable — with a pre-flight classifier that routes unanswerable questions to abstention *before* generation, rather than letting the model invent an answer.
+
+**Why this is a real gap in the market, not a manufactured one:** academic research (AbstentionBench, 35k+ unanswerable queries across 20 datasets) finds that reasoning fine-tuning often makes newer models *worse* at knowing when to say "I don't know" — this is getting worse, not better, as models improve on other axes. All 6 named failure modes are unit-tested and live on the enforcement path (`answerability.py`).
+
+### 4.6 Source authority & provenance
+
+**What it does.** Every retrieved chunk carries a source tier (system-of-record / approved / unverified / external), freshness, and owner — turning "the answer is grounded in the retrieved context" (a lab metric every RAG eval tool measures) into "the retrieved context was itself authoritative" (the question that actually matters to a business). Citation binding checks that a material claim maps to a chunk that actually supports it. Real, live (`provenance.py`), all 6 modes unit-tested.
+
+### 4.7 Escalation governance
+
+**What it does.** Per-agent escalation policy (conditions that must trigger human hand-off), counterfactual detection ("this should have escalated and didn't"), context-complete hand-off packages, and owner + SLA tracking on the resulting queue. This is the single largest category from Section 2's failure data (31.1%), and it went from zero coverage to a dedicated 821-line, unit-tested module this cycle. 6 of 7 named failure modes are unit-tested and live.
+
+### 4.8 Commitment, advice & liability (F6) — built, honestly flagged as not yet reachable
+
+**What it exists to do.** Detect binding commitments an agent shouldn't be able to make unilaterally (refunds, SLAs), flag unlicensed financial/medical/legal advice, check EU AI Act Art. 50 disclosure, and run a fairness probe for discriminatory screening outcomes.
+
+**Status, stated plainly:** the logic is real and individually unit-tested (`commitments.py`, `register.py`) — but **nothing in the live enforcement path calls it today.** A real production request gets zero benefit from any of it right now, despite the code being correct in isolation. We're naming this explicitly rather than letting "built and tested" imply "shipping" — see [`docs/gap-analysis.md`](gap-analysis.md) for the fuller pattern (several other modules share this status). Wiring it in is the single highest-leverage remaining fix in the whole product roadmap: it's routing, not invention.
+
+### 4.9 Numeric, temporal & entity integrity
+
+**What it does.** Verifies record matches against the actual system of record (catching hallucinated matches, the class of error behind real finance-reconciliation incidents), checks arithmetic/aggregation against the cited rows, and disambiguates fiscal-vs-calendar periods and units/currency. Live on the enforcement path (`integrity.py`), 5 of 7 named failure modes unit-tested.
+
+### 4.10 Audit chain, evidence packages, and compliance mapping
+
+**What it does.** A different kind of guarantee than the detectors above — not "did we catch the bad thing" but "can what happened be proven, tamper-evidently, to someone who doesn't trust us." A hash-chained audit log, a standalone stdlib-only verifier an auditor can run offline, evidence packages that exclude unreviewed compliance-framework mappings by construction, and control status computed from live telemetry rather than attested.
+
+**Verified adversarially, not just tested.** "Benchmark" isn't quite the right frame for an integrity guarantee; the equivalent rigor is adversarial — mutation, deletion, insertion/reorder, and checkpoint-forgery attempts, all independently detected, verified by extracting a real evidence package and running its verifier under a clean system Python, outside the repo entirely.
+
+### 4.11 Silent-failure / correctness detection
+
+**What it does.** The project's original flagship differentiator: a 6-signal ensemble that discriminates a confidently-wrong answer from a correctly-hedged one, aimed at the failure mode most of the rest of the market's tooling (and most of the "AI safety" conversation) treats as the whole problem. 8 unit tests cover the discrimination logic. Per Section 2's own data, this covers under 10% of real-world failure share — which is precisely why the roadmap put F1–F5 ahead of expanding this further.
+
+## 5. Competitive landscape — where Nometria sits
+
+Four camps exist in this market, and Nometria doesn't fit cleanly into any one of them — which is a fair way to describe both its opportunity and its risk:
+
+| Camp | Examples | Runtime enforcement | Compliance depth | What they have that we don't |
+|---|---|---|---|---|
+| Agent-security pure-plays | Zenity, Noma, Arthur, WitnessAI | Strong | Thin | Estate-scale discovery, adaptive red-team, market maturity |
+| Security suites | Palo Alto, Cisco AI Defense, Check Point+Lakera | Strong, network-integrated | Medium | Distribution, SOC integration |
+| AI governance platforms (Gartner MQ) | IBM, ServiceNow, Credo AI, OneTrust | Mostly none — Gartner's own finding | Deep | Workflow/assessment engines, analyst recognition, installed base |
+| Eval / observability | Braintrust, Arize, LangSmith | N/A | N/A | Eval UX depth, dataset tooling |
+
+Gartner's own read on the governance camp is that it largely lacks runtime enforcement, and the security camp largely lacks compliance depth. Nometria's bet is the combination — runtime enforcement *and* audit-grade compliance depth, in one product, self-hosted. The full gap register, including where we still fall short of category table stakes (estate-scale connectors, a general workflow engine, third-party certifications), is in [`docs/gap-analysis.md`](gap-analysis.md).
+
+## 6. Methodology discipline (the rules every number above follows)
+
+A capability counts as "benchmarked" in this document only if: it's scored against a public, licensed dataset (named and linked, or fetched by a re-runnable script); the scoring runs the real shipping code, not a reimplementation; per-example predictions are saved, not just an aggregate; and negative and inconclusive results are reported alongside positive ones (three appear in Section 4.1 alone).
+
+---
+
+## Appendix — source files
+
+- [`benchmarks/REPORT.md`](../benchmarks/REPORT.md) — full prompt-injection benchmark methodology, all six rounds.
+- [`benchmarks/agent_security/README.md`](../benchmarks/agent_security/README.md) — the four-tier agent-runtime-security suite, full methodology.
+- [`benchmarks/data_generalization/README.md`](../benchmarks/data_generalization/README.md) — the four generalization datasets: sources, licenses, and datasets considered and rejected.
+- [`docs/gap-analysis.md`](gap-analysis.md), [`docs/failure-modes.md`](failure-modes.md) — full capability-by-capability build status, including what's unit-tested vs. wired to the live request path vs. genuinely absent.

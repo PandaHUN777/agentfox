@@ -1,6 +1,6 @@
 # Appendix C — API Specification
 
-Companion to [PRD §11](PRD.md#11-api-surface). Principle **X-5**: the dashboard is a client of this API; there is no privileged back-channel. The CLI and SDK use the same surface.
+Companion to [the PRD](PRD.md)'s [§7 Architecture](PRD.md#7-architecture) and [§6 Integration surface](PRD.md#6-integration-surface). Principle **X-5**: the dashboard is a client of this API; there is no privileged back-channel. The CLI and SDK use the same surface.
 
 Base: `http://localhost:8080` (self-host default). All control-plane routes under `/api`. Inline enforcement routes under `/v1` so they are drop-in for provider SDKs.
 
