@@ -1,0 +1,2040 @@
+{
+  "dataset": "gretelai/synthetic_pii_finance_multilingual (test split)",
+  "rows": 5594,
+  "in_scope_gt_entity_types": [
+    "credit_card_number",
+    "date_of_birth",
+    "driver_license_number",
+    "email",
+    "first_name",
+    "iban",
+    "ipv4",
+    "ipv6",
+    "last_name",
+    "name",
+    "passport_number",
+    "phone_number",
+    "ssn"
+  ],
+  "out_of_scope_entity_types_seen": [
+    "account_pin",
+    "api_key",
+    "bank_routing_number",
+    "bban",
+    "company",
+    "credit_card_security_code",
+    "customer_id",
+    "date",
+    "date_time",
+    "employee_id",
+    "local_latlng",
+    "password",
+    "street_address",
+    "swift_bic_code",
+    "time",
+    "user_name"
+  ],
+  "results": [
+    {
+      "config": "pii.native",
+      "tp": 2463,
+      "fp": 3889,
+      "fn": 12017,
+      "precision": 0.3878,
+      "recall": 0.1701,
+      "f1": 0.2365,
+      "by_type": {
+        "PII.CREDIT_CARD": {
+          "tp": 54,
+          "fp": 123,
+          "fn": 66,
+          "precision": 0.3051,
+          "recall": 0.45,
+          "f1": 0.3636
+        },
+        "PII.DATE_OF_BIRTH": {
+          "tp": 123,
+          "fp": 1724,
+          "fn": 127,
+          "precision": 0.0666,
+          "recall": 0.492,
+          "f1": 0.1173
+        },
+        "PII.EMAIL": {
+          "tp": 1369,
+          "fp": 51,
+          "fn": 53,
+          "precision": 0.9641,
+          "recall": 0.9627,
+          "f1": 0.9634
+        },
+        "PII.IBAN": {
+          "tp": 166,
+          "fp": 323,
+          "fn": 37,
+          "precision": 0.3395,
+          "recall": 0.8177,
+          "f1": 0.4798
+        },
+        "PII.IP_ADDRESS": {
+          "tp": 159,
+          "fp": 0,
+          "fn": 139,
+          "precision": 1.0,
+          "recall": 0.5336,
+          "f1": 0.6958
+        },
+        "PII.PERSON": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 10812,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PII.US_DRIVER_LICENSE": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 140,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PII.US_PASSPORT": {
+          "tp": 66,
+          "fp": 35,
+          "fn": 70,
+          "precision": 0.6535,
+          "recall": 0.4853,
+          "f1": 0.557
+        },
+        "PII.US_PHONE": {
+          "tp": 442,
+          "fp": 1630,
+          "fn": 504,
+          "precision": 0.2133,
+          "recall": 0.4672,
+          "f1": 0.2929
+        },
+        "PII.US_SSN": {
+          "tp": 84,
+          "fp": 3,
+          "fn": 69,
+          "precision": 0.9655,
+          "recall": 0.549,
+          "f1": 0.7
+        }
+      },
+      "by_language": {
+        "Dutch": {
+          "PII.CREDIT_CARD": {
+            "tp": 1,
+            "fp": 5,
+            "fn": 5,
+            "precision": 0.1667,
+            "recall": 0.1667,
+            "f1": 0.1667
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 2,
+            "fp": 251,
+            "fn": 3,
+            "precision": 0.0079,
+            "recall": 0.4,
+            "f1": 0.0155
+          },
+          "PII.EMAIL": {
+            "tp": 84,
+            "fp": 4,
+            "fn": 3,
+            "precision": 0.9545,
+            "recall": 0.9655,
+            "f1": 0.96
+          },
+          "PII.IBAN": {
+            "tp": 16,
+            "fp": 45,
+            "fn": 4,
+            "precision": 0.2623,
+            "recall": 0.8,
+            "f1": 0.3951
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 19,
+            "fp": 0,
+            "fn": 15,
+            "precision": 1.0,
+            "recall": 0.5588,
+            "f1": 0.717
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1313,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 7,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_PASSPORT": {
+            "tp": 5,
+            "fp": 1,
+            "fn": 0,
+            "precision": 0.8333,
+            "recall": 1.0,
+            "f1": 0.9091
+          },
+          "PII.US_PHONE": {
+            "tp": 14,
+            "fp": 120,
+            "fn": 55,
+            "precision": 0.1045,
+            "recall": 0.2029,
+            "f1": 0.1379
+          },
+          "PII.US_SSN": {
+            "tp": 5,
+            "fp": 0,
+            "fn": 6,
+            "precision": 1.0,
+            "recall": 0.4545,
+            "f1": 0.625
+          }
+        },
+        "English": {
+          "PII.CREDIT_CARD": {
+            "tp": 36,
+            "fp": 73,
+            "fn": 40,
+            "precision": 0.3303,
+            "recall": 0.4737,
+            "f1": 0.3892
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 75,
+            "fp": 824,
+            "fn": 68,
+            "precision": 0.0834,
+            "recall": 0.5245,
+            "f1": 0.144
+          },
+          "PII.EMAIL": {
+            "tp": 817,
+            "fp": 26,
+            "fn": 25,
+            "precision": 0.9692,
+            "recall": 0.9703,
+            "f1": 0.9697
+          },
+          "PII.IBAN": {
+            "tp": 95,
+            "fp": 55,
+            "fn": 3,
+            "precision": 0.6333,
+            "recall": 0.9694,
+            "f1": 0.7661
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 75,
+            "fp": 0,
+            "fn": 82,
+            "precision": 1.0,
+            "recall": 0.4777,
+            "f1": 0.6466
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 4588,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 72,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_PASSPORT": {
+            "tp": 32,
+            "fp": 17,
+            "fn": 45,
+            "precision": 0.6531,
+            "recall": 0.4156,
+            "f1": 0.5079
+          },
+          "PII.US_PHONE": {
+            "tp": 383,
+            "fp": 752,
+            "fn": 149,
+            "precision": 0.3374,
+            "recall": 0.7199,
+            "f1": 0.4595
+          },
+          "PII.US_SSN": {
+            "tp": 66,
+            "fp": 1,
+            "fn": 10,
+            "precision": 0.9851,
+            "recall": 0.8684,
+            "f1": 0.9231
+          }
+        },
+        "France": {
+          "PII.CREDIT_CARD": {
+            "tp": 0,
+            "fp": 28,
+            "fn": 4,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 12,
+            "fp": 162,
+            "fn": 3,
+            "precision": 0.069,
+            "recall": 0.8,
+            "f1": 0.127
+          },
+          "PII.EMAIL": {
+            "tp": 110,
+            "fp": 13,
+            "fn": 5,
+            "precision": 0.8943,
+            "recall": 0.9565,
+            "f1": 0.9244
+          },
+          "PII.IBAN": {
+            "tp": 6,
+            "fp": 56,
+            "fn": 5,
+            "precision": 0.0968,
+            "recall": 0.5455,
+            "f1": 0.1644
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 11,
+            "fp": 0,
+            "fn": 12,
+            "precision": 1.0,
+            "recall": 0.4783,
+            "f1": 0.6471
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 716,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 6,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_PASSPORT": {
+            "tp": 5,
+            "fp": 1,
+            "fn": 5,
+            "precision": 0.8333,
+            "recall": 0.5,
+            "f1": 0.625
+          },
+          "PII.US_PHONE": {
+            "tp": 6,
+            "fp": 164,
+            "fn": 81,
+            "precision": 0.0353,
+            "recall": 0.069,
+            "f1": 0.0467
+          },
+          "PII.US_SSN": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 9,
+            "precision": 1.0,
+            "recall": 0.25,
+            "f1": 0.4
+          }
+        },
+        "German": {
+          "PII.CREDIT_CARD": {
+            "tp": 0,
+            "fp": 9,
+            "fn": 4,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 0,
+            "fp": 6,
+            "fn": 25,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.EMAIL": {
+            "tp": 83,
+            "fp": 0,
+            "fn": 3,
+            "precision": 1.0,
+            "recall": 0.9651,
+            "f1": 0.9822
+          },
+          "PII.IBAN": {
+            "tp": 10,
+            "fp": 35,
+            "fn": 16,
+            "precision": 0.2222,
+            "recall": 0.3846,
+            "f1": 0.2817
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 13,
+            "fp": 0,
+            "fn": 7,
+            "precision": 1.0,
+            "recall": 0.65,
+            "f1": 0.7879
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1091,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 16,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_PASSPORT": {
+            "tp": 9,
+            "fp": 8,
+            "fn": 4,
+            "precision": 0.5294,
+            "recall": 0.6923,
+            "f1": 0.6
+          },
+          "PII.US_PHONE": {
+            "tp": 7,
+            "fp": 114,
+            "fn": 42,
+            "precision": 0.0579,
+            "recall": 0.1429,
+            "f1": 0.0824
+          },
+          "PII.US_SSN": {
+            "tp": 5,
+            "fp": 0,
+            "fn": 11,
+            "precision": 1.0,
+            "recall": 0.3125,
+            "f1": 0.4762
+          }
+        },
+        "Italian": {
+          "PII.CREDIT_CARD": {
+            "tp": 8,
+            "fp": 2,
+            "fn": 6,
+            "precision": 0.8,
+            "recall": 0.5714,
+            "f1": 0.6667
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 20,
+            "fp": 239,
+            "fn": 10,
+            "precision": 0.0772,
+            "recall": 0.6667,
+            "f1": 0.1384
+          },
+          "PII.EMAIL": {
+            "tp": 76,
+            "fp": 7,
+            "fn": 3,
+            "precision": 0.9157,
+            "recall": 0.962,
+            "f1": 0.9383
+          },
+          "PII.IBAN": {
+            "tp": 23,
+            "fp": 82,
+            "fn": 2,
+            "precision": 0.219,
+            "recall": 0.92,
+            "f1": 0.3538
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 17,
+            "fp": 0,
+            "fn": 3,
+            "precision": 1.0,
+            "recall": 0.85,
+            "f1": 0.9189
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 940,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 11,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_PASSPORT": {
+            "tp": 5,
+            "fp": 2,
+            "fn": 5,
+            "precision": 0.7143,
+            "recall": 0.5,
+            "f1": 0.5882
+          },
+          "PII.US_PHONE": {
+            "tp": 14,
+            "fp": 141,
+            "fn": 49,
+            "precision": 0.0903,
+            "recall": 0.2222,
+            "f1": 0.1284
+          },
+          "PII.US_SSN": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 20,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          }
+        },
+        "Spanish": {
+          "PII.CREDIT_CARD": {
+            "tp": 7,
+            "fp": 1,
+            "fn": 6,
+            "precision": 0.875,
+            "recall": 0.5385,
+            "f1": 0.6667
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 9,
+            "fp": 188,
+            "fn": 10,
+            "precision": 0.0457,
+            "recall": 0.4737,
+            "f1": 0.0833
+          },
+          "PII.EMAIL": {
+            "tp": 84,
+            "fp": 0,
+            "fn": 7,
+            "precision": 1.0,
+            "recall": 0.9231,
+            "f1": 0.96
+          },
+          "PII.IBAN": {
+            "tp": 5,
+            "fp": 30,
+            "fn": 6,
+            "precision": 0.1429,
+            "recall": 0.4545,
+            "f1": 0.2174
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 9,
+            "fp": 0,
+            "fn": 10,
+            "precision": 1.0,
+            "recall": 0.4737,
+            "f1": 0.6429
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1025,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 13,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_PASSPORT": {
+            "tp": 2,
+            "fp": 3,
+            "fn": 7,
+            "precision": 0.4,
+            "recall": 0.2222,
+            "f1": 0.2857
+          },
+          "PII.US_PHONE": {
+            "tp": 12,
+            "fp": 181,
+            "fn": 59,
+            "precision": 0.0622,
+            "recall": 0.169,
+            "f1": 0.0909
+          },
+          "PII.US_SSN": {
+            "tp": 3,
+            "fp": 0,
+            "fn": 6,
+            "precision": 1.0,
+            "recall": 0.3333,
+            "f1": 0.5
+          }
+        },
+        "Swedish": {
+          "PII.CREDIT_CARD": {
+            "tp": 2,
+            "fp": 5,
+            "fn": 1,
+            "precision": 0.2857,
+            "recall": 0.6667,
+            "f1": 0.4
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 5,
+            "fp": 54,
+            "fn": 8,
+            "precision": 0.0847,
+            "recall": 0.3846,
+            "f1": 0.1389
+          },
+          "PII.EMAIL": {
+            "tp": 115,
+            "fp": 1,
+            "fn": 7,
+            "precision": 0.9914,
+            "recall": 0.9426,
+            "f1": 0.9664
+          },
+          "PII.IBAN": {
+            "tp": 11,
+            "fp": 20,
+            "fn": 1,
+            "precision": 0.3548,
+            "recall": 0.9167,
+            "f1": 0.5116
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 15,
+            "fp": 0,
+            "fn": 10,
+            "precision": 1.0,
+            "recall": 0.6,
+            "f1": 0.75
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1139,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 15,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_PASSPORT": {
+            "tp": 8,
+            "fp": 3,
+            "fn": 4,
+            "precision": 0.7273,
+            "recall": 0.6667,
+            "f1": 0.6957
+          },
+          "PII.US_PHONE": {
+            "tp": 6,
+            "fp": 158,
+            "fn": 69,
+            "precision": 0.0366,
+            "recall": 0.08,
+            "f1": 0.0502
+          },
+          "PII.US_SSN": {
+            "tp": 2,
+            "fp": 2,
+            "fn": 7,
+            "precision": 0.5,
+            "recall": 0.2222,
+            "f1": 0.3077
+          }
+        }
+      }
+    },
+    {
+      "config": "pii.presidio.default",
+      "tp": 2883,
+      "fp": 16071,
+      "fn": 11597,
+      "precision": 0.1521,
+      "recall": 0.1991,
+      "f1": 0.1725,
+      "by_type": {
+        "PII.CREDIT_CARD": {
+          "tp": 45,
+          "fp": 14,
+          "fn": 75,
+          "precision": 0.7627,
+          "recall": 0.375,
+          "f1": 0.5028
+        },
+        "PII.DATE_OF_BIRTH": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 250,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PII.EMAIL": {
+          "tp": 1360,
+          "fp": 51,
+          "fn": 62,
+          "precision": 0.9639,
+          "recall": 0.9564,
+          "f1": 0.9601
+        },
+        "PII.IBAN": {
+          "tp": 151,
+          "fp": 5,
+          "fn": 52,
+          "precision": 0.9679,
+          "recall": 0.7438,
+          "f1": 0.8412
+        },
+        "PII.IP_ADDRESS": {
+          "tp": 268,
+          "fp": 27,
+          "fn": 30,
+          "precision": 0.9085,
+          "recall": 0.8993,
+          "f1": 0.9039
+        },
+        "PII.PERSON": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 10812,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PII.US_DRIVER_LICENSE": {
+          "tp": 107,
+          "fp": 12073,
+          "fn": 33,
+          "precision": 0.0088,
+          "recall": 0.7643,
+          "f1": 0.0174
+        },
+        "PII.US_PASSPORT": {
+          "tp": 132,
+          "fp": 1105,
+          "fn": 4,
+          "precision": 0.1067,
+          "recall": 0.9706,
+          "f1": 0.1923
+        },
+        "PII.US_PHONE": {
+          "tp": 744,
+          "fp": 2343,
+          "fn": 202,
+          "precision": 0.241,
+          "recall": 0.7865,
+          "f1": 0.369
+        },
+        "PII.US_SSN": {
+          "tp": 76,
+          "fp": 453,
+          "fn": 77,
+          "precision": 0.1437,
+          "recall": 0.4967,
+          "f1": 0.2229
+        }
+      },
+      "by_language": {
+        "Dutch": {
+          "PII.CREDIT_CARD": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 5,
+            "precision": 1.0,
+            "recall": 0.1667,
+            "f1": 0.2857
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 5,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.EMAIL": {
+            "tp": 84,
+            "fp": 4,
+            "fn": 3,
+            "precision": 0.9545,
+            "recall": 0.9655,
+            "f1": 0.96
+          },
+          "PII.IBAN": {
+            "tp": 14,
+            "fp": 0,
+            "fn": 6,
+            "precision": 1.0,
+            "recall": 0.7,
+            "f1": 0.8235
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 32,
+            "fp": 0,
+            "fn": 2,
+            "precision": 1.0,
+            "recall": 0.9412,
+            "f1": 0.9697
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1313,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 5,
+            "fp": 1050,
+            "fn": 2,
+            "precision": 0.0047,
+            "recall": 0.7143,
+            "f1": 0.0094
+          },
+          "PII.US_PASSPORT": {
+            "tp": 5,
+            "fp": 75,
+            "fn": 0,
+            "precision": 0.0625,
+            "recall": 1.0,
+            "f1": 0.1176
+          },
+          "PII.US_PHONE": {
+            "tp": 54,
+            "fp": 191,
+            "fn": 15,
+            "precision": 0.2204,
+            "recall": 0.7826,
+            "f1": 0.3439
+          },
+          "PII.US_SSN": {
+            "tp": 6,
+            "fp": 19,
+            "fn": 5,
+            "precision": 0.24,
+            "recall": 0.5455,
+            "f1": 0.3333
+          }
+        },
+        "English": {
+          "PII.CREDIT_CARD": {
+            "tp": 28,
+            "fp": 11,
+            "fn": 48,
+            "precision": 0.7179,
+            "recall": 0.3684,
+            "f1": 0.487
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 143,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.EMAIL": {
+            "tp": 809,
+            "fp": 26,
+            "fn": 33,
+            "precision": 0.9689,
+            "recall": 0.9608,
+            "f1": 0.9648
+          },
+          "PII.IBAN": {
+            "tp": 92,
+            "fp": 1,
+            "fn": 6,
+            "precision": 0.9892,
+            "recall": 0.9388,
+            "f1": 0.9634
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 133,
+            "fp": 23,
+            "fn": 24,
+            "precision": 0.8526,
+            "recall": 0.8471,
+            "f1": 0.8498
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 4588,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 56,
+            "fp": 6397,
+            "fn": 16,
+            "precision": 0.0087,
+            "recall": 0.7778,
+            "f1": 0.0172
+          },
+          "PII.US_PASSPORT": {
+            "tp": 76,
+            "fp": 656,
+            "fn": 1,
+            "precision": 0.1038,
+            "recall": 0.987,
+            "f1": 0.1879
+          },
+          "PII.US_PHONE": {
+            "tp": 408,
+            "fp": 1086,
+            "fn": 124,
+            "precision": 0.2731,
+            "recall": 0.7669,
+            "f1": 0.4028
+          },
+          "PII.US_SSN": {
+            "tp": 51,
+            "fp": 280,
+            "fn": 25,
+            "precision": 0.1541,
+            "recall": 0.6711,
+            "f1": 0.2506
+          }
+        },
+        "France": {
+          "PII.CREDIT_CARD": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 4,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 15,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.EMAIL": {
+            "tp": 110,
+            "fp": 13,
+            "fn": 5,
+            "precision": 0.8943,
+            "recall": 0.9565,
+            "f1": 0.9244
+          },
+          "PII.IBAN": {
+            "tp": 6,
+            "fp": 1,
+            "fn": 5,
+            "precision": 0.8571,
+            "recall": 0.5455,
+            "f1": 0.6667
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 23,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 716,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 2,
+            "fp": 982,
+            "fn": 4,
+            "precision": 0.002,
+            "recall": 0.3333,
+            "f1": 0.004
+          },
+          "PII.US_PASSPORT": {
+            "tp": 10,
+            "fp": 83,
+            "fn": 0,
+            "precision": 0.1075,
+            "recall": 1.0,
+            "f1": 0.1942
+          },
+          "PII.US_PHONE": {
+            "tp": 81,
+            "fp": 218,
+            "fn": 6,
+            "precision": 0.2709,
+            "recall": 0.931,
+            "f1": 0.4197
+          },
+          "PII.US_SSN": {
+            "tp": 4,
+            "fp": 31,
+            "fn": 8,
+            "precision": 0.1143,
+            "recall": 0.3333,
+            "f1": 0.1702
+          }
+        },
+        "German": {
+          "PII.CREDIT_CARD": {
+            "tp": 0,
+            "fp": 1,
+            "fn": 4,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 25,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.EMAIL": {
+            "tp": 82,
+            "fp": 0,
+            "fn": 4,
+            "precision": 1.0,
+            "recall": 0.9535,
+            "f1": 0.9762
+          },
+          "PII.IBAN": {
+            "tp": 9,
+            "fp": 2,
+            "fn": 17,
+            "precision": 0.8182,
+            "recall": 0.3462,
+            "f1": 0.4865
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 20,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1091,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 14,
+            "fp": 811,
+            "fn": 2,
+            "precision": 0.017,
+            "recall": 0.875,
+            "f1": 0.0333
+          },
+          "PII.US_PASSPORT": {
+            "tp": 13,
+            "fp": 70,
+            "fn": 0,
+            "precision": 0.1566,
+            "recall": 1.0,
+            "f1": 0.2708
+          },
+          "PII.US_PHONE": {
+            "tp": 36,
+            "fp": 210,
+            "fn": 13,
+            "precision": 0.1463,
+            "recall": 0.7347,
+            "f1": 0.2441
+          },
+          "PII.US_SSN": {
+            "tp": 8,
+            "fp": 28,
+            "fn": 8,
+            "precision": 0.2222,
+            "recall": 0.5,
+            "f1": 0.3077
+          }
+        },
+        "Italian": {
+          "PII.CREDIT_CARD": {
+            "tp": 8,
+            "fp": 0,
+            "fn": 6,
+            "precision": 1.0,
+            "recall": 0.5714,
+            "f1": 0.7273
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 30,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.EMAIL": {
+            "tp": 76,
+            "fp": 7,
+            "fn": 3,
+            "precision": 0.9157,
+            "recall": 0.962,
+            "f1": 0.9383
+          },
+          "PII.IBAN": {
+            "tp": 14,
+            "fp": 1,
+            "fn": 11,
+            "precision": 0.9333,
+            "recall": 0.56,
+            "f1": 0.7
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 19,
+            "fp": 1,
+            "fn": 1,
+            "precision": 0.95,
+            "recall": 0.95,
+            "f1": 0.95
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 940,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 11,
+            "fp": 970,
+            "fn": 0,
+            "precision": 0.0112,
+            "recall": 1.0,
+            "f1": 0.0222
+          },
+          "PII.US_PASSPORT": {
+            "tp": 10,
+            "fp": 69,
+            "fn": 0,
+            "precision": 0.1266,
+            "recall": 1.0,
+            "f1": 0.2247
+          },
+          "PII.US_PHONE": {
+            "tp": 59,
+            "fp": 214,
+            "fn": 4,
+            "precision": 0.2161,
+            "recall": 0.9365,
+            "f1": 0.3512
+          },
+          "PII.US_SSN": {
+            "tp": 1,
+            "fp": 33,
+            "fn": 19,
+            "precision": 0.0294,
+            "recall": 0.05,
+            "f1": 0.037
+          }
+        },
+        "Spanish": {
+          "PII.CREDIT_CARD": {
+            "tp": 6,
+            "fp": 1,
+            "fn": 7,
+            "precision": 0.8571,
+            "recall": 0.4615,
+            "f1": 0.6
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 19,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.EMAIL": {
+            "tp": 84,
+            "fp": 0,
+            "fn": 7,
+            "precision": 1.0,
+            "recall": 0.9231,
+            "f1": 0.96
+          },
+          "PII.IBAN": {
+            "tp": 5,
+            "fp": 0,
+            "fn": 6,
+            "precision": 1.0,
+            "recall": 0.4545,
+            "f1": 0.625
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 18,
+            "fp": 3,
+            "fn": 1,
+            "precision": 0.8571,
+            "recall": 0.9474,
+            "f1": 0.9
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1025,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 10,
+            "fp": 905,
+            "fn": 3,
+            "precision": 0.0109,
+            "recall": 0.7692,
+            "f1": 0.0216
+          },
+          "PII.US_PASSPORT": {
+            "tp": 7,
+            "fp": 74,
+            "fn": 2,
+            "precision": 0.0864,
+            "recall": 0.7778,
+            "f1": 0.1556
+          },
+          "PII.US_PHONE": {
+            "tp": 55,
+            "fp": 223,
+            "fn": 16,
+            "precision": 0.1978,
+            "recall": 0.7746,
+            "f1": 0.3152
+          },
+          "PII.US_SSN": {
+            "tp": 3,
+            "fp": 20,
+            "fn": 6,
+            "precision": 0.1304,
+            "recall": 0.3333,
+            "f1": 0.1875
+          }
+        },
+        "Swedish": {
+          "PII.CREDIT_CARD": {
+            "tp": 2,
+            "fp": 1,
+            "fn": 1,
+            "precision": 0.6667,
+            "recall": 0.6667,
+            "f1": 0.6667
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 13,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.EMAIL": {
+            "tp": 115,
+            "fp": 1,
+            "fn": 7,
+            "precision": 0.9914,
+            "recall": 0.9426,
+            "f1": 0.9664
+          },
+          "PII.IBAN": {
+            "tp": 11,
+            "fp": 0,
+            "fn": 1,
+            "precision": 1.0,
+            "recall": 0.9167,
+            "f1": 0.9565
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 23,
+            "fp": 0,
+            "fn": 2,
+            "precision": 1.0,
+            "recall": 0.92,
+            "f1": 0.9583
+          },
+          "PII.PERSON": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 1139,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 9,
+            "fp": 958,
+            "fn": 6,
+            "precision": 0.0093,
+            "recall": 0.6,
+            "f1": 0.0183
+          },
+          "PII.US_PASSPORT": {
+            "tp": 11,
+            "fp": 78,
+            "fn": 1,
+            "precision": 0.1236,
+            "recall": 0.9167,
+            "f1": 0.2178
+          },
+          "PII.US_PHONE": {
+            "tp": 51,
+            "fp": 201,
+            "fn": 24,
+            "precision": 0.2024,
+            "recall": 0.68,
+            "f1": 0.3119
+          },
+          "PII.US_SSN": {
+            "tp": 3,
+            "fp": 42,
+            "fn": 6,
+            "precision": 0.0667,
+            "recall": 0.3333,
+            "f1": 0.1111
+          }
+        }
+      }
+    },
+    {
+      "config": "pii.presidio.full",
+      "tp": 10151,
+      "fp": 51981,
+      "fn": 4329,
+      "precision": 0.1634,
+      "recall": 0.701,
+      "f1": 0.265,
+      "by_type": {
+        "PII.CREDIT_CARD": {
+          "tp": 45,
+          "fp": 14,
+          "fn": 75,
+          "precision": 0.7627,
+          "recall": 0.375,
+          "f1": 0.5028
+        },
+        "PII.DATE_OF_BIRTH": {
+          "tp": 223,
+          "fp": 13889,
+          "fn": 27,
+          "precision": 0.0158,
+          "recall": 0.892,
+          "f1": 0.0311
+        },
+        "PII.EMAIL": {
+          "tp": 1360,
+          "fp": 51,
+          "fn": 62,
+          "precision": 0.9639,
+          "recall": 0.9564,
+          "f1": 0.9601
+        },
+        "PII.IBAN": {
+          "tp": 151,
+          "fp": 5,
+          "fn": 52,
+          "precision": 0.9679,
+          "recall": 0.7438,
+          "f1": 0.8412
+        },
+        "PII.IP_ADDRESS": {
+          "tp": 268,
+          "fp": 27,
+          "fn": 30,
+          "precision": 0.9085,
+          "recall": 0.8993,
+          "f1": 0.9039
+        },
+        "PII.PERSON": {
+          "tp": 7045,
+          "fp": 22021,
+          "fn": 3767,
+          "precision": 0.2424,
+          "recall": 0.6516,
+          "f1": 0.3533
+        },
+        "PII.US_DRIVER_LICENSE": {
+          "tp": 107,
+          "fp": 12073,
+          "fn": 33,
+          "precision": 0.0088,
+          "recall": 0.7643,
+          "f1": 0.0174
+        },
+        "PII.US_PASSPORT": {
+          "tp": 132,
+          "fp": 1105,
+          "fn": 4,
+          "precision": 0.1067,
+          "recall": 0.9706,
+          "f1": 0.1923
+        },
+        "PII.US_PHONE": {
+          "tp": 744,
+          "fp": 2343,
+          "fn": 202,
+          "precision": 0.241,
+          "recall": 0.7865,
+          "f1": 0.369
+        },
+        "PII.US_SSN": {
+          "tp": 76,
+          "fp": 453,
+          "fn": 77,
+          "precision": 0.1437,
+          "recall": 0.4967,
+          "f1": 0.2229
+        }
+      },
+      "by_language": {
+        "Dutch": {
+          "PII.CREDIT_CARD": {
+            "tp": 1,
+            "fp": 0,
+            "fn": 5,
+            "precision": 1.0,
+            "recall": 0.1667,
+            "f1": 0.2857
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 5,
+            "fp": 897,
+            "fn": 0,
+            "precision": 0.0055,
+            "recall": 1.0,
+            "f1": 0.011
+          },
+          "PII.EMAIL": {
+            "tp": 84,
+            "fp": 4,
+            "fn": 3,
+            "precision": 0.9545,
+            "recall": 0.9655,
+            "f1": 0.96
+          },
+          "PII.IBAN": {
+            "tp": 14,
+            "fp": 0,
+            "fn": 6,
+            "precision": 1.0,
+            "recall": 0.7,
+            "f1": 0.8235
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 32,
+            "fp": 0,
+            "fn": 2,
+            "precision": 1.0,
+            "recall": 0.9412,
+            "f1": 0.9697
+          },
+          "PII.PERSON": {
+            "tp": 751,
+            "fp": 3433,
+            "fn": 562,
+            "precision": 0.1795,
+            "recall": 0.572,
+            "f1": 0.2732
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 5,
+            "fp": 1050,
+            "fn": 2,
+            "precision": 0.0047,
+            "recall": 0.7143,
+            "f1": 0.0094
+          },
+          "PII.US_PASSPORT": {
+            "tp": 5,
+            "fp": 75,
+            "fn": 0,
+            "precision": 0.0625,
+            "recall": 1.0,
+            "f1": 0.1176
+          },
+          "PII.US_PHONE": {
+            "tp": 54,
+            "fp": 191,
+            "fn": 15,
+            "precision": 0.2204,
+            "recall": 0.7826,
+            "f1": 0.3439
+          },
+          "PII.US_SSN": {
+            "tp": 6,
+            "fp": 19,
+            "fn": 5,
+            "precision": 0.24,
+            "recall": 0.5455,
+            "f1": 0.3333
+          }
+        },
+        "English": {
+          "PII.CREDIT_CARD": {
+            "tp": 28,
+            "fp": 11,
+            "fn": 48,
+            "precision": 0.7179,
+            "recall": 0.3684,
+            "f1": 0.487
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 133,
+            "fp": 8978,
+            "fn": 10,
+            "precision": 0.0146,
+            "recall": 0.9301,
+            "f1": 0.0287
+          },
+          "PII.EMAIL": {
+            "tp": 809,
+            "fp": 26,
+            "fn": 33,
+            "precision": 0.9689,
+            "recall": 0.9608,
+            "f1": 0.9648
+          },
+          "PII.IBAN": {
+            "tp": 92,
+            "fp": 1,
+            "fn": 6,
+            "precision": 0.9892,
+            "recall": 0.9388,
+            "f1": 0.9634
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 133,
+            "fp": 23,
+            "fn": 24,
+            "precision": 0.8526,
+            "recall": 0.8471,
+            "f1": 0.8498
+          },
+          "PII.PERSON": {
+            "tp": 3408,
+            "fp": 3313,
+            "fn": 1180,
+            "precision": 0.5071,
+            "recall": 0.7428,
+            "f1": 0.6027
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 56,
+            "fp": 6397,
+            "fn": 16,
+            "precision": 0.0087,
+            "recall": 0.7778,
+            "f1": 0.0172
+          },
+          "PII.US_PASSPORT": {
+            "tp": 76,
+            "fp": 656,
+            "fn": 1,
+            "precision": 0.1038,
+            "recall": 0.987,
+            "f1": 0.1879
+          },
+          "PII.US_PHONE": {
+            "tp": 408,
+            "fp": 1086,
+            "fn": 124,
+            "precision": 0.2731,
+            "recall": 0.7669,
+            "f1": 0.4028
+          },
+          "PII.US_SSN": {
+            "tp": 51,
+            "fp": 280,
+            "fn": 25,
+            "precision": 0.1541,
+            "recall": 0.6711,
+            "f1": 0.2506
+          }
+        },
+        "France": {
+          "PII.CREDIT_CARD": {
+            "tp": 0,
+            "fp": 0,
+            "fn": 4,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 13,
+            "fp": 699,
+            "fn": 2,
+            "precision": 0.0183,
+            "recall": 0.8667,
+            "f1": 0.0358
+          },
+          "PII.EMAIL": {
+            "tp": 110,
+            "fp": 13,
+            "fn": 5,
+            "precision": 0.8943,
+            "recall": 0.9565,
+            "f1": 0.9244
+          },
+          "PII.IBAN": {
+            "tp": 6,
+            "fp": 1,
+            "fn": 5,
+            "precision": 0.8571,
+            "recall": 0.5455,
+            "f1": 0.6667
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 23,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "PII.PERSON": {
+            "tp": 403,
+            "fp": 1373,
+            "fn": 313,
+            "precision": 0.2269,
+            "recall": 0.5628,
+            "f1": 0.3234
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 2,
+            "fp": 982,
+            "fn": 4,
+            "precision": 0.002,
+            "recall": 0.3333,
+            "f1": 0.004
+          },
+          "PII.US_PASSPORT": {
+            "tp": 10,
+            "fp": 83,
+            "fn": 0,
+            "precision": 0.1075,
+            "recall": 1.0,
+            "f1": 0.1942
+          },
+          "PII.US_PHONE": {
+            "tp": 81,
+            "fp": 218,
+            "fn": 6,
+            "precision": 0.2709,
+            "recall": 0.931,
+            "f1": 0.4197
+          },
+          "PII.US_SSN": {
+            "tp": 4,
+            "fp": 31,
+            "fn": 8,
+            "precision": 0.1143,
+            "recall": 0.3333,
+            "f1": 0.1702
+          }
+        },
+        "German": {
+          "PII.CREDIT_CARD": {
+            "tp": 0,
+            "fp": 1,
+            "fn": 4,
+            "precision": 0.0,
+            "recall": 0.0,
+            "f1": 0.0
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 23,
+            "fp": 1064,
+            "fn": 2,
+            "precision": 0.0212,
+            "recall": 0.92,
+            "f1": 0.0414
+          },
+          "PII.EMAIL": {
+            "tp": 82,
+            "fp": 0,
+            "fn": 4,
+            "precision": 1.0,
+            "recall": 0.9535,
+            "f1": 0.9762
+          },
+          "PII.IBAN": {
+            "tp": 9,
+            "fp": 2,
+            "fn": 17,
+            "precision": 0.8182,
+            "recall": 0.3462,
+            "f1": 0.4865
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 20,
+            "fp": 0,
+            "fn": 0,
+            "precision": 1.0,
+            "recall": 1.0,
+            "f1": 1.0
+          },
+          "PII.PERSON": {
+            "tp": 730,
+            "fp": 4747,
+            "fn": 361,
+            "precision": 0.1333,
+            "recall": 0.6691,
+            "f1": 0.2223
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 14,
+            "fp": 811,
+            "fn": 2,
+            "precision": 0.017,
+            "recall": 0.875,
+            "f1": 0.0333
+          },
+          "PII.US_PASSPORT": {
+            "tp": 13,
+            "fp": 70,
+            "fn": 0,
+            "precision": 0.1566,
+            "recall": 1.0,
+            "f1": 0.2708
+          },
+          "PII.US_PHONE": {
+            "tp": 36,
+            "fp": 210,
+            "fn": 13,
+            "precision": 0.1463,
+            "recall": 0.7347,
+            "f1": 0.2441
+          },
+          "PII.US_SSN": {
+            "tp": 8,
+            "fp": 28,
+            "fn": 8,
+            "precision": 0.2222,
+            "recall": 0.5,
+            "f1": 0.3077
+          }
+        },
+        "Italian": {
+          "PII.CREDIT_CARD": {
+            "tp": 8,
+            "fp": 0,
+            "fn": 6,
+            "precision": 1.0,
+            "recall": 0.5714,
+            "f1": 0.7273
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 23,
+            "fp": 748,
+            "fn": 7,
+            "precision": 0.0298,
+            "recall": 0.7667,
+            "f1": 0.0574
+          },
+          "PII.EMAIL": {
+            "tp": 76,
+            "fp": 7,
+            "fn": 3,
+            "precision": 0.9157,
+            "recall": 0.962,
+            "f1": 0.9383
+          },
+          "PII.IBAN": {
+            "tp": 14,
+            "fp": 1,
+            "fn": 11,
+            "precision": 0.9333,
+            "recall": 0.56,
+            "f1": 0.7
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 19,
+            "fp": 1,
+            "fn": 1,
+            "precision": 0.95,
+            "recall": 0.95,
+            "f1": 0.95
+          },
+          "PII.PERSON": {
+            "tp": 596,
+            "fp": 3518,
+            "fn": 344,
+            "precision": 0.1449,
+            "recall": 0.634,
+            "f1": 0.2359
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 11,
+            "fp": 970,
+            "fn": 0,
+            "precision": 0.0112,
+            "recall": 1.0,
+            "f1": 0.0222
+          },
+          "PII.US_PASSPORT": {
+            "tp": 10,
+            "fp": 69,
+            "fn": 0,
+            "precision": 0.1266,
+            "recall": 1.0,
+            "f1": 0.2247
+          },
+          "PII.US_PHONE": {
+            "tp": 59,
+            "fp": 214,
+            "fn": 4,
+            "precision": 0.2161,
+            "recall": 0.9365,
+            "f1": 0.3512
+          },
+          "PII.US_SSN": {
+            "tp": 1,
+            "fp": 33,
+            "fn": 19,
+            "precision": 0.0294,
+            "recall": 0.05,
+            "f1": 0.037
+          }
+        },
+        "Spanish": {
+          "PII.CREDIT_CARD": {
+            "tp": 6,
+            "fp": 1,
+            "fn": 7,
+            "precision": 0.8571,
+            "recall": 0.4615,
+            "f1": 0.6
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 13,
+            "fp": 580,
+            "fn": 6,
+            "precision": 0.0219,
+            "recall": 0.6842,
+            "f1": 0.0425
+          },
+          "PII.EMAIL": {
+            "tp": 84,
+            "fp": 0,
+            "fn": 7,
+            "precision": 1.0,
+            "recall": 0.9231,
+            "f1": 0.96
+          },
+          "PII.IBAN": {
+            "tp": 5,
+            "fp": 0,
+            "fn": 6,
+            "precision": 1.0,
+            "recall": 0.4545,
+            "f1": 0.625
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 18,
+            "fp": 3,
+            "fn": 1,
+            "precision": 0.8571,
+            "recall": 0.9474,
+            "f1": 0.9
+          },
+          "PII.PERSON": {
+            "tp": 496,
+            "fp": 2638,
+            "fn": 529,
+            "precision": 0.1583,
+            "recall": 0.4839,
+            "f1": 0.2385
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 10,
+            "fp": 905,
+            "fn": 3,
+            "precision": 0.0109,
+            "recall": 0.7692,
+            "f1": 0.0216
+          },
+          "PII.US_PASSPORT": {
+            "tp": 7,
+            "fp": 74,
+            "fn": 2,
+            "precision": 0.0864,
+            "recall": 0.7778,
+            "f1": 0.1556
+          },
+          "PII.US_PHONE": {
+            "tp": 55,
+            "fp": 223,
+            "fn": 16,
+            "precision": 0.1978,
+            "recall": 0.7746,
+            "f1": 0.3152
+          },
+          "PII.US_SSN": {
+            "tp": 3,
+            "fp": 20,
+            "fn": 6,
+            "precision": 0.1304,
+            "recall": 0.3333,
+            "f1": 0.1875
+          }
+        },
+        "Swedish": {
+          "PII.CREDIT_CARD": {
+            "tp": 2,
+            "fp": 1,
+            "fn": 1,
+            "precision": 0.6667,
+            "recall": 0.6667,
+            "f1": 0.6667
+          },
+          "PII.DATE_OF_BIRTH": {
+            "tp": 13,
+            "fp": 923,
+            "fn": 0,
+            "precision": 0.0139,
+            "recall": 1.0,
+            "f1": 0.0274
+          },
+          "PII.EMAIL": {
+            "tp": 115,
+            "fp": 1,
+            "fn": 7,
+            "precision": 0.9914,
+            "recall": 0.9426,
+            "f1": 0.9664
+          },
+          "PII.IBAN": {
+            "tp": 11,
+            "fp": 0,
+            "fn": 1,
+            "precision": 1.0,
+            "recall": 0.9167,
+            "f1": 0.9565
+          },
+          "PII.IP_ADDRESS": {
+            "tp": 23,
+            "fp": 0,
+            "fn": 2,
+            "precision": 1.0,
+            "recall": 0.92,
+            "f1": 0.9583
+          },
+          "PII.PERSON": {
+            "tp": 661,
+            "fp": 2999,
+            "fn": 478,
+            "precision": 0.1806,
+            "recall": 0.5803,
+            "f1": 0.2755
+          },
+          "PII.US_DRIVER_LICENSE": {
+            "tp": 9,
+            "fp": 958,
+            "fn": 6,
+            "precision": 0.0093,
+            "recall": 0.6,
+            "f1": 0.0183
+          },
+          "PII.US_PASSPORT": {
+            "tp": 11,
+            "fp": 78,
+            "fn": 1,
+            "precision": 0.1236,
+            "recall": 0.9167,
+            "f1": 0.2178
+          },
+          "PII.US_PHONE": {
+            "tp": 51,
+            "fp": 201,
+            "fn": 24,
+            "precision": 0.2024,
+            "recall": 0.68,
+            "f1": 0.3119
+          },
+          "PII.US_SSN": {
+            "tp": 3,
+            "fp": 42,
+            "fn": 6,
+            "precision": 0.0667,
+            "recall": 0.3333,
+            "f1": 0.1111
+          }
+        }
+      }
+    }
+  ]
+}
