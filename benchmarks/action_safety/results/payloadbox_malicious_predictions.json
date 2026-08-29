@@ -1,0 +1,1721 @@
+[
+  {
+    "key": "notes",
+    "value": "'",
+    "sources": [
+      "mysql-payloads.txt",
+      "postgresql-payloads.txt",
+      "mssql-payloads.txt",
+      "sqlite-payloads.txt",
+      "oracle-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "reference_code",
+    "value": "\"",
+    "sources": [
+      "mysql-payloads.txt",
+      "postgresql-payloads.txt",
+      "mssql-payloads.txt",
+      "sqlite-payloads.txt",
+      "oracle-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "employee_id",
+    "value": "'--",
+    "sources": [
+      "mysql-payloads.txt",
+      "postgresql-payloads.txt",
+      "mssql-payloads.txt",
+      "sqlite-payloads.txt",
+      "oracle-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_id",
+    "value": "' #",
+    "sources": [
+      "mysql-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "SELECT @@VERSION, USER(), DATABASE();",
+    "sources": [
+      "mysql-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "order_id",
+    "value": "SELECT table_name FROM information_schema.tables;",
+    "sources": [
+      "mysql-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "ticket_id",
+    "value": "SELECT column_name FROM information_schema.columns WHERE table_name = 'users';",
+    "sources": [
+      "mysql-payloads.txt",
+      "postgresql-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "SELECT 'malicious code' INTO OUTFILE '/var/www/html/shell.php';",
+    "sources": [
+      "mysql-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "order_id",
+    "value": "SELECT LOAD_FILE('/etc/passwd');",
+    "sources": [
+      "mysql-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "customer_id",
+    "value": "SELECT CONCAT('a', 'b');",
+    "sources": [
+      "mysql-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "notes",
+    "value": "' OR 1=1--",
+    "sources": [
+      "mysql-payloads.txt",
+      "postgresql-payloads.txt",
+      "mssql-payloads.txt",
+      "sqlite-payloads.txt",
+      "oracle-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "ticket_id",
+    "value": "' OR 1=1#",
+    "sources": [
+      "mysql-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "\" OR 1=1--",
+    "sources": [
+      "mysql-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "ticket_id",
+    "value": "\" OR 1=1#",
+    "sources": [
+      "mysql-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_name",
+    "value": "admin'--",
+    "sources": [
+      "mysql-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "item_id",
+    "value": "admin' #",
+    "sources": [
+      "mysql-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_name",
+    "value": "' UNION SELECT NULL--",
+    "sources": [
+      "mysql-payloads.txt",
+      "postgresql-payloads.txt",
+      "mssql-payloads.txt",
+      "sqlite-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "ticket_id",
+    "value": "' UNION SELECT NULL,NULL--",
+    "sources": [
+      "mysql-payloads.txt",
+      "postgresql-payloads.txt",
+      "mssql-payloads.txt",
+      "sqlite-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "SLEEP(5)",
+    "sources": [
+      "mysql-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "notes",
+    "value": "' AND (SELECT 1 FROM (SELECT(SLEEP(5)))a)--",
+    "sources": [
+      "mysql-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "' OR (SELECT 1 FROM (SELECT(SLEEP(5)))a)='",
+    "sources": [
+      "mysql-payloads.txt",
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "mysql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "ticket_id",
+    "value": "SELECT version(), current_user, current_database();",
+    "sources": [
+      "postgresql-payloads.txt"
+    ],
+    "primary_source": "postgresql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "customer_id",
+    "value": "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';",
+    "sources": [
+      "postgresql-payloads.txt"
+    ],
+    "primary_source": "postgresql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "COPY (SELECT 'malicious') TO '/tmp/test';",
+    "sources": [
+      "postgresql-payloads.txt"
+    ],
+    "primary_source": "postgresql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "employee_id",
+    "value": "CREATE TABLE shell(output text);",
+    "sources": [
+      "postgresql-payloads.txt"
+    ],
+    "primary_source": "postgresql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "item_id",
+    "value": "COPY shell FROM PROGRAM 'id';",
+    "sources": [
+      "postgresql-payloads.txt"
+    ],
+    "primary_source": "postgresql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "tracking_number",
+    "value": "SELECT * FROM shell;",
+    "sources": [
+      "postgresql-payloads.txt"
+    ],
+    "primary_source": "postgresql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "employee_id",
+    "value": "SELECT pg_sleep(5);",
+    "sources": [
+      "postgresql-payloads.txt"
+    ],
+    "primary_source": "postgresql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "account_number",
+    "value": "' AND (SELECT 1 FROM (SELECT(pg_sleep(5)))a)--",
+    "sources": [
+      "postgresql-payloads.txt"
+    ],
+    "primary_source": "postgresql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "reference_code",
+    "value": "SELECT @@VERSION, SUSER_SNAME(), DB_NAME();",
+    "sources": [
+      "mssql-payloads.txt"
+    ],
+    "primary_source": "mssql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "ticket_id",
+    "value": "SELECT name FROM sysobjects WHERE xtype = 'U';",
+    "sources": [
+      "mssql-payloads.txt"
+    ],
+    "primary_source": "mssql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "SELECT name FROM syscolumns WHERE id = (SELECT id FROM sysobjects WHERE name = 'users');",
+    "sources": [
+      "mssql-payloads.txt"
+    ],
+    "primary_source": "mssql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "employee_id",
+    "value": "EXEC xp_cmdshell 'whoami';",
+    "sources": [
+      "mssql-payloads.txt"
+    ],
+    "primary_source": "mssql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "WAITFOR DELAY '0:0:5';",
+    "sources": [
+      "mssql-payloads.txt"
+    ],
+    "primary_source": "mssql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "employee_id",
+    "value": "' AND 1=1--",
+    "sources": [
+      "mssql-payloads.txt"
+    ],
+    "primary_source": "mssql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "notes",
+    "value": "' AND 1=2--",
+    "sources": [
+      "mssql-payloads.txt"
+    ],
+    "primary_source": "mssql-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "notes",
+    "value": "SELECT sqlite_version();",
+    "sources": [
+      "sqlite-payloads.txt"
+    ],
+    "primary_source": "sqlite-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "customer_name",
+    "value": "SELECT name FROM sqlite_master WHERE type='table';",
+    "sources": [
+      "sqlite-payloads.txt"
+    ],
+    "primary_source": "sqlite-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "employee_id",
+    "value": "PRAGMA table_info('users');",
+    "sources": [
+      "sqlite-payloads.txt"
+    ],
+    "primary_source": "sqlite-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "reference_code",
+    "value": "ATTACH DATABASE '/var/www/html/shell.php' AS pwn;",
+    "sources": [
+      "sqlite-payloads.txt"
+    ],
+    "primary_source": "sqlite-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "account_number",
+    "value": "CREATE TABLE pwn.shell (code TEXT);",
+    "sources": [
+      "sqlite-payloads.txt"
+    ],
+    "primary_source": "sqlite-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "account_number",
+    "value": "INSERT INTO pwn.shell (code) VALUES ('<?php system($_GET[\"cmd\"]); ?>');",
+    "sources": [
+      "sqlite-payloads.txt"
+    ],
+    "primary_source": "sqlite-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "SELECT banner FROM v$version;",
+    "sources": [
+      "oracle-payloads.txt"
+    ],
+    "primary_source": "oracle-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "reference_code",
+    "value": "SELECT user FROM dual;",
+    "sources": [
+      "oracle-payloads.txt"
+    ],
+    "primary_source": "oracle-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "customer_id",
+    "value": "SELECT table_name FROM all_tables;",
+    "sources": [
+      "oracle-payloads.txt"
+    ],
+    "primary_source": "oracle-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "SELECT column_name FROM all_tab_columns WHERE table_name = 'USERS';",
+    "sources": [
+      "oracle-payloads.txt"
+    ],
+    "primary_source": "oracle-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_statement_in_value"
+    ]
+  },
+  {
+    "key": "item_id",
+    "value": "BEGIN DBMS_LOCK.SLEEP(5); END;",
+    "sources": [
+      "oracle-payloads.txt"
+    ],
+    "primary_source": "oracle-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_id",
+    "value": "' UNION SELECT NULL FROM DUAL--",
+    "sources": [
+      "oracle-payloads.txt"
+    ],
+    "primary_source": "oracle-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "reference_code",
+    "value": "' UNION SELECT NULL,NULL FROM DUAL--",
+    "sources": [
+      "oracle-payloads.txt"
+    ],
+    "primary_source": "oracle-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_id",
+    "value": "'/*",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "' OR '1'='1",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "\" OR \"1\"=\"1",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_id",
+    "value": "admin'/*",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "' UNION SELECT NULL,NULL,NULL--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_id",
+    "value": "' AND (SELECT 1 FROM (SELECT(SLEEP(10)))a)--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_name",
+    "value": "' AND 1=(SELECT COUNT(*) FROM tablename)--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "' OR 1=1 LIMIT 1--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "' OR 1=1 LIMIT 1 OFFSET 1--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_name",
+    "value": "' GROUP BY 1,2,3--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "notes",
+    "value": "' ORDER BY 1--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_name",
+    "value": "' ORDER BY 2--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "account_number",
+    "value": "' ORDER BY 10--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "'); WAITFOR DELAY '0:0:5'--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "notes",
+    "value": "'); SELECT PG_SLEEP(5)--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "' OR (SELECT 1 FROM (SELECT(SLEEP(5)))a)='1",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "1' AND 1=1",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_id",
+    "value": "1' AND 1=2",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "ticket_id",
+    "value": "1\" AND 1=1",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_name",
+    "value": "1\" AND 1=2",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "employee_id",
+    "value": "' OR TRUE--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "item_id",
+    "value": "\" OR TRUE--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "' OR 1=1/*",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "' OR 'a'='a",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "' OR 'a'='b",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "item_id",
+    "value": "' OR 1=1 LIMIT 1",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "' OR 1=1;--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_name",
+    "value": "' OR 1=1;#",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "' OR 1=1;/*",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "') OR ('1'='1",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "reference_code",
+    "value": "') OR ('1'='1'--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "item_id",
+    "value": "') OR ('1'='1'#",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "notes",
+    "value": "') OR ('1'='1'/*",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "account_number",
+    "value": "') OR '1'='1",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "account_number",
+    "value": "') OR '1'='1'--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "account_number",
+    "value": "') OR '1'='1'#",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_name",
+    "value": "') OR '1'='1'/*",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "item_id",
+    "value": "\" OR \"1\"=\"1\"--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "item_id",
+    "value": "\" OR \"1\"=\"1\"#",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "notes",
+    "value": "\" OR \"1\"=\"1\"/*",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "\" OR 1=1",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "account_number",
+    "value": "\" OR 1=1/*",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "notes",
+    "value": "\" OR 1=1;--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "account_number",
+    "value": "\" OR 1=1;#",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "ticket_id",
+    "value": "\" OR 1=1;/*",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "employee_id",
+    "value": "\") OR (\"1\"=\"1",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "customer_name",
+    "value": "\") OR (\"1\"=\"1\"--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "item_id",
+    "value": "\") OR (\"1\"=\"1\"#",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "\") OR (\"1\"=\"1\"/*",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_name",
+    "value": "\") OR \"1\"=\"1",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "reference_code",
+    "value": "\") OR \"1\"=\"1\"--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "item_id",
+    "value": "\") OR \"1\"=\"1\"#",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "\") OR \"1\"=\"1\"/*",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "item_id",
+    "value": "SLEEP(5) /*' or SLEEP(5) or '\" or SLEEP(5) or \"*/",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "notes",
+    "value": "' OR 1=1 --",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "employee_id",
+    "value": "\" OR 1=1 --",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "' OR '1'='1' { % / * / }",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "account_number",
+    "value": "%27%20OR%201%3D1--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "account_number",
+    "value": "0x61646d696e",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "customer_id",
+    "value": "CHAR(39,79,82,39,49,39,61,39,49)",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "ticket_id",
+    "value": "'/**/OR/**/1=1--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "account_number",
+    "value": "'OR%091=1--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "reference_code",
+    "value": "'OR%0a1=1--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "reference_code",
+    "value": "'OR%0b1=1--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "employee_id",
+    "value": "'OR%0c1=1--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "employee_id",
+    "value": "'OR%0d1=1--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "employee_id",
+    "value": "'OR%a01=1--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "tracking_number",
+    "value": "'#",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "ticket_id",
+    "value": "'-- -",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "order_id",
+    "value": "' UNION SELECT 1,2,3--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "ticket_id",
+    "value": "' UNION SELECT @@VERSION,2,3--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "ticket_id",
+    "value": "' UNION SELECT version(),2,3--",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  },
+  {
+    "key": "customer_name",
+    "value": "{\"id\": \"1' OR 1=1--\"}",
+    "sources": [
+      "burp-intruder-payloads.txt"
+    ],
+    "primary_source": "burp-intruder-payloads.txt",
+    "expect_blocked": true,
+    "authored": false,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "scope.sql_fragment_in_value"
+    ]
+  }
+]

@@ -1,0 +1,96 @@
+{
+  "splits": {
+    "train": {
+      "natural_dml": {
+        "n": 1200,
+        "tp": 33,
+        "fp": 1,
+        "tn": 1166,
+        "fn": 0,
+        "precision": 0.9706,
+        "recall": 1.0,
+        "parse_failures": 0,
+        "parse_failure_rate": 0.0
+      },
+      "natural_ddl": {
+        "n": 803,
+        "tp": 111,
+        "fp": 0,
+        "tn": 692,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "parse_failures": 0,
+        "parse_failure_rate": 0.0
+      },
+      "adversarial_unbounded": {
+        "n": 1200,
+        "tp": 1200,
+        "fp": 0,
+        "tn": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "parse_failures": 3,
+        "parse_failure_rate": 0.0025
+      },
+      "adversarial_tautology": {
+        "n": 1200,
+        "tp": 1200,
+        "fp": 0,
+        "tn": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "parse_failures": 6,
+        "parse_failure_rate": 0.005
+      }
+    },
+    "test": {
+      "natural_dml": {
+        "n": 365,
+        "tp": 8,
+        "fp": 0,
+        "tn": 357,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "parse_failures": 0,
+        "parse_failure_rate": 0.0
+      },
+      "natural_ddl": {
+        "n": 46,
+        "tp": 12,
+        "fp": 0,
+        "tn": 34,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "parse_failures": 0,
+        "parse_failure_rate": 0.0
+      },
+      "adversarial_unbounded": {
+        "n": 357,
+        "tp": 357,
+        "fp": 0,
+        "tn": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "parse_failures": 2,
+        "parse_failure_rate": 0.0056
+      },
+      "adversarial_tautology": {
+        "n": 357,
+        "tp": 357,
+        "fp": 0,
+        "tn": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "parse_failures": 2,
+        "parse_failure_rate": 0.0056
+      }
+    }
+  }
+}

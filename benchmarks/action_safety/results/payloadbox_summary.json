@@ -1,0 +1,224 @@
+{
+  "malicious": {
+    "n": 122,
+    "tp": 109,
+    "fp": 0,
+    "tn": 0,
+    "fn": 13,
+    "precision": 1.0,
+    "recall": 0.8934,
+    "false_positive_rate": null,
+    "risk_codes": {
+      "scope.sql_fragment_in_value": 90,
+      "scope.sql_statement_in_value": 19
+    }
+  },
+  "benign": {
+    "n": 34,
+    "tp": 0,
+    "fp": 0,
+    "tn": 34,
+    "fn": 0,
+    "precision": null,
+    "recall": null,
+    "false_positive_rate": 0.0,
+    "risk_codes": {}
+  },
+  "by_source": {
+    "mysql-payloads.txt": {
+      "n": 21,
+      "tp": 17,
+      "fp": 0,
+      "tn": 0,
+      "fn": 4,
+      "precision": 1.0,
+      "recall": 0.8095,
+      "false_positive_rate": null,
+      "risk_codes": {
+        "scope.sql_fragment_in_value": 13,
+        "scope.sql_statement_in_value": 4
+      }
+    },
+    "postgresql-payloads.txt": {
+      "n": 15,
+      "tp": 11,
+      "fp": 0,
+      "tn": 0,
+      "fn": 4,
+      "precision": 1.0,
+      "recall": 0.7333,
+      "false_positive_rate": null,
+      "risk_codes": {
+        "scope.sql_fragment_in_value": 6,
+        "scope.sql_statement_in_value": 5
+      }
+    },
+    "mssql-payloads.txt": {
+      "n": 13,
+      "tp": 10,
+      "fp": 0,
+      "tn": 0,
+      "fn": 3,
+      "precision": 1.0,
+      "recall": 0.7692,
+      "false_positive_rate": null,
+      "risk_codes": {
+        "scope.sql_fragment_in_value": 7,
+        "scope.sql_statement_in_value": 3
+      }
+    },
+    "sqlite-payloads.txt": {
+      "n": 12,
+      "tp": 8,
+      "fp": 0,
+      "tn": 0,
+      "fn": 4,
+      "precision": 1.0,
+      "recall": 0.6667,
+      "false_positive_rate": null,
+      "risk_codes": {
+        "scope.sql_fragment_in_value": 4,
+        "scope.sql_statement_in_value": 4
+      }
+    },
+    "oracle-payloads.txt": {
+      "n": 11,
+      "tp": 9,
+      "fp": 0,
+      "tn": 0,
+      "fn": 2,
+      "precision": 1.0,
+      "recall": 0.8182,
+      "false_positive_rate": null,
+      "risk_codes": {
+        "scope.sql_fragment_in_value": 5,
+        "scope.sql_statement_in_value": 4
+      }
+    },
+    "burp-intruder-payloads.txt": {
+      "n": 87,
+      "tp": 81,
+      "fp": 0,
+      "tn": 0,
+      "fn": 6,
+      "precision": 1.0,
+      "recall": 0.931,
+      "false_positive_rate": null,
+      "risk_codes": {
+        "scope.sql_fragment_in_value": 81
+      }
+    }
+  },
+  "benign_by_category": {
+    "apostrophe_in_name": {
+      "n": 3,
+      "tp": 0,
+      "fp": 0,
+      "tn": 3,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "risk_codes": {}
+    },
+    "combined_words_no_structure": {
+      "n": 2,
+      "tp": 0,
+      "fp": 0,
+      "tn": 2,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "risk_codes": {}
+    },
+    "dash_as_em_dash": {
+      "n": 6,
+      "tp": 0,
+      "fp": 0,
+      "tn": 6,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "risk_codes": {}
+    },
+    "equality_in_prose": {
+      "n": 3,
+      "tp": 0,
+      "fp": 0,
+      "tn": 3,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "risk_codes": {}
+    },
+    "or_word_no_structure": {
+      "n": 7,
+      "tp": 0,
+      "fp": 0,
+      "tn": 7,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "risk_codes": {}
+    },
+    "plain_identifier": {
+      "n": 4,
+      "tp": 0,
+      "fp": 0,
+      "tn": 4,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "risk_codes": {}
+    },
+    "quote_in_prose": {
+      "n": 1,
+      "tp": 0,
+      "fp": 0,
+      "tn": 1,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "risk_codes": {}
+    },
+    "select_word_no_structure": {
+      "n": 3,
+      "tp": 0,
+      "fp": 0,
+      "tn": 3,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "risk_codes": {}
+    },
+    "semicolon_in_prose": {
+      "n": 2,
+      "tp": 0,
+      "fp": 0,
+      "tn": 2,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "risk_codes": {}
+    },
+    "union_word_no_structure": {
+      "n": 3,
+      "tp": 0,
+      "fp": 0,
+      "tn": 3,
+      "fn": 0,
+      "precision": null,
+      "recall": null,
+      "false_positive_rate": 0.0,
+      "risk_codes": {}
+    }
+  }
+}
