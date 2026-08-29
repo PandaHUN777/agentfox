@@ -12,7 +12,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { SESSION_COOKIE } from "@/lib/api";
 
-const PUBLIC_PATHS = ["/login", "/api/auth"];
+// /playground is the public, unauthenticated demo (dashboard/app/playground) — it
+// talks directly to the gateway's own unauthenticated `/api/playground/*` routes
+// from the browser, never through this app's cookie-authenticated `api()` helper,
+// so it needs no session here either.
+const PUBLIC_PATHS = ["/login", "/api/auth", "/playground"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
