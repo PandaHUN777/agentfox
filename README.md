@@ -6,7 +6,17 @@ See every agent, control what it can do, prove it works, and demonstrate complia
 
 ---
 
-## Thirty seconds
+## Try it — zero install, nothing leaves your machine
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/architsharm/guardrails/main/scripts/quickscan.sh | bash
+```
+
+This is the lowest-friction way to see whether this is worth your time: no account, no clone, no config. It installs into a throwaway virtualenv (removed on exit), scans the current directory for agent code, checks what's actually running via local AI-tool session transcripts, and runs a handful of known-adversarial prompts through the real detector pipeline right in your terminal — so "we catch prompt injection" is something you watch happen, not something we said. Nothing talks to anything but PyPI/GitHub (to fetch the package) and your local filesystem.
+
+---
+
+## Real usage — thirty seconds
 
 ```bash
 pip install git+https://github.com/architsharm/guardrails.git   # not on PyPI yet
@@ -47,7 +57,18 @@ The defensible middle is a **vendor-neutral, agent-native control plane that uni
 
 Full reasoning, evidence and roadmap: **[docs/PRD.md](docs/PRD.md)**.
 
-## The six pillars
+## What's ours, and what we wrap
+
+This isn't a bundle of open-source scanners with a UI on top. Roughly 20% of the engineering integrates OSS primitives; **80% is proprietary logic above them** — the part that's actually ours to sell, and the part we intend to be compensated for as this moves toward a paid product.
+
+| | Examples | Status |
+|---|---|---|
+| **Wrapped OSS primitives** — the raw detection/policy engines | Presidio (PII), Granite Guardian, sqlglot (SQL parsing), OPA/Rego (policy), OpenTelemetry (tracing) | Swappable behind our own adapter interface — see [Appendix A](docs/appendix-a-oss-register.md) |
+| **Proprietary, built by us** — the logic that turns a primitive into a governance decision | Argument-provenance taint tracking · deterministic blast-radius/action-semantics analysis on generated SQL · answerability & abstention against a declared knowledge boundary · end-user entitlement propagation through retrieval and tool calls · escalation-failure counterfactual detection · the tamper-evident audit chain and its independent verifier · the PIGuard+backstop ensemble tuning that drives our own injection-detection numbers (see Benchmarks below) | This is the moat — none of it exists as an off-the-shelf OSS or commercial primitive today; see [docs/PRD.md §1.4](docs/PRD.md#14-what-is-genuinely-differentiated--and-what-is-not) for what's genuinely unclaimed vs. contested |
+
+**Build-vs-reuse rule:** wrap the primitive, own the interface. Every wrapped project sits behind a swappable adapter — see [Appendix A](docs/appendix-a-oss-register.md), which also records *why* LLM Guard (archived), Invariant/mcp-scan (Snyk-owned), Llama Guard (non-OSI licence) and systemprompt-core (BSL) are deliberately **off** the critical path.
+
+### The six pillars
 
 | # | Pillar | Answers | Built on |
 |---|---|---|---|
@@ -58,9 +79,23 @@ Full reasoning, evidence and roadmap: **[docs/PRD.md](docs/PRD.md)**.
 | 5 | Audit & Traceability | *Show me what happened* | **OpenTelemetry** + ours |
 | 6 | Policy & Compliance | *Prove we meet the rules* | ours — essentially no OSS exists here |
 
-**Build-vs-reuse rule:** wrap the primitive, own the interface. ~20% of engineering integrates OSS; ~80% goes above the value line. Every wrapped project sits behind a swappable adapter — see [Appendix A](docs/appendix-a-oss-register.md), which also records *why* LLM Guard (archived), Invariant/mcp-scan (Snyk-owned), Llama Guard (non-OSI licence) and systemprompt-core (BSL) are deliberately **off** the critical path.
+## Benchmarks — real numbers, reproducible by anyone
 
-## Quick start
+We don't ask you to trust a vendor claim. Every number below has a public, licensed dataset and a script in this repo that reproduces it:
+
+```bash
+uv run python benchmarks/run_prompt_injection_benchmark.py     # primary + generalization datasets
+uv run python benchmarks/run_generalization_benchmark.py
+uv run python benchmarks/agent_security/tier_a_multiturn.py    # + tier_b/c/d — vs. a real llm-guard install
+```
+
+- **Prompt-injection detection**, held-out split of `deepset/prompt-injections`: **0% → 66.7% recall, 100% precision held throughout**, across four rounds of measured, disclosed changes — including a two-model ensemble classifier we tuned ourselves (`leolee99/PIGuard` + a `protectai/deberta` backstop, threshold anchored to llm-guard's own published default, not swept against our own data).
+- **Generalized across four independent datasets** (5,345 examples total) the detectors were never tuned against: 98.0–98.6% recall on two of them, with the real over-defense cost on the other two disclosed rather than hidden.
+- **Agent-runtime security, four tiers vs. a real, independently-installed `llm-guard`**: multi-turn payload splitting (2/2 vs. llm-guard's false triggers on isolated fragments), indirect injection via tool output (100% recall vs. llm-guard's 90%), tool-parameter exploitation and privilege escalation (10/10 and 6/6 — axes llm-guard structurally cannot participate in, since it scans text, not tool-call structure or capability grants).
+
+Full methodology and every round: **[the benchmarking white paper](docs/benchmarking-whitepaper.md)**. Raw methodology: [benchmarks/REPORT.md](benchmarks/REPORT.md), [benchmarks/agent_security/README.md](benchmarks/agent_security/README.md).
+
+## Quick start (development)
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
@@ -92,7 +127,7 @@ docker compose -f deploy/docker-compose.yml up
 
 ## What the demo shows
 
-`nometria demo` walks the request path in PRD §9.3 and prints each step:
+`nometria demo` walks the request path in [docs/PRD.md §7.3](docs/PRD.md#73-request-path) and prints each step:
 
 1. An agent makes a normal call → **allowed**, traced.
 2. A retrieved document carries an **indirect prompt injection** → detected, tainted, blocked.
@@ -106,6 +141,7 @@ docker compose -f deploy/docker-compose.yml up
 ## CLI
 
 ```bash
+nometria quickscan                # zero-config first look — see "Try it" above
 nometria seed                     # demo agents, policies, controls, obligations
 nometria serve                    # gateway + control-plane API
 nometria demo                     # end-to-end walkthrough
@@ -141,26 +177,24 @@ Escalation maps to LangGraph's own `interrupt()` — one pause mechanism, not tw
 
 | | |
 |---|---|
-| **[PRD (consolidated) ★](docs/PRD-consolidated.md)** | **Start here.** Self-contained: all 11 pillars, with references, OSS options, commercial alternatives and industry state of the art per pillar |
+| **[PRD ★](docs/PRD.md)** | **Start here.** The single canonical PRD — argument, product, plan, and what's shipped since |
 | **[Implementation status](docs/status.md)** | **Computed coverage — regenerate with `python scripts/coverage.py --write`** |
-| **[PRD v3 — CONSOLIDATED](docs/PRD-v3-consolidated.md)** | **Canonical. Self-contained: evidence, market, 15 pillars with OSS + commercial alternatives per pillar, roadmap** |
-| [PRD v1](docs/PRD.md) | Historical — the original six pillars |
-| [PRD v2](docs/PRD-v2.md) | Historical — the agent-assurance delta |
-| **[Practitioner signal](docs/practitioner-signal.md)** | **What 11 senior AI engineers actually built** — tech graph, integration surface, and the 6-of-11 finding |
-| **[Failure-mode analysis](docs/failure-modes.md)** | **How deployed agents actually fail** — 50 modes, 7 families, grounded in 10k+ catalogued incidents |
-| [Gap analysis](docs/gap-analysis.md) | Enterprise readiness & competitive position — audited, severity-ranked |
+| **[Benchmarking white paper](docs/benchmarking-whitepaper.md)** | The product, capability by capability — what it does, how we know it works, and how it differs from the market |
+| **[Failure-mode analysis](docs/failure-modes.md)** | **How deployed agents actually fail** — 50 modes, 7 families, grounded in 10k+ catalogued incidents; 40/50 now covered |
+| [Gap analysis](docs/gap-analysis.md) | Enterprise readiness & competitive position — audited, severity-ranked, re-verified 2026-08-29 |
 | [Appendix A](docs/appendix-a-oss-register.md) | OSS dependency register — licence, health, verdict, our exposure |
 | [Appendix B](docs/appendix-b-control-catalog.md) | 41 controls mapped to EU AI Act, NIST AI RMF, ISO 42001, SOC 2, OWASP LLM & Agentic, MITRE ATLAS |
 | [Appendix C](docs/appendix-c-api-spec.md) | API specification |
 | [Appendix D](docs/appendix-d-data-model.md) | Data model |
 | [Appendix E](docs/appendix-e-threat-model.md) | Threat model — threats to the customer's agents, and to us |
 | [Traceability](docs/traceability.md) | Every requirement → the module that implements it |
+| [docs/research/](docs/research/) | Raw research inputs (practitioner CVs, market analysis) the PRD synthesizes — not living documentation, kept for provenance |
 
 ## Honest limits
 
 - **Compliance mappings are DRAFT.** Produced from framework texts by engineers, not reviewed by compliance counsel. The product badges them as such and excludes drafts from evidence packages. See [Appendix B §B.6](docs/appendix-b-control-catalog.md#b6-mapping-review-gate).
 - **Coverage gaps are declared, not hidden.** Appendix B §B.4 lists what each framework mapping does *not* cover; Appendix E §E.3 does the same for threats.
-- **This is an MVP.** Single-org, no live IdP, no scheduled red-team campaigns, text modalities only. PRD §6.3 has the full list.
+- **This is an MVP.** Single-org multi-tenancy enforced at the session (not yet a managed multi-region offering), no live IdP/SSO, no scheduled red-team campaigns, text modalities only. Full non-goals list: [docs/PRD.md §10.3](docs/PRD.md#103-non-goals).
 
 ## Licence
 

@@ -199,7 +199,7 @@ Legend: `[ ]` open · `[~]` in progress · `[x]` done · `[-]` intentionally def
   "API tokens" next to Connect, plus a matching sidebar icon.
 - [x] No in-app glossary anywhere for the `P#-#` / `NOM-XXX-##` / OWASP / MITRE ATLAS coding
   schemes used constantly across Policies, Guardrails, Compliance, Board.
-  Done: new `/glossary` page (pillar list sourced from `docs/PRD-v3-consolidated.md`, NOM-XXX
+  Done: new `/glossary` page (pillar list sourced from `docs/PRD.md`, NOM-XXX
   prefixes sourced from `src/nometria/compliance_data/controls.yaml` rather than guessed),
   reachable from a persistent sidebar footer link plus explicit call-outs on Policies and
   Compliance (the two densest pages). `/guardrails`'s dense jargon (library names) is covered on
@@ -370,7 +370,7 @@ issues" — it's new product work.
 
 ### Docs hygiene
 - [x] PRD pillar-header symbols (P7, P9, P10, P11, P15 sections) contradict their own body text
-  a few lines below ("✗" header, "✅ shipped" prose) — reconcile in `docs/PRD-v3-consolidated.md`.
+  a few lines below ("✗" header, "✅ shipped" prose) — reconcile in `docs/PRD.md`.
   Done: P7 and P11 headers → ✅ (body already claimed full coverage), P9 and P10 → ✅◐ (body
   claims shipped with one named gap each), P15 → ◐ and its body text corrected too — it claimed
   "nothing enforces, no fallback, no circuit breaker" which was itself false: `availability.py`
@@ -452,7 +452,7 @@ issues" — it's new product work.
   lists, per-hop delegation instruction text) that no current model actually populates; wiring a
   route today would either fabricate data or silently report "nothing" against every real trace,
   so this was left as a documented, honest gap rather than forced. **Docs hygiene**: fixed 5
-  header/body symbol contradictions in `PRD-v3-consolidated.md` (Pillars 7, 9, 10, 11, 15 — the
+  header/body symbol contradictions in `PRD.md` (Pillars 7, 9, 10, 11, 15 — the
   Pillar 15 fix went further than the symbol, rewriting a body claim that inaccurately said
   nothing enforces degradation when `availability.py`'s `service_fallback` and `AdmissionController`
   are real, tested implementations), and corrected two overstated rows in `status.md` (P4 Ragas,

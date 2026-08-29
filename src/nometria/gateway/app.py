@@ -26,6 +26,7 @@ from ..providers import all_providers, available_providers
 from .deps import current_user, db
 from .routes import (
     answerability,
+    discovery,
     entitlement,
     escalation,
     evaluation,
@@ -35,6 +36,7 @@ from .routes import (
     memory,
     messaging,
     onboarding,
+    playground,
     policy,
     provenance,
     registry,
@@ -103,9 +105,16 @@ def create_app() -> FastAPI:
 
     # The dashboard is a client of this API (X-5). In self-host it is same-origin or
     # localhost; nothing here opens the control plane to the internet by itself.
+    # The public playground page is the one deliberate exception — it is designed
+    # to be called cross-origin, unauthenticated, from wherever it's hosted, so its
+    # origin is additive here via NOMETRIA_PLAYGROUND_CORS_ORIGIN rather than
+    # widening this list's intent for every other route.
+    cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    if get_settings().playground_cors_origin:
+        cors_origins.append(get_settings().playground_cors_origin)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -131,8 +140,14 @@ def create_app() -> FastAPI:
     app.include_router(provenance.router)
     app.include_router(entitlement.router)
     app.include_router(integrations.router)
+    app.include_router(discovery.router)
     app.include_router(memory.router)
     app.include_router(messaging.router)
+    # Unauthenticated by design (see playground.py's module docstring) — the only
+    # router in this app that never depends on `current_user`, and the one place
+    # this process is not stateless (NFR-3, contradicted deliberately: see
+    # playground_sessions.py's own note on why that's an accepted trade-off here).
+    app.include_router(playground.router)
 
     @app.get("/api/health", tags=["platform"])
     def health() -> dict[str, Any]:

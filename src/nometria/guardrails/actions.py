@@ -32,6 +32,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from .normalize import normalize
+
 log = logging.getLogger(__name__)
 
 try:  # sqlglot is an optional extra so `pip install nometria` stays offline-light
@@ -59,7 +61,9 @@ CLASS_RANK = {READ: 0, WRITE: 1, ADMIN: 2, DESTRUCTIVE: 3, UNKNOWN: 4}
 _DESTRUCTIVE_NODES = ("Drop", "TruncateTable")
 #: ALTER is destructive only when it drops or renames — ADD COLUMN is not, and
 #: blocking it would be the kind of false positive that gets the control switched off.
-_DESTRUCTIVE_ALTER_ACTIONS = ("Drop", "AlterRename")
+#: sqlglot gives a table-level rename (RENAME TO) and a column-level rename (RENAME
+#: COLUMN ... TO ...) distinct node types — AlterRename and RenameColumn respectively.
+_DESTRUCTIVE_ALTER_ACTIONS = ("Drop", "AlterRename", "RenameColumn")
 _WRITE_NODES = ("Insert", "Update", "Delete", "Merge")
 _ADMIN_NODES = ("Grant", "Revoke", "Create", "Set", "Command", "Alter")
 
@@ -136,11 +140,35 @@ def _alter_is_destructive(node: Any) -> bool:
     return any(type(a).__name__ in _DESTRUCTIVE_ALTER_ACTIONS for a in actions)
 
 
+def _is_unparsed_alter_rename(node: Any) -> bool:
+    """A multi-column ``RENAME COLUMN a TO x, b TO y`` in one statement isn't valid
+    Postgres grammar, so sqlglot can't build a structured `Alter` node for it and
+    falls back to a generic `Command` — which `_node_class` would otherwise classify
+    as an ordinary admin action with no risk at all, silently bypassing the
+    destructive-ALTER check entirely.
+
+    Scoped narrowly to the rename case specifically, not to every Command fallback:
+    a `CREATE OR REPLACE VIEW` can hit the same sqlglot fallback path for unrelated
+    dialect-support reasons and is not destructive, so treating every unparsed
+    Command as critical would flag legitimate DDL this check has no business
+    touching. Only `Command` nodes whose captured leading keyword is `ALTER` and
+    whose (unparsed) remainder mentions `RENAME COLUMN` qualify.
+    """
+    if type(node).__name__ != "Command":
+        return False
+    if node.args.get("this") != "ALTER":
+        return False
+    remainder = node.args.get("expression") or ""
+    return "RENAME COLUMN" in remainder.upper()
+
+
 def _is_destructive(node: Any) -> bool:
     name = type(node).__name__
     if name in _DESTRUCTIVE_NODES:
         return True
-    return name == "Alter" and _alter_is_destructive(node)
+    if name == "Alter":
+        return _alter_is_destructive(node)
+    return _is_unparsed_alter_rename(node)
 
 
 def _node_class(node: Any) -> str:
@@ -342,6 +370,23 @@ _SHELL_DESTRUCTIVE = [
     (re.compile(r"\bgit\s+push\s+.*--force", re.I), "force push"),
     (re.compile(r"\bkubectl\s+delete\s+(ns|namespace|all)\b", re.I), "cluster-scope delete"),
     (re.compile(r"\bterraform\s+destroy\b", re.I), "infrastructure destroy"),
+    # `kill -9 -1` sends SIGKILL to every process the caller can signal; `kill -9 1`
+    # targets init specifically. Both are well-known "kill everything" idioms, not
+    # ordinary process management — an unqualified `kill`/`pkill` on a named process
+    # is deliberately not matched here, since that's routine and would cost real
+    # false positives for a shape that isn't unambiguously catastrophic.
+    (re.compile(r"\bkill\s+(-9|-(?:sig)?kill)\s+(-1|1)\b", re.I), "kill-all or kill-init signal"),
+    (
+        re.compile(r"\busermod\s+.*-a?g\s+(sudo|wheel|admin)\b", re.I),
+        "granting sudo/wheel group membership",
+    ),
+    (re.compile(r">>?\s*/etc/sudoers\b", re.I), "direct write to /etc/sudoers"),
+    (re.compile(r"\biptables\s+(-f|--flush)\b", re.I), "firewall rule flush"),
+    (re.compile(r"\bufw\s+disable\b", re.I), "firewall disabled"),
+    (
+        re.compile(r"\b(apt(-get)?|yum|dnf)\s+(purge|remove)\b", re.I),
+        "installed package removal",
+    ),
 ]
 
 _UNSAFE_METHODS = {"DELETE", "PUT", "PATCH", "POST"}
@@ -425,13 +470,111 @@ _WILDCARD_VALUES = {"*", "%", "%%", "all", "any", "everything"}
 #: SQL-injection-shaped content arriving in a field nobody declared as SQL. If a
 #: caller names their field `sql`/`query`, `analyse_sql` already gives it a real
 #: parse; this is the backstop for the field that was never expected to carry SQL
-#: at all, e.g. an `order_id` argument holding `1 OR 1=1`.
+#: at all, e.g. an `order_id` argument holding `1 OR 1=1`. Context-free signals only
+#: — every alternative here is a shape no ordinary argument value has an innocent
+#: reason to contain, regardless of what else surrounds it. The comment-marker
+#: (`--`/`#`/`/*`) is deliberately *not* here — see `_QUOTE_THEN_COMMENT_RE` below
+#: for why that one needs context to avoid flagging ordinary prose.
 _SQLI_FRAGMENT_RE = re.compile(
-    r"(\bOR\b\s+[\w'\"]+\s*=\s*[\w'\"]+|;\s*(DROP|DELETE|UPDATE|INSERT)\b|--\s|\bUNION\b\s+\bSELECT\b)",
+    r"(\b(?:OR|AND)\b\s+[\w'\"]+\s*=\s*[\w'\"]+"
+    r"|;\s*(?:DROP|DELETE|UPDATE|INSERT)\b"
+    r"|\bUNION\b\s+\bSELECT\b"
+    r"|\b(?:SLEEP|BENCHMARK|PG_SLEEP)\s*\("
+    r"|\bWAITFOR\s+DELAY\b)",
     re.IGNORECASE,
 )
+#: A SQL line/block comment marker (`--`, `#`, `/*`) is only a strong signal when a
+#: quote character appears earlier in the same value — that's the shape a real
+#: injection takes (break out of a string literal, then comment out whatever
+#: followed in the original query: `' OR 1=1 --`, `admin'--`). A bare `--`/`#` with
+#: no quote in sight is at least as often an ASCII em-dash or a hashtag in ordinary
+#: prose ("Fragile -- please handle with care"), and treating it as unconditionally
+#: suspicious produced real, measured false positives on ordinary argument values
+#: (see benchmarks/action_safety/README.md, Dataset 4) — gating on a preceding quote
+#: fixes that without giving up recall, since every payload this exists to catch has
+#: one. Matches end-of-string too (`admin'--` has nothing after the marker), not
+#: just a marker followed by whitespace. `/*` has no such trailing requirement —
+#: two literal comment-open characters right after a quote has no innocent reading
+#: on its own, regardless of what follows.
+_QUOTE_THEN_COMMENT_RE = re.compile(
+    r"['\"][^\n]*?(?:(?:--|\#)(?:\s|$)|/\*)",
+    re.IGNORECASE,
+)
+#: `/**/` used as a whitespace substitute (`'/**/OR/**/1=1--`) is a standard filter
+#: -evasion technique — a regex expecting `\s` between keywords never sees it.
+#: Replacing each block comment with a single space before matching is normalization,
+#: not detection: it doesn't decide anything by itself, it just gives the two regexes
+#: above the same shot at the de-obfuscated text they'd have had without the evasion.
+_BLOCK_COMMENT_RE = re.compile(r"/\*.*?\*/", re.DOTALL)
 #: Path traversal in a value that isn't a declared URL/path argument either.
 _PATH_TRAVERSAL_RE = re.compile(r"\.\.[/\\]")
+
+
+#: A positive list of genuine top-level statement types, not a negative list of
+#: trivial ones to exclude — tried the exclusion approach first and it kept finding
+#: new trivial-but-not-excluded node types: a hyphenated order number like
+#: `ORD-2026-004471` parses as `Sub` (sqlglot reads the hyphens as arithmetic
+#: subtraction between a column reference and two numeric literals — a bare
+#: expression, not a statement), and a bare Command fallback fires for *any* text
+#: sqlglot can't structure, ordinary English included (`Call the office` parses as
+#: `Command` exactly like `EXEC xp_cmdshell` does — recognising a leading word as a
+#: keyword isn't the same as the text being SQL). Enumerating every real statement
+#: shape sqlglot can produce is a stable, closed set in a way "everything trivial"
+#: never is. The honest cost: statements only `Command` can represent (`EXEC ...`,
+#: `ATTACH ...`) aren't caught by this specific check — see
+#: benchmarks/action_safety/README.md, Dataset 4 for why extending into that
+#: territory (matching on `Command`'s captured keyword) traded away more than it
+#: gained once real English collisions (`Call`, `Attach`) showed up in testing.
+_REAL_STATEMENT_NODE_TYPES = frozenset(
+    {
+        "Select", "Insert", "Update", "Delete", "Drop", "Alter", "Create",
+        "Grant", "Revoke", "Merge", "TruncateTable", "Union", "With",
+    }
+)
+
+
+def _parses_as_real_sql_statement(value: str) -> bool:
+    if not SQLGLOT_AVAILABLE:
+        return False
+    try:
+        trees = [t for t in sqlglot.parse(value, read="postgres") if t is not None]
+    except Exception:
+        return False
+    if not trees:
+        return False
+    return all(type(t).__name__ in _REAL_STATEMENT_NODE_TYPES for t in trees)
+
+
+def _sqli_shaped(value: str) -> str | None:
+    """Checks `value` for SQL-injection shape across every reading worth checking:
+    the raw text, `normalize()`'s decoded views (catches percent-encoding evasion
+    like `'OR%0a1=1--` for free, via the same normalisation `injection.*` already
+    relies on), and a `/**/`-as-whitespace-collapsed variant. Returns the risk code
+    for the first match found, or `None`.
+
+    Deliberately layered rather than one giant regex: `_SQLI_FRAGMENT_RE`'s
+    alternatives need no context, `_QUOTE_THEN_COMMENT_RE` needs a quote earlier in
+    the same text, and `_parses_as_real_sql_statement` (a full statement pasted
+    whole, e.g. `SELECT table_name FROM information_schema.tables`) needs the value
+    to actually parse as one — folding all three into a single check would lose
+    that per-check context.
+    """
+    candidates = [value]
+    for view in normalize(value).views:
+        if view.text not in candidates:
+            candidates.append(view.text)
+    decommented = _BLOCK_COMMENT_RE.sub(" ", value)
+    if decommented not in candidates:
+        candidates.append(decommented)
+
+    for text in candidates:
+        if _SQLI_FRAGMENT_RE.search(text):
+            return "scope.sql_fragment_in_value"
+        if _QUOTE_THEN_COMMENT_RE.search(text):
+            return "scope.sql_fragment_in_value"
+    if _parses_as_real_sql_statement(value):
+        return "scope.sql_statement_in_value"
+    return None
 
 
 def analyse_scope(key: str, value: str) -> ActionAnalysis | None:
@@ -465,16 +608,20 @@ def analyse_scope(key: str, value: str) -> ActionAnalysis | None:
                 {"key": key, "value": stripped},
             )
         )
-    elif _SQLI_FRAGMENT_RE.search(value):
+    elif (sqli_code := _sqli_shaped(value)) is not None:
         analysis.operation = ADMIN
         analysis.blast_radius = "unbounded"
         analysis.reversible = False
+        detail = (
+            "contains a full SQL statement"
+            if sqli_code == "scope.sql_statement_in_value"
+            else "contains a SQL-injection-shaped fragment"
+        )
         analysis.risks.append(
             ActionRisk(
-                "scope.sql_fragment_in_value",
+                sqli_code,
                 "critical",
-                f"argument '{key}' contains a SQL-injection-shaped fragment though it "
-                "was never declared as a SQL parameter",
+                f"argument '{key}' {detail} though it was never declared as a SQL parameter",
                 {"key": key},
             )
         )
@@ -500,9 +647,32 @@ def analyse_scope(key: str, value: str) -> ActionAnalysis | None:
 
 #: Argument names that conventionally carry an executable artefact. Matching is on the
 #: name because that is what the tool's own schema declares.
-_SQL_KEYS = ("sql", "query", "statement", "command_text")
+#: `sql`/`statement`/`command_text` are unambiguous — nothing legitimate names a
+#: field that and puts free text in it. `query` is not: it's at least as often a
+#: generic search/filter parameter (`search_emails(query=...)`,
+#: `search_calendar_events(query=...)`) as it is a raw SQL string, and unlike the
+#: other three, ordinary search text can accidentally *succeed* at parsing as SQL
+#: (sqlglot reads a bare two-word phrase like "vacation plans" as a column alias)
+#: or *fail* to parse for reasons that have nothing to do with risk (three-plus-word
+#: phrases usually don't fit any SQL grammar) — so treating every `query` value as
+#: SQL doesn't just risk false positives, it produces essentially arbitrary
+#: behaviour uncorrelated with actual danger. `_looks_like_sql` gates it: a `query`
+#: value is only sent to `analyse_sql` if it actually starts with a SQL verb;
+#: otherwise it falls through to the same generic scope backstop an unnamed
+#: argument gets.
+_SQL_KEYS_UNCONDITIONAL = ("sql", "statement", "command_text")
+_SQL_KEYS_AMBIGUOUS = ("query",)
+_SQL_LEADING_VERBS = (
+    "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE",
+    "TRUNCATE", "GRANT", "REVOKE", "MERGE", "WITH", "EXPLAIN", "SHOW", "DESCRIBE",
+)
 _SHELL_KEYS = ("command", "cmd", "script", "shell")
 _URL_KEYS = ("url", "endpoint", "path")
+
+
+def _looks_like_sql(value: str) -> bool:
+    first_word = value.strip().split(None, 1)[0].upper() if value.strip() else ""
+    return first_word in _SQL_LEADING_VERBS
 
 
 def analyse_arguments(
@@ -513,7 +683,9 @@ def analyse_arguments(
     for key, value in (arguments or {}).items():
         lowered = str(key).lower()
         if isinstance(value, str) and value.strip():
-            if lowered in _SQL_KEYS:
+            if lowered in _SQL_KEYS_UNCONDITIONAL or (
+                lowered in _SQL_KEYS_AMBIGUOUS and _looks_like_sql(value)
+            ):
                 out.append(analyse_sql(value, dialect=dialect))
             elif lowered in _SHELL_KEYS:
                 out.append(analyse_shell(value))

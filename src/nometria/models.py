@@ -390,12 +390,15 @@ class ScanRun(Base, TimestampMixin):
     __tablename__ = "scan_runs"
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("scn"))
-    # Null for a hosted-API scan — there's no stored connection to point at, since
-    # unlike GitHub we hold no credential to fetch the spec on the user's behalf.
+    # Null for a hosted-API or CLI scan — there's no stored connection to point at:
+    # unlike GitHub we hold no credential to fetch the spec (hosted-API) or ever touch
+    # the target machine at all (CLI submit — the scan already ran locally).
     connection_id: Mapped[str | None] = mapped_column(
         String(40), ForeignKey("github_connections.id"), index=True
     )
-    # "github" (default, repo scan) or "hosted_api" (OpenAPI spec scan).
+    # "github" (default, repo scan), "hosted_api" (OpenAPI spec scan), or "cli"
+    # (`nometria check --submit` / `nometria quickscan --submit` — a locally-run scan
+    # whose redacted summary, never its file contents, was submitted for review).
     source_kind: Mapped[str] = mapped_column(String(16), default="github")
     repo_full_name: Mapped[str] = mapped_column(String(300), default="")
     # The endpoint or spec URL, for a hosted-API scan. Unused for a github scan.
@@ -1346,7 +1349,8 @@ class Control(Base, TimestampMixin):
 
 
 class FrameworkMapping(Base, TimestampMixin):
-    """`draft` mappings are excluded from evidence packages (Appendix B §B.6)."""
+    """`draft` mappings ship in evidence packages chip-labeled `DRAFT — UNVERIFIED /
+    NOT LEGAL ADVICE` rather than excluded (Appendix B §B.6)."""
 
     __tablename__ = "framework_mappings"
 

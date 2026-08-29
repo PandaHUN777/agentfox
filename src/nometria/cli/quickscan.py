@@ -1,7 +1,7 @@
 """`nometria quickscan` — the one command answer to "is this worth my time."
 
-No account, no GitHub connection, no SDK integration, nothing leaves this machine.
-Three signals, all local:
+No account, no GitHub connection, no SDK integration, nothing leaves this machine —
+unless you explicitly ask it to. Three signals, all local:
 
 1. What's committed — `discovery.py`'s static AST scan of the current directory,
    the same engine `nometria check` uses.
@@ -14,6 +14,11 @@ Three signals, all local:
 
 Whatever this finds, the CTA at the end is the honest one: this is a snapshot, not
 governance — continuous monitoring needs `nometria.auto()` or a connected agent.
+
+`--submit` (or the interactive prompt at the end, if neither `--submit` nor
+`--no-submit` is passed) is the one optional exception to "nothing leaves this
+machine": see `cli/submit.py` for exactly what that sends and, just as important,
+what it never does.
 """
 
 from __future__ import annotations
@@ -62,11 +67,19 @@ def quickscan(
     skip_sessions: bool = typer.Option(
         False, "--skip-sessions", help="Skip the local AI-tool session scan."
     ),
+    submit: bool | None = typer.Option(
+        None,
+        "--submit/--no-submit",
+        help="Send a redacted summary (counts and structure only, never file "
+        "contents) to a running control plane for a fuller dashboard report. "
+        "Optional — omit both flags to be asked interactively.",
+    ),
 ) -> None:
     """One shot: what's committed, what's actually running, and proof the detectors
-    work — no account, nothing leaves this machine."""
+    work — no account, nothing leaves this machine unless you explicitly submit."""
     from ..discovery import scan as discovery_scan
     from ..session_scan import scan_all
+    from .submit import maybe_submit_report
 
     repo_report = discovery_scan(path)
     session_reports = [] if skip_sessions else scan_all()
@@ -83,11 +96,16 @@ def quickscan(
                 default=str,
             )
         )
+        if submit:
+            maybe_submit_report(
+                repo_report, source="quickscan", explicit=True, console=Console(stderr=True)
+            )
         return
 
     console.print(
         Panel(
-            "[bold]No account. No GitHub connection. Nothing leaves this machine.[/]\n"
+            "[bold]No account. No GitHub connection. Nothing leaves this machine "
+            "unless you say so.[/]\n"
             "[dim]Everything below ran locally, right now.[/]",
             title="[bold]Nometria Quickscan[/]",
             title_align="left",
@@ -144,6 +162,8 @@ def quickscan(
         f"  [{tone}]{caught}/{total}[/] adversarial probes caught in "
         f"[bold]{demo_ms:.0f}ms[/]  [dim](no data left this machine)[/]"
     )
+
+    maybe_submit_report(repo_report, source="quickscan", explicit=submit, console=console)
 
     console.print()
     console.print(

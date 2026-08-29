@@ -244,6 +244,50 @@ def test_check_emits_json_for_tooling(isolated_db, project):
     assert payload["coverage"] == 0.0
 
 
+def test_check_no_submit_never_touches_the_network(isolated_db, project, monkeypatch):
+    def _boom(*a, **k):
+        raise AssertionError("httpx.post must not be called when --no-submit is passed")
+
+    monkeypatch.setattr("nometria.cli.submit.httpx.post", _boom)
+    result = runner.invoke(app, ["check", str(project), "--no-submit"])
+    assert result.exit_code == 0, result.output
+
+
+def test_check_default_run_does_not_prompt_on_a_non_tty(isolated_db, project, monkeypatch):
+    def _boom(*a, **k):
+        raise AssertionError("nothing should be submitted with no flag on a non-tty run")
+
+    monkeypatch.setattr("nometria.cli.submit.httpx.post", _boom)
+    result = runner.invoke(app, ["check", str(project)])
+    assert result.exit_code == 0, result.output
+    assert "Submit to the dashboard?" not in result.output
+
+
+def test_check_submit_sends_the_redacted_payload(isolated_db, project, monkeypatch):
+    monkeypatch.setenv("NOMETRIA_API_URL", "https://plane.example.internal")
+    monkeypatch.setenv("NOMETRIA_API_TOKEN", "nom_usr_test")
+    captured = {}
+
+    class _FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"scan_run_id": "scn_test", "summary": {"agents_proposed": ["myrepo-app"]}}
+
+    def _fake_post(url, json, headers, timeout):
+        captured["json"] = json
+        return _FakeResponse()
+
+    monkeypatch.setattr("nometria.cli.submit.httpx.post", _fake_post)
+    result = runner.invoke(app, ["check", str(project), "--submit"])
+    assert result.exit_code == 0, result.output
+    assert "Submitted." in flat(result.output)
+    assert "deploy.sh" not in repr(captured["json"])  # worker.py's shell_call detail
+    assert "detail" not in repr(captured["json"])
+    assert "line" not in repr(captured["json"])
+
+
 def test_doctor_reports_without_changing_anything(isolated_db):
     result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 0

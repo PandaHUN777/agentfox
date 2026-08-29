@@ -19,7 +19,7 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
-Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
+Requirement detail lives in [the PRD](PRD.md); requirement→test mapping
 in [traceability.md](traceability.md).
 
 | ID | Pillar | Capability | Status | Tests | Note |

@@ -351,7 +351,9 @@ export default async function Compliance({
             An auditor-ready zip: what was in scope, what the agent actually did, which
             policy version was in force, and a standalone script that re-derives the
             audit-chain hash without trusting this platform or calling its API. Draft
-            (unreviewed) framework mappings are always excluded — reviewed on the{" "}
+            (unreviewed) framework mappings are included too, each tagged with a{" "}
+            <strong>DRAFT — UNVERIFIED / NOT LEGAL ADVICE</strong> chip so it's obvious
+            what still needs review — reviewed on the{" "}
             <a href="/compliance?tab=frameworks">Frameworks tab</a>. Building a package is
             itself logged to the audit chain, after the package's own contents are already
             computed — so a package can never include a record of its own creation, and its

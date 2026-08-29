@@ -208,13 +208,15 @@ def test_evidence_package_contents(seeded, tmp_path):
     assert "verify_chain.py" in readme
 
 
-def test_draft_mappings_excluded_from_evidence(seeded):
-    """Unreviewed regulatory mappings must never appear as evidence (Appendix B §B.6)."""
+def test_draft_mappings_included_with_chip(seeded):
+    """Unreviewed regulatory mappings ship as evidence, chip-labeled draft (Appendix B §B.6)."""
     package = evidence.build(seeded, agents=["*"], requested_by="dana@example.com")
     with zipfile.ZipFile(package.path) as zf:
         mappings = json.loads(zf.read("framework_mappings.json"))
-    assert mappings == [], "seeded catalog is all draft; nothing should be exported"
-    assert package.manifest_json["counts"]["excluded_draft_mappings"] > 0
+    assert mappings, "seeded catalog is all draft; drafts should still be exported"
+    assert all(m["review_status"] == "draft" for m in mappings)
+    assert all(m["chip"] == "DRAFT — UNVERIFIED / NOT LEGAL ADVICE" for m in mappings)
+    assert package.manifest_json["counts"]["draft_mappings_included"] == len(mappings)
 
 
 def test_reviewed_mappings_are_included(seeded):
@@ -224,7 +226,8 @@ def test_reviewed_mappings_are_included(seeded):
     package = evidence.build(seeded, agents=["*"], requested_by="dana@example.com")
     with zipfile.ZipFile(package.path) as zf:
         mappings = json.loads(zf.read("framework_mappings.json"))
-    assert any(m["control_key"] == "NOM-RTG-01" for m in mappings)
+    reviewed = [m for m in mappings if m["control_key"] == "NOM-RTG-01"]
+    assert reviewed and reviewed[0]["chip"] == "REVIEWED"
 
 
 def test_manifest_digests_match_files(seeded):

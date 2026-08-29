@@ -1,0 +1,1637 @@
+{
+  "malicious": [
+    {
+      "key": "notes",
+      "value": "'",
+      "sources": [
+        "mysql-payloads.txt",
+        "postgresql-payloads.txt",
+        "mssql-payloads.txt",
+        "sqlite-payloads.txt",
+        "oracle-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "reference_code",
+      "value": "\"",
+      "sources": [
+        "mysql-payloads.txt",
+        "postgresql-payloads.txt",
+        "mssql-payloads.txt",
+        "sqlite-payloads.txt",
+        "oracle-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "employee_id",
+      "value": "'--",
+      "sources": [
+        "mysql-payloads.txt",
+        "postgresql-payloads.txt",
+        "mssql-payloads.txt",
+        "sqlite-payloads.txt",
+        "oracle-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_id",
+      "value": "' #",
+      "sources": [
+        "mysql-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "SELECT @@VERSION, USER(), DATABASE();",
+      "sources": [
+        "mysql-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "SELECT table_name FROM information_schema.tables;",
+      "sources": [
+        "mysql-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "ticket_id",
+      "value": "SELECT column_name FROM information_schema.columns WHERE table_name = 'users';",
+      "sources": [
+        "mysql-payloads.txt",
+        "postgresql-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "SELECT 'malicious code' INTO OUTFILE '/var/www/html/shell.php';",
+      "sources": [
+        "mysql-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "SELECT LOAD_FILE('/etc/passwd');",
+      "sources": [
+        "mysql-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_id",
+      "value": "SELECT CONCAT('a', 'b');",
+      "sources": [
+        "mysql-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "notes",
+      "value": "' OR 1=1--",
+      "sources": [
+        "mysql-payloads.txt",
+        "postgresql-payloads.txt",
+        "mssql-payloads.txt",
+        "sqlite-payloads.txt",
+        "oracle-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "ticket_id",
+      "value": "' OR 1=1#",
+      "sources": [
+        "mysql-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "\" OR 1=1--",
+      "sources": [
+        "mysql-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "ticket_id",
+      "value": "\" OR 1=1#",
+      "sources": [
+        "mysql-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_name",
+      "value": "admin'--",
+      "sources": [
+        "mysql-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "item_id",
+      "value": "admin' #",
+      "sources": [
+        "mysql-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_name",
+      "value": "' UNION SELECT NULL--",
+      "sources": [
+        "mysql-payloads.txt",
+        "postgresql-payloads.txt",
+        "mssql-payloads.txt",
+        "sqlite-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "ticket_id",
+      "value": "' UNION SELECT NULL,NULL--",
+      "sources": [
+        "mysql-payloads.txt",
+        "postgresql-payloads.txt",
+        "mssql-payloads.txt",
+        "sqlite-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "SLEEP(5)",
+      "sources": [
+        "mysql-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "notes",
+      "value": "' AND (SELECT 1 FROM (SELECT(SLEEP(5)))a)--",
+      "sources": [
+        "mysql-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "' OR (SELECT 1 FROM (SELECT(SLEEP(5)))a)='",
+      "sources": [
+        "mysql-payloads.txt",
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "mysql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "ticket_id",
+      "value": "SELECT version(), current_user, current_database();",
+      "sources": [
+        "postgresql-payloads.txt"
+      ],
+      "primary_source": "postgresql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_id",
+      "value": "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public';",
+      "sources": [
+        "postgresql-payloads.txt"
+      ],
+      "primary_source": "postgresql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "COPY (SELECT 'malicious') TO '/tmp/test';",
+      "sources": [
+        "postgresql-payloads.txt"
+      ],
+      "primary_source": "postgresql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "employee_id",
+      "value": "CREATE TABLE shell(output text);",
+      "sources": [
+        "postgresql-payloads.txt"
+      ],
+      "primary_source": "postgresql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "item_id",
+      "value": "COPY shell FROM PROGRAM 'id';",
+      "sources": [
+        "postgresql-payloads.txt"
+      ],
+      "primary_source": "postgresql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "SELECT * FROM shell;",
+      "sources": [
+        "postgresql-payloads.txt"
+      ],
+      "primary_source": "postgresql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "employee_id",
+      "value": "SELECT pg_sleep(5);",
+      "sources": [
+        "postgresql-payloads.txt"
+      ],
+      "primary_source": "postgresql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "account_number",
+      "value": "' AND (SELECT 1 FROM (SELECT(pg_sleep(5)))a)--",
+      "sources": [
+        "postgresql-payloads.txt"
+      ],
+      "primary_source": "postgresql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "reference_code",
+      "value": "SELECT @@VERSION, SUSER_SNAME(), DB_NAME();",
+      "sources": [
+        "mssql-payloads.txt"
+      ],
+      "primary_source": "mssql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "ticket_id",
+      "value": "SELECT name FROM sysobjects WHERE xtype = 'U';",
+      "sources": [
+        "mssql-payloads.txt"
+      ],
+      "primary_source": "mssql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "SELECT name FROM syscolumns WHERE id = (SELECT id FROM sysobjects WHERE name = 'users');",
+      "sources": [
+        "mssql-payloads.txt"
+      ],
+      "primary_source": "mssql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "employee_id",
+      "value": "EXEC xp_cmdshell 'whoami';",
+      "sources": [
+        "mssql-payloads.txt"
+      ],
+      "primary_source": "mssql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "notes",
+      "value": "WAITFOR DELAY '0:0:5';",
+      "sources": [
+        "mssql-payloads.txt"
+      ],
+      "primary_source": "mssql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "employee_id",
+      "value": "' AND 1=1--",
+      "sources": [
+        "mssql-payloads.txt"
+      ],
+      "primary_source": "mssql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "notes",
+      "value": "' AND 1=2--",
+      "sources": [
+        "mssql-payloads.txt"
+      ],
+      "primary_source": "mssql-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "notes",
+      "value": "SELECT sqlite_version();",
+      "sources": [
+        "sqlite-payloads.txt"
+      ],
+      "primary_source": "sqlite-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_name",
+      "value": "SELECT name FROM sqlite_master WHERE type='table';",
+      "sources": [
+        "sqlite-payloads.txt"
+      ],
+      "primary_source": "sqlite-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "employee_id",
+      "value": "PRAGMA table_info('users');",
+      "sources": [
+        "sqlite-payloads.txt"
+      ],
+      "primary_source": "sqlite-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "reference_code",
+      "value": "ATTACH DATABASE '/var/www/html/shell.php' AS pwn;",
+      "sources": [
+        "sqlite-payloads.txt"
+      ],
+      "primary_source": "sqlite-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "account_number",
+      "value": "CREATE TABLE pwn.shell (code TEXT);",
+      "sources": [
+        "sqlite-payloads.txt"
+      ],
+      "primary_source": "sqlite-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "account_number",
+      "value": "INSERT INTO pwn.shell (code) VALUES ('<?php system($_GET[\"cmd\"]); ?>');",
+      "sources": [
+        "sqlite-payloads.txt"
+      ],
+      "primary_source": "sqlite-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "SELECT banner FROM v$version;",
+      "sources": [
+        "oracle-payloads.txt"
+      ],
+      "primary_source": "oracle-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "reference_code",
+      "value": "SELECT user FROM dual;",
+      "sources": [
+        "oracle-payloads.txt"
+      ],
+      "primary_source": "oracle-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_id",
+      "value": "SELECT table_name FROM all_tables;",
+      "sources": [
+        "oracle-payloads.txt"
+      ],
+      "primary_source": "oracle-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "SELECT column_name FROM all_tab_columns WHERE table_name = 'USERS';",
+      "sources": [
+        "oracle-payloads.txt"
+      ],
+      "primary_source": "oracle-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "item_id",
+      "value": "BEGIN DBMS_LOCK.SLEEP(5); END;",
+      "sources": [
+        "oracle-payloads.txt"
+      ],
+      "primary_source": "oracle-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_id",
+      "value": "' UNION SELECT NULL FROM DUAL--",
+      "sources": [
+        "oracle-payloads.txt"
+      ],
+      "primary_source": "oracle-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "reference_code",
+      "value": "' UNION SELECT NULL,NULL FROM DUAL--",
+      "sources": [
+        "oracle-payloads.txt"
+      ],
+      "primary_source": "oracle-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_id",
+      "value": "'/*",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "' OR '1'='1",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "\" OR \"1\"=\"1",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_id",
+      "value": "admin'/*",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "' UNION SELECT NULL,NULL,NULL--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_id",
+      "value": "' AND (SELECT 1 FROM (SELECT(SLEEP(10)))a)--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_name",
+      "value": "' AND 1=(SELECT COUNT(*) FROM tablename)--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "' OR 1=1 LIMIT 1--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "' OR 1=1 LIMIT 1 OFFSET 1--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_name",
+      "value": "' GROUP BY 1,2,3--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "notes",
+      "value": "' ORDER BY 1--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_name",
+      "value": "' ORDER BY 2--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "account_number",
+      "value": "' ORDER BY 10--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "'); WAITFOR DELAY '0:0:5'--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "notes",
+      "value": "'); SELECT PG_SLEEP(5)--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "' OR (SELECT 1 FROM (SELECT(SLEEP(5)))a)='1",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "1' AND 1=1",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_id",
+      "value": "1' AND 1=2",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "ticket_id",
+      "value": "1\" AND 1=1",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_name",
+      "value": "1\" AND 1=2",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "employee_id",
+      "value": "' OR TRUE--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "item_id",
+      "value": "\" OR TRUE--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "' OR 1=1/*",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "' OR 'a'='a",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "' OR 'a'='b",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "item_id",
+      "value": "' OR 1=1 LIMIT 1",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "' OR 1=1;--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_name",
+      "value": "' OR 1=1;#",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "' OR 1=1;/*",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "') OR ('1'='1",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "reference_code",
+      "value": "') OR ('1'='1'--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "item_id",
+      "value": "') OR ('1'='1'#",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "notes",
+      "value": "') OR ('1'='1'/*",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "account_number",
+      "value": "') OR '1'='1",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "account_number",
+      "value": "') OR '1'='1'--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "account_number",
+      "value": "') OR '1'='1'#",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_name",
+      "value": "') OR '1'='1'/*",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "item_id",
+      "value": "\" OR \"1\"=\"1\"--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "item_id",
+      "value": "\" OR \"1\"=\"1\"#",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "notes",
+      "value": "\" OR \"1\"=\"1\"/*",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "\" OR 1=1",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "account_number",
+      "value": "\" OR 1=1/*",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "notes",
+      "value": "\" OR 1=1;--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "account_number",
+      "value": "\" OR 1=1;#",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "ticket_id",
+      "value": "\" OR 1=1;/*",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "employee_id",
+      "value": "\") OR (\"1\"=\"1",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_name",
+      "value": "\") OR (\"1\"=\"1\"--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "item_id",
+      "value": "\") OR (\"1\"=\"1\"#",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "\") OR (\"1\"=\"1\"/*",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_name",
+      "value": "\") OR \"1\"=\"1",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "reference_code",
+      "value": "\") OR \"1\"=\"1\"--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "item_id",
+      "value": "\") OR \"1\"=\"1\"#",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "\") OR \"1\"=\"1\"/*",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "item_id",
+      "value": "SLEEP(5) /*' or SLEEP(5) or '\" or SLEEP(5) or \"*/",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "notes",
+      "value": "' OR 1=1 --",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "employee_id",
+      "value": "\" OR 1=1 --",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "' OR '1'='1' { % / * / }",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "account_number",
+      "value": "%27%20OR%201%3D1--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "account_number",
+      "value": "0x61646d696e",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_id",
+      "value": "CHAR(39,79,82,39,49,39,61,39,49)",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "ticket_id",
+      "value": "'/**/OR/**/1=1--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "account_number",
+      "value": "'OR%091=1--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "reference_code",
+      "value": "'OR%0a1=1--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "reference_code",
+      "value": "'OR%0b1=1--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "employee_id",
+      "value": "'OR%0c1=1--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "employee_id",
+      "value": "'OR%0d1=1--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "employee_id",
+      "value": "'OR%a01=1--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "tracking_number",
+      "value": "'#",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "ticket_id",
+      "value": "'-- -",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "order_id",
+      "value": "' UNION SELECT 1,2,3--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "ticket_id",
+      "value": "' UNION SELECT @@VERSION,2,3--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "ticket_id",
+      "value": "' UNION SELECT version(),2,3--",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    },
+    {
+      "key": "customer_name",
+      "value": "{\"id\": \"1' OR 1=1--\"}",
+      "sources": [
+        "burp-intruder-payloads.txt"
+      ],
+      "primary_source": "burp-intruder-payloads.txt",
+      "expect_blocked": true,
+      "authored": false
+    }
+  ],
+  "benign": [
+    {
+      "key": "customer_name",
+      "value": "Sarah or her assistant will pick up the order",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "or_word_no_structure"
+    },
+    {
+      "key": "notes",
+      "value": "Please deliver before noon or leave with the doorman",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "or_word_no_structure"
+    },
+    {
+      "key": "notes",
+      "value": "Call the office or send an email if there's a delay",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "or_word_no_structure"
+    },
+    {
+      "key": "item_id",
+      "value": "small or medium size, whichever is in stock",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "or_word_no_structure"
+    },
+    {
+      "key": "customer_name",
+      "value": "Pat Taylor (they/them or she/her)",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "or_word_no_structure"
+    },
+    {
+      "key": "notes",
+      "value": "Leave at the front desk or with building security",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "or_word_no_structure"
+    },
+    {
+      "key": "reference_code",
+      "value": "quote valid for 30 days or until stock runs out",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "or_word_no_structure"
+    },
+    {
+      "key": "notes",
+      "value": "Please select the blue option if red is unavailable",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "select_word_no_structure"
+    },
+    {
+      "key": "notes",
+      "value": "Union Station is the preferred pickup point",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "union_word_no_structure"
+    },
+    {
+      "key": "customer_name",
+      "value": "Select Comfort Mattress Co. \u2014 attn: receiving",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "select_word_no_structure"
+    },
+    {
+      "key": "notes",
+      "value": "Employees are union members and get a discount code",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "union_word_no_structure"
+    },
+    {
+      "key": "notes",
+      "value": "Select all items before checking out, thanks",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "select_word_no_structure"
+    },
+    {
+      "key": "customer_name",
+      "value": "United Union Workers Local 42",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "union_word_no_structure"
+    },
+    {
+      "key": "notes",
+      "value": "Select overnight shipping or standard, whichever is cheaper this week",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "combined_words_no_structure"
+    },
+    {
+      "key": "notes",
+      "value": "Union members should select their preferred delivery slot online",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "combined_words_no_structure"
+    },
+    {
+      "key": "notes",
+      "value": "See section 2 -- overview for full delivery terms",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "dash_as_em_dash"
+    },
+    {
+      "key": "notes",
+      "value": "Fragile -- please handle with care",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "dash_as_em_dash"
+    },
+    {
+      "key": "customer_name",
+      "value": "J. Alvarez -- Suite 400",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "dash_as_em_dash"
+    },
+    {
+      "key": "notes",
+      "value": "Backordered -- will ship once restocked",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "dash_as_em_dash"
+    },
+    {
+      "key": "reference_code",
+      "value": "Q3-2025 -- renewal",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "dash_as_em_dash"
+    },
+    {
+      "key": "notes",
+      "value": "Gift wrap -- no card needed",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "dash_as_em_dash"
+    },
+    {
+      "key": "notes",
+      "value": "Width = 12in, Height = 8in, per the spec sheet",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "equality_in_prose"
+    },
+    {
+      "key": "notes",
+      "value": "Total = $42.50 after the discount code was applied",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "equality_in_prose"
+    },
+    {
+      "key": "reference_code",
+      "value": "PO#4471 = the original January order",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "equality_in_prose"
+    },
+    {
+      "key": "customer_name",
+      "value": "O'Brien",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "apostrophe_in_name"
+    },
+    {
+      "key": "customer_name",
+      "value": "D'Angelo Martinez",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "apostrophe_in_name"
+    },
+    {
+      "key": "notes",
+      "value": "Customer said it's fine to leave at the gate",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "apostrophe_in_name"
+    },
+    {
+      "key": "notes",
+      "value": "The label reads \"Handle with care\"",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "quote_in_prose"
+    },
+    {
+      "key": "notes",
+      "value": "Ship Monday; confirm by phone first",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "semicolon_in_prose"
+    },
+    {
+      "key": "notes",
+      "value": "Items: 2 chairs; 1 table; 1 lamp",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "semicolon_in_prose"
+    },
+    {
+      "key": "order_id",
+      "value": "ORD-2026-004471",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "plain_identifier"
+    },
+    {
+      "key": "account_number",
+      "value": "ACC00931847",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "plain_identifier"
+    },
+    {
+      "key": "employee_id",
+      "value": "E-10432",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "plain_identifier"
+    },
+    {
+      "key": "customer_name",
+      "value": "Priya Natarajan",
+      "sources": [
+        "authored"
+      ],
+      "primary_source": "authored",
+      "expect_blocked": false,
+      "authored": true,
+      "category": "plain_identifier"
+    }
+  ]
+}

@@ -1,0 +1,72 @@
+{
+  "injection": {
+    "n": 65,
+    "flagged": 0,
+    "flag_rate": 0.0,
+    "risk_codes": {}
+  },
+  "user": {
+    "n": 552,
+    "flagged": 0,
+    "flag_rate": 0.0,
+    "risk_codes": {}
+  },
+  "by_suite": {
+    "workspace": {
+      "injection": {
+        "n": 12,
+        "flagged": 0,
+        "flag_rate": 0.0,
+        "risk_codes": {}
+      },
+      "user": {
+        "n": 101,
+        "flagged": 0,
+        "flag_rate": 0.0,
+        "risk_codes": {}
+      }
+    },
+    "travel": {
+      "injection": {
+        "n": 17,
+        "flagged": 0,
+        "flag_rate": 0.0,
+        "risk_codes": {}
+      },
+      "user": {
+        "n": 261,
+        "flagged": 0,
+        "flag_rate": 0.0,
+        "risk_codes": {}
+      }
+    },
+    "banking": {
+      "injection": {
+        "n": 23,
+        "flagged": 0,
+        "flag_rate": 0.0,
+        "risk_codes": {}
+      },
+      "user": {
+        "n": 40,
+        "flagged": 0,
+        "flag_rate": 0.0,
+        "risk_codes": {}
+      }
+    },
+    "slack": {
+      "injection": {
+        "n": 13,
+        "flagged": 0,
+        "flag_rate": 0.0,
+        "risk_codes": {}
+      },
+      "user": {
+        "n": 150,
+        "flagged": 0,
+        "flag_rate": 0.0,
+        "risk_codes": {}
+      }
+    }
+  }
+}

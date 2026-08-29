@@ -96,10 +96,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // default on an edge case is the wrong failure direction.
   const pathname = (await headers()).get("x-pathname") || "";
   const isLoginPage = pathname === "/login";
+  // The public playground (/playground) is unauthenticated by design (see
+  // middleware.ts) and has its own minimal header — the authenticated sidebar/
+  // topbar chrome would be both wrong (nothing here is signed in) and a giveaway
+  // of internal nav to an anonymous visitor.
+  const isChromelessPage = isLoginPage || pathname.startsWith("/playground");
 
   let me: any = null;
   let attention: any = null;
-  if (signedIn && !isLoginPage) {
+  if (signedIn && !isChromelessPage) {
     [me, attention] = await Promise.all([
       safeApi("/api/me", null),
       safeApi("/api/attention", { items: [], total: 0 }),
@@ -112,7 +117,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
-        {isLoginPage ? (
+        {isChromelessPage ? (
           <main className="login-main">{children}</main>
         ) : (
           <div className="shell">

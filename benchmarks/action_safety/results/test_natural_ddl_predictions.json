@@ -1,0 +1,624 @@
+[
+  {
+    "sql": "CREATE TABLE products( product_id INT PRIMARY KEY, name VARCHAR(255), supplier_id INT, quantity_sold INT, price DECIMAL(5,2));",
+    "domain": "retail",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "DROP TABLE therapists;",
+    "domain": "mental health",
+    "statement_kind": [
+      "DROP",
+      "TABLE"
+    ],
+    "expect_blocked": true,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "sql.destructive_ddl"
+    ],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "DROP VIEW autonomous_vehicles_view;",
+    "domain": "transportation",
+    "statement_kind": [
+      "DROP",
+      "VIEW"
+    ],
+    "expect_blocked": true,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "sql.destructive_ddl"
+    ],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE VIEW veteran_long_service AS SELECT * FROM veteran_employment WHERE years_of_service > 5;",
+    "domain": "defense industry",
+    "statement_kind": [
+      "CREATE",
+      "VIEW"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "DROP VIEW redundant_billing_view;",
+    "domain": "legal services",
+    "statement_kind": [
+      "DROP",
+      "VIEW"
+    ],
+    "expect_blocked": true,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "sql.destructive_ddl"
+    ],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE planets (id INT PRIMARY KEY, name VARCHAR(50), distance_to_sun FLOAT);",
+    "domain": "space",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "DROP TABLE innovation_trends;",
+    "domain": "startups",
+    "statement_kind": [
+      "DROP",
+      "TABLE"
+    ],
+    "expect_blocked": true,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "sql.destructive_ddl"
+    ],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE VIEW risk_assessment_summary AS SELECT region, SUM(risk_score) AS total_risk_score, AVG(risk_score) AS average_risk_score FROM risk_assessment GROUP BY region;",
+    "domain": "defense contractors",
+    "statement_kind": [
+      "CREATE",
+      "VIEW"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE ingredient_sourcing (ingredient_id INT, supplier_id INT, sourcing_date DATE, PRIMARY KEY (ingredient_id, sourcing_date));",
+    "domain": "cosmetics",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "DROP TABLE species;",
+    "domain": "oceans",
+    "statement_kind": [
+      "DROP",
+      "TABLE"
+    ],
+    "expect_blocked": true,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "sql.destructive_ddl"
+    ],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "ALTER TABLE athlete_stats ADD COLUMN assists INT;",
+    "domain": "sports entertainment",
+    "statement_kind": [
+      "ALTER",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE VIEW mammals_view AS SELECT * FROM animals WHERE species = 'Mammal';",
+    "domain": "wildlife conservation",
+    "statement_kind": [
+      "CREATE",
+      "VIEW"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE Donations( id INT PRIMARY KEY AUTO_INCREMENT, donor_name VARCHAR(255), donation_amount DECIMAL(10, 2), donation_date DATE)",
+    "domain": "nonprofit operations",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE VIEW student_info AS SELECT smh.student_id, smh.mental_health_score, sd.age, sd.gender FROM student_mental_health smh INNER JOIN student_demographics sd ON smh.student_id = sd.student_id;",
+    "domain": "education",
+    "statement_kind": [
+      "CREATE",
+      "VIEW"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "ALTER TABLE Courses ADD COLUMN StudentsEnrolled INT;",
+    "domain": "education",
+    "statement_kind": [
+      "ALTER",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE food_waste (waste_type VARCHAR(255), quantity INT);",
+    "domain": "food services",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "DROP TABLE community_education;",
+    "domain": "wildlife conservation",
+    "statement_kind": [
+      "DROP",
+      "TABLE"
+    ],
+    "expect_blocked": true,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "sql.destructive_ddl"
+    ],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE VIEW top_safety_scores AS SELECT manufacturer, AVG(test_score) as avg_score FROM vehicle_safety_testing GROUP BY manufacturer ORDER BY avg_score DESC LIMIT 5;",
+    "domain": "automotive",
+    "statement_kind": [
+      "CREATE",
+      "VIEW"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE indigenous_farms (id SERIAL PRIMARY KEY, name TEXT, community TEXT, hectares INT);",
+    "domain": "agriculture",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE supplier_ethics (supplier_id INT, country VARCHAR(50), labor_practices VARCHAR(50), sustainability_score INT);",
+    "domain": "retail",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE VIEW TopTeachers AS SELECT Name, Subject FROM Teachers WHERE Subject = 'Science';",
+    "domain": "education",
+    "statement_kind": [
+      "CREATE",
+      "VIEW"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE VIEW fish_biomass AS SELECT species, AVG(biomass) as avg_biomass FROM fish_stock GROUP BY species;",
+    "domain": "aquaculture",
+    "statement_kind": [
+      "CREATE",
+      "VIEW"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE threat_analysis (id INT PRIMARY KEY, analysis_date DATE, threat_level VARCHAR(10), analysis TEXT);",
+    "domain": "defense industry",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "ALTER TABLE Sites ADD Era TEXT;",
+    "domain": "archeology",
+    "statement_kind": [
+      "ALTER",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE client_demographics (client_id INT PRIMARY KEY, client_name VARCHAR(255));",
+    "domain": "legal services",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "DROP TABLE EmployeeDemographics;",
+    "domain": "human resources",
+    "statement_kind": [
+      "DROP",
+      "TABLE"
+    ],
+    "expect_blocked": true,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "sql.destructive_ddl"
+    ],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE OR REPLACE VIEW health_equity_view AS SELECT * FROM health_equity;",
+    "domain": "healthcare",
+    "statement_kind": [
+      "CREATE",
+      "OR"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "ALTER TABLE climate_mitigation_projects DROP COLUMN budget;",
+    "domain": "climate change",
+    "statement_kind": [
+      "ALTER",
+      "TABLE"
+    ],
+    "expect_blocked": true,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "sql.destructive_ddl"
+    ],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "DROP TABLE disability_accommodations;",
+    "domain": "disability services",
+    "statement_kind": [
+      "DROP",
+      "TABLE"
+    ],
+    "expect_blocked": true,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "sql.destructive_ddl"
+    ],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE ticket_sales (sale_id INT, event_date DATE, team VARCHAR(50), section VARCHAR(50), price DECIMAL(5,2), quantity INT);",
+    "domain": "sports entertainment",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE manufacturing_regions (id INT PRIMARY KEY, region VARCHAR(100), country VARCHAR(100), manufacturing_volume INT);",
+    "domain": "fashion",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE gaming.game_stats (session_id INT, game_mode VARCHAR(50), kills INT, deaths INT, assists INT, score INT);",
+    "domain": "gaming industry",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "DROP VIEW top_ethical_companies;",
+    "domain": "manufacturing",
+    "statement_kind": [
+      "DROP",
+      "VIEW"
+    ],
+    "expect_blocked": true,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "sql.destructive_ddl"
+    ],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE VIEW top_artists AS SELECT * FROM artists ORDER BY total_streams DESC LIMIT 5;",
+    "domain": "music industry",
+    "statement_kind": [
+      "CREATE",
+      "VIEW"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE if not exists mental_health_parity_community_workers AS SELECT * FROM mental_health_parity CROSS JOIN community_health_workers WHERE FALSE;",
+    "domain": "healthcare",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE VIEW fish_in_warm_waters AS SELECT * FROM fish_stock WHERE location IN ('tropical', 'temperate');",
+    "domain": "aquaculture",
+    "statement_kind": [
+      "CREATE",
+      "VIEW"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "ALTER TABLE infrastructure_materials ADD material_origin TEXT DEFAULT 'Domestic';",
+    "domain": "civil engineering",
+    "statement_kind": [
+      "ALTER",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "ALTER TABLE audience_demographics RENAME TO audience;",
+    "domain": "journalism",
+    "statement_kind": [
+      "ALTER",
+      "TABLE"
+    ],
+    "expect_blocked": true,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "sql.destructive_ddl"
+    ],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "ALTER TABLE policyholders ADD COLUMN zip_code VARCHAR(10);",
+    "domain": "insurance",
+    "statement_kind": [
+      "ALTER",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE VIEW EmployeeAgesEthnicities AS SELECT Age, Ethnicity FROM EmployeeDemographics;",
+    "domain": "human resources",
+    "statement_kind": [
+      "CREATE",
+      "VIEW"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE VIEW cbt_therapists AS SELECT therapist_id, name, specialization, experience FROM therapists WHERE specialization = 'CBT';",
+    "domain": "mental health",
+    "statement_kind": [
+      "CREATE",
+      "VIEW"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "DROP TABLE social_impact_scores;",
+    "domain": "technology",
+    "statement_kind": [
+      "DROP",
+      "TABLE"
+    ],
+    "expect_blocked": true,
+    "predicted_blocked": true,
+    "risk_codes": [
+      "sql.destructive_ddl"
+    ],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "ALTER TABLE hotel_reviews ADD total_revenue FLOAT;",
+    "domain": "hospitality technology",
+    "statement_kind": [
+      "ALTER",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE sustainability_metrics (country VARCHAR(100) PRIMARY KEY, eco_friendly_percentage DECIMAL(5, 2), water_usage_avg INT);",
+    "domain": "fashion retail",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE TABLE marine_protected_areas (id INT PRIMARY KEY, name VARCHAR(255), location VARCHAR(255), size FLOAT, year_established INT);",
+    "domain": "oceans",
+    "statement_kind": [
+      "CREATE",
+      "TABLE"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  },
+  {
+    "sql": "CREATE VIEW sustainable_suppliers AS SELECT * FROM suppliers WHERE sustainability_score > 80;",
+    "domain": "retail",
+    "statement_kind": [
+      "CREATE",
+      "VIEW"
+    ],
+    "expect_blocked": false,
+    "predicted_blocked": false,
+    "risk_codes": [],
+    "parsed": true,
+    "parse_error": null
+  }
+]

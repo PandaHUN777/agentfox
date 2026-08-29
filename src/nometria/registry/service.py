@@ -20,7 +20,7 @@ import json
 import re
 import shutil
 import subprocess
-from collections import deque
+from collections import defaultdict, deque
 from typing import Any
 
 from sqlalchemy import func, select
@@ -37,6 +37,7 @@ from ..models import (
     Trace,
     utcnow,
 )
+from ..policy import PolicyDocument, save_policy
 
 _SLUG = re.compile(r"[^a-z0-9-]+")
 
@@ -102,6 +103,79 @@ def register_agent(
         agent.first_seen_at = utcnow()
     session.flush()
     return agent
+
+
+def propose_from_scan(
+    session: Session,
+    *,
+    run_id: str,
+    repo_slug_base: str,
+    repo_display_name: str,
+    frameworks: list[str],
+    sites: list[dict[str, Any]],
+    author: str,
+) -> tuple[list[str], list[str]]:
+    """Propose one draft agent per top-level directory and one observe-mode policy
+    per detected framework, from a discovery scan's governable sites.
+
+    Shared by every scan entry point that ends up here — the GitHub-connected repo
+    scan (``routes/integrations.py``) and a locally-run ``nometria check --submit`` /
+    ``nometria quickscan --submit`` (``routes/discovery.py``) — so a scan looks the
+    same in the dashboard whichever door it came through. ``sites`` is intentionally
+    the redacted shape (``{"kind", "top_dir", "provider"}``, see
+    ``discovery.ScanReport.to_submission_payload``): this function never needs, and
+    must never be given, a file's full path, line number or literal source text.
+    """
+    repo_short = slugify(repo_slug_base)
+    groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for site in sites:
+        groups[site.get("top_dir") or "root"].append(site)
+
+    created_agents: list[str] = []
+    for group_key, group_sites in groups.items():
+        providers = [s["provider"] for s in group_sites if s.get("provider")]
+        framework = providers[0] if providers else (frameworks[0] if frameworks else None)
+        # A monorepo's top-level directory is often named after the repo itself
+        # (e.g. gpt-researcher/gpt-researcher/) — slugifying both halves would
+        # produce "gpt-researcher-gpt-researcher", which reads as a typo rather
+        # than two distinct things.
+        group_slug = slugify(group_key)
+        slug = repo_short if group_slug == repo_short else f"{repo_short}-{group_slug}"
+        agent = register_agent(
+            session,
+            slug=slug,
+            name=f"{repo_display_name}/{group_key}",
+            # A static scan can count code sites, not know what the agent is
+            # *for* — left blank and surfaced honestly until a human sets one.
+            purpose="",
+            framework=framework,
+            draft=True,
+            source_scan_run_id=run_id,
+        )
+        created_agents.append(agent.slug)
+
+    created_policies: list[str] = []
+    for framework in frameworks:
+        doc = PolicyDocument(
+            key=f"scan-{run_id}-{slugify(framework)}",
+            name=f"{framework} guardrails",
+            description=(
+                f"Detects {framework} usage in {repo_display_name} — prompt "
+                f"injection, PII/secret leaks, and unsafe tool actions."
+            ),
+            mode="observe",
+            scope={"agents": [f"{repo_short}-*"]},
+            rules=[],
+        )
+        policy, _version = save_policy(
+            session, doc, author=author, notes=f"Proposed by scan {run_id}",
+            bind_mode="observe",
+        )
+        policy.proposed = True
+        policy.source_scan_run_id = run_id
+        created_policies.append(policy.key)
+
+    return created_agents, created_policies
 
 
 def observe_agent(

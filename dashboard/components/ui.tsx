@@ -195,7 +195,7 @@ export function DraftCaveat({ text }: { text?: string }) {
     <div className="caveat">
       <strong>Framework mappings are DRAFT</strong>
       {text ||
-        "These are informed engineering drafts produced from the framework texts. They are not legal advice, have not been reviewed by compliance counsel or a certification body, and are excluded from evidence packages until reviewed."}
+        "These are informed engineering drafts produced from the framework texts. They are not legal advice, have not been reviewed by compliance counsel or a certification body, and ship inside evidence packages tagged DRAFT — UNVERIFIED / NOT LEGAL ADVICE until reviewed."}
     </div>
   );
 }

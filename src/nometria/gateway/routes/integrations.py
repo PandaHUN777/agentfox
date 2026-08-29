@@ -26,7 +26,6 @@ import logging
 import secrets
 import tarfile
 import tempfile
-from collections import defaultdict
 from pathlib import Path
 from typing import Annotated, Any
 from urllib.parse import urlparse
@@ -46,7 +45,7 @@ from ...discovery import scan as discovery_scan
 from ...discovery_openapi import SpecFetchError, fetch_spec, scan_spec
 from ...models import GithubConnection, Policy, PolicyVersion, ScanRun, User, utcnow
 from ...policy import PolicyDocument, save_policy
-from ...registry.service import register_agent, slugify
+from ...registry.service import propose_from_scan, register_agent, slugify
 from ...tenancy import bind_session, system_scope
 from ..auth import issue_token
 from ..deps import current_user, db, require
@@ -337,65 +336,23 @@ def trigger_scan(
             session.commit()
             raise HTTPException(500, f"scan failed: {exc}") from exc
 
-    repo_short = slugify(payload.repo_full_name.split("/")[-1])
-    governable = [s for s in report.sites if s.kind in ("agent_definition", "tool", "model_call")]
-    groups: dict[str, list] = defaultdict(list)
-    for site in governable:
-        top = Path(site.file).parts[0] if Path(site.file).parts else "root"
-        groups[top].append(site)
+    def _top_dir(rel_path: str) -> str:
+        parts = Path(rel_path).parts
+        return parts[0] if parts else "root"
 
-    created_agents: list[str] = []
-    for group_key, sites in groups.items():
-        providers = [s.provider for s in sites if s.provider]
-        framework = providers[0] if providers else (report.frameworks[0] if report.frameworks else None)
-        # A monorepo's top-level directory is often named after the repo itself
-        # (e.g. gpt-researcher/gpt-researcher/) — slugifying both halves would
-        # produce "gpt-researcher-gpt-researcher", which reads as a typo rather
-        # than two distinct things.
-        group_slug = slugify(group_key)
-        slug = repo_short if group_slug == repo_short else f"{repo_short}-{group_slug}"
-        agent = register_agent(
-            session,
-            slug=slug,
-            name=f"{payload.repo_full_name}/{group_key}",
-            # A static scan can count code sites, not know what the agent is
-            # *for* — a fabricated-sounding purpose repeated identically across
-            # every scanned agent read as noise, not information. Left blank
-            # and surfaced honestly ("no purpose recorded") until a human sets
-            # one; the site count and framework are already shown elsewhere
-            # (the framework column, the scan run, the agent's own registration).
-            purpose="",
-            framework=framework,
-            draft=True,
-            source_scan_run_id=run.id,
-        )
-        created_agents.append(agent.slug)
-
-    created_policies: list[str] = []
-    for framework in report.frameworks:
-        doc = PolicyDocument(
-            key=f"scan-{run.id}-{slugify(framework)}",
-            # Short and framework-specific — the repo name and the "proposed,
-            # observe mode, add rules" workflow explanation are already shown
-            # once by the surrounding UI (scan link, proposed badge, mode
-            # column, review panel note), so repeating all of that in every
-            # row's name/description was the noise, not the information.
-            name=f"{framework} guardrails",
-            description=(
-                f"Detects {framework} usage in {payload.repo_full_name} — prompt "
-                f"injection, PII/secret leaks, and unsafe tool actions."
-            ),
-            mode="observe",
-            scope={"agents": [f"{repo_short}-*"]},
-            rules=[],
-        )
-        policy, _version = save_policy(
-            session, doc, author=user.email or user.id, notes=f"Proposed by scan {run.id}",
-            bind_mode="observe",
-        )
-        policy.proposed = True
-        policy.source_scan_run_id = run.id
-        created_policies.append(policy.key)
+    created_agents, created_policies = propose_from_scan(
+        session,
+        run_id=run.id,
+        repo_slug_base=payload.repo_full_name.split("/")[-1],
+        repo_display_name=payload.repo_full_name,
+        frameworks=report.frameworks,
+        sites=[
+            {"kind": s.kind, "top_dir": _top_dir(s.file), "provider": s.provider}
+            for s in report.sites
+            if s.kind in ("agent_definition", "tool", "model_call")
+        ],
+        author=user.email or user.id,
+    )
 
     run.status = "completed"
     run.completed_at = utcnow()

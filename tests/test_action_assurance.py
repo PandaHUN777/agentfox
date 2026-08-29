@@ -192,7 +192,15 @@ def test_executable_arguments_are_found_by_their_declared_names():
 
 
 def test_non_executable_arguments_are_left_alone():
-    assert analyse_arguments({"note": "DELETE FROM users", "count": 3}) == []
+    assert analyse_arguments({"note": "please clean up old files this week", "count": 3}) == []
+
+
+def test_a_full_statement_pasted_into_an_ordinary_argument_is_caught():
+    # "DELETE FROM users" is genuinely executable SQL regardless of what the field
+    # is named — the exact shape benchmarks/action_safety/README.md's Dataset 4
+    # named as the single largest miss category before this check existed.
+    analyses = analyse_arguments({"note": "DELETE FROM users"})
+    assert any(a.blocked for a in analyses)
 
 
 def test_the_summary_takes_the_worst_of_several_artefacts():

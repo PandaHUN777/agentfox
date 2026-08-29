@@ -153,7 +153,7 @@ Before any mapping in this appendix is presented to a customer's auditor:
 1. **Engineering** confirms the `implemented_by` FR actually ships and the `evidence_sources` actually populate.
 2. **Compliance counsel / qualified assessor** reviews the framework citation for accuracy and scope.
 3. The mapping is version-stamped and recorded in `compliance/frameworks/<key>.yaml` with `reviewed_by` and `reviewed_at`.
-4. Unreviewed mappings render in the UI with a `DRAFT — not reviewed` badge and are excluded from evidence packages.
+4. Unreviewed mappings render in the UI with a `DRAFT — not reviewed` badge and ship inside evidence packages with a `DRAFT — UNVERIFIED / NOT LEGAL ADVICE` chip on each row, instead of being excluded, so reviewers can see exactly what is still outstanding.
 
 **As of 2026-08-17: all mappings are `DRAFT`.** None have completed step 2.
 
@@ -161,8 +161,9 @@ Before any mapping in this appendix is presented to a customer's auditor:
 
 | Date | Version | Change |
 |---|---|---|
+| 2026-08-29 | 0.1.0-draft | Evidence packages now include draft mappings (chip-labeled `DRAFT — UNVERIFIED / NOT LEGAL ADVICE`) instead of excluding them, so reviewers can see exactly what is outstanding. |
 | 2026-08-17 | 0.1.0-draft | Initial catalog — 36 controls, 7 frameworks. All mappings DRAFT. |
 | 2026-08-18 | 0.1.0-draft | Added NOM-RTG-09 (generated actions analysed before execution, P9) — 37 controls, 266 mappings. |
 | 2026-08-19 | 0.1.0-draft | Added NOM-RTG-10 (escalation governed, P11) and NOM-RTG-11 (knowledge boundary, P7) — 39 controls, 280 mappings. |
 | 2026-08-19 | 0.1.0-draft | Added NOM-RTG-12 (source authority, P8) and NOM-IAM-07 (entitlement, P10) — 41 controls, 300 mappings. |
-| 2026-08-26 | 0.1.0-draft | Added NOM-RTG-13 (memory write governance, P14-7, closes OWASP ASI06) and NOM-IAM-08 (inter-agent message security, new P17, closes OWASP ASI07). PRD v4 addendum §1.2/§1.3 proposed NOM-RTG-09 for the memory-write control; corrected to NOM-RTG-13 here since NOM-RTG-09 was already assigned (P9, generated-action risk analysis) — see PRD-v4-addendum.md's own correction note. |
+| 2026-08-26 | 0.1.0-draft | Added NOM-RTG-13 (memory write governance, P14-7, closes OWASP ASI06) and NOM-IAM-08 (inter-agent message security, new P17, closes OWASP ASI07). Originally proposed as NOM-RTG-09 for the memory-write control; corrected to NOM-RTG-13 since NOM-RTG-09 was already assigned (P9, generated-action risk analysis) — see [`docs/PRD.md`](PRD.md) §12.1 for the full correction note. |

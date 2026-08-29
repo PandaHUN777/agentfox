@@ -938,7 +938,8 @@ def compliance_frameworks() -> None:
     console.print(table)
     console.print(
         "\n[yellow]All mappings are engineering drafts. They are not legal advice and "
-        "are excluded from evidence packages until reviewed.[/]"
+        "ship inside evidence packages tagged DRAFT — UNVERIFIED / NOT LEGAL ADVICE "
+        "until reviewed.[/]"
     )
 
 

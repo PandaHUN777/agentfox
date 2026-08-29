@@ -762,7 +762,7 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Failure modes covered** | **{fpct}%** — {fcovered} of {ftotal} outright, {fpartial} partial |
 {evasion}
 
-Requirement detail lives in [PRD v3](PRD-v3-consolidated.md); requirement→test mapping
+Requirement detail lives in [the PRD](PRD.md); requirement→test mapping
 in [traceability.md](traceability.md).
 
 | ID | Pillar | Capability | Status | Tests | Note |

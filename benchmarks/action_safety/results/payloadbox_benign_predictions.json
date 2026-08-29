@@ -1,0 +1,444 @@
+[
+  {
+    "key": "customer_name",
+    "value": "Sarah or her assistant will pick up the order",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "or_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Please deliver before noon or leave with the doorman",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "or_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Call the office or send an email if there's a delay",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "or_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "item_id",
+    "value": "small or medium size, whichever is in stock",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "or_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "customer_name",
+    "value": "Pat Taylor (they/them or she/her)",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "or_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Leave at the front desk or with building security",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "or_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "reference_code",
+    "value": "quote valid for 30 days or until stock runs out",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "or_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Please select the blue option if red is unavailable",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "select_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Union Station is the preferred pickup point",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "union_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "customer_name",
+    "value": "Select Comfort Mattress Co. \u2014 attn: receiving",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "select_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Employees are union members and get a discount code",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "union_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Select all items before checking out, thanks",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "select_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "customer_name",
+    "value": "United Union Workers Local 42",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "union_word_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Select overnight shipping or standard, whichever is cheaper this week",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "combined_words_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Union members should select their preferred delivery slot online",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "combined_words_no_structure",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "See section 2 -- overview for full delivery terms",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "dash_as_em_dash",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Fragile -- please handle with care",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "dash_as_em_dash",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "customer_name",
+    "value": "J. Alvarez -- Suite 400",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "dash_as_em_dash",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Backordered -- will ship once restocked",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "dash_as_em_dash",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "reference_code",
+    "value": "Q3-2025 -- renewal",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "dash_as_em_dash",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Gift wrap -- no card needed",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "dash_as_em_dash",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Width = 12in, Height = 8in, per the spec sheet",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "equality_in_prose",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Total = $42.50 after the discount code was applied",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "equality_in_prose",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "reference_code",
+    "value": "PO#4471 = the original January order",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "equality_in_prose",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "customer_name",
+    "value": "O'Brien",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "apostrophe_in_name",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "customer_name",
+    "value": "D'Angelo Martinez",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "apostrophe_in_name",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Customer said it's fine to leave at the gate",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "apostrophe_in_name",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "The label reads \"Handle with care\"",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "quote_in_prose",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Ship Monday; confirm by phone first",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "semicolon_in_prose",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "notes",
+    "value": "Items: 2 chairs; 1 table; 1 lamp",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "semicolon_in_prose",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "order_id",
+    "value": "ORD-2026-004471",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "plain_identifier",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "account_number",
+    "value": "ACC00931847",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "plain_identifier",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "employee_id",
+    "value": "E-10432",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "plain_identifier",
+    "predicted_blocked": false,
+    "risk_codes": []
+  },
+  {
+    "key": "customer_name",
+    "value": "Priya Natarajan",
+    "sources": [
+      "authored"
+    ],
+    "primary_source": "authored",
+    "expect_blocked": false,
+    "authored": true,
+    "category": "plain_identifier",
+    "predicted_blocked": false,
+    "risk_codes": []
+  }
+]

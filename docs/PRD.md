@@ -1,675 +1,1212 @@
-# PRD — Nometria Control Plane
-
-**Agent-native, vendor-neutral governance, security & compliance for AI agents in production.**
+# Nometria — Product Requirements Document
+## Agent Assurance & Governance for Enterprise AI
 
 | | |
 |---|---|
-| **Document** | Product Requirements Document, v1.0 |
-| **Date** | 2026-08-17 |
-| **Status** | Approved for build (MVP v0.1) |
-| **Owner** | Product / Founding team, Nometria |
-| **Upstream inputs** | `agent-harness-dashboard.html` (market briefing), `agent-governance-roadmap.html` (wedge → roadmap), `oss-guardrails-catalog.html` (build-vs-reuse catalog) |
-| **Appendices** | [A — OSS Dependency Register](appendix-a-oss-register.md) · [B — Control Catalog & Framework Mapping](appendix-b-control-catalog.md) · [C — API Specification](appendix-c-api-spec.md) · [D — Data Model](appendix-d-data-model.md) · [E — Threat Model](appendix-e-threat-model.md) |
-| **Traceability** | [docs/traceability.md](traceability.md) — every FR in this document mapped to the module that implements it |
+| **Version** | 3.1 — the single canonical PRD |
+| **Date** | 2026-08-18, merged 2026-08-29 |
+| **Status** | Approved for build; large parts now shipped — see §12 and [status.md](status.md) |
+| **History** | This file merges what was previously five separate PRD documents (v1, v2, a "consolidated" draft, this v3 base, and a v4 addendum) into one. Earlier versions are retired, not deleted from history — `git log -- docs/` has them. Keeping one file instead of five was a deliberate cleanup: a reader should never have to figure out which of five PRDs is current. |
+| **Positioning** | Horizontal (no vertical beachhead) · SDK-first · vendor-neutral · self-host default |
+
+> **Read this first if you are new.** This document is written to stand alone. It explains what
+> enterprises are building, how it fails, what already exists to solve it (open source and
+> commercial), what is genuinely missing, and what we are going to build. Sections 1–4 are the
+> argument; section 5 is the product; sections 6–11 are the plan; **§12 is what shipped after this
+> document was written**, kept short and pointing at the live-computed sources of truth
+> ([status.md](status.md), [gap-analysis.md](gap-analysis.md), [failure-modes.md](failure-modes.md))
+> rather than re-describing them here, where they would immediately start going stale again.
 
 ---
 
-## 0. How to read this document
+## Table of contents
 
-Requirements are identified as `P<pillar>-<n>` (functional, by pillar), `NFR-<n>` (non-functional), and `X-<n>` (cross-cutting). Each carries:
+**Part I — The argument**
+1. [Executive summary](#1-executive-summary)
+2. [Evidence base](#2-evidence-base)
+3. [How enterprises build agent infrastructure, and where it breaks](#3-how-enterprises-build-agent-infrastructure-and-where-it-breaks)
+4. [Market landscape and honest positioning](#4-market-landscape-and-honest-positioning)
 
-- **Tier** — the smallest customer tier for which the requirement is *Critical* (A = mid-market, B = enterprise, C = large/regulated). See §8.
-- **Phase** — the roadmap phase it ships in (0/1/2/3). See §14.
-- **Source** — `REUSE` (wrapped OSS), `BUILD` (our engineering), or `HYBRID`.
-- **MVP** — ✅ in MVP v0.1, ◐ partial in MVP v0.1, ✗ specified but not built in this pass.
+**Part II — The product**
+5. [The five layers and fifteen pillars](#5-the-five-layers-and-fifteen-pillars)
+6. [Integration surface](#6-integration-surface)
+7. [Architecture](#7-architecture)
 
-MVP v0.1 is a **thin functional slice across all six pillars**, not a Phase-0-only build. Rationale in §6.
+**Part III — The plan**
+8. [Current build state and gap register](#8-current-build-state-and-gap-register)
+9. [Roadmap](#9-roadmap)
+10. [Metrics, risks and non-goals](#10-metrics-risks-and-non-goals)
+11. [Reference index](#11-reference-index)
 
----
-
-## 1. Summary
-
-### 1.1 The one-paragraph thesis
-
-Enterprises deploying AI agents need **one place to see every agent, control what it can do, prove it works, and demonstrate compliance — across every model and cloud.** Today that need is split between two camps that each own half of it. Governance/GRC incumbents (Credo AI, OneTrust, Holistic AI, ModelOp, FairNow) own policy, registry, framework mapping and reporting, but were built for the *model* era: they have no runtime enforcement, no understanding of agent execution paths or tool calls, and no evaluation depth. Agent-security tools (Arthur, Zenity, Lakera, Palo Alto Prisma AIRS, Microsoft Agent 365, Astrix) own runtime guardrails, identity and discovery, but are thin on compliance and evaluation, and several are structurally locked to one vendor's model, cloud, or security suite. **Nometria is the defensible middle**: an agent-native, vendor-neutral control plane that unifies runtime security, reliability/evaluation, tamper-evident audit and compliance mapping — the exact product a model provider cannot build without a conflict of interest, a GRC incumbent cannot retrofit, and a point-security tool does not attempt.
-
-### 1.2 Why this wedge (evidence)
-
-From the market briefing (sources: Menlo Ventures *State of Generative AI in the Enterprise 2025*; Bessemer *AI Infrastructure Roadmap 2026*; LangChain *State of Agent Engineering* n=1,340; Cleanlab *AI Agents in Production 2025* n=1,837; OpenAI AgentKit announcement):
-
-| Signal | Figure | Implication for us |
-|---|---|---|
-| Enterprise gen-AI spend 2025 | $37B, ↑3.2× YoY | Large, compounding pool |
-| Spend on *dedicated agents* | ~$750M (vs $7.2B copilots) | Thin today — we are early, not late |
-| Deployments that are *true agents* | 16% enterprise / 27% startup | Most "agents" are workflows; the real agent population is small but growing |
-| Production-live (strict screen) | 5.2% (Cleanlab) vs 57% (LangChain builders) | **The spread between these two numbers is the reliability/trust gap we sell into** |
-| #1 barrier to production | Quality/reliability, 32% | Reliability is the growing pain |
-| #2 barrier at 2,000+ employees | Security, 24.9% | Security is enterprise-gating |
-| Cost as a barrier | **Declining** YoY | Do not build a "spend less on tokens" product — that pain is shrinking |
-| Teams with observability | 89–94% | Table-stakes; not a differentiator |
-| Teams running evals | 52.4% offline / 37.3% online / **22.8% none** | The widest solved-vs-unsolved gap in the stack |
-| AI failures that are "invisible" | ~78% (Bessemer citing WildChat study) | Silent-failure detection is an unclaimed category |
-| Teams satisfied with tooling | < 1 in 3 | Incumbency is weak |
-
-**Caveat carried forward from the research:** adoption and pain figures come from vendor-run surveys of self-selected agent builders. They are directional, not census-grade — which is exactly why the 5.2%–57% production spread exists. Market-sizing projections (e.g. $10.9B 2026 → $182.9B 2033) diverge sharply by firm and are treated as narrative, not planning input. Menlo's spend data is the defensible anchor. Competitor capability claims come from 2026 buyer guides and shift quickly; re-validate before positioning against a named rival.
-
-### 1.3 Why it is defensible
-
-Three moats, in order of durability:
-
-1. **Neutrality is structural.** A model provider's evaluation or guardrail product that "also supports competitors" is a conflict of interest they will never fully commit to. OpenAI's AgentKit Evals technically supports third-party models — and that support will always be half-hearted, because depth there cannibalises the model business. Neutrality is the one property Microsoft and Palo Alto cannot copy, because they *sell* the lock-in.
-2. **Agent-native runtime + evaluation depth cannot be retrofitted by GRC incumbents.** Credo AI and OneTrust model a *model registry*; governing an agent means governing an execution path — prompts, tool calls, sub-agent delegation, retries, and the decision to act. That is a different data model, not a feature.
-3. **Unifying all six pillars is what point tools do not attempt.** Lakera does sub-50ms inline guardrails and nothing else; Zenity does intent-based runtime and posture. Neither ties enforcement to evaluation, to immutable audit, to framework mapping. The unification *is* the product.
-
-**The one rule** (from the market briefing, and binding on every scoping decision in this document): *design around the assumption that model providers keep absorbing the commodity middle. Anything a future AgentKit release could bundle for free is not a business.*
-
-### 1.4 The build-vs-reuse rule
-
-From the OSS catalog: **~20% of engineering on integrating open source, ~80% on the build column.** Concretely:
-
-> If a permissively-licensed (Apache/MIT), actively-maintained OSS project already does a primitive well, **wrap it — do not rebuild it.** Our product is the integration, the evaluation depth, the compliance mapping, and the neutrality — none of which any single OSS project provides.
-
-This rule is enforced architecturally: every runtime primitive sits behind a `Detector`/`Adapter` interface (§9.4) so that the OSS implementation is swappable and the *policy interface above it* is ours. See Appendix A for the full register and §12 for the decisions.
+**Part IV — What shipped after this document was written**
+12. [Addendum (2026-08-26 proposal, delivered by 2026-08-29)](#12-addendum-2026-08-26-proposal-delivered-by-2026-08-29)
 
 ---
+---
 
-## 2. Problem statement
+# Part I — The argument
 
-### 2.1 The user's problem, in their words
+## 1. Executive summary
 
-**Platform engineer (Tier A/B):** "We shipped an agent that can file tickets and email customers. I have traces in Langfuse, but I cannot tell you whether last Tuesday's output was *correct*, I cannot prove the agent never saw a customer's SSN, and I have no idea how many agents other teams have spun up on our OpenAI org key."
+### 1.1 What we are building
 
-**CISO (Tier B/C):** "I have three vendors' agents, two clouds, and four models in production. I have no inventory. My SIEM sees API calls, not agent intent. When the regulator asks what this agent was allowed to do on 3 March and what it actually did, I have nothing that survives an audit."
+**A governance and assurance layer for AI agents that runs inline, enforces policy, and proves what happened — installed as a library, not procured as a platform.**
 
-**Head of GRC (Tier C):** "We need to map our AI controls to the EU AI Act, NIST AI RMF and ISO 42001 once, and satisfy all three. Today that is a spreadsheet maintained by hand, refreshed quarterly, and out of date the day it is filed."
+The unit of adoption is `pip install nometria` plus a LangGraph decorator. The control plane is what a
+team graduates to when they have twenty agents, not what they start with.
 
-### 2.2 The four questions the product answers
+### 1.2 The thesis, and the evidence for it
 
-Every requirement in this document exists to answer one of four questions an enterprise asks about any agent:
+Enterprises deploying agents need to answer five operational questions that neither their
+observability stack nor their security stack answers:
 
-| Question | Pillars |
+| Question | Why it is unanswered today |
 |---|---|
-| **What is it?** | 1 — Discovery & Agent Registry |
-| **What can it do?** | 2 — Identity, Access & Authorization · 3 — Runtime Guardrails & Security |
-| **Does it work?** | 4 — Evaluation & Reliability Assurance |
-| **Can we prove it?** | 5 — Audit, Observability & Traceability · 6 — Policy & Compliance Management |
+| **Should this agent answer this at all?** | Prompt engineering is the current answer, and it degrades — reasoning fine-tuning *worsens* abstention ([AbstentionBench](https://arxiv.org/html/2506.09038v1)) |
+| **Where did that answer come from, and was the source authoritative?** | Groundedness scorers check the answer against retrieved text; nothing checks whether that text was authoritative or fresh |
+| **What will this action actually do to our systems?** | Argument validation cannot see the structure of generated SQL. An agent wiped 1.9M production rows "flawlessly from a technical standpoint" |
+| **Is this person entitled to see this?** | Copilot oversharing is *"a governance failure rather than a security breach — every permission check passed"* |
+| **When must a human take over, and did they?** | 31.1% of catalogued agent failures are escalation/resolution breakdowns |
 
-### 2.3 What is already solved (explicit non-goals)
+### 1.3 The finding that determines our strategy
 
-Per the market briefing's "solved — don't build here" list, we do **not** build, and will not compete on:
+We analysed the full CVs of **11 vetted senior/staff/principal AI engineers** (Meta, Apple, Waymo,
+Accenture, Deloitte, Philips, Emirates NBD, Itaú, HP, Nvidia, Amazon).
 
-- **The agent loop / orchestration.** LangGraph, CrewAI, AutoGen, LlamaIndex, Temporal, Inngest. Free and abundant. We *integrate with* them; we never ask a customer to re-architect onto our framework.
-- **Tool connectivity.** MCP standardised this in ~18 months and is Anthropic-authored and open. We consume MCP; we do not build a competing connectivity layer or an MCP hub business.
-- **Tracing plumbing.** 89–94% of teams already have it and it is consolidating into incumbents (Langfuse → ClickHouse). We emit and ingest OpenTelemetry; we do not sell a tracing product.
-- **Model routing / gateways.** LiteLLM has 418M monthly downloads on ~$15M raised — the cautionary tale that ubiquity ≠ revenue. We can sit inline, but "routing" is not a feature we monetise.
-- **Retrieval mechanics / vector DBs.** Commoditised. The bottleneck moved to retrieval *quality*, which we address in Pillar 4 (groundedness scoring), not in storage.
-- **Runtime sandboxing.** E2B, Modal, Daytona. Genuine technical moat, narrow, capital-intensive, entrenched, hard to enter late. We *govern* sandboxed execution; we do not build isolation tech.
+> **6 of 11 independently hand-built a governance/guardrail/validation layer inside their employer.**
 
----
+Six engineers, six companies, four industries, three continents, building the same component,
+because nothing off-the-shelf fit their stack.
 
-## 3. Positioning & competition
+**Therefore: we do not primarily compete with vendors. We compete with `git init`.** The buyer's
+alternative is two engineer-quarters of internal work. That single fact drives every product
+decision below — SDK-first, LangGraph-native, and composing with LangSmith/Langfuse rather than
+replacing them.
 
-### 3.1 The two-axis frame
+### 1.4 What is genuinely differentiated — and what is not
 
-The competitive field is decided by **agent-native runtime depth** (does it understand execution paths, tool calls, and correctness?) versus **compliance depth** (policy, frameworks, audit, evidence). The incumbents cluster in two corners. The top-right — deep on both, and neutral — is open.
+Stated plainly, because earlier drafts of this document overstated it.
 
-| Competitor | Camp | Strength | Structural weakness we exploit |
-|---|---|---|---|
-| **Lakera** | Agent security | Runtime guardrails, sub-50ms inline | Light on compliance/GRC. A *feature we must match*, not a full-platform rival. |
-| **Zenity, Arthur** | Agent security | Intent-based detection over the full execution path incl. tool calls; posture | Thin on evaluation depth and compliance. **Closest rivals** — beat them on eval + compliance + neutrality. |
-| **Palo Alto (Prisma AIRS), Microsoft (Agent 365)** | Agent security | Deep pockets, distribution, bundled | Locked to their security suite / cloud / identity stack. **Neutrality is the wedge.** |
-| **Credo AI, OneTrust** | GRC | Registry, policy, framework mapping, reporting | Model-era; weak on runtime, agents, evaluation. Out-flank on agent-native depth. |
-| **Holistic AI, ModelOp, FairNow** | GRC | Compliance & lifecycle depth | Minimal runtime enforcement. Same flank. |
-| **OpenAI AgentKit, Anthropic Claude Agent SDK, Google ADK** | Provider | Free, bundled, distribution | Conflict of interest on neutrality; not a compliance/audit product; not their DNA. |
+**Genuinely unclaimed** (no OSS project or commercial product surveyed provides these):
 
-### 3.2 Our sentence
+1. **Failure attribution across multi-agent handoffs** — *"a stack trace for agent systems"* (a
+   practitioner's phrase, unprompted). Absent from LangSmith, Langfuse and every vendor surveyed.
+2. **Answerability enforcement against a declared knowledge boundary** — forcing "I don't have that"
+   *before generation*, rather than hoping the model complies.
+3. **Action semantics** — deterministic parsing of *generated* SQL/artefacts for blast radius,
+   environment binding, and verified-state preconditions.
+4. **Argument-provenance taint tracking** — containment that holds after detection fails.
 
-> **Nometria is the vendor-neutral control plane for AI agents in production: see every agent, control what it can do, prove it works, and demonstrate compliance — across every model, framework and cloud.**
+**Contested but defensible** (others do it; we do it differently):
 
-### 3.3 The principal risk
+5. Hierarchical policy composition — 2/11 built it by hand; **no vendor packages it**
+6. Entitlement-aware retrieval — Knostic and Microsoft Purview address it; we do it inline and cross-stack
+7. Computed control status from telemetry rather than attestation
 
-A well-funded agent-security player (Arthur, Zenity) adds compliance faster than we add runtime depth. **Mitigation, and it is a product mitigation, not a marketing one:** keep the runtime + evaluation lead while racing them to the compliance pillar. This is why MVP v0.1 is a thin slice across all six rather than a deep Phase 0 (§6.2) — the compliance pillar must exist, however thinly, from day one so it can compound.
+**Overstated in earlier drafts — corrected:**
 
----
+| Earlier claim | Correction |
+|---|---|
+| "Silent-failure detection — nobody does this" | **Wrong.** Cleanlab TLM, Vectara HHEM, Galileo, Patronus, RAGAS all do it, and better — ours is lexical, theirs is model-based. A practitioner at Deloitte built it in-house too. **We are behind here, not ahead.** |
+| "Tamper-evident audit is a key differentiator" | **Overstated.** A practitioner delivered "regulator-grade auditability" to a bank with no hash chain. Zero of 11 engineers were asked for cryptographic audit. Keep it (cheap, true), stop leading with it. |
+| "The governance camp has no runtime enforcement" | **Weakening.** LangSmith shipped an LLM Gateway; ServiceNow, Airia and ModelOp/Kong all have runtime paths; two practitioners built runtime enforcement in-house. The capability is not rare — the *packaging* is. |
+| "Nobody addresses escalation breakdown" | **Half right.** Practitioners build HITL escalation routinely. Only **detection of *missed* escalation** is unclaimed. Claim narrowed. |
 
-## 4. Users, buyers & personas
+### 1.5 What we have built, honestly
 
-### 4.1 Personas
+50.2k lines, **1,006 passing tests**, offline-capable, **76% weighted coverage of 41
+tracked capabilities**, **96% of the catalogued failure modes** (54 of 57 outright), and
+**90% weighted coverage of an independent 112-scenario taxonomy** built from the
+architecture of a request rather than from our own failure catalogue — 98 of those
+scenarios verified by executing against the real product, with the harness failing if
+any claim disagrees with what happens. Computed by probe, not asserted: see
+[status.md](status.md) and [coverage-map.md](coverage-map.md), regenerated by
+`python scripts/coverage.py --write` and `python scripts/probe/run.py --md`.
 
-| Persona | Role in product | Primary jobs | Tier |
-|---|---|---|---|
-| **Priya — Platform / AI engineer** | Champion & daily user | Instrument agents, define policies, fix eval regressions, respond to blocked calls | A, B |
-| **Marcus — CISO / Head of Security** | Economic buyer (B/C) | Inventory all agents, prove least-privilege, review incidents, feed SIEM, report to board | B, C |
-| **Dana — GRC / Compliance lead** | Economic buyer (C) | Map controls to frameworks, maintain risk register, produce audit evidence, track obligations | C |
-| **Aisha — Internal / external auditor** | Read-only consumer | Verify audit-log integrity, pull evidence for a period, confirm control operation | C |
-| **Tom — Agent owner (business)** | Accountable party | Own an agent's business purpose and risk tier; approve HITL escalations | B, C |
+**No capability row is absent any more.** Twenty-one are built, twenty are partial, and
+every partial row carries a written note saying exactly what is missing — those notes
+are the honest part of this document, not the percentages.
 
-### 4.2 RBAC roles (implements the personas)
+Working: runtime detectors across five surfaces with taint tracking and evasion
+resistance; tenant isolation enforced at the session with an import-time assertion that
+fails the build if a mapped class escapes it; API-token authentication with the dev
+header refused outside development; action assurance over a SQL AST; answerability and
+forced abstention; provenance and source authority; entitlement and disclosure control;
+context integrity from ingestion through assembly; failure attribution and handoff
+fidelity; commitment, AI-disclosure and fairness gates; idempotency, compensation and
+cascade analysis; business-rule ladders with a policy compiler that turns a written
+document into executable rules; hash-chained per-tenant audit with an independent
+verifier, now including operator actions; loop governance over the run rather than the
+step; declared fail modes; admission control; 41 controls mapped to 7 frameworks.
 
-`owner` · `admin` · `security` · `compliance` · `developer` · `auditor` (read-only, cannot mutate audit state) · `agent` (machine identity, gateway-only).
+**Not working, and worth stating plainly:**
 
-Full permission matrix in Appendix C §4.
+* **Organisational, not engineering.** SOC 2, penetration test, DPA/DR/RTO. These are
+  programmes with a calendar, and no amount of code shortens them.
+* **Needs infrastructure we do not have.** SSO/SCIM needs a live IdP to develop
+  against; KMS/Vault needs a deployment; HA scale-out needs load. Each is a declared
+  seam rather than an implementation, and a declared seam is not a feature.
+* **Deliberately deferred.** Packaging — the product still installs from a git
+  checkout. Model-based detectors ship but their weights are an opt-in download.
+* **Genuinely hard and openly uncovered.** Sycophancy, invalid logical inference, and
+  answer quality in languages other than English. A deterministic checker cannot judge
+  informal argument, and an LLM judge inherits the failure it is meant to catch. These
+  are marked absent in the coverage map rather than papered over.
+* **Known limits of what is built.** Cascade analysis is exactly as good as the trigger
+  declarations it is given. Data-access scoping is exactly as good as the ScopeRule
+  declarations. The fail-open budget and rate limit are per-process, so a multi-worker
+  deployment gets N times the declared budget. `system_scope` lifts tenant isolation
+  and therefore has no tenant chain to write to.
 
-### 4.3 GTM motion the product must support
-
-| Tier | Economic buyer | Champion | Lead with | Motion | ACV | Product implication |
-|---|---|---|---|---|---|---|
-| **A** — Mid-market / AI-native (~500–2,000 emp) | Head of Eng / Platform | Senior engineers | Safety + eval + SOC 2 to sell upmarket | PLG / self-serve, bottoms-up | $ low | **Must install in <10 minutes with no procurement.** Free tier, single binary/compose, no SSO required. |
-| **B** — Enterprise (~2,000–10,000) | CISO + Head of AI Platform | Platform & security eng | Control plane: see + control + audit all agents | Sales-assisted, design partners, security review | $$ mid | **Must pass a security review**: SSO/SCIM, RBAC, audit log, SIEM export, self-host option. |
-| **C** — Large / regulated (10,000+, finance/health/gov) | CISO + Chief Compliance/GRC | GRC, DPO, risk, audit | Provable compliance, residency, board risk | Enterprise sales, POC, procurement, MSA | $$$ high | **Must survive an audit**: tamper-evident evidence, residency/air-gap, framework mapping, risk register, board reporting. |
-
-**Land-and-expand:** enter bottoms-up through the platform/security engineer who feels the runtime pain (Phase 0), prove value on a real blocked incident, expand to the CISO as the control plane (Phase 1), then to GRC as the audit and framework story matures (Phase 2). Each buyer unlocks the next tier's budget.
-
----
-
-## 5. Product principles
-
-1. **Drop-in, never re-architect.** Any integration that requires rewriting the agent is a failed integration. Three surfaces, all optional-additive: inline gateway (zero code change), SDK (one decorator), OTel ingestion (passive). — *X-1*
-2. **Neutral by construction.** No feature may depend on a single model provider, cloud, framework, or security suite. Every provider is an adapter. If a capability can only work on one vendor, it does not ship in core. — *X-2*
-3. **Wrap the primitive, own the interface.** OSS below the value line; our policy model, control plane, and evidence layer above it. Swappability is a tested property, not an aspiration. — *X-3*
-4. **Fail visibly, not silently.** Every decision — allow, block, redact, escalate — is recorded with its reason, the rule that fired, and the evidence. A guardrail that blocks without an auditable reason is a bug. — *X-4*
-5. **Correctness is in scope.** We govern whether the agent *worked*, not only whether it was *safe*. This is the line between us and pure-security vendors. — *X-5*
-6. **Evidence is a first-class artefact.** Everything the platform observes must be exportable as something an auditor accepts: tamper-evident, timestamped, complete for a stated period, and independently verifiable. — *X-6*
-7. **Latency is a product constraint, not an implementation detail.** Inline enforcement has a hard budget (NFR-1). Detectors that exceed it degrade to async-observe rather than blocking the customer's agent. — *X-7*
-8. **The customer's data stays in the customer's boundary.** Self-host and VPC deployment are day-one architecture decisions, not a Phase-2 port. — *X-8*
-
----
-
-## 6. Scope
-
-### 6.1 In scope for the product (all phases)
-
-All six pillars in §7, delivered across four phases (§14), on three integration surfaces (gateway, SDK, OTel ingest), for three customer tiers.
-
-### 6.2 In scope for MVP v0.1 (this build)
-
-**A thin, functional slice across all six pillars**, with depth in Pillars 3 (runtime), 4 (evaluation) and 5 (audit).
-
-**Why a thin slice rather than a deep Phase 0.** The roadmap's Phase 0 is the right *commercial* sequence — sell runtime security first, let it fund the compliance build. But three factors argue for touching all six pillars in the first engineering pass:
-
-1. **The OSS catalog makes pillars 2, 3, 4 and 5 cheap.** Presidio, OPA/Cedar, promptfoo, Garak/PyRIT and OpenTelemetry are mature, permissive, and cover the primitives. The marginal cost of a working slice of each is weeks, not quarters. Not taking that leverage would be the mistake.
-2. **The compliance pillar's value is cumulative.** Control mappings, evidence formats and the risk register get better with every trace they see. Starting the data model in Phase 2 means starting from zero in Phase 2. Starting it now means Phase 2 is a UI and content problem, not an architecture problem.
-3. **§3.3's principal risk is that rivals reach compliance before we reach runtime depth.** A thin compliance pillar from day one is the hedge.
-
-**What "thin" means, precisely:** each pillar is functional end-to-end for the demo path and the seeded fixtures, with the *interfaces* complete enough that Phase 1–2 work is additive. It does not mean production-hardened at Tier-C scale. Per-requirement MVP status is marked in §7.
-
-### 6.3 Out of scope for MVP v0.1
-
-- Multi-tenancy beyond a single logical org (schema supports it; enforcement is single-org).
-- Real SSO/SCIM against an IdP (RBAC and the SAML/OIDC seam exist; no live IdP integration).
-- Managed cloud offering, billing, provisioning.
-- Automated red-teaming *at scale* (the adapters and an offline probe suite exist; continuous scheduled campaigns do not).
-- Cross-org benchmarking, partner marketplace (Phase 3).
-- Non-text modalities (image/audio PII and safety). Presidio's image redaction is available but not wired.
-
-### 6.4 Explicit non-goals (permanent)
-
-Everything in §2.3, plus: we do not build a model, a vector database, an agent framework, or a sandbox runtime.
+See §8.
 
 ---
 
-## 7. Functional requirements — the six pillars
+## 2. Evidence base
 
-### Pillar 1 — Discovery & Agent Registry
-*"What agents do we even have?" — visibility first.*
+Four independent sources. Where they disagree, the disagreement is noted rather than resolved in our favour.
 
-| ID | Requirement | Tier | Phase | Source | MVP |
-|---|---|---|---|---|---|
-| **P1-1** | **Agent & tool inventory.** A canonical record for every agent, with the models, tools, MCP servers and datasets it uses. Records are created by explicit registration (API/CLI/UI) or automatically on first observation at the gateway. | B (Nice at A) | 0–1 | BUILD | ✅ |
-| **P1-2** | **Shadow-agent detection.** Traffic observed at the gateway, in ingested OTel spans, or in provider audit logs that does not correlate to a registered agent raises a `shadow_agent` finding with first-seen, last-seen, call volume, models touched, and a suggested registration payload. | B (Critical at C) | 1 | BUILD | ✅ |
-| **P1-3** | **Lineage & dependency map.** A queryable graph of agent → model, agent → tool, agent → data source, agent → sub-agent, derived from observed execution paths rather than declared config. Supports blast-radius queries ("what breaks / what is exposed if this tool is compromised"). | C (Nice at B) | 1–2 | BUILD | ◐ graph derived + queryable; no visual map in MVP |
-| **P1-4** | **Ownership & metadata.** Every agent carries an accountable owner, business purpose, environment, deployment surface, data classes touched, and an assigned risk tier. Unowned agents are a reportable compliance finding. | B (Critical at C) | 0–1 | BUILD | ✅ |
-| **P1-5** | **MCP server inventory & hygiene scanning.** Enumerate MCP servers an agent connects to; record tools, schemas and schema *changes* over time. Flag tool-poisoning indicators (instructions embedded in tool descriptions, silent schema drift, unpinned servers). | B | 1 | HYBRID — `mcp-scan` as an invoked **tool**, never a dependency (Snyk-owned) | ◐ native schema-drift + description-injection checks; mcp-scan adapter present, optional |
-| **P1-6** | **Framework auto-discovery.** Detect the orchestration framework in use (LangGraph, CrewAI, AutoGen, LlamaIndex, Claude Agent SDK, ADK, bare SDK) from span attributes, and record it on the agent for neutrality reporting. | B | 1 | BUILD | ✅ |
-| **P1-7** | **Registry drift & attestation.** Periodically re-attest that a registered agent's declared tools/models match what is observed; raise a finding on divergence. | C | 2 | BUILD | ◐ divergence detected on ingest; no scheduled re-attestation job |
+### 2.1 Practitioner CVs — 11 senior AI engineers (strongest source)
 
-**Design note.** P1-3's insistence on *observed* rather than *declared* lineage is deliberate and is a differentiator against GRC incumbents, whose registries are self-reported forms. A registry that only knows what someone typed into it is the artefact Dana already has in a spreadsheet.
+Not a vendor survey. A record of what senior engineers were **paid to build** in production, in
+regulated enterprises, 2023–2026. Full analysis: [research/practitioner-signal.md](research/practitioner-signal.md).
 
----
+**Technology frequency (n=11):**
 
-### Pillar 2 — Identity, Access & Authorization
-*"What is this agent allowed to touch?" — least privilege.*
-
-| ID | Requirement | Tier | Phase | Source | MVP |
-|---|---|---|---|---|---|
-| **P2-1** | **Non-human identity (NHI).** Every agent has a governed machine identity: credential issuance, scoped capabilities, rotation, revocation, expiry, last-used, and posture (stale/over-privileged/orphaned). | B (Critical at C) | 1–2 | BUILD | ✅ issuance, rotation, revocation, expiry, posture findings |
-| **P2-2** | **Tool-scoped least privilege.** Per-agent, per-tool, per-action permissions evaluated on every tool call, including argument-level constraints (e.g. `payments.transfer` allowed only when `amount < 1000` and `currency == "USD"`). Default deny. | A (Critical at B, C) | 0 | REUSE — **OPA/Rego** decision engine (Cedar-compatible seam), BUILD — agent-native authoring layer | ✅ |
-| **P2-3** | **Human-in-the-loop approvals.** A policy outcome that suspends execution, emits an approval request to a named approver/role with the full decision context, and resumes or aborts on response. Configurable timeout behaviour (deny-on-timeout default). | B (Critical at C, Nice at A) | 1 | BUILD | ✅ API + queue + resume/abort; notification is webhook-only |
-| **P2-4** | **SSO / SCIM / RBAC.** Enterprise auth for the control plane: OIDC/SAML SSO, SCIM user/group provisioning, and the role matrix in §4.2. | A (Critical at B, C) | 1 | REUSE — standard OIDC/SAML libs; BUILD — role model | ◐ RBAC + API keys + local users complete; OIDC/SAML seam present, not wired to an IdP |
-| **P2-5** | **Delegation & sub-agent identity.** When an agent spawns a sub-agent, the child inherits a *narrowed* (never widened) capability set, and the delegation chain is recorded and enforced. | C | 2 | BUILD | ◐ chain recorded and narrowing enforced; no cross-process propagation |
-| **P2-6** | **Credential brokerage.** Agents never hold long-lived third-party secrets; the control plane brokers short-lived, scoped credentials per tool call and records issuance. | C | 2–3 | BUILD | ✗ specified only |
-| **P2-7** | **Policy simulation ("what would happen").** Dry-run a policy change against the last N days of recorded execution paths and report what would newly block, newly allow, or newly escalate — before the change is enforced. | B | 1–2 | BUILD | ✅ |
-
-**Design note.** P2-7 is disproportionately important for adoption. The reason security tooling gets configured permissively and left there is that nobody can predict what tightening a rule will break. Replaying real traffic against a candidate policy converts a scary change into a reviewed diff — and it is only possible because Pillar 5 already stores the full execution path.
-
----
-
-### Pillar 3 — Runtime Guardrails & Security
-*"Stop the bad thing before it happens" — inline defence.*
-
-| ID | Requirement | Tier | Phase | Source | MVP |
-|---|---|---|---|---|---|
-| **P3-1** | **Prompt-injection & jailbreak defence.** Inline detection and blocking on user input, retrieved content, tool *results*, and sub-agent output. Must cover indirect injection (the payload arrives via RAG or a tool response, not the user). | A (Critical at B, C) | 0 | HYBRID — BUILD heuristic + structural analysers; REUSE optional transformer classifiers (Granite Guardian preferred on licence grounds) | ✅ |
-| **P3-2** | **PII / DLP & output filtering.** Detect and act on personal and sensitive data in **both** directions (into the model, and out to the user or a tool). Actions: allow, redact, mask, tokenise, block. Configurable entity sets per jurisdiction. | A (Critical at B, C) | 0 | REUSE — **Presidio** (MIT, de-facto standard); BUILD — policy/action layer, tokenisation, jurisdiction packs | ✅ |
-| **P3-3** | **Secrets & credential leakage detection.** Detect API keys, tokens, private keys and high-entropy strings in prompts, outputs and tool arguments. | A | 0 | BUILD (regex + entropy; cheap and better done natively) | ✅ |
-| **P3-4** | **Tool-call containment (intent-based).** Policy evaluated over the **full execution path**, not a single string: the tool, its arguments, the provenance of those arguments (did they originate in untrusted retrieved content?), the sequence of prior calls, and the declared task intent. Blocks the *action*, not the phrasing. | B (Critical at C, Nice at A) | 0–1 | BUILD (this is the agent-native differentiator over model-era filters) | ✅ |
-| **P3-5** | **Content safety / toxicity / harm classification.** Category-scored classification of input and output against a configurable policy (harm, harassment, self-harm, illicit, etc.). | A | 0–1 | REUSE — **Granite Guardian** (Apache-2.0) default; Llama Guard / ShieldGemma as opt-in adapters with licence gating | ◐ heuristic lexicon + classifier adapter; weights not bundled |
-| **P3-6** | **Low-latency inline enforcement.** Hard p95 budget (NFR-1). Detectors run concurrently with per-detector timeouts; anything over budget degrades to observe-only for that request and raises an operational finding. | B (Critical at C, Nice at A) | 0 | BUILD | ✅ |
-| **P3-7** | **Fail-open / fail-closed by policy.** Per-policy, per-environment choice of behaviour when a detector errors or times out, with the choice itself recorded as a governed, audited setting. | B | 0 | BUILD | ✅ |
-| **P3-8** | **Data residency / VPC / self-host.** Full functionality with no egress from the customer boundary; no telemetry, prompts or outputs leave unless explicitly configured. | C (Nice at B) | 2 | BUILD (architectural from day one — X-8) | ✅ self-host is the default and only MVP deployment mode |
-| **P3-9** | **Output schema & format enforcement.** Validate model output against a declared schema/contract; on violation, repair, retry or block per policy. | A | 1 | REUSE — **Guardrails AI** validators / **NeMo Guardrails** rails as adapters; BUILD — policy binding | ◐ native JSON-schema validator; NeMo/Guardrails-AI adapters present, optional |
-| **P3-10** | **Rate, cost & loop containment.** Per-agent budgets on calls, tokens, spend and recursion depth; detect and break runaway tool loops. | B | 1 | BUILD | ✅ |
-| **P3-11** | **Detector swappability & benchmarking.** Any detector is replaceable by config; the platform measures each detector's latency, and (where labelled fixtures exist) precision/recall, so the choice is evidence-based. | B | 1 | BUILD | ✅ |
-
-**Design note on P3-1 and P3-4 together.** The market's model-era filters ask "is this string malicious?". The agent-native question is "should this *action* happen, given where its arguments came from?". We implement **taint tracking**: content arriving from untrusted sources (retrieved documents, tool results, sub-agent output, user input) is tagged, the tag propagates into tool-call arguments, and policy can require that a high-impact tool never receives tainted arguments without a human approval. This is the single most defensible piece of runtime engineering in the product, and it is not available in any OSS project surveyed.
-
----
-
-### Pillar 4 — Evaluation & Reliability Assurance
-*"Does it actually work?" — the eval-gap wedge, and the line between us and pure-security vendors.*
-
-| ID | Requirement | Tier | Phase | Source | MVP |
-|---|---|---|---|---|---|
-| **P4-1** | **Offline evaluation + CI regression gating.** Run a dataset of cases against an agent/prompt/model configuration, score with configurable scorers, compare to a baseline, and **fail the build** on regression beyond a threshold. Exit codes and JUnit/SARIF output for CI. | A (Core at all tiers) | 0 | REUSE — **promptfoo** (MIT, purpose-built for CI gating) as a runner adapter; BUILD — native runner, domain scorers, gating semantics, governance tie-in | ✅ |
-| **P4-2** | **Online / production evaluation + drift.** Sample live traffic, score it with the same scorers as offline, and track score distributions over time. Alert on drift (PSI / KS / mean-shift) against a declared baseline window. | B (Critical at C, Nice at A) | 1 | BUILD | ✅ |
-| **P4-3** | **Silent-failure detection.** Detect plausible-but-wrong outputs — the ~78% of failures nobody catches. Signal families: (a) **groundedness** — output claims unsupported by retrieved context; (b) **self-consistency** — divergence across resampled generations; (c) **contract violation** — output violates a declared schema, format or invariant; (d) **behavioural anomaly** — tool-call sequence, latency, length or refusal patterns outside the learned envelope; (e) **hedging/uncertainty markers**; (f) **task-completion failure** — the agent stopped without satisfying the declared goal. | B (Core at C) | 1 | BUILD — **no OSS project does this; this is the category we intend to own** | ✅ (a)–(f) implemented as scorers; ensemble scoring, learned envelope is statistical not ML |
-| **P4-4** | **Automated red-teaming.** Continuous adversarial testing across injection, jailbreak, data-exfiltration, tool-abuse, and policy-bypass probes, with results tracked as a security posture over time. | C (Nice at B) | 2 | REUSE — **Garak** (Apache-2.0) scanner + **PyRIT** (MIT) orchestrated attacks + **Giskard** scan; BUILD — campaign scheduling, posture scoring, control tie-in | ◐ built-in offline probe suite + Garak/PyRIT adapters; no scheduled campaigns |
-| **P4-5** | **Scorer library & custom scorers.** First-party scorers (exact/fuzzy match, JSON-schema, regex, groundedness, self-consistency, safety, latency, cost, tool-trajectory) plus a plugin interface for domain scorers, including LLM-as-judge with a pinned judge model and recorded rubric. | A | 0–1 | BUILD | ✅ |
-| **P4-6** | **Datasets & golden sets.** Versioned evaluation datasets, importable from traces ("promote this production failure to a test case"), with labels, splits and provenance. | A | 0–1 | BUILD | ✅ |
-| **P4-7** | **Reliability SLOs.** Declare a target (e.g. "groundedness ≥ 0.9 on p95 of production traffic"), measure continuously, and surface error budget burn. Feeds the compliance control for performance monitoring. | C | 2 | BUILD | ✅ |
-| **P4-8** | **Cross-model comparison.** Run the same evaluation across models/providers and report a comparison. **The neutrality proof-point** — the feature a model provider structurally will not do well. | B | 1 | BUILD | ✅ |
-
-**Design note.** P4-3 is the highest-leverage requirement in the document. Observability is at 89–94% adoption and is table-stakes; evaluation is at ~52% offline / 37% online with 22.8% running none. The gap is not "teams cannot see their agents" — it is "teams cannot judge them". Silent-failure detection is the sharpest expression of that gap, it has no OSS equivalent, and it is what lets a governance product claim it governs *correctness* and not merely safety.
-
----
-
-### Pillar 5 — Audit, Observability & Traceability
-*"Show me exactly what happened" — the evidence layer.*
-
-| ID | Requirement | Tier | Phase | Source | MVP |
-|---|---|---|---|---|---|
-| **P5-1** | **Full execution-path trace.** Every prompt, model call, retrieval, tool call and argument, sub-agent delegation, guardrail decision, approval and error, as a single correlated trace with parent/child structure and timing. | A (Critical at C) | 0 | REUSE — **OpenTelemetry** + OpenLLMetry semantic conventions as the wire format; BUILD — agent-native span model and correlation | ✅ |
-| **P5-2** | **Tamper-evident audit log.** An append-only log of every governance-relevant event, hash-chained (each entry binds the previous entry's digest), with periodic signed checkpoints and an independent verification routine that detects insertion, deletion, reordering and mutation. | B (Critical at C, Nice at A) | 1 | BUILD — **OTel gives spans; the evidentiary layer is ours** | ✅ |
-| **P5-3** | **Auditor-ready evidence export.** One-click evidence package for a stated scope (agent(s) × period × control(s)) containing the relevant traces, decisions, policy versions in force at the time, eval results, approvals, a control-by-control narrative, and a manifest with per-file digests plus the chain verification result. | C (Nice at B) | 2 | BUILD | ✅ |
-| **P5-4** | **SIEM / OTel integration.** Export decisions and findings to the customer's existing SOC: OTLP, JSON Lines, CEF/LEEF, and webhook. Never require the customer to adopt our storage as their system of record. | B (Critical at C, Nice at A) | 1 | REUSE — OTel exporters; BUILD — CEF/LEEF mappers and event taxonomy | ✅ |
-| **P5-5** | **Retention, redaction & legal hold.** Configurable retention per data class; redaction of sensitive content *at capture* so that the audit log never becomes a new PII liability; legal hold that suspends deletion for a defined scope. | C | 2 | BUILD | ✅ redaction-at-capture + retention policy + legal hold; no automated deletion daemon in MVP |
-| **P5-6** | **Trace search & replay.** Query traces by agent, decision, verdict, entity type, tool, time and content; open a single execution path end-to-end; replay it against a candidate policy or model (feeds P2-7 and P4-8). | A | 0–1 | BUILD | ✅ |
-| **P5-7** | **Provenance & chain-of-custody for evidence.** Every exported artefact records who generated it, when, over what scope, against which policy version and code version, and is independently verifiable without access to our systems. | C | 2 | BUILD | ✅ |
-
-**Design note on P5-2.** "Immutable" in a startup's product usually means "we do not have a DELETE endpoint". That does not survive an auditor. We implement a genuine hash chain: `entry.digest = H(seq ‖ timestamp ‖ payload_digest ‖ prev_digest)`, with checkpoints signed by a key held outside the application database, and a `verify` routine that any third party can run against an export. This is cheap to build correctly at the start and effectively impossible to retrofit — the entries you already wrote were never chained.
-
----
-
-### Pillar 6 — Policy & Compliance Management
-*"Prove we meet the rules" — the CISO/GRC pillar, and the part with essentially no OSS coverage.*
-
-| ID | Requirement | Tier | Phase | Source | MVP |
-|---|---|---|---|---|---|
-| **P6-1** | **Policy-as-code engine.** One policy definition that drives **both** runtime enforcement and audit reporting. Human-authorable declarative policies (YAML) compiled to a decision engine, versioned, diffable, reviewable, with a stated author and effective time range. | B (Critical at C, Nice at A) | 0–2 | REUSE — **OPA/Rego** (CNCF-graduated) as the decision engine; BUILD — agent-native authoring layer, versioning, "write once, enforce + report" binding | ✅ (native evaluator + OPA sidecar adapter, both) |
-| **P6-2** | **Control catalog & framework mapping.** A catalog of platform controls, each mapped to **EU AI Act**, **NIST AI RMF (+ Generative AI profile)**, **ISO/IEC 42001**, **SOC 2**, **OWASP LLM Top 10**, **OWASP Agentic Top 10** and **MITRE ATLAS**. Map once, satisfy many. | B (Critical at C, Nice(SOC 2) at A) | 2 | BUILD — **essentially no OSS exists here; adopt OWASP/ATLAS as the risk *language*** | ✅ 30+ controls mapped across 7 frameworks |
-| **P6-3** | **Agent risk register & assessment.** Per-agent risk tiering (incl. EU AI Act risk classification: prohibited / high-risk / limited / minimal), structured assessment questionnaires, mitigations, residual risk, review cadence and sign-off. | B (Critical at C) | 2 | BUILD | ✅ classification + register + assessment; questionnaire content is a starter set |
-| **P6-4** | **Continuous compliance monitoring.** Each control's status is *computed from telemetry* — not attested in a form — and is one of `effective` / `degraded` / `failing` / `not_implemented` / `not_applicable`, with the evidence that produced the status and a trend. | C | 2 | BUILD | ✅ |
-| **P6-5** | **Obligation calendar.** Track regulatory obligations and their dates against the customer's agent inventory: which agents are in scope for which obligation, and what is outstanding. Seeded with the EU AI Act phased schedule. | C | 2 | BUILD | ✅ |
-| **P6-6** | **Board / exec risk dashboard.** Up-and-out view: agent population by risk tier, control effectiveness, open findings by severity, incidents blocked, compliance posture by framework, trend. | C (Core at B) | 2–3 | BUILD | ✅ API + dashboard view |
-| **P6-7** | **Policy packs.** Pre-built, importable policy + control bundles per regime and per vertical (EU AI Act high-risk, HIPAA, PCI-DSS, DORA, financial services), so a customer starts from a defensible baseline. | C | 2–3 | BUILD | ◐ EU AI Act high-risk + SOC 2 baseline packs shipped; verticals specified only |
-| **P6-8** | **Framework versioning.** Frameworks change (the EU AI Act omnibus delay is the live example). Mappings are versioned, and a change produces a diff of what it means for the customer's controls. | C | 3 | BUILD | ◐ versioned catalog; no diff engine |
-
-**Design note.** P6-4 is the difference between a compliance product and a compliance *theatre* product. Credo AI and OneTrust largely collect attestations. We compute status from the same execution data that drives runtime enforcement — because we are inline, we can. That is a claim only an agent-native platform can make, and it is why the compliance pillar must be built on top of the runtime pillar rather than beside it.
-
----
-
-### Cross-cutting requirements
-
-| ID | Requirement | MVP |
+| Tech | Count | Read |
 |---|---|---|
-| **X-1** | **Three integration surfaces**, all additive and independently sufficient: (a) inline **gateway** — OpenAI/Anthropic-compatible proxy, zero code change; (b) **SDK** — decorators/context managers for in-process enforcement and richer intent capture; (c) **OTel ingestion** — passive observation of existing telemetry. | ✅ all three |
-| **X-2** | **Provider & framework neutrality.** Adapter layer for model providers (OpenAI, Anthropic, Google, Bedrock, Azure, local/vLLM) and frameworks (LangGraph, CrewAI, AutoGen, LlamaIndex, Claude Agent SDK, ADK). Adding a provider must not touch core. | ✅ adapter layer + OpenAI/Anthropic/echo(offline) providers |
-| **X-3** | **Offline-first.** Every capability degrades to a functional local implementation with no third-party API key and no downloaded weights. Upgrading to hosted models/classifiers is configuration, never a rewrite. | ✅ |
-| **X-4** | **Deterministic decisions.** Given the same input, policy version and detector versions, a decision is reproducible and replayable. Non-deterministic components (LLM judges) are pinned and their outputs recorded. | ✅ |
-| **X-5** | **Everything through the API.** The dashboard is a client of the same public API as the CLI and SDK; no privileged back-channel. | ✅ |
+| **LangGraph** | **11/11** | Universal. Not *a* framework — *the* framework. |
+| FastAPI | 10/11 | Universal serving layer |
+| LangChain | 10/11 | Alongside LangGraph |
+| Kubernetes + Docker | 10/11 | Universal deployment |
+| **MCP / FastMCP** | **9/11** | Effectively standard for tool exposure |
+| **LangSmith** | **7/11** | Dominant observability |
+| Azure OpenAI / Foundry | 6/11 | Leading enterprise model access |
+| OpenTelemetry | 5/11 | |
+| **Langfuse** | **4/11** | Second observability; often *alongside* LangSmith |
+| AWS Bedrock · Prometheus/Grafana | 4/11 | |
+| RAGAS · Ray · GraphRAG/KG · Vertex/Gemini | 3/11 | |
+| **A2A** · LiteLLM · MLflow | 2/11 | Emerging, at Fortune-500 scale |
+
+**Several engineers run LangSmith *and* Langfuse *and* OTel *and* Prometheus simultaneously.** That
+is not preference — it is none of them covering the whole need.
+
+**Domain spread:** banking/fintech 3 · healthcare 3 · legal 2 · retail/CPG 2 · consulting 2 · plus
+recruiting, sales, devtools, autonomous driving, telecom. **Regulated-heavy.**
+
+### 2.2 Incident and failure data
+
+| Finding | Source |
+|---|---|
+| **31.1%** of failures are resolution/escalation breakdowns; execution/action failures **+62%**; **<10%** hallucination-related (10,000+ events) | [ChatSee via PR Newswire](https://www.prnewswire.com/news-releases/new-research-finds-enterprise-ai-failures-are-shifting-beyond-hallucinations-as-companies-move-from-chatbots-to-agents-302837907.html) |
+| **73%** of leaders say agents fail more from **broken context** than broken models | [Context engineering research](https://memeburn.com/why-ai-agents-fail-in-2026-the-context-problem-no-one-talks-about/) |
+| **88%** of orgs had ≥1 AI agent security incident in 2025 | [AI incidents H1 2026](https://www.digitalapplied.com/blog/ai-incidents-h1-2026-retrospective-failure-modes-analysis) |
+| ~78% of AI failures are "invisible" — plausible but wrong | Bessemer, citing WildChat |
+| 89–94% have observability; **52%** run offline evals, **37%** online, **22.8% none** | LangChain State of Agent Engineering (n=1,340) |
+| Guardrail deployment pain is **latency and false positives**; *"without violation specificity, tuning becomes guesswork"*; users route around controls into shadow AI | [Obsidian Security](https://www.obsidiansecurity.com/blog/ai-guardrails), [ML6 benchmark](https://www.ml6.eu/en/blog/inside-ai-guardrails-a-benchmark-on-enterprise-llm-security) |
+| *"Weak or outdated evaluation datasets cause more failures than the choice of tool"*; what OSS misses is **the organisational layer** — annotation queues, human feedback, surfaces non-engineers can use | [Maxim AI](https://www.getmaxim.ai/articles/challenges-in-managing-high-quality-datasets-for-llm-evaluation/) |
+| Reasoning fine-tuning **degrades** abstention — newer models are *worse* at "I don't know" | [AbstentionBench, 20 datasets / 35k queries](https://arxiv.org/html/2506.09038v1) |
+
+**Named incidents we design against:**
+
+| Incident | Mechanism |
+|---|---|
+| AI coding agent wiped **1.9M rows** — connected to **production instead of staging** | Environment binding + destructive-statement analysis |
+| Finance reconciliation agent **hallucinated a matching record** to "confirm" a match; caught at month-end close | Claim-to-record verification |
+| HR agent emailed a welcome to a candidate who **had not accepted** — hallucinated state, acted irreversibly | `requires_verified_state` precondition |
+| M365 Copilot oversharing — *"every permission check passed"* | End-user entitlement propagation |
+| Sales agent hallucinates objection responses **after step four** | Turn-depth degradation detection |
+
+### 2.3 Market and competitive research
+
+Gartner published the **first Magic Quadrant for AI Governance Platforms on 16 June 2026** — 13
+vendors; Leaders IBM, ServiceNow, Truyo. Inclusion required all of: AI discovery/registry, compliance
+risk management, policy management and enforcement, **dynamic risk scoring**, evidence collection,
+**interoperability**, **workflow and approvals**, complete audit trail.
+
+Gartner's own observation: **most vendors lack runtime enforcement** — a critical gap for regulated buyers.
+
+**Consolidation our original research missed** (all verified):
+
+| Event | Date | Consequence for us |
+|---|---|---|
+| **promptfoo → OpenAI** | 9 Mar 2026 | Our chosen CI-eval runner became provider-owned. **Dropped from the critical path**; optional adapter only. |
+| **OpenAI Frontier** launched | 5 Feb 2026 | Enterprise agent platform with identity, permissions, audit and evals built in. Bigger platform-risk event than AgentKit. |
+| **Lakera → Check Point** (~$300M) | Q4 2025 | A "point tool to out-flank" is now inside a security suite. |
+| **Galileo → Cisco** | 2025 | Cisco AI Defense = Robust Intelligence + Galileo evals + network enforcement. |
+| **Langfuse → ClickHouse** | Jan 2026 | Known; EE tier considerations. |
+| **Microsoft Entra Agent ID + Agent 365** | through 2026 | Agent identity, lifecycle, entitlement management, Conditional Access — *this is our Pillar 2*, from the identity incumbent. |
+
+### 2.4 Code audit of our own system
+
+Every capability claim below is grep- or execution-verified. Verified **absent** (zero matches):
+streaming, rate limiting, kill switch, multi-tenant filtering, cloud connectors, ITSM, async queue,
+KMS/Vault, DB migrations, dynamic risk scoring, framework SDKs, SQL parsing, end-user identity
+propagation, answerability, escalation-failure detection.
 
 ---
 
-## 8. Feature × company-tier matrix
+## 3. How enterprises build agent infrastructure, and where it breaks
 
-The same product means different things at different scale. A 900-person scale-up buys safety + speed; a Fortune-500 bank buys audit, residency and compliance. **The "Critical" column shifts rightward and downward — that shift *is* the expansion path.**
+### 3.1 The stack as it actually exists
 
-Legend: **Critical** = deal-maker, they will not buy without it · **Core** = expected in the platform · **Nice** = valued, not decisive · **—** = not needed at this tier.
-
-| Feature | A · Mid-market (~500–2k) | B · Enterprise (2k–10k) | C · Large / regulated (10k+) |
-|---|---|---|---|
-| **1 · Discovery & Registry** | | | |
-| Agent & tool inventory | Nice | Core | **Critical** |
-| Shadow-agent detection | — | Core | **Critical** |
-| Lineage & dependency map | — | Nice | Core |
-| Ownership & metadata | Nice | Core | **Critical** |
-| MCP inventory & hygiene | Nice | Core | **Critical** |
-| **2 · Identity, Access & Authorization** | | | |
-| Tool-scoped least privilege | Core | **Critical** | **Critical** |
-| Non-human identity (NHI) | — | Core | **Critical** |
-| Human-in-the-loop approvals | Nice | Core | **Critical** |
-| SSO / SCIM / RBAC | Core | **Critical** | **Critical** |
-| Delegation & sub-agent identity | — | Nice | Core |
-| **3 · Runtime Guardrails & Security** | | | |
-| Prompt-injection / jailbreak defence | Core | **Critical** | **Critical** |
-| PII / DLP & output filtering | Core | **Critical** | **Critical** |
-| Secrets leakage detection | Core | Core | **Critical** |
-| Tool-call containment (intent-based) | Nice | Core | **Critical** |
-| Low-latency inline enforcement (<100ms) | Nice | Core | **Critical** |
-| Data residency / VPC / self-host | — | Nice | **Critical** |
-| **4 · Evaluation & Reliability** | | | |
-| Offline eval + regression gating | Core | Core | Core |
-| Online / production eval + drift | Nice | Core | **Critical** |
-| Silent-failure detection | Nice | Core | Core |
-| Automated red-teaming | — | Nice | **Critical** |
-| Cross-model comparison | Nice | Core | Core |
-| **5 · Audit, Observability & Traceability** | | | |
-| Full execution-path trace | Core | Core | **Critical** |
-| Immutable / tamper-evident audit log | Nice | Core | **Critical** |
-| Auditor-ready evidence export | — | Nice | **Critical** |
-| SIEM / OpenTelemetry integration | Nice | Core | **Critical** |
-| Retention / redaction / legal hold | — | Nice | **Critical** |
-| **6 · Policy & Compliance** | | | |
-| Policy-as-code engine | Nice | Core | **Critical** |
-| Framework mapping | Nice (SOC 2 only) | Core | **Critical** |
-| Agent risk register | — | Core | **Critical** |
-| Continuous compliance monitoring | — | Nice | **Critical** |
-| Board / exec risk dashboards | — | Nice | Core |
-
-**Product consequence:** land Tier A/B on security + reliability; expand into Tier C as the compliance pillar matures. **Do not build Tier-C compliance features before Tier-B design partners are using the runtime + audit core.** MVP v0.1's thin compliance slice exists to establish the data model and prove the story in a demo — not to sell Tier C.
-
----
-
-## 9. Architecture
-
-### 9.1 Shape
+Reconstructed from the 11 CVs. This is what a real enterprise agent deployment looks like in 2026.
 
 ```
-                ┌──────────────────────────────────────────────────┐
-                │            Control plane (Next.js UI)            │
-                │  registry · incidents · traces · evals · policy  │
-                │            compliance · board view               │
-                └───────────────────────┬──────────────────────────┘
-                                        │  public REST API (X-5)
-┌───────────────┐   ┌────────────────────┴───────────────────────────────┐
-│  Customer's   │   │                Nometria core                       │
-│    agent      │   │                                                    │
-│               │   │  ┌─────────────┐  ┌──────────────┐  ┌───────────┐ │
-│ ┌───────────┐ │   │  │  Pillar 1   │  │   Pillar 2   │  │ Pillar 6  │ │
-│ │  SDK      │─┼───┼─▶│  Registry   │  │  Identity &  │  │  Policy & │ │
-│ │  (X-1b)   │ │   │  │  Discovery  │  │  Authz (OPA) │  │Compliance │ │
-│ └───────────┘ │   │  └─────────────┘  └──────────────┘  └───────────┘ │
-│      or       │   │                                                    │
-│ ┌───────────┐ │   │  ┌──────────────────────────────────────────────┐ │
-│ │  Gateway  │─┼───┼─▶│      Pillar 3 — Guardrail engine             │ │
-│ │  (X-1a)   │ │   │  │  taint tracking · detector pipeline · budget │ │
-│ └───────────┘ │   │  │  Presidio | injection | secrets | safety |…  │ │
-│      or       │   │  └───────────────────────┬──────────────────────┘ │
-│ ┌───────────┐ │   │                          │  decisions             │
-│ │ OTel SDK  │─┼───┼─▶┌───────────────────────▼──────────────────────┐ │
-│ │  (X-1c)   │ │   │  │   Pillar 5 — Trace + tamper-evident audit    │ │
-│ └───────────┘ │   │  └───────────────────────┬──────────────────────┘ │
-└───────────────┘   │                          │                        │
-                    │  ┌───────────────────────▼──────────────────────┐ │
-                    │  │   Pillar 4 — Evaluation & reliability        │ │
-                    │  │  offline/CI · online/drift · silent-failure  │ │
-                    │  │  red-team (Garak/PyRIT/promptfoo adapters)   │ │
-                    │  └──────────────────────────────────────────────┘ │
-                    └────────────────┬───────────────────────────────────┘
-                                     │
-                     ┌───────────────┴────────────────┐
-                     ▼                                ▼
-              Model providers                   SIEM / OTLP
-        (OpenAI, Anthropic, Google,         (customer's SOC —
-         Bedrock, Azure, local) — X-2        never our lock-in)
+┌──────────────────────────────────────────────────────────────────────────┐
+│  L7  GOVERNANCE            ← hand-built in 6/11 companies. THE GAP.       │
+│      PII, injection, policy, HITL, audit, validation                     │
+├──────────────────────────────────────────────────────────────────────────┤
+│  L6  OBSERVABILITY & EVAL  LangSmith 7/11 · Langfuse 4/11 · RAGAS 3/11    │
+│                            OTel 5/11 · Prometheus 4/11  ← often 3 at once │
+├──────────────────────────────────────────────────────────────────────────┤
+│  L5  AGENT RUNTIME         LangGraph 11/11 · Ray 3/11 · A2A 2/11          │
+├──────────────────────────────────────────────────────────────────────────┤
+│  L4  MODEL ACCESS          Azure OpenAI 6 · Bedrock 4 · Vertex 3          │
+│                            LiteLLM routing 2/11 · fallback chains         │
+├──────────────────────────────────────────────────────────────────────────┤
+│  L3  TOOLS & INTEGRATION   MCP/FastMCP 9/11 · REST · internal SDKs        │
+├──────────────────────────────────────────────────────────────────────────┤
+│  L2  RETRIEVAL             Pinecone/Qdrant/FAISS/pgvector/Azure AI Search  │
+│                            hybrid BM25+dense+rerank 4/11 · GraphRAG 3/11  │
+├──────────────────────────────────────────────────────────────────────────┤
+│  L1  INGESTION             Docling · PyMuPDF · Azure Document Intelligence │
+│                            chunking · embeddings   ← quality unmeasured    │
+├──────────────────────────────────────────────────────────────────────────┤
+│  L0  DATA & SYSTEMS OF     Snowflake/Databricks · Salesforce · ServiceNow  │
+│      RECORD                SharePoint · ERP · operational DBs             │
+└──────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 9.2 Components
+**Three structural observations:**
 
-| Component | Module | Responsibility |
-|---|---|---|
-| **Core** | `nometria.{models,db,config,enforcement}` + pillar packages `registry`, `identity`, `guardrails`, `policy`, `evaluation`, `audit`, `compliance` | Domain model, persistence, policy model, all six pillar services. No transport. |
-| **Providers** | `nometria.providers` | Model-provider adapter layer (X-2). `echo` is the offline default. |
-| **Gateway** | `nometria.gateway` | FastAPI app: OpenAI/Anthropic-compatible inline proxy + the public control-plane API + OTLP ingest. |
-| **SDK** | `nometria.sdk` | In-process Python client: decorators, context managers, tagged content for provenance. Local or remote against a gateway. |
-| **CLI** | `nometria.cli` | `nometria eval gate` (CI gating), `evidence export`, `audit verify`, `scan mcp`, `policy simulate`, `redteam run`, `compliance status`, `seed`, `demo`, `serve`. |
-| **Dashboard** | `dashboard/` | Next.js control plane. Pure API client. |
-| **Policies** | `policies/` | Declarative YAML policy packs (compiled to Rego on demand). |
-| **Compliance content** | `compliance/` | Control catalog and obligation calendar as versioned YAML. |
+1. **L5 is settled, L2/L1 are fragmented, L7 is hand-rolled.** Orchestration converged on LangGraph.
+   Retrieval did not converge at all. Governance has no default at all — so people build it.
+2. **L6 is doubled up.** Teams run LangSmith *and* Langfuse *and* OTel simultaneously. Each covers a
+   slice; nothing covers the whole.
+3. **The failure symptoms surface at L7 but the causes live at L0–L2.** An agent gives a wrong answer
+   (L7 symptom) because the chunk was incoherent (L1), the source was unauthoritative (L0), or the
+   entitlement model was never propagated (L0↔L2). **Guardrails at L7 cannot fix an L1 defect** — they
+   can only detect the symptom. This is why "add a guardrail" keeps disappointing.
 
-Distributed as a single `nometria` package with optional extras per wrapped OSS
-primitive (`pii`, `classifiers`, `rails`, `validators`, `redteam`, `otel`, `postgres`)
-so the offline default install stays dependency-light — see §12.1 and `pyproject.toml`.
+### 3.2 The seven failure families
 
-### 9.3 Request path (inline enforcement)
+Full taxonomy with 50 modes: [failure-modes.md](failure-modes.md). Summarised, with where the cause
+actually lives:
 
-1. Request arrives at gateway (or SDK boundary) with an agent identity.
-2. **Identity resolution** — resolve NHI, agent record; unregistered → shadow finding (P1-2), then continue per policy.
-3. **Taint annotation** — mark untrusted content sources (P3-4).
-4. **Pre-flight detector pipeline** — concurrent, budgeted (P3-6): injection, PII, secrets, safety.
-5. **Policy decision** — declarative policy + Rego over the full context: agent, tool, arguments, taint, detector findings, budgets, prior calls (P2-2, P3-4, P6-1). Outcome ∈ `allow | redact | block | escalate`.
-6. **Escalation** → suspend, create approval, await/resume (P2-3).
-7. **Forward to provider** (adapter, X-2) or return a block.
-8. **Post-flight pipeline** on the response — PII/DLP outbound, safety, schema, silent-failure scorers sampled (P3-2, P3-9, P4-3).
-9. **Emit** — trace spans (P5-1), audit chain entries (P5-2), SIEM events (P5-4), compliance signals (P6-4).
-
-### 9.4 The build-vs-reuse seam
-
-Every OSS primitive sits behind one of four interfaces, which is how X-3 (swappability) is made a tested property rather than a claim:
-
-| Interface | Contract | OSS implementations |
-|---|---|---|
-| `Detector` | `detect(content, context) -> Findings` | Presidio, Granite Guardian, native heuristics, NeMo/Guardrails-AI rails |
-| `PolicyEngine` | `decide(input) -> Decision` | OPA/Rego, native evaluator (Cedar seam) |
-| `EvalRunner` | `run(suite, target) -> Results` | native, promptfoo |
-| `RedTeamRunner` | `probe(target, campaign) -> Findings` | native probe suite, Garak, PyRIT, Giskard |
-| `ModelProvider` | `complete(request) -> Response` | OpenAI, Anthropic, Google, Bedrock, local, echo (offline) |
-
-### 9.5 Deployment
-
-**MVP:** single Docker Compose stack — gateway, OPA sidecar, Postgres (or SQLite for zero-infra), dashboard. Self-host is the default and only mode (X-8, P3-8). No egress. Managed cloud is Phase 2+ and is not a different codebase.
-
----
-
-## 10. Data model
-
-Summary; full schema in [Appendix D](appendix-d-data-model.md).
-
-**Pillar 1:** `Agent`, `AgentVersion`, `Tool`, `McpServer`, `McpToolSnapshot`, `LineageEdge`, `Finding`
-**Pillar 2:** `Identity`, `Credential`, `Capability`, `ApprovalRequest`, `User`, `Role`, `DelegationEdge`
-**Pillar 3:** `DetectorRun`, `DetectionFinding`, `TaintTag`, `Budget`
-**Pillar 4:** `EvalSuite`, `EvalCase`, `EvalRun`, `EvalResult`, `Scorer`, `Baseline`, `DriftWindow`, `RedTeamCampaign`, `SLO`
-**Pillar 5:** `Trace`, `Span`, `AuditEntry` (hash-chained), `AuditCheckpoint`, `EvidencePackage`, `LegalHold`, `RetentionPolicy`
-**Pillar 6:** `Policy`, `PolicyVersion`, `Decision`, `Control`, `FrameworkMapping`, `ControlStatus`, `RiskAssessment`, `Obligation`
-
-**Invariants worth stating in a PRD because they constrain engineering:**
-- `AuditEntry` is append-only; there is no update or delete path in code, and the chain is verified independently (P5-2).
-- `Decision` always references the exact `PolicyVersion` in force at decision time — policies are never mutated in place (P6-1, X-4).
-- `Capability` narrowing is enforced on `DelegationEdge` creation; widening is rejected at write time, not audited after the fact (P2-5).
-
----
-
-## 11. API surface
-
-Full specification in [Appendix C](appendix-c-api-spec.md). Shape:
-
-- **Inline** — `POST /v1/chat/completions` (OpenAI-compatible), `POST /v1/messages` (Anthropic-compatible), `POST /v1/guard/{input,output,tool_call}` (direct enforcement without proxying).
-- **Registry** — `/api/agents`, `/api/tools`, `/api/mcp-servers`, `/api/lineage`, `/api/findings`.
-- **Identity** — `/api/identities`, `/api/credentials`, `/api/capabilities`, `/api/approvals`.
-- **Policy** — `/api/policies`, `/api/policies/{id}/versions`, `/api/policies/simulate`.
-- **Eval** — `/api/eval/suites`, `/api/eval/runs`, `/api/eval/gate`, `/api/eval/drift`, `/api/eval/slos`, `/api/redteam/campaigns`.
-- **Audit** — `/api/traces`, `/api/traces/{id}`, `/api/audit/entries`, `/api/audit/verify`, `/api/evidence`, `/api/export/siem`.
-- **Compliance** — `/api/controls`, `/api/frameworks`, `/api/compliance/status`, `/api/risk`, `/api/obligations`, `/api/board`.
-- **Ingest** — `POST /v1/traces` (OTLP/HTTP).
-
----
-
-## 12. Open-source strategy
-
-### 12.1 Decisions
-
-Full register with licence, health, verdict and risk in [Appendix A](appendix-a-oss-register.md). Headlines:
-
-**Adopt on the critical path (all permissive, all active):**
-
-| Layer | Pick | Licence | Why |
+| Family | What goes wrong | Cause layer | Our coverage |
 |---|---|---|---|
-| PII detection/redaction | **Presidio** | MIT | De-facto standard, mature, extensible. Rebuilding is pure duplicated work. |
-| Safety classifier | **Granite Guardian** (IBM) | Apache-2.0 | Cleanest licence in the classifier group — true Apache weights. |
-| Guardrail orchestration | **NeMo Guardrails** / **Guardrails AI** | Apache-2.0 | Compose checks; don't hand-roll a runner. *(Adapters — our pipeline is the primary path; see 12.2.)* |
-| Eval + CI gating | **promptfoo** | MIT | Purpose-built for regression gating in CI. |
-| Red-teaming | **Garak** + **PyRIT** (+ Giskard) | Apache / MIT | Scanner + orchestrated adversarial suites. |
-| Authorization / policy | **OPA (Rego)** | Apache-2.0 | CNCF-graduated, battle-tested, sub-ms. Cedar kept as a compatible seam. |
-| Tracing / audit spine | **OpenTelemetry** + OpenLLMetry | Apache-2.0 | Industry standard; feeds our evidence layer. |
-| Risk taxonomy | **OWASP LLM & Agentic Top 10**, **MITRE ATLAS** | Open | Map detections to a language buyers already trust. |
+| **F1 Answerability** | Answers an unknowable question ("Q4 2027 revenue"), answers outside coverage window, over-refuses | L0 metadata absent | ✗ 0/6 |
+| **F2 Source authority** | Faithfully grounded in a deprecated wiki page; fabricated citation; silent pick between conflicting sources | L0 catalog absent | ◐ 1/6 partial |
+| **F3 Destructive action** | Generated `DELETE` with no `WHERE`; prod vs staging; irreversible act on hallucinated state; duplicate on retry | L3/L5 | ✗ 0/10 |
+| **F4 Entitlement** | Oversharing via RAG; agent identity ≠ user entitlement; aggregation disclosure; cross-tenant | L0↔L2 | ✗ 0/8 (1 partial) |
+| **F5 Escalation** | **31.1% of all failures.** Didn't hand off; looped instead; escalated with no context; false resolution | L5/L7 | ◐ 1/7 partial |
+| **F6 Commitment/liability** | Binding promise; unlicensed advice; missing AI disclosure; adverse action without reason | L7 | ◐ 2/6 |
+| **F7 Numeric/entity integrity** | Hallucinated record match; wrong period; currency/unit; entity confusion | L0/L7 | ✗ 0/7 |
+| **F8 Context & retrieval integrity** *(new)* | Incoherent chunks; `[UNK]` boundary failures on non-Latin scripts; stale index; context-window truncation dropping evidence; memory contamination | **L1/L2** | ✗ 0/7 |
 
-**Deliberately off the critical path:**
+**We cover 1 of ~57 modes outright.** That number is less damning than it looks — the substrate we
+built (taint, policy, audit, control status) is what these controls *run on*. But it is the honest
+starting point.
 
-| Project | Why excluded | How we still use it |
-|---|---|---|
-| **LLM Guard** | Archived 9 Jul 2026 (Protect AI → Palo Alto). Excellent scanner design, dead dependency. | Mine the 15-input/20-output scanner taxonomy as a **design reference** for our detector coverage. |
-| **Rebuff, Vigil** | Stale / low activity. | Reference for multi-layer injection detection patterns (canary tokens in particular). |
-| **Invariant Guardrails / mcp-scan** | Acquired by **Snyk** — an incumbent building the same category. Most agent/MCP-native OSS guardrails, and precisely therefore the riskiest to depend on. | `mcp-scan` invoked as an **external tool** in P1-5, never linked as a dependency. |
-| **Llama Guard / Prompt Guard, ShieldGemma** | Not OSI-approved. Llama Community Licence adds an AUP and a >700M-MAU clause; Gemma similar. Usable, but restricted. | Opt-in adapters behind an explicit licence acknowledgement flag. Granite Guardian is the default. |
-| **systemprompt-core** | BSL-1.1 — source-available, **not** open source; usage restrictions today. | Reference only. |
-| **OpenAI Guardrails** | MIT but OpenAI-centric; adopting it as the spine would contradict X-2. | Reference for config ergonomics. |
-| **Langfuse** | MIT core and self-hostable, but ClickHouse-acquired with features behind an EE tier. | Supported as an *export target*, not as our storage. |
-| **Microsoft Agent Governance Toolkit** | MIT, but a competitor-adjacent framing. | Reference for OWASP Agentic Top-10 coverage mapping. |
+### 3.3 Why the data/metadata layer matters more than it appears
 
-### 12.2 Where OSS runs out — and why that is the product
+A recurring pattern across F1, F2, F7 and F8: **the agent has no access to enterprise semantics.**
+It does not know which of seven tables containing "revenue" is authoritative, that "customer" means
+different things in Salesforce and the warehouse, that this dashboard was deprecated in March, or
+what the coverage window of the index actually is.
 
-Coverage by pillar, from the catalog:
+You cannot guardrail your way out of missing metadata. What you *can* do — and what nobody does — is:
 
-| Pillar | OSS coverage | Consequence |
-|---|---|---|
-| 3 · Runtime guardrails | **Well covered** | Wrap. Matching here is table-stakes, not differentiation. |
-| 4 · Evaluation & reliability | **Good primitives** | Wrap the runners; **silent-failure detection has no OSS equivalent** — build. |
-| 2 · Identity & authorization | **Engines yes, agent-native no** | Wrap OPA; build the agent-native capability model. |
-| 5 · Audit & traceability | **Partial** — tracing yes, immutable/evidence no | Wrap OTel; build the evidentiary layer. |
-| 1 · Discovery & registry | **Thin / competitor-owned** | Build. |
-| 6 · Policy & compliance mapping | **Essentially none** | Build. This is the moat. |
+- **Consume** existing catalog/lineage metadata (DataHub, OpenMetadata, Unity Catalog, Collibra) and
+  use it as **policy input**: source tier, freshness SLA, ownership, classification.
+- **Derive** what is missing from observed behaviour (we already derive lineage from spans).
+- **Enforce** on it: *"financial figures may only be sourced from tier-1 systems of record under 24h old."*
 
-The pattern is the strategy: the more commoditised a pillar, the more OSS is free; the more it is our moat, the less OSS exists — because it requires product integration and domain work, not a library.
-
-### 12.3 Licence compliance obligations on us
-
-- Maintain `THIRD_PARTY_NOTICES.md` with every dependency's licence (Apache-2.0 §4(d) attribution).
-- Restricted-licence adapters (Llama Guard, ShieldGemma) are **not installed by default** and require an explicit config acknowledgement. No BSL dependency on any path.
-- Re-verify licence and last-commit date for every critical-path project quarterly — the catalog's own caveat, and two projects changed status in the last twelve months.
+This is what makes Pillars 7, 8 and 14 tractable rather than aspirational: **the metadata mostly
+exists, it is just not wired to the agent.** GraphRAG/knowledge-graph adoption (3/11, always at the
+hardest problems) is practitioners reaching for the same thing from the retrieval side.
 
 ---
 
-## 13. Compliance framework coverage
+## 4. Market landscape and honest positioning
 
-Seven frameworks, one control set (P6-2). Full mapping in [Appendix B](appendix-b-control-catalog.md).
+### 4.1 Five camps
 
-| Framework | Status | Why buyers ask |
-|---|---|---|
-| **EU AI Act** | Legally binding, phased | The demand pump (§14.2) |
-| **NIST AI RMF** (+ Generative AI profile) | Voluntary | The US baseline buyers ask you to map to |
-| **ISO/IEC 42001** | Certifiable AI management system | Increasingly required *of vendors* |
-| **SOC 2** | Attestation | Tier-A's reason to buy — it unblocks *their* upmarket sales |
-| **OWASP LLM Top 10** | Taxonomy | The security team's shared language |
-| **OWASP Agentic Top 10** | Taxonomy | Agent-specific threat coverage |
-| **MITRE ATLAS** | Threat matrix | Maps our detections to a matrix SOCs already use |
-
----
-
-## 14. Roadmap
-
-### 14.1 Phases
-
-**Sequencing logic:** revenue-bearing security value first (Phase 0–1) funds the slow, expensive compliance build (Phase 2) — and by the time high-risk EU AI Act obligations bite (Dec 2027), the compliance pillar is mature. Building compliance first would mean 18 months of GRC engineering before a single "it works" demo: the wrong order for a startup.
-
-| Phase | Window | Theme | Ships | Goal | Target tier |
-|---|---|---|---|---|---|
-| **0 · Beachhead** | 0–6 mo | The wedge that demos itself | Inline injection + PII/DLP guardrails (SDK/gateway); full execution-path trace → searchable log; offline eval + CI regression gating; basic tool-scoped permissions | 3–5 design partners; block a real incident on day one | A / B |
-| **1 · Land** | 6–12 mo | Point tool → control plane | Agent registry + shadow-agent discovery; online eval + drift + silent-failure detection; immutable audit log + SIEM/OTel export; HITL approvals; SSO/RBAC | Become the single pane for "all our agents"; convert design partners to paid; first Tier-B logos | B |
-| **2 · Expand** | 12–24 mo | Unlock the compliance buyer | Policy-as-code engine; framework mapping (EU AI Act, NIST, ISO 42001); risk register + auditor-ready evidence export; NHI management; residency / self-host / VPC | High-ACV Tier-C deals; CISO + GRC co-sign | C / regulated |
-| **3 · Category** | 24 mo+ | The neutral standard | Cross-model / cross-cloud control plane; automated red-teaming at scale; board dashboards + cross-org benchmarking; partner/marketplace ecosystem | Own "agent governance" as a category; neutrality as the moat vs Microsoft/Palo Alto bundles | B + C |
-
-**Phase 0 MVP, as the roadmap defines it:** a drop-in SDK/gateway that on day one (1) blocks prompt-injection and PII leakage, (2) records a full searchable execution-path trace, and (3) runs eval gates in CI so a bad agent cannot ship. One dashboard. No re-architecture. *Why this:* demonstrable in a 20-minute call, owned by a buyer who can say yes without procurement, and it plants the trace/audit spine every later pillar hangs off.
-
-### 14.2 The regulatory clock
-
-Compliance features do not sell on merit; they sell on deadlines. Align Phase-2 delivery to land ~12 months ahead of each obligation.
-
-| Date | Obligation | Status | Pull |
+| Camp | Players | Strength | Structural weakness |
 |---|---|---|---|
-| Feb 2025 | Prohibited practices enforceable; AI-literacy duties for all providers/deployers | **Live** | — |
-| **2 Aug 2026** | Transparency obligations enforceable — disclose AI interaction, mark AI-generated content; market-surveillance authorities stand up | Near-term | **Now** |
-| **2 Dec 2026** | GPAI grace period ends — general-purpose model obligations bite for Code-of-Practice signatories | Near-term | **Now** |
-| **2 Dec 2027** | High-risk systems (Annex III) — standalone high-risk obligations apply (delayed from 2026) | Phase-2 target | Build now, sell 2027 |
-| **2 Aug 2028** | High-risk embedded in products (Annex I) — full obligations | Phase-3 horizon | — |
+| **Observability & eval** | **LangSmith**, **Langfuse**, Braintrust, Arize/Phoenix, Fiddler, Patronus, Opik | Developer-loved; where the traces already are | **Read-path.** Langfuse states it plainly: *"Langfuse's role is observability and validation, not enforcement"* — it recommends pairing with a separate runtime library |
+| **Agent security** | Zenity, Noma, Arthur, WitnessAI, Astrix, Knostic | Real runtime enforcement, discovery, posture | Thin on correctness/eval and compliance depth; several SaaS-only |
+| **Security suites** | Palo Alto (Prisma AIRS), Cisco AI Defense, **Check Point (+Lakera)**, SentinelOne (+Prompt Security) | Distribution, SOC integration, existing MSA | Suite lock-in; agent-native depth varies |
+| **AI governance platforms** | IBM, ServiceNow, Truyo (Gartner Leaders); Airia, Credo AI, ModelOp, Monitaur, OneTrust; Holistic AI | Compliance depth, framework mapping, workflow, installed base | **Gartner: most lack runtime enforcement** |
+| **Model providers** | OpenAI Frontier/AgentKit, Anthropic, Google ADK, Microsoft Agent 365/Entra Agent ID | Free, bundled, distribution | Conflict of interest on neutrality; not a compliance product |
 
-Dates reflect the 2026 post-omnibus timeline. **The high-risk delay to Dec 2027 / Aug 2028 buys time to build the compliance pillar — but the Aug 2026 transparency and Dec 2026 GPAI obligations are demand triggers today.** Re-check before committing compliance-feature delivery dates; the schedule remains subject to further EU adjustment.
+### 4.2 Where each camp genuinely fails
+
+Stated as fairly as possible, because our roadmap depends on these being true.
+
+**LangSmith / Langfuse (the incumbents that matter, 7/11 and 4/11):**
+- Observation, not enforcement. Langfuse explicitly recommends separate runtime libraries.
+- No policy model, no identity/authorization for agents, no compliance mapping.
+- Evaluation is **offline/async** — you find out after the fact.
+- LangSmith is coupled to the LangChain ecosystem and engineering-centric; non-technical stakeholders
+  cannot operate it. Self-hosting is enterprise-tier.
+- **The organisational layer is missing** — annotation queues, human review, surfaces a compliance
+  lead can use. This is the stated #1 reason eval programmes stall, not the scorers.
+- *LangSmith has shipped an LLM Gateway with request-layer policy* — this is real and narrows the gap.
+  We should assume it improves.
+
+**Agent-security tools:** no correctness governance (they secure, they do not judge), separate system
+from the traces the team already uses, and several cannot self-host.
+
+**Governance platforms:** no runtime; registration-driven discovery; the CISO can use them and the
+engineer cannot.
+
+**Model providers:** neutrality conflict; and a customer with Azure OpenAI + Bedrock + Vertex
+(common — 6/4/3 in our sample) cannot govern from any single one.
+
+### 4.3 Our position, stated honestly
+
+We are not creating a category. We are proposing that **five specific controls belong together and
+belong inline**, and that the packaging — a library that drops into LangGraph — is what has been
+missing.
+
+**Our real competitor is internal engineering.** The comparison that matters:
+
+| | Hand-built (the 6/11 path) | Nometria |
+|---|---|---|
+| Time to first enforcement | 4–8 engineer-weeks | an afternoon |
+| Hierarchical policy | rarely; Derrick's took real effort | built in |
+| Compliance mapping | never | 41 controls × 7 frameworks |
+| Failure attribution | never | Pillar 13 |
+| Maintained as models/frameworks change | by whoever built it, until they leave | by us |
+| Cost | ~$150–300k of senior engineering | licence |
+
+### 4.4 Platform risk
+
+Assume providers absorb the commodity middle. **Microsoft Entra Agent ID will win agent identity** —
+they own the directory. Our Pillar 2 should **integrate with it**, not compete. Similarly, assume
+LangSmith's gateway improves. Our defensibility must live where a provider structurally will not go:
+cross-vendor neutrality, compliance evidence, correctness governance, and controls that span L0–L7.
+
+---
+---
+# Part II — The product
+
+## 5. The five layers and fifteen pillars
+
+Fifteen pillars grouped into five layers by the question they answer. Each states: **what · why (evidence) · what already exists (OSS + commercial) · our status · requirements**.
+
+Status: ✅ built & tested · ◐ partial · ✗ not built.
+
+| Layer | Question | Pillars |
+|---|---|---|
+| **A — Know** | What exists and what are the rules? | 1 Registry · 12 Policy Composition |
+| **B — Constrain** | What may it do? | 2 Identity · 3 Guardrails · 9 Action Assurance · 10 Entitlement |
+| **C — Ground** | Should it answer, and from what? | 7 Answerability · 8 Provenance · 14 Context Integrity |
+| **D — Judge** | Did it work, and who broke it? | 4 Evaluation · 13 Failure Attribution · 11 Escalation |
+| **E — Prove** | Can we demonstrate it? | 5 Audit · 6 Compliance |
+| **Cross-cutting** | | 15 Cost & Reliability |
 
 ---
 
-## 15. Non-functional requirements
+## Layer A — Know
 
-| ID | Requirement | Target | Tier |
-|---|---|---|---|
-| **NFR-1** | **Inline enforcement latency.** Added p95 latency for the full pre-flight pipeline, excluding the model call. | **< 100 ms p95**, < 250 ms p99. Lakera targets <50ms — treat 50ms as the competitive bar for the heuristic path. Per-detector timeout default 40 ms. | A/B/C |
-| **NFR-2** | **Availability.** Gateway is on the customer's critical path. | 99.9% self-hosted target; **no single point of failure that can take the customer's agent down** — P3-7 fail-open must be genuinely available. | B/C |
-| **NFR-3** | **Throughput.** | 500 rps/node sustained on the heuristic path; horizontal scale-out, stateless gateway. | B/C |
-| **NFR-4** | **Data residency.** | Zero egress by default. All processing in-boundary. Air-gap installable (no runtime package/model downloads). | C |
-| **NFR-5** | **Audit integrity.** | Chain verification detects any insertion, deletion, reordering or mutation; verification is independently runnable against an export with no access to our systems. | B/C |
-| **NFR-6** | **Retention.** | Configurable 30 d – 7 y per data class; legal hold overrides deletion. | C |
-| **NFR-7** | **Security posture of the platform itself.** | SOC 2 Type II path; encryption at rest and in transit; secrets never logged; the audit log must not itself become a PII liability (redaction at capture, P5-5). | B/C |
-| **NFR-8** | **Time to first value.** | Registered agent → first blocked incident visible in the dashboard in **< 10 minutes** from a cold start, with no code change. This is the Tier-A acquisition constraint. | A |
-| **NFR-9** | **Offline operation.** | Full core functionality with no network egress and no model weights present. | All |
-| **NFR-10** | **Determinism & replay.** | Same input + policy version + detector versions → same decision, replayable from stored traces. | B/C |
+### Pillar 1 · Discovery & Agent Registry ✅◐
 
----
+**What.** A canonical record of every agent — owner, purpose, risk tier, models, tools, MCP servers — created by registration *or* first observation. Lineage derived from observed execution paths, not declared config.
 
-## 16. Success metrics
+**Why.** *"What agents do we even have?"* is the first CISO question. **Reference:** Gartner MQ inclusion criterion (AI discovery/registry).
 
-| Stage | Metrics |
+| | Options |
 |---|---|
-| **Phase 0–1** | Design partners signed; **incidents blocked** (the demo-that-sells-itself metric); % of known agents traced; eval coverage %; time-to-first-block |
-| **Phase 1–2** | Paid conversion; **agents under management**; time-to-audit-evidence; net revenue retention; % traffic with online eval |
-| **Phase 2–3** | Tier-C logos; ACV expansion B→C; frameworks supported; **% ARR from compliance**; control effectiveness rate |
+| **OSS** | None meaningful. `mcp-scan` (Snyk-owned — external tool only, never a dependency) |
+| **Commercial** | ServiceNow AI Control Tower (~30 discovery integrations), Kosmoy (4 cloud registries), OneTrust Agent Detection, Credo AI Agent Registry, Zenity (Copilot/Power Platform) |
+| **Their gap** | Registration- or connector-driven. None derive lineage from *observed* behaviour. |
 
-**Leading product-health indicators** (internal): p95 added latency, detector precision/recall on labelled fixtures, false-block rate (the metric that kills adoption if it drifts), silent-failure detection rate vs. human-labelled sample, chain verification success rate.
+**Our status.** ✅ registry, shadow detection, ownership, framework auto-detection, observed lineage, MCP hygiene. ✗ **no cloud connectors** — we see only what crosses our gateway or OTel.
 
----
-
-## 17. Risks & open decisions
-
-| # | Risk | Severity | Mitigation |
-|---|---|---|---|
-| R1 | **A funded agent-security rival (Arthur, Zenity) adds compliance faster than we add runtime depth.** | High | Keep the runtime + eval lead; ship the compliance pillar thin-but-real from v0.1 so it compounds (§6.2). |
-| R2 | **A provider bundles enough of this for free** (an AgentKit release with audit + policy). | High | Neutrality, compliance depth and evidence are structurally hard for them. Never build anything a provider could bundle as our *only* value. |
-| R3 | **False blocks destroy trust.** A guardrail that blocks legitimate work gets turned off, and it never gets turned back on. | High | Observe-only mode by default; P2-7 policy simulation before enforcement; per-detector precision tracking; fast per-decision override + feedback loop. |
-| R4 | **Latency budget breach** makes us a performance problem. | High | NFR-1 as a tested budget; concurrent detectors; degrade-to-observe (P3-6); heuristic fast path before any model-based detector. |
-| R5 | **OSS dependency changes status** — two projects were archived or acquired in the last year. | Medium | Adapter interfaces (§9.4) make every OSS component swappable; quarterly licence/health re-verification (§12.3); nothing archived, BSL or competitor-owned on the critical path. |
-| R6 | **Regulatory dates move** (they already did, via the omnibus delay). | Medium | Framework mappings are versioned content, not code (P6-8); obligation calendar is data. |
-| R7 | **Compliance content is a bottomless pit** — mappings can absorb unlimited effort with no revenue. | Medium | Content is capped per phase and driven by design-partner demand; ship packs (P6-7), not bespoke mappings. |
-| R8 | **The audit log becomes a new PII liability** — we would be centralising the exact data customers fear leaking. | Medium | Redaction at capture (P5-5); residency by default (NFR-4); customer-held keys for checkpoints. |
-| R9 | **The market is small today** — ~$750M on dedicated agents, 5–16% true agents. | Medium | Accept: this is an early-market bet on a growing pain, not a large-market land-grab. Revenue timing risk, not thesis risk. |
-
-**Open decisions requiring founder input** (carried from the roadmap; they change sequencing, not architecture):
-
-1. **Horizontal vs. vertical beachhead.** A regulated-vertical entry (fintech, health, insurance) accelerates Tier-C credibility and yields proprietary compliance depth, at the cost of TAM per logo. Horizontal is bigger but meets the incumbents sooner. Depends on existing domain relationships. *This PRD assumes horizontal with an optional vertical overlay — P6-7 policy packs are the mechanism either way.*
-2. **Bottoms-up vs. top-down entry.** This PRD assumes a bottoms-up security/platform wedge before the CISO/GRC motion. Existing enterprise/CISO relationships would invert Phases 0–2.
-3. **Existing IP.** If there is existing eval or security IP to build from, the reuse boundary in §12 shifts.
+**Requirements.** P1-1…P1-7 as v1. **New:** `P1-8` connector framework (Bedrock, Azure AI Foundry, Vertex, Salesforce, ServiceNow) — Gartner interoperability criterion and the estate-scale gap.
 
 ---
 
-## 18. Appendices
+### Pillar 12 · Policy Composition & Lifecycle ✗
 
-- [Appendix A — OSS Dependency Register](appendix-a-oss-register.md)
-- [Appendix B — Control Catalog & Framework Mapping](appendix-b-control-catalog.md)
-- [Appendix C — API Specification](appendix-c-api-spec.md)
-- [Appendix D — Data Model](appendix-d-data-model.md)
-- [Appendix E — Threat Model](appendix-e-threat-model.md)
-- [Traceability — FR → implementation](traceability.md)
+**What.** Hierarchical policy — `org → team → agent → user` — with inheritance, override semantics, effective-policy resolution showing provenance, and lint.
+
+**Why. Evidence: 2/11 built it by hand.** Derrick (Murphy USA, ex-Apple/Cigna/Ally): *"hierarchical policy framework (company → team → user) with inheritance/override rules, context isolation, and tool permissions... **reducing policy misconfigurations by 87%**."* Jeremy (Accenture, ex-Waymo): *"hierarchical policies, Policy-as-Code."*
+
+An enterprise with 40 agents across 8 teams **cannot** manage flat policy. The 87% figure is the tell: flat policy *causes incidents*.
+
+| | Options |
+|---|---|
+| **OSS** | OPA/Rego, Cedar, Casbin, OpenFGA — all *engines*; none ship an agent policy hierarchy |
+| **Commercial** | **No agent-governance vendor packages hierarchical agent policy** |
+| **Their gap** | Everyone gives you a decision engine. Nobody gives you the org model. |
+
+**Our status.** ✗ flat scope-matching, "strongest effect wins". Immutable versions + simulation ✅.
+
+| ID | Requirement |
+|---|---|
+| P12-1 | Four levels `org → team → agent → user`, inheritance by default |
+| P12-2 | Override semantics: `extend` · `restrict` (always allowed) · `override` (needs upstream `overridable: true`) |
+| P12-3 | **Effective-policy resolution with provenance** — "this rule came from team `finance`, overriding org default". Opacity *is* the misconfiguration cause |
+| P12-4 | **Policy lint** in CI — shadowed/unreachable rules, contradictory effects, over-broad globs, levels granting more than their parent |
+| P12-5 | Context isolation — a team cannot read or leak another team's rules |
+| P12-6 | **Agent canary rollout** by version with health gates and automated rollback *(Siddhant, Derrick)* |
+| P12-7 | **Non-developer rule authoring** for the QMS reviewer / compliance lead who owns the rule *(Leo: "without developer intervention")* |
 
 ---
 
-## 19. Sources & caveats
+## Layer B — Constrain
 
-**Primary:** Menlo Ventures, *State of Generative AI in the Enterprise 2025* · Bessemer, *AI Infrastructure Roadmap 2026* · LangChain, *State of Agent Engineering* (n=1,340) · OpenAI, *AgentKit* announcement · Cleanlab, *AI Agents in Production 2025* (n=1,837). **Secondary:** CB Insights, Grand View Research, O'Reilly, Braintrust, StartupHub, SoftwareStrategies, presenc.ai, Arthur "Best AI Agent Security Platforms 2026", TrueFoundry buyer's guide, TechTarget / Modulos / Kovrr AI-governance guides 2026. **Regulatory:** EU AI Act post-omnibus timeline (Norton Rose Fulbright *Data Protection Report* Jul 2026; SIG summary Aug 2026; EU AI Act Service Desk), NIST AI RMF + GenAI profile, ISO/IEC 42001. **OSS:** project repositories and licence files as catalogued Aug 2026.
+### Pillar 2 · Identity, Access & Authorization ✅◐
 
-**Caveats.** Adoption and pain figures come from vendor-run surveys of self-selected agent builders — directional, not census-grade. Market-sizing projections diverge sharply by firm and are narrative, not planning input. Competitor capability claims come from 2026 buyer guides and shift quickly; validate before positioning against a named rival. Regulatory dates reflect the post-omnibus schedule and remain subject to EU adjustment. OSS licence and maintenance status change fast — the catalog's own scan found two critical projects archived or acquired within a year; re-verify before each release. Company-tier need levels (§8) are informed planning judgments, not survey data. Three claims from the original research were fact-checked and **refuted**, and are excluded here: "$4.7B raised across 59 agentic deals", "vertical agents = 55.7% of capital", "35% of Fortune 500 use LangChain".
+**What.** Non-human identity per agent with full lifecycle, tool-scoped least privilege with argument-level constraints, delegation narrowing, HITL approvals.
+
+**Why.** Agents act with real credentials. **Reference:** OWASP Agentic T3/T9; EU AI Act Art. 14.
+
+| | Options |
+|---|---|
+| **OSS** | **OPA** (CNCF graduated), **Cedar** (AWS, formally verified), **OpenFGA** (CNCF incubating), Casbin, SpiceDB, Permify |
+| **Commercial** | **Microsoft Entra Agent ID + Agent 365** — identity, lifecycle, entitlement management, Conditional Access, access packages, time-bound access. Astrix, Okta, Ping, Noma |
+| **Their gap** | Entra will win *identity*. None do **argument-level constraints plus provenance ceilings** — the agent-native part |
+
+**Our status.** ✅ NHI, rotation with overlap, argument constraints, `max_taint` ceiling, delegation narrowing enforced at write time, approvals with deny-on-timeout. ◐ RBAC done, **no live IdP**.
+
+**Requirements.** P2-1…P2-7 as v1. **New:** `P2-8` **Entra Agent ID / Okta integration** — consume their identity, layer our capability model on top. *Do not compete with the directory.*
+
+---
+
+### Pillar 3 · Runtime Guardrails ✅◐
+
+**What.** Inline detection across five surfaces — input, output, tool arguments, tool results, retrieved content — with a hard latency budget and per-policy fail-open/closed.
+
+**Why.** Table stakes. **The real deployment pain is not detection — it is tuning:** *"latency and false positives are the top pain points"*; *"without violation specificity, tuning becomes guesswork"*; users route around controls into shadow AI.
+
+| | Options |
+|---|---|
+| **OSS** | **Presidio** (MIT, de-facto PII standard), **NeMo Guardrails**, **Guardrails AI** (Apache core; Hub validators have own licences), **Granite Guardian** (IBM, Apache-2.0 weights — cleanest licence), Llama Guard/ShieldGemma (non-OSI, opt-in), LLM Guard (**archived Jul 2026**), Rebuff/Vigil (stale) |
+| **Commercial** | Lakera (Check Point), Prompt Security (SentinelOne), Azure AI Content Safety + Prompt Shields, Bedrock Guardrails, WitnessAI, Zenity |
+| **Practitioner** | **Aditya hand-built a "four-layer AI safety guardrail"** — Presidio 12 entities + hallucination detection vs Azure AI Search + Content Filter + Prompt Shields; **OWASP LLM Grade A, 29/29, zero false positives** |
+| **Their gap** | Detection is commoditised. **Nobody solves tuning** — violation specificity, cumulative latency budgeting, false-positive management |
+
+**Our status.** ✅ injection (lexical + structural + provenance-weighted + **evasion-resistant**:
+normalisation feeds every detector, so separators, homoglyphs, fullwidth, leetspeak, base64,
+percent- and entity-encoding and eight non-English languages are all handled — measured at 100%
+recall on a committed adversarial corpus, 0 false positives, and a fast path that keeps a 32 KB
+document at 13 ms), PII (native + Presidio), secrets, safety lexicon, schema, budgeted concurrent pipeline with degrade-to-observe, per-detector latency telemetry, taint tracking. ✅ **P3-12/13/14 shipped** — violation specificity on every verdict, a request-level latency ledger, and the false-positive loop with expiring scoped suppressions. ◐ model-based detectors wired but their weights are an opt-in download.
+
+**Requirements.** P3-1…P3-11 as v1. **New, aimed at the tuning gap:**
+
+| ID | Requirement |
+|---|---|
+| P3-12 | **Violation specificity** — every block names detector, rule, matched span, score, and why that threshold |
+| P3-13 | **Cumulative latency budgeting across stacked detectors** with a per-agent budget report |
+| P3-14 | **False-positive feedback loop** — one-click "this was wrong", feeding per-detector precision and threshold recommendations |
+
+---
+
+### Pillar 9 · Action Assurance ✅◐
+
+**What.** Deterministic analysis of **generated artefacts** — SQL, scripts, API bodies — before execution: operation class, targets, blast radius, reversibility, environment.
+
+**Why.** Our containment is argument-level on *declared* tools. An agent with a legitimate `db.query` tool can pass `DROP TABLE users` as a well-formed string argument. **An AI coding agent connected to production instead of staging wiped 1.9M rows** — "flawlessly from a technical standpoint".
+
+The literature is prescriptive: **deterministic parsing, not an LLM checking the SQL**, targeting **zero false negatives**, **comments stripped first** — `SELECT * FROM users -- ; DROP TABLE users` defeats keyword matching.
+
+| | Options |
+|---|---|
+| **OSS** | **sqlglot** (MIT, zero-dependency, 31 dialects, full AST) — the pick; sqlparse (BSD, weaker) |
+| **Commercial** | DB proxies with read-replica routing; Kosmoy kernel sandboxing; Cisco DefenseClaw — all *isolate*, none *analyse the statement* |
+| **Their gap** | **No agent-governance vendor performs statement-level blast-radius analysis.** Genuinely unclaimed. |
+
+**Our status.** ✅ **shipped.** sqlglot parsing with fail-closed on unparseable, operation
+classification, stacked-statement rejection, unbounded-mutation and tautological-predicate
+detection, blast-radius and reversibility, environment binding, `requires_verified_state`, dry-run,
+plus shell deny-list and HTTP collection-mutation analysis. Exposed to policy as
+`action_operation` / `blast_radius_at_least` / `action_reversible` / `action_risk` conditions and
+to engineers as `nometria analyse-action`. ◐ idempotency keys (P9-8) absent.
+
+**Requirements.** P9-1 parse via sqlglot, **fail closed** on unparseable · P9-2 operation classification · P9-3 stacked-statement rejection · P9-4 unbounded-mutation detection (no `WHERE`, tautologies) · P9-5 blast-radius estimation · **P9-6 environment binding** · **P9-7 `requires_verified_state`** (read the record back from the SoR before an irreversible act — closes the HR incident) · P9-8 idempotency keys · P9-9 composed-privilege detection · P9-10 dry-run mode.
+
+---
+
+### Pillar 10 · Entitlement & Disclosure Control ✅◐
+
+**What.** Propagate the **end-user principal** through the agent into retrieval and tools; enforce that responses contain only what that human may see; detect over-permissioned retrieval.
+
+**Why. The highest commercial-value gap.** *"A governance failure rather than a security breach — **every permission check passed**."* The agent runs under its own service identity and inherits the union of everything it can reach. One prompt — *"summarise our M&A discussions last quarter"* — surfaces everything the account can read. **This is why Copilot-class rollouts stall.**
+
+| | Options |
+|---|---|
+| **OSS** | **OpenFGA** (Apache-2.0, CNCF incubating — `ListObjects` pre-filter, `Check` post-filter) — the pick; SpiceDB, Permify, Cedar |
+| **Commercial** | **Knostic** (need-to-know for LLMs — closest direct competitor), **Microsoft Purview + SharePoint Advanced Management** (DAG reports, Restricted Content Discovery), Zenity, Securiti |
+| **Their gap** | Microsoft's answer works *inside* Microsoft. Knostic is closest but single-purpose. **Nobody does it inline, cross-stack, across Azure + Bedrock + Vertex + Snowflake + Salesforce.** |
+
+**Our status.** ✅ **shipped, F4 fully covered (0.5/8 → 8/8).** End-user principal propagation,
+a retrieval pre-filter with default-deny, withholding recorded as the oversharing metric, the
+over-permission diagnostic that works before any entitlement model exists, restricted classes
+gated on clearance rather than grant, purpose limitation, per-record residency, k-anonymity on
+aggregates and inference-disclosure detection. Control `NOM-IAM-07`. ◐ the OpenFGA adapter is a
+declared seam, not an implementation.
+
+**Requirements.** P10-1 end-user principal propagation — **everything else depends on this** · P10-2 retrieval **pre-filtering** via OpenFGA `ListObjects` · P10-3 post-filter fallback recording drops (the drop count *is* the oversharing metric) · **P10-4 over-permission detection** — agent reach vs principal entitlement; *valuable even with no entitlement model, as the diagnostic that motivates the work* · P10-5 cross-tenant hard assertion · P10-6 k-anonymity on aggregates · P10-7 purpose limitation (GDPR Art. 5(1)(b)) · P10-8 restricted classes (MNPI, blackout, legal hold) · P10-9 inference-disclosure detection.
+
+---
+## Layer C — Ground
+
+### Pillar 7 · Answerability & Abstention ✅
+
+**What.** A declared **knowledge boundary** per agent; pre-flight classification of whether a question is answerable at all; forced templated abstention **before generation**.
+
+**Why.** *"If someone asks for future sales, the answer should be 'data not available', not a generated one."* Prompt engineering is the current answer and it **degrades**: [AbstentionBench](https://arxiv.org/html/2506.09038v1) (20 datasets, 35k+ unanswerable queries) finds **reasoning fine-tuning frequently worsens abstention** — models get *worse* at this as they get more capable. A property that degrades with model upgrades cannot be left to the model.
+
+The inverse failure is real too: retrieval noise causes **over-refusal**, where the model refuses what it could answer.
+
+| | Options |
+|---|---|
+| **OSS** | AbstentionBench (benchmark, not a control), Ragas `answer_relevancy` (post-hoc score), NeMo Guardrails topical rails (crude topic gating) |
+| **Commercial** | Vectara factual-consistency gating, Cleanlab TLM trustworthiness scores — **both post-hoc**; some RAG platforms have "no answer" fallbacks on retrieval-empty |
+| **Their gap** | Everything is **post-hoc scoring of a generated answer**. **Nobody refuses to generate based on a declared coverage boundary.** Genuinely unclaimed. |
+
+**Our status.** ✅ **shipped, F1 fully covered.** Declared boundary, deterministic pre-flight
+classification, forced abstention before the model call, post-flight boundary verification,
+over-refusal detection as a counter-metric, completeness signalling. Control `NOM-RTG-11`;
+`abstain` added to the verdict lattice between `redact` and `escalate`.
+
+**Requirements.** P7-1 knowledge-boundary declaration (systems of record, entity types, temporal coverage, freshness SLA, answerable/unanswerable question types, out-of-scope topics) · P7-2 pre-flight classification (temporal scope · question type · entity scope · topic scope; deterministic first, classifier second) · P7-3 **forced abstention without reaching the model** · P7-4 post-flight boundary verification · P7-5 prediction-vs-record register separation · **P7-6 over-refusal detection** (finding, never a block) · P7-7 completeness signalling ("retrieved 3 of 50").
+
+**Verdict-lattice change:** `allow(0) < tokenize(1) < mask(2) < redact(3) < abstain(4) < escalate(5) < block(6)`. `abstain` returns a helpful templated response — above redaction because it *replaces* the answer, below escalation because it needs no human.
+
+---
+
+### Pillar 8 · Provenance & Source Authority ✗◐
+
+**What.** Source tiers, freshness, ownership per retrievable source; provenance carried on every chunk; per-claim citation binding.
+
+**Why.** **The hole in v1.** Our `groundedness` scorer checks the answer against **retrieved context**. It never asks whether that context was **authoritative**. An answer faithfully grounded in a deprecated 2019 wiki page scores **1.0**. That is a lab metric wearing the costume of a control.
+
+**Source tiers:** 1 `system_of_record` · 2 `approved` · 3 `unverified` · 4 `external`.
+
+| | Options |
+|---|---|
+| **OSS** | **DataHub**, **OpenMetadata** (catalog + lineage + ownership + freshness — the metadata already exists), OpenLineage, Ragas `faithfulness`/`context_precision`, Vectara HHEM (Apache-2.0 hallucination eval model) |
+| **Commercial** | Collibra, Alation, Atlan, Databricks Unity Catalog (governance + lineage); Vectara, Cleanlab TLM, Galileo, Patronus Lynx (groundedness scoring) |
+| **Their gap** | Catalogs know source authority but **are not wired to the agent**. Groundedness scorers are wired to the agent but **know nothing about source authority**. **Nobody joins the two.** That join is the product. |
+
+**Our status.** ◐ lexical groundedness only — and *behind* the model-based scorers above.
+
+**Requirements.** P8-1 source registry (tier, owner, `updated_at`, refresh cadence, data classes) · P8-2 chunk provenance carried through the execution path and into the trace · P8-3 tier policy (*"financial figures: tier-1 only, under 24h"*) · P8-4 staleness enforcement · P8-5 **per-claim citation binding** · P8-6 uncited-assertion detection · P8-7 conflict disclosure · P8-8 domain binding. **New:** `P8-9` **catalog ingestion** — consume DataHub/OpenMetadata/Unity Catalog metadata as policy input rather than asking customers to re-declare it.
+
+---
+
+### Pillar 14 · Context & Retrieval Integrity ✗
+
+**What.** Govern the ingestion and retrieval pipeline itself — extraction quality, chunk coherence, tokeniser compatibility, retrieval metrics, index freshness, context-window pressure, memory contamination.
+
+**Why.** **73% of leaders say agents fail more from broken context than broken models.** A whole failure family neither earlier PRD had: *the agent answered badly because the document was chunked badly.* Every downstream control is blind to it — including Pillar 8, which tells you *which* source, not whether the chunk was coherent.
+
+Rahul (BSH, ex-HP/Nokia) instrumented exactly this: *"chunking metrics covering **token distribution, boundary coherence, heading coverage, and semantic density per chunk**, combined with retrieval metrics **nDCG@10, recall@k, MRR** against ground-truth query sets"*; *"eliminating **[UNK] token boundary failures on Cyrillic and Greek scripts**"*; *"**GPT-based corruption detection gating each document** before processing"*.
+
+| | Options |
+|---|---|
+| **OSS** | Ragas (`context_precision`, `context_recall`), TruLens, BEIR/nDCG tooling, Docling, Unstructured.io, LlamaIndex evaluators |
+| **Commercial** | Azure Document Intelligence, Vectara, Galileo (some retrieval metrics), Arize/Phoenix (retrieval tracing) |
+| **Their gap** | Retrieval *scoring* exists. **Nobody governs ingestion quality as an enforceable control with a policy attached** — no gate that says "this index is unfit to answer from". |
+
+**Our status.** ✗ nothing.
+
+**Requirements.** P14-1 ingestion quality gate (corruption detection, extraction confidence) · P14-2 chunk quality metrics (token distribution, boundary coherence, heading coverage, semantic density) · P14-3 tokeniser/script compatibility (`[UNK]` boundary failures — a silent multilingual killer) · P14-4 retrieval quality metrics (nDCG@10, recall@k, MRR) tracked over time · P14-5 index freshness and coverage — **feeds P7 knowledge boundary and P8 freshness directly** · P14-6 context-budget governance (window pressure, "lost in the middle", truncation that silently drops evidence) · P14-7 memory-contamination detection.
+
+---
+
+## Layer D — Judge
+
+### Pillar 4 · Evaluation & Reliability ✅◐
+
+**What.** Offline evaluation with CI regression gating, online sampling with drift, a scorer library including silent-failure signals, red-team campaigns.
+
+**Why.** 89–94% have observability; only ~52% run offline evals, 37% online, **22.8% none**. But note the corrected framing: **hallucination is <10% of real failures.** This pillar matters — it is not the biggest lever.
+
+**Where teams actually struggle** (and it is not the scorers): *"weak or outdated evaluation datasets cause more failures than the choice of tool itself"*; *"what open-source tools don't handle is **the organisational layer**: annotation queues, human feedback workflows, regression dashboards, and collaboration surfaces that non-engineering stakeholders can actually use."*
+
+| | Options |
+|---|---|
+| **OSS** | **Ragas** (3/11 use it), **Garak** (NVIDIA), **PyRIT** (Microsoft), Giskard, DeepEval, Phoenix, Opik, promptfoo (**now OpenAI-owned — off our critical path**), Vectara HHEM |
+| **Commercial** | **LangSmith** (7/11 — datasets with splits, experiments, pairwise comparison, annotation queues), **Langfuse** (4/11), Braintrust (CI/CD gating), Galileo (Cisco), Arize, Fiddler, Patronus, **Cleanlab TLM** |
+| **Their gap** | Evaluation is **offline/async** — you find out after. And the organisational layer is thin everywhere; LangSmith is the strongest and is engineering-centric. |
+
+**Our status.** ✅ runner, CI gate with direction-aware scorers, JUnit/SARIF, drift (PSI/KS), SLOs, red-team probes, silent-failure ensemble. **◐ our groundedness is lexical and behind Cleanlab/Vectara/HHEM — this is a weakness, not a strength.**
+
+**Requirements.** P4-1…P4-8 as v1. **New:** `P4-9` **Ragas adapter** (their vocabulary, 3/11) · `P4-10` **model-based groundedness** via Vectara HHEM (Apache-2.0) or Granite Guardian, replacing lexical as the default where weights are available · `P4-11` **annotation queue and human review surface** — the stated #1 reason eval programmes stall · `P4-12` **dataset health** (staleness, coverage, drift of the dataset itself).
+
+---
+
+### Pillar 13 · Failure Attribution ✗ — *"a stack trace for agent systems"*
+
+**What.** Three evaluation tiers — agent-level, handoff-level, end-to-end — with blame assignment backwards along the execution path.
+
+**Why. The strongest unclaimed capability in the entire evidence base.** Pranav (SpotDraft, ex-Apollo.io) built exactly this and named it unprompted: *"a **three-tier agentic evaluation framework** spanning agent-level evals (per-subagent correctness and tool use), **integration evals (inter-agent handoffs)**, and end-to-end evals, with structured execution traces enabling **precise failure attribution (a stack trace for agent systems)**."*
+
+And the mechanism it addresses is documented: *"A wrong decision at step 3 shapes context at step 4, which influences step 5. By step 8, no individual step looks wrong in isolation — but the cumulative path was broken from the start. This is the hardest failure mode to debug in production agentic AI."*
+
+| | Options |
+|---|---|
+| **OSS** | OpenTelemetry (spans, no attribution), OpenInference/OpenLLMetry semconv, Phoenix (trace viz) |
+| **Commercial** | LangSmith, Langfuse, Braintrust, Arize — **all show you the trace; none tell you which step caused the failure** |
+| **Their gap** | **Nobody does blame assignment.** Universal absence across OSS and commercial. |
+
+**Our status.** ✗ we record execution paths; we do not attribute.
+
+**Requirements.** P13-1 three tiers (agent · **handoff fidelity** · end-to-end) · P13-2 handoff checks — what was passed, dropped, paraphrased; semantic drift across a handoff is a first-class defect · **P13-3 blame assignment** — walk backwards to the earliest step already wrong · P13-4 error-propagation detection where no single step trips a threshold · P13-5 turn-depth quality curve (the "collapse after step four") · P13-6 regression attribution to the agent/prompt/tool/model that changed.
+
+---
+
+### Pillar 11 · Escalation Governance ✅
+
+**What.** Declared escalation conditions; detection of **missed** escalation; context-complete hand-off; ownership and SLA.
+
+**Why. 31.1% of all catalogued failures** — the largest single class.
+
+**Narrowed claim** (earlier drafts overstated): practitioners *do* build HITL escalation routinely — Rishabh built *"human-in-the-loop decisions with regulator-grade auditability"*; Derrick built *"HITL workflows and escalation pipelines for ambiguous agent actions"*. **What nobody builds is detection of the counterfactual — it met an escalation condition and did not escalate.** That is our claim, and only that.
+
+| | Options |
+|---|---|
+| **OSS** | LangGraph `interrupt()` (the mechanism, not the policy), Temporal (durable HITL workflows) |
+| **Commercial** | Zendesk/Intercom/ServiceNow handoff (channel-specific), Airia, agent platforms with approval steps |
+| **Their gap** | Everyone provides the *mechanism* to escalate. **Nobody detects that you should have and didn't.** |
+
+**Our status.** ✅ **shipped, F5 fully covered.** Declared per-agent conditions, missed-escalation
+detection with retroactive hand-off, hand-off completeness scoring, SLA breach findings,
+false-resolution detection, loop-without-hand-off, turn-depth degradation, sentiment with distress
+and legal-threat flags held separate. Control `NOM-RTG-10`; headline metric `missed_rate` measured
+against *qualifying* conversations rather than all traffic, which would flatter it.
+
+**Requirements.** P11-1 escalation policy (`must_escalate_when`: confidence, repeated failure, sentiment, regulated topic, repeated abstention, turn depth, explicit user request) · **P11-2 missed-escalation detection** — the 31% control · P11-3 turn-depth degradation · P11-4 loop-vs-escalate (a broken loop with no hand-off is still a failure) · P11-5 false-resolution detection · P11-6 hand-off completeness · P11-7 ownership and SLA with breach findings.
+
+---
+
+## Layer E — Prove
+
+### Pillar 5 · Audit, Observability & Traceability ✅
+
+**What.** Full execution-path traces on OTel semantics; hash-chained tamper-evident audit log with signed checkpoints; auditor evidence packages with an independent verifier; SIEM export.
+
+**Why.** EU AI Act Art. 12 (record-keeping); OWASP Agentic T8 (Repudiation & Untraceability).
+
+**Positioning correction.** Earlier drafts led with the hash chain as a differentiator. **Overstated** — Rishabh delivered "regulator-grade auditability" to a bank with no hash chain, and zero of 11 engineers were asked for cryptographic audit. It is cheap, correct and demoable in 60 seconds. It is **not** the reason anyone buys.
+
+| | Options |
+|---|---|
+| **OSS** | **OpenTelemetry** + OpenLLMetry (the wire format), Langfuse (self-hostable traces), Phoenix |
+| **Commercial** | LangSmith, Datadog LLM Observability, Arize, Splunk/QRadar for SIEM |
+| **Their gap** | Traces are commoditised. The **evidentiary layer** — verifiable export an auditor can check without the vendor — is rare, but rarely demanded. |
+
+**Our status.** ✅ all of it, tested against four tamper modes with a standalone stdlib verifier.
+
+**Requirements.** P5-1…P5-7 as v1. **New:** `P5-8` **bidirectional LangSmith/Langfuse integration** — ingest their runs, correlate our decisions to their trace ids, push verdicts and scores back as feedback. **We do not replace their traces.**
+
+---
+
+### Pillar 6 · Policy & Compliance Management ✅◐
+
+**What.** Control catalog mapped to frameworks; control status **computed from telemetry**; risk register with EU AI Act classification; obligation calendar; board view.
+
+**Why.** Gartner MQ inclusion criteria. **Reference:** EU AI Act phased timeline (Art. 50 transparency live Aug 2026; GPAI Dec 2026; Annex III high-risk Dec 2027).
+
+| | Options |
+|---|---|
+| **OSS** | **Essentially none.** OSCAL (NIST control format) is the closest primitive |
+| **Commercial** | Credo AI (Policy Packs incl. NYC LL144), IBM watsonx.governance, OneTrust, ModelOp, Holistic AI, Monitaur, ServiceNow |
+| **Their gap** | They **collect attestations**. We **compute status from telemetry** — a claim only an inline platform can make. That is real and defensible. |
+
+**Our status.** ✅ 41 controls × 7 frameworks, computed status with 9 rule kinds, risk classification, obligations, board view, declared gaps per framework. **⚠ all 300 mappings are DRAFT** — excluded from evidence packages by our own gate until a qualified reviewer signs them.
+
+**Requirements.** P6-1…P6-8 as v1. **New:** `P6-9` **dynamic risk scoring** (Gartner criterion, currently ✗ — static classification only) · `P6-10` **assessment/workflow engine** (Gartner criterion) · `P6-11` complete the mapping review gate with a qualified assessor.
+
+---
+
+## Cross-cutting
+
+### Pillar 15 · Cost, Reliability & Degradation ◐
+
+**What.** Circuit breakers, fallback chains, degradation ladders, hard token/spend caps, backpressure, cost attribution.
+
+**Why. 5/11 built this by hand**, and it sits at *the same inline interception point as enforcement* — building it separately is duplicated plumbing. Aditya: *"circuit breaker for LLM provider outages, **Redis-backpressure request queuing**, provider fallback, **TPM/RPM-aware rate limiting with hard daily caps on token spend**"*. Derrick: *"graceful degradation to **smaller LLMs**, sustaining 2x traffic spikes"*. Savings claimed across the set: 60% infra, ~50%, $84K/yr, 75%, 70–80% token, 30%, 18%.
+
+| | Options |
+|---|---|
+| **OSS** | **LiteLLM** (routing, fallback, budgets — 2/11), Helicone (Apache-2.0, cost tracking + rate limiting), Portkey gateway |
+| **Commercial** | Portkey, Kong AI Gateway, Cloudflare AI Gateway, TrueFoundry |
+| **Their gap** | Gateways do routing and cost. **None tie spend to governance** — no "this agent's budget is exhausted, and here is the audit entry for the block". |
+
+**Our status.** ◐ a fail-open/fail-closed degradation policy per control with an audit trail
+(`availability.py::service_fallback` — blocks once a control has been failing open past its time
+budget, rather than silently degrading forever) and a priority-aware rate limiter/load shedder
+ahead of governance (`AdmissionController` — P15-4 backpressure). ✗ no per-provider circuit
+breaker or model-fallback chain, no TPM/RPM token-based caps (P15-1/2/3), no cost attribution
+beyond agent-level (P15-5), no LiteLLM adapter (P15-6).
+
+**Requirements.** P15-1 circuit breaker per provider/model · P15-2 fallback chain and degradation ladder · P15-3 TPM/RPM limits with hard daily caps · P15-4 backpressure queueing · P15-5 cost attribution per agent/team/user/session/tool · P15-6 **LiteLLM adapter** where teams already run it.
+
+---
+## 6. Integration surface
+
+Frequency-ordered from the 11 CVs. **This is measured, not assumed.**
+
+| ID | Integration | Freq | Requirement | Status |
+|---|---|---|---|---|
+| **I-1** | **LangGraph** | **11/11** | Node/edge hooks, checkpointer-aware state, `interrupt()` for HITL, per-node policy binding | ✅ |
+| **I-2** | **MCP / FastMCP** | **9/11** | Inline governance of the `tools/call` path, not only hygiene scanning | ✅ rug pull, undeclared tool, poisoned result |
+| **I-3** | **FastAPI** | 10/11 | Middleware + dependency for in-process enforcement | ✅ observe-only middleware, opt-in enforcing dependency |
+| **I-4** | **LangSmith** | **7/11** | Bidirectional correlation of decisions to their trace ids | ✅ in-band join key, reverse lookup |
+| **I-5** | **OpenTelemetry** | 5/11 | OTLP ingest + export | ✅ |
+| **I-6** | **Langfuse** | 4/11 | Ingest traces; push decisions back | ✅ |
+| **I-7** | **Prometheus / Grafana** | 4/11 | Metric export into dashboards they already run | ✅ stdlib exposition at `/metrics` |
+| **I-8** | **Ragas** | 3/11 | Scorer adapter — their vocabulary | ✅ native offline, delegates when installed |
+| **I-9** | **Ray** | 3/11 | Enforcement across Ray actors | ✗ |
+| **I-10** | **LiteLLM** | 2/11 | Govern *through* their routing layer rather than compete | ✅ |
+| **I-11** | Azure OpenAI · Bedrock · Vertex | 6/4/3 | Provider adapters beyond OpenAI/Anthropic | ✅ Azure inherits the OpenAI wire format; Bedrock and Vertex refuse rather than improvise auth |
+| **I-12** | Qdrant · Pinecone · pgvector · Azure AI Search · Elasticsearch · FAISS | fragmented | Retrieval-scope filter adapters (P10-2). **No winner exists — build the seam, not a favourite** | ✗ |
+| **I-13** | **Presidio · OPA** | 2/11 · 1/11 | Both **independently chosen** by these engineers — validating our picks | ✅ |
+| **I-14** | **DataHub / OpenMetadata / Unity Catalog** | — | Catalog ingestion for source tier, freshness, ownership (P8-9) | ◐ tiers and freshness modelled; ingestion absent |
+| **I-15** | **Entra Agent ID / Okta** | — | Consume agent identity rather than compete (P2-8) | ✗ |
+| **I-16** | **A2A** | 2/11 | Watch. Emerging at Fortune-500 scale; design P13 handoff checks to extend to it | ✗ |
+
+> **Ten of sixteen integrations ship, covering every surface above 3/11 frequency.** The four
+> remaining gaps are deliberate: `I-12` waits on P10 (there is no winner to build against, so we
+> build the seam when the entitlement engine needs it), `I-14` waits on a customer who runs a
+> catalog, `I-15` is a Tranche 4 procurement item, and `I-9` Ray has no enforcement story that is
+> not just the SDK.
+
+---
+
+## 7. Architecture
+
+### 7.1 Three integration surfaces, all additive
+
+1. **SDK (primary)** — `pip install nometria`, LangGraph-native decorators and node hooks. **This is the adoption path.**
+2. **Gateway** — OpenAI/Anthropic-compatible inline proxy for teams that cannot change code, or non-Python stacks.
+3. **OTel ingestion** — passive observation; gives Pillars 1 and 5 with zero integration.
+
+### 7.2 The swappable seam
+
+Every wrapped OSS primitive sits behind one interface. This is what makes the OSS register's
+"exposure" column honest — swapping an archived or acquired project touches one adapter file.
+
+| Interface | Contract | Implementations |
+|---|---|---|
+| `Detector` | `detect(content, context) -> Findings` | native heuristics, Presidio, Granite Guardian, NeMo, Guardrails AI |
+| `PolicyEngine` | `decide(input) -> Decision` | native, OPA/Rego (Cedar seam) |
+| `EvalRunner` | `run(suite, target) -> Results` | native, Ragas *(promptfoo demoted — OpenAI-owned)* |
+| `RedTeamRunner` | `probe(target, campaign) -> Findings` | native, Garak, PyRIT, Giskard |
+| `ModelProvider` | `complete(request) -> Response` | echo (offline), OpenAI, Anthropic, + Azure/Bedrock/Vertex |
+| **`ActionAnalyser`** *(new)* | `analyse(artefact) -> BlastRadius` | sqlglot |
+| **`EntitlementEngine`** *(new)* | `visible(principal, resources) -> Set` | OpenFGA, native ACL |
+| **`CatalogSource`** *(new)* | `describe(source) -> Tier/Freshness/Owner` | DataHub, OpenMetadata, Unity Catalog |
+
+### 7.3 Request path
+
+```
+identity + END-USER PRINCIPAL (P2, P10-1)
+  → knowledge-boundary check (P7) ──── abstain? → templated response, no model call
+  → entitlement pre-filter on retrieval (P10-2)
+  → taint annotation (P3-4)
+  → budgeted detector pipeline (P3)
+  → hierarchical policy resolution (P12) → decision (P6-1)
+  → escalate → human (P2-3, P11)
+  → provider call (X-2) with circuit breaker + fallback (P15)
+  → post-flight: PII/DLP, schema, provenance binding (P8), silent-failure sampling (P4)
+  → trace + audit chain + SIEM + control signals (P5, P6)
+  → attribution graph updated (P13)
+```
+
+### 7.4 OSS decisions
+
+**On the critical path** (all permissive, active, none provider-owned): Presidio · OPA · OpenTelemetry · Granite Guardian · Garak · PyRIT · Giskard · **sqlglot** (new) · **OpenFGA** (new) · Cedar/Casbin (seams).
+
+**Deliberately off it:** promptfoo (**OpenAI-owned since 9 Mar 2026**) · LLM Guard (archived) · Invariant/mcp-scan (Snyk-owned; external tool only) · systemprompt-core (BSL) · Llama Guard/ShieldGemma (non-OSI, opt-in with explicit acknowledgement) · Langfuse *as storage* (export target only).
+
+Full register with licence, health, verdict and exposure: [Appendix A](appendix-a-oss-register.md).
+
+---
+---
+
+# Part III — The plan
+
+## 8. Current build state and gap register
+
+### 8.1 What is built and tested
+
+> **Live figures live in [status.md](status.md)**, which is regenerated by
+> `python scripts/coverage.py --write` from probes against the actual source tree. A
+> hand-written table drifts within a week and then quietly lies, so this section carries
+> only the narrative; the numbers below are a snapshot of that file, not a second source
+> of truth.
+
+**Snapshot — 70% weighted coverage of 38 tracked capabilities** (21 built · 11 partial ·
+6 absent) · **75% of the catalogued failure modes** (42 outright, 1 partial) ·
+**100% injection recall** on a 35-case adversarial corpus with zero false positives ·
+39.9k lines · 704 passing tests · ruff clean · offline-capable (no API key,
+no weights, no egress). Measured added latency **2–6 ms** on the heuristic path (budget 100 ms).
+
+Built and tested end to end:
+
+- **Layer B/E core** — runtime detectors across 5 surfaces · taint tracking with argument
+  provenance · tool-scoped least privilege with argument constraints · delegation narrowing
+  at write time · hash-chained audit (4 tamper modes tested, standalone stdlib verifier) ·
+  evidence packages · SIEM export.
+- **Judge** — evaluation with direction-aware CI gating · silent-failure ensemble · red-team
+  harness.
+- **Know/Prove** — registry with shadow-agent detection and observed lineage · 41 controls ×
+  7 frameworks with computed status · Next.js control plane.
+- **Tranche 0 (complete)** — `PL-1` streaming with inline enforcement in both OpenAI and
+  Anthropic wire formats · `PL-2` Alembic migrations · `PL-3` kill switch and quarantine ·
+  `I-1` LangGraph-native SDK with trace id carried in graph state.
+- **Tranche 1 (in progress)** — `P12` hierarchical policy composition (`org → team → agent →
+  user`) with `extend`/`restrict`/`override` semantics and a six-code linter · `P15` circuit
+  breaker, fallback ladder with recorded degradation, and hard budget caps enforced
+  **pre-flight** as governed events (audit entry + deduplicated finding), not as an HTTP 429
+  that disappears into a load-balancer log · `I-4`/`I-6` **bidirectional** LangSmith and
+  Langfuse correlation — the join key travels in-band on a `traceparent` or vendor header, so
+  correlation needs zero configuration and zero installed packages, and `GET
+  /api/traces/resolve` answers the direction nobody ships: *their* run id → *our* decision ·
+  `P3-12…P3-14` the **tuning surface**: every verdict carries the detector, rule, matched span,
+  score and remedy; a request-level latency ledger so stacked detectors cannot quietly overrun
+  the SLO; and a false-positive loop producing per-detector precision, threshold recommendations
+  — including the honest *"these scores do not separate, no threshold fixes this"* — and scoped,
+  **expiring** suppressions whose every hit is recorded on the decision · `I-2` **MCP inline
+  governance**: hygiene scanning caught only the server that was already malicious at scan time,
+  so the call path is now governed for the three failures that happen at call time — the rug
+  pull (schema or description changed after authorisation → blocked), the undeclared tool
+  (registered and raised as a finding rather than passing invisibly), and the poisoned result
+  (evaluated on `tool_result` and taint-propagated, so a derived argument cannot exceed the
+  ceiling for third-party provenance).
+
+**Tranche 1 is complete.**
+
+- **Tranche 2 (in progress)** — `P9` **action assurance**, the first of the three genuinely
+  unclaimed capabilities. Everything else here governs the *call*; this governs the *artefact*.
+  Deterministic sqlglot parsing (never a model on a deterministic question), **fail closed on
+  unparseable**, stacked-statement rejection, unbounded-mutation and tautological-predicate
+  detection (`WHERE 1=1` is the shape that gets past "does it have a WHERE clause?"), blast-radius
+  and reversibility classification, environment binding, `requires_verified_state` for irreversible
+  acts, and dry-run mode. A `db.query` capability no longer authorises `DROP TABLE users`.
+- **`P11` escalation governance — F5 closed, 0/7 → 7/7.** The largest single failure family at
+  **31.1%**. Everyone ships the *mechanism* to escalate; the claim here is the counterfactual —
+  **it met a condition and did not escalate**. That failure is invisible from inside the system:
+  a conversation where the agent kept going instead of handing off looks entirely ordinary in the
+  telemetry, and the user simply leaves. So detection is a deliberate second pass over completed
+  conversations replaying the declared policy, not a runtime check. Also: hand-off context
+  completeness (an escalation the human cannot act on is still a failure), SLA breach on dropped
+  hand-offs, false-resolution detection, loop-without-hand-off, turn-depth degradation, and
+  distress/legal flags kept out of the sentiment average so the one message that mattered is not
+  averaged away. Missed escalations raise a **retroactive hand-off**, because recording that a
+  person was left waiting and then leaving them waiting is an audit artefact, not a control.
+- **`P7` answerability — F1 closed, 0/6 → 6/6.** The distinction that makes this a different
+  control: Cleanlab, Vectara, RAGAS, Galileo and Patronus all score an answer *after* it exists,
+  which cannot address F1 — by then the number has been invented, and a confident wrong number
+  scored at 0.4 is still a confident wrong number in front of a user. A declared knowledge
+  boundary (systems of record, coverage window, entity scope, answerable question types) drives
+  four deterministic pre-flight checks, and an unanswerable question is answered from a template
+  **without a model call**. The refusal names what is missing — *"I hold 24 months and you asked
+  about 2019"* — because "I don't know" sends the user away while naming the boundary sends them
+  to the right system. Post-flight: boundary verification (F1.4, a record-only agent that drifts
+  into forecast) and completeness signalling (F1.6, retrieved 3 of 50 and answered as though
+  exhaustive). **Over-refusal (F1.5) is a finding against us and never a block**, because an
+  over-refusing agent is uninstalled faster than a hallucinating one; the whole pillar ships
+  observe-first with a `POST /check` dry run so a team can replay real traffic before enforcing.
+- **`P8` provenance — F2 closed, 1/6 → 6/6.** The gap our own groundedness scorer is blind to by
+  construction: it checks the answer against the retrieved context and never asks whether that
+  context was authoritative, so an answer faithfully grounded in a deprecated 2019 wiki page
+  scores 1.0. Perfect groundedness against the wrong source is *more* dangerous than an ungrounded
+  answer, because every quality metric says it is fine. Sources now carry a tier, owner, freshness
+  SLA and domain; fabricated citations are split into the blatant case (a document never
+  retrieved) and the case that survives review (a real document cited for a figure it does not
+  contain); silent source conflicts and uncited material claims are surfaced.
+- **F7 numeric, temporal and entity integrity — 1/7 → 7/7.** The failures that survive every other
+  control: the answer is grounded, the source authoritative, the action safe, nobody needed to
+  escalate — and the number is for the wrong quarter, in the wrong currency, or belongs to a
+  different customer with a similar name. All six checks are deterministic, which is the point:
+  a probabilistic judge is the wrong instrument for whether 5 + 3 = 9. Fiscal-versus-calendar is
+  the expensive one — both parties say "2024", mean ranges that overlap by nine months, and the
+  answer looks right to everyone in the room.
+- **Integration surfaces — `I-3`, `I-7`, `I-8`, `I-10`, `I-11`.** FastAPI is 10/11 and the
+  lowest-cost surface there is: observe-only middleware safe to mount globally, plus an *opt-in*
+  enforcing dependency, because a middleware that can 403 a route its author never considered is
+  how a governance layer gets removed on the first false positive. Azure OpenAI (6/11) inherits
+  the OpenAI wire format rather than copy-pasting it; Bedrock (4/11) and Vertex (3/11) report
+  unavailable without their SDKs rather than improvising request signing. Prometheus (4/11) is a
+  stdlib-only exposition of numbers computed elsewhere — counts and rates, never content, on an
+  unauthenticated `/metrics` like every other one. Ragas (3/11) is a vocabulary adapter that runs
+  natively offline and delegates to Ragas where it is installed, naming its implementation on
+  every result. LiteLLM (2/11) is governed *through*, not competed with.
+- **Adoption surface — `X-1`, `X-2`, `X-3`.** The binding constraint was never capability;
+  it was that every integration asked the developer to change how they call the model, and the
+  sum of small asks is why governance tooling sits in a proof-of-concept for six months.
+  `nometria.auto()` patches the client libraries in place so an existing codebase is governed by
+  one line, in observe mode, with no other file touched. `nometria check` answers the question
+  a platform team has to answer first and nobody has written down — *where does this codebase
+  actually talk to a model?* — statically, ranked, ending in one sentence saying what to do next.
+  And the control plane now leads with what needs a human rather than an inventory, and
+  distinguishes **not connected** from **nothing wrong**, which look identical and mean opposite
+  things. `X-4` closes what the audit named as the actual business blocker: **P8 had no HTTP
+  surface at all**, P7 and P11 were REST-only, and escalation needed the host application to push
+  conversation turns that nothing was pushing — so the largest failure family was covered in code
+  and uncovered in practice. Every protective control now has a CLI verb, a dry run and a page,
+  and `auto()` captures conversation turns itself.
+
+The honest reading of these numbers is that **the spine is real and the breadth is closing**.
+Two of the three genuinely unclaimed capabilities are shipped (`P9`, `P7`); `P13` failure
+attribution is not started. Five families are complete (F1, F2, F4, F5, F7). The two
+weakest remaining are `F8` context integrity (0/7) and `F6` commitment and liability (1.5/6).
+
+### 8.2 Gap register — ranked
+
+**Tier 0 — production blockers** (cannot deploy inline)
+
+| # | Gap | Evidence |
+|---|---|---|
+| 0.1 | **Streaming silently ignored** — `stream: true` returns non-streaming JSON | verified by execution |
+| 0.2 | **No DB migrations** — a deployed instance cannot be upgraded | verified absent |
+| 0.3 | **No kill switch / quarantine** | verified absent; every competitor has one |
+| 0.4 | ~~No LangGraph integration~~ — **closed.** `I-1` shipped (§6): node/edge hooks, checkpointer-aware state, `interrupt()` for HITL, per-node policy binding — this line contradicted §6's own I-1 status even at the time this document was first written, and stayed uncorrected until the 2026-08-29 merge caught it. See `integrations/langgraph.py`, 34 passing tests in `tests/test_tranche0.py`. | 34 tests |
+| 0.5 | ~~Agent tool-calling loop not governed~~ — **closed.** `PL-4` governs the run rather than the step: identical re-issued calls, alternating cycles, and steps producing no new observation | 18 tests |
+| 0.6 | ~~Everything synchronous~~ — **closed as an interface.** `PL-5` `JobQueue` with retries and a public dead letter; a Redis/SQS implementation belongs behind it | 6 tests |
+| 0.7 | ~~No HA validation~~ — **partly closed.** SQLite is now refused at startup for a multi-worker deployment rather than surfacing as intermittent latency; Postgres pools and pre-pings. Scale-out under real load is still untested | NFR-3 partly met |
+
+**Tier 1 — procurement blockers** (cannot pass security review)
+
+SSO/SCIM ✗ (API tokens ✅, OIDC seam only) · multi-tenancy ✅ **enforced at the session** ·
+authentication ✅ **API tokens, dev header refused outside development** ·
+rate limiting ✅ **admission control that sheds work, never governance** · KMS/Vault ✗ ·
+SOC 2 Type II ✗ · pen test ✗ · DPA/DR/RTO ✗ · dashboard read-only ✗ ·
+operator audit log ✅ **in the same hash-chained log as the decisions, with a structural
+check that a new privileged surface cannot ship unaudited**.
+**7 of 14 standard procurement requirements unmet** — tenancy, authentication, rate
+limiting and the operator log now met. The seven that remain are almost entirely
+organisational rather than engineering: SOC 2, pen test and DPA/DR/RTO are programmes,
+not features, and SSO/SCIM needs a live IdP to develop against.
+
+**Tier 2 — Gartner MQ inclusion criteria**
+
+dynamic risk scoring ✗ · interoperability/connectors ✗ · workflow & approvals ◐ (runtime only).
+Evidence collection ✅ and audit trail ✅ are strong.
+
+**Tier 3 — capability gaps** — Pillars 12 (canary, non-developer authoring) and 15
+(LiteLLM adapter) remain. Pillars 7, 9, 10, 13 and 14 are built and probed.
+
+**Tier 4 — found in review, absent from this register when it was written**
+
+The gap register above was assembled from practitioner CVs, incident data and a code
+audit. It still missed an entire axis, which review surfaced: the product governed the
+*call* and the *output* and never the semantic contract between them. Pillar 18 covers
+it — proving a tool's query touched only the caller's rows, checking the result is
+about the record that was requested, gating the specificity an answer is entitled to,
+and arbitrating between datasources with a confirmation step instead of a silent pick.
+Recording the miss matters more than the fix: three independent evidence sources agreed
+with each other and were jointly blind to it.
+
+---
+
+## 9. Roadmap
+
+Ordered by **whether anyone can adopt it**, which the CV evidence says is the binding constraint —
+not by severity, which was the earlier (wrong) ordering.
+
+### Tranche 0 — be installable at all
+`PL-1` streaming · `PL-2` Alembic migrations · `PL-3` kill switch · **`I-1` LangGraph-native SDK**
+
+> I-1 sits in Tranche 0 because 11/11 use LangGraph. A governance product that is not a LangGraph
+> primitive is a proxy teams route around. This is the difference between "a tool we evaluated" and
+> "a tool we installed".
+
+### Tranche 1 — replace the hand-rolled wrapper *(the 6-of-11 opportunity)* — **complete**
+`P12-1…P12-4` hierarchical policy + lint ✅ · `I-4`/`I-6` LangSmith + Langfuse correlation ✅ ·
+`I-2` MCP inline governance ✅ · `P15-1…P15-4` circuit breaker, fallback, caps ✅
+(backpressure/queue shedding `P15-6` deferred) · `P3-12…P3-14` violation specificity, cumulative
+latency, false-positive loop ✅
+
+> This is precisely what Aditya, Derrick, Leo, Jeremy, Siddhant and Rishabh built by hand. Shipping it
+> means a platform team **deletes code instead of writing it**. That is the wedge.
+
+### Tranche 2 — the controls nobody has
+`P9` action assurance ✅ · `P13` failure attribution · `P7` answerability ✅
+
+> All three are genuinely unclaimed across OSS and commercial. P9 is the most demoable
+> (`DROP TABLE` blocked live); P13 is the most valuable to a platform team; P7 is the most novel.
+
+### Tranche 3 — depth
+`P10` entitlement ✅ · `P14` context integrity ✅ · `P8` provenance ✅ (catalog ingestion still
+absent) · `P11` escalation ✅ (pulled forward — largest family) · `P4-9…P4-12` Ragas adapter,
+model-based groundedness, annotation queue · `P12-6/7` canary + non-developer authoring ·
+`PL-4…PL-7` loop governance ✅, async ✅, HA ◐, service fail-open ✅
+
+### Tranche 4 — enterprise readiness
+Tier 1 procurement (SSO, multi-tenancy, KMS, rate limiting) · Tier 2 Gartner criteria (dynamic risk
+scoring, connectors, workflow engine) · SOC 2 programme (start the clock early — it is the longest
+pole and it is organisational, not engineering)
+
+### Explicitly not doing
+Sandboxing · business-platform coverage (Copilot Studio, Power Platform) · network-level discovery ·
+becoming the retrieval layer · building a model, vector DB, or agent framework.
+
+> XL effort, defended by well-funded incumbents, and **absent from the practitioner evidence entirely**
+> — not one of 11 engineers mentioned needing them.
+
+---
+
+## 10. Metrics, risks and non-goals
+
+### 10.1 Metrics that matter
+
+| Pillar | Primary metric | Target |
+|---|---|---|
+| 7 | Unanswerable-question fabrication rate | **0** |
+| 7 | **False-abstention rate** *(the counter-metric)* | < 2% |
+| 8 | Unauthoritative-answer rate | < 1% of material claims |
+| 9 | Destructive-action **false-negative rate** | **0** — non-negotiable |
+| 10 | Entitlement-violating disclosure | **0**; over-permission ratio trending down |
+| 11 | Missed-escalation rate | < 5% of qualifying conversations |
+| 12 | Policy misconfigurations caught by lint | benchmark vs Derrick's 87% |
+| 13 | Attribution accuracy on labelled multi-agent failures | > 80% |
+| 3 | **False-block rate** *(the adoption killer)* | < 0.5% |
+| Platform | Added p95 latency (buffered streaming) | < 150 ms |
+
+**The two counter-metrics are the important ones.** False abstention and false blocks are how this
+product gets uninstalled. Both are tracked, both raise findings, and every enforcing pillar ships
+**observe-first**.
+
+### 10.2 Risks
+
+| # | Risk | Mitigation |
+|---|---|---|
+| R1 | **Pillars 7 and 9 make agents useless** — over-abstention and false blocks | Observe-first; counter-metrics with findings; P7-6 over-refusal detection; P9 dry-run |
+| R2 | **LangSmith closes the gap** — their gateway already ships request-layer policy | Assume it improves. Defend on cross-vendor neutrality, compliance evidence, and P9/P13 which are not on their roadmap |
+| R3 | **Entra Agent ID owns identity** | Integrate (P2-8), do not compete with the directory |
+| R4 | **We are behind on groundedness** — ours is lexical, Cleanlab/Vectara/HHEM are model-based | P4-10 adopt HHEM/Granite; stop claiming leadership here |
+| R5 | **P10 requires an entitlement model the customer may not have** | Post-filtering works with whatever ACLs exist; P10-4 has standalone diagnostic value |
+| R6 | **OSS dependency changes status** — 4 did in 12 months | Adapter seam; quarterly re-verification; nothing archived/BSL/provider-owned on a default path |
+| R7 | **Scope** — 15 pillars is a lot | Tranches are hard gates; no new interfaces permitted inside a tranche |
+| R8 | **Compliance mappings are DRAFT** | Our own gate excludes them from evidence packages; needs a qualified assessor |
+| R9 | **We build a platform when the market wants a library** | Tranche 0 forces SDK-first; the control plane is the graduation, not the entry |
+
+### 10.3 Non-goals
+
+We do not build: a model · a vector database · an agent framework · a sandbox runtime · a retrieval
+layer · an identity directory. We do not replace LangSmith or Langfuse traces. We do not claim
+coverage we lack — every framework mapping ships with a declared gap list.
+
+---
+
+## 11. Reference index
+
+**Internal:** [Gap analysis](gap-analysis.md) · [Failure modes](failure-modes.md) ·
+[Benchmarking white paper](benchmarking-whitepaper.md) ·
+[Practitioner signal](research/practitioner-signal.md) (raw evidence — 11 practitioner CVs) ·
+[Appendix A — OSS register](appendix-a-oss-register.md) ·
+[Appendix B — Control catalog](appendix-b-control-catalog.md) ·
+[Appendix C — API spec](appendix-c-api-spec.md) · [Appendix D — Data model](appendix-d-data-model.md) ·
+[Appendix E — Threat model](appendix-e-threat-model.md) · [Traceability](traceability.md)
+
+**Failure & incident data:** [Enterprise AI failures shifting beyond hallucinations (10k+ events)](https://www.prnewswire.com/news-releases/new-research-finds-enterprise-ai-failures-are-shifting-beyond-hallucinations-as-companies-move-from-chatbots-to-agents-302837907.html) · [AI incidents H1 2026](https://www.digitalapplied.com/blog/ai-incidents-h1-2026-retrospective-failure-modes-analysis) · [Why AI agents fail — the context problem](https://memeburn.com/why-ai-agents-fail-in-2026-the-context-problem-no-one-talks-about/) · [Enterprise agent failure modes](https://thoughtminds.ai/blog/enterprise-ai-agent-failure-modes)
+
+**Abstention:** [AbstentionBench](https://arxiv.org/html/2506.09038v1) · [Know Your Limits — abstention survey (TACL)](https://direct.mit.edu/tacl/article/doi/10.1162/tacl_a_00754/131566/Know-Your-Limits-A-Survey-of-Abstention-in-Large) · [The downside of RAG — over-refusal](https://www.bohrium.com/en/blog/research-notes/aaai-2026-retrieval-augmented-models-dont-know/)
+
+**Entitlement / oversharing:** [M365 Copilot oversharing — what IAM teams must fix](https://nhimg.org/community/cybersecurity-beyond-identity/microsoft-365-copilot-oversharing-what-iam-and-data-teams-must-fix/) · [Copilot didn't overshare your data, your permissions did](https://petri.com/copilot-didnt-overshare-your-data-your-permissions-did/) · [Microsoft — mitigate oversharing](https://techcommunity.microsoft.com/blog/microsoft365copilotblog/mitigate-oversharing-to-govern-microsoft-365-copilot-and-agents/4448744)
+
+**Action safety:** [Protecting production SQL from agentic query risks](https://rietta.com/blog/ai-sql-database-data-protection-read-replica/) · [Production text-to-SQL: 9 problems with fixes](https://atalupadhyay.wordpress.com/2026/07/01/building-a-production-ready-text-to-sql-ai-agent-9-problems-with-fixes/) · [AI agent database wipe — lessons](https://www.mindstudio.ai/blog/ai-agent-database-wipe-disaster-lessons/) · [Testing SQL agents](https://langwatch.ai/scenario/testing-guides/sql-agent/)
+
+**Guardrail tuning:** [Obsidian — enforcing safety without slowing innovation](https://www.obsidiansecurity.com/blog/ai-guardrails) · [ML6 — enterprise LLM security benchmark](https://www.ml6.eu/en/blog/inside-ai-guardrails-a-benchmark-on-enterprise-llm-security) · [Airia — what guardrails can and cannot do](https://airia.com/blog/what-guardrails-can-and-cannot-do-setting-realistic-expectations-for-enterprise-ai-safety/)
+
+**Evaluation practice:** [Challenges managing eval datasets](https://www.getmaxim.ai/articles/challenges-in-managing-high-quality-datasets-for-llm-evaluation/) · [Langfuse — LLM evaluation methods](https://langfuse.com/blog/2025-11-12-evals) · [Langfuse — security & guardrails positioning](https://langfuse.com/docs/security-and-guardrails)
+
+**Market:** [Gartner MQ for AI Governance Platforms](https://www.gartner.com/en/documents/8006369) · [Kosmoy — AI governance platforms 2026](https://www.kosmoy.com/resources/blog/best-ai-governance-platforms-2026/) · [Kosmoy — agent governance platforms 2026](https://www.kosmoy.com/resources/blog/best-ai-agent-governance-platforms-2026/) · [Modulos buyer's guide](https://www.modulos.ai/best-ai-governance-platforms/)
+
+**Consolidation:** [OpenAI to acquire Promptfoo](https://openai.com/index/openai-to-acquire-promptfoo/) · [Check Point acquires Lakera](https://www.checkpoint.com/press-releases/check-point-acquires-lakera-to-deliver-end-to-end-ai-security-for-enterprises/) · [Microsoft Entra Agent ID](https://learn.microsoft.com/en-us/entra/agent-id/what-is-microsoft-entra-agent-id) · [Entra ID Governance for agents](https://learn.microsoft.com/en-us/entra/id-governance/agent-id-governance-overview)
+
+**Procurement:** [SOC 2 customer security questionnaire](https://www.konfirmity.com/blog/soc-2-customer-security-questionnaire) · [Security compliance questionnaires](https://www.workstreet.com/blog/security-compliance-questionnaires)
+
+---
+---
+
+# Part IV — What shipped after this document was written
+
+## 12. Addendum (2026-08-26 proposal, delivered by 2026-08-29)
+
+A shorter, separate addendum was written 2026-08-26 after reading the OWASP Top 10 for Agentic
+Applications 2026 in full and reviewing two competitor dashboards (Decawork, EVO). Its proposals
+have since shipped; this section keeps the substance — what was missing, what control closed it,
+which OWASP category — without the original's full build narrative, which belongs in git history,
+not a living PRD.
+
+### 12.1 P16 — Memory write governance (closes OWASP ASI06)
+
+**Gap identified.** `assess_context()` checked documents and retrieval arriving as call arguments,
+but nothing governed the *write* into an agent's long-term memory (a vector store, a `mem0`-style
+store, a LangGraph checkpointer) — no content validation before a write committed, no cross-tenant
+isolation on the store itself, no provenance weight on a retrieved memory entry, no expiry for an
+unverified one.
+
+**Shipped as `NOM-RTG-13`** (not `NOM-RTG-09` as first proposed — that code was already assigned to
+P9's critical-action-risk block; see [Appendix B](appendix-b-control-catalog.md)'s changelog for the
+correction): a `MemoryWrite` decision surface parallel to `guard_content`/`guard_tool_call`, running
+the full detector pipeline on every write before it commits; provenance carried on the entry itself
+so retrieval can weight a `tool_result`-tainted memory differently from one the end user typed
+directly; `expires_at` defaulting closed on unverified entries; cross-tenant isolation reusing the
+existing `TenantScoped` pattern. `MemoryEntry` model + migration, `Enforcer.guard_memory_write()`,
+`GET/POST /api/memory`, `POST /v1/guard/memory_write` on the inline gateway.
+
+### 12.2 P17 — Inter-agent communication security (closes OWASP ASI07)
+
+**Gap identified.** Sub-agent output was folded into the `tool_result` surface — agent-to-agent
+traffic got the same governance as a tool call, not a governed boundary of its own. No message
+signing, no replay protection, no agent-card attestation anywhere in the enforcement path.
+
+**Shipped as `NOM-IAM-08`:** a genuine `agent_message` surface distinct from `tool_result`, so a
+sub-agent's output is evaluated as another agent's untrusted claim rather than a tool's return
+value; HMAC message signing + verification for Nometria-mediated agent-to-agent traffic (payload +
+declared sender + nonce + timestamp), with unsigned traffic on an external transport reported as a
+finding rather than silently passed; anti-replay via a short-term fingerprint cache; agent-card
+fields checked against the sender at message time, reusing `attest_registry()`'s existing
+declared-vs-observed comparison.
+
+### 12.3 Declared hardening (extends existing pillars, not new ones)
+
+- **ASI04 supply-chain signing** — `scan_mcp_server()` computed a digest for drift comparison but
+  never verified a cryptographic signature. Extends `registry/service.py`, not a new pillar.
+- **ASI10 behavioral attestation** — `attest_registry()` already did after-the-fact drift detection;
+  periodic signed re-attestation is a parameter on existing machinery, not new architecture.
+- **ASI05 (unexpected code execution)** — declared explicitly as a non-goal in writing (§10.3):
+  Nometria governs the interface into a tool call, not the agent's own code-execution runtime.
+
+### 12.4 Dashboard UX — the complexity complaint, checked against evidence
+
+A user complaint ("we are over complex... they are much more cleaner") was checked against two
+competitor products page-by-page rather than argued about. It held. Fixed directly: table cells
+that printed raw backend sentences instead of a one-line summary with detail behind a click (seven
+instances across the app); Compliance's six scaffolding elements ahead of any real content, cut to
+three; sidebar reduced from 16 flat items to 11 by folding Connect/tokens into Start Here and
+merging Guardrails→Policies, Escalation→Approvals, Board view→Compliance as tabs (with redirects so
+old links still resolve); inline-expandable rows, countdown-style expiry, a persistent stat strip,
+and distinct approval-tag coloring adopted from the two competitor products reviewed.
+
+### 12.5 Current status
+
+Live, computed figures — not restated here because a number copied into a PRD starts going stale
+the moment it's written: **[status.md](status.md)** (capability coverage, regenerated by
+`python scripts/coverage.py --write`), **[gap-analysis.md](gap-analysis.md)** (enterprise-readiness
+and competitive position, re-verified 2026-08-29), **[failure-modes.md](failure-modes.md)** (F1–F7
+taxonomy, 40 of 50 modes now covered, re-verified 2026-08-29). As of that re-verification, the §8.2
+Tier 0 production-blocker list above is mostly closed (streaming, migrations, kill switch,
+multi-tenancy), several items are real but not yet called from the live request path — flagged
+there as **stub-only**, a distinct status from both "built" and "absent" — and the procurement bar
+(SOC 2, ISO 27001, a completed pentest) remains almost entirely organisational, not engineering.
+
+---
+
+*All framework mappings in this product are engineering drafts, not legal advice, and are excluded
+from evidence packages until reviewed by a qualified assessor. Coverage gaps are declared per
+framework rather than hidden. Competitor capability claims come from 2026 public sources and shift
+quickly — re-verify before positioning against a named vendor.*

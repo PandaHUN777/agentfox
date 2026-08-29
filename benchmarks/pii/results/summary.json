@@ -1,0 +1,300 @@
+{
+  "dataset": "presidio-research/synth_dataset_v2.json",
+  "rows": 1500,
+  "in_scope_gt_entity_types": [
+    "CREDIT_CARD",
+    "DATE_TIME",
+    "EMAIL_ADDRESS",
+    "GPE",
+    "IBAN_CODE",
+    "IP_ADDRESS",
+    "PERSON",
+    "PHONE_NUMBER",
+    "US_DRIVER_LICENSE",
+    "US_SSN"
+  ],
+  "out_of_scope_entity_types_seen": [
+    "AGE",
+    "DOMAIN_NAME",
+    "NRP",
+    "ORGANIZATION",
+    "STREET_ADDRESS",
+    "TITLE",
+    "ZIP_CODE"
+  ],
+  "results": [
+    {
+      "config": "pii.native",
+      "tp": 253,
+      "fp": 9,
+      "fn": 1467,
+      "precision": 0.9656,
+      "recall": 0.1471,
+      "f1": 0.2553,
+      "by_type": {
+        "PII.CREDIT_CARD": {
+          "tp": 126,
+          "fp": 2,
+          "fn": 10,
+          "precision": 0.9844,
+          "recall": 0.9265,
+          "f1": 0.9545
+        },
+        "PII.DATE_OF_BIRTH": {
+          "tp": 10,
+          "fp": 0,
+          "fn": 109,
+          "precision": 1.0,
+          "recall": 0.084,
+          "f1": 0.155
+        },
+        "PII.EMAIL": {
+          "tp": 49,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "PII.IBAN": {
+          "tp": 20,
+          "fp": 0,
+          "fn": 1,
+          "precision": 1.0,
+          "recall": 0.9524,
+          "f1": 0.9756
+        },
+        "PII.IP_ADDRESS": {
+          "tp": 13,
+          "fp": 7,
+          "fn": 1,
+          "precision": 0.65,
+          "recall": 0.9286,
+          "f1": 0.7647
+        },
+        "PII.LOCATION": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 411,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PII.PERSON": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 857,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PII.US_DRIVER_LICENSE": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 5,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PII.US_PHONE": {
+          "tp": 19,
+          "fp": 0,
+          "fn": 73,
+          "precision": 1.0,
+          "recall": 0.2065,
+          "f1": 0.3423
+        },
+        "PII.US_SSN": {
+          "tp": 16,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      }
+    },
+    {
+      "config": "pii.presidio.default",
+      "tp": 263,
+      "fp": 149,
+      "fn": 1457,
+      "precision": 0.6383,
+      "recall": 0.1529,
+      "f1": 0.2467,
+      "by_type": {
+        "PII.CREDIT_CARD": {
+          "tp": 105,
+          "fp": 0,
+          "fn": 31,
+          "precision": 1.0,
+          "recall": 0.7721,
+          "f1": 0.8714
+        },
+        "PII.DATE_OF_BIRTH": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 119,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PII.EMAIL": {
+          "tp": 49,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "PII.IBAN": {
+          "tp": 21,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "PII.IP_ADDRESS": {
+          "tp": 14,
+          "fp": 5,
+          "fn": 0,
+          "precision": 0.7368,
+          "recall": 1.0,
+          "f1": 0.8485
+        },
+        "PII.LOCATION": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 411,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PII.PERSON": {
+          "tp": 0,
+          "fp": 0,
+          "fn": 857,
+          "precision": 0.0,
+          "recall": 0.0,
+          "f1": 0.0
+        },
+        "PII.US_DRIVER_LICENSE": {
+          "tp": 4,
+          "fp": 120,
+          "fn": 1,
+          "precision": 0.0323,
+          "recall": 0.8,
+          "f1": 0.062
+        },
+        "PII.US_PHONE": {
+          "tp": 54,
+          "fp": 24,
+          "fn": 38,
+          "precision": 0.6923,
+          "recall": 0.587,
+          "f1": 0.6353
+        },
+        "PII.US_SSN": {
+          "tp": 16,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      }
+    },
+    {
+      "config": "pii.presidio.full",
+      "tp": 1300,
+      "fp": 1089,
+      "fn": 420,
+      "precision": 0.5442,
+      "recall": 0.7558,
+      "f1": 0.6328,
+      "by_type": {
+        "PII.CREDIT_CARD": {
+          "tp": 105,
+          "fp": 0,
+          "fn": 31,
+          "precision": 1.0,
+          "recall": 0.7721,
+          "f1": 0.8714
+        },
+        "PII.DATE_OF_BIRTH": {
+          "tp": 119,
+          "fp": 440,
+          "fn": 0,
+          "precision": 0.2129,
+          "recall": 1.0,
+          "f1": 0.351
+        },
+        "PII.EMAIL": {
+          "tp": 49,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "PII.IBAN": {
+          "tp": 21,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        },
+        "PII.IP_ADDRESS": {
+          "tp": 14,
+          "fp": 5,
+          "fn": 0,
+          "precision": 0.7368,
+          "recall": 1.0,
+          "f1": 0.8485
+        },
+        "PII.LOCATION": {
+          "tp": 206,
+          "fp": 237,
+          "fn": 205,
+          "precision": 0.465,
+          "recall": 0.5012,
+          "f1": 0.4824
+        },
+        "PII.PERSON": {
+          "tp": 712,
+          "fp": 263,
+          "fn": 145,
+          "precision": 0.7303,
+          "recall": 0.8308,
+          "f1": 0.7773
+        },
+        "PII.US_DRIVER_LICENSE": {
+          "tp": 4,
+          "fp": 120,
+          "fn": 1,
+          "precision": 0.0323,
+          "recall": 0.8,
+          "f1": 0.062
+        },
+        "PII.US_PHONE": {
+          "tp": 54,
+          "fp": 24,
+          "fn": 38,
+          "precision": 0.6923,
+          "recall": 0.587,
+          "f1": 0.6353
+        },
+        "PII.US_SSN": {
+          "tp": 16,
+          "fp": 0,
+          "fn": 0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0
+        }
+      }
+    }
+  ]
+}
