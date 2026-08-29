@@ -26,6 +26,7 @@ from ..providers import all_providers, available_providers
 from .deps import current_user, db
 from .routes import (
     answerability,
+    discovery,
     entitlement,
     escalation,
     evaluation,
@@ -131,6 +132,7 @@ def create_app() -> FastAPI:
     app.include_router(provenance.router)
     app.include_router(entitlement.router)
     app.include_router(integrations.router)
+    app.include_router(discovery.router)
     app.include_router(memory.router)
     app.include_router(messaging.router)
 

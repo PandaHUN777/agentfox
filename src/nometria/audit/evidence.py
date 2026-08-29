@@ -9,8 +9,10 @@ That is why ``verify_chain.py`` ships *inside* the package: a standalone script 
 no imports beyond the standard library that re-derives the hash chain from the
 exported rows.
 
-Draft framework mappings are excluded (Appendix B §B.6). A package that presents
-unreviewed regulatory mappings as evidence is worse than no package.
+Draft framework mappings ship inside the package too (Appendix B §B.6), but each
+one carries an explicit ``DRAFT — UNVERIFIED / NOT LEGAL ADVICE`` chip rather than
+being silently dropped. Hiding an unreviewed mapping told an auditor nothing was
+outstanding; badging it tells them exactly what still needs review.
 """
 
 from __future__ import annotations
@@ -244,15 +246,11 @@ def build(
         statuses = [s for s in statuses if s.control_key in controls]
     risk = list(session.scalars(select(RiskAssessment)))
 
-    # Appendix B §B.6: unreviewed mappings never enter an evidence package.
-    mappings = list(
-        session.scalars(
-            select(FrameworkMapping).where(FrameworkMapping.review_status == "reviewed")
-        )
-    )
-    excluded_drafts = session.scalars(
-        select(FrameworkMapping).where(FrameworkMapping.review_status == "draft")
-    ).all()
+    # Appendix B §B.6: every mapping ships, draft or reviewed — each one is
+    # chip-labeled below so an auditor can see exactly what is still outstanding
+    # instead of the gap being invisible.
+    mappings = list(session.scalars(select(FrameworkMapping)))
+    draft_mappings = [m for m in mappings if m.review_status != "reviewed"]
 
     # --- serialise -------------------------------------------------------
     files: dict[str, str] = {
@@ -392,6 +390,11 @@ def build(
                     "reference": m.reference,
                     "review_status": m.review_status,
                     "reviewed_by": m.reviewed_by,
+                    "chip": (
+                        "REVIEWED"
+                        if m.review_status == "reviewed"
+                        else "DRAFT — UNVERIFIED / NOT LEGAL ADVICE"
+                    ),
                 }
                 for m in mappings
             ],
@@ -417,7 +420,7 @@ def build(
     }
 
     files["README.txt"] = _readme(
-        scope, verification, len(traces), len(decisions), len(audit_entries), len(excluded_drafts)
+        scope, verification, len(traces), len(decisions), len(audit_entries), len(draft_mappings)
     )
 
     manifest = {
@@ -437,8 +440,8 @@ def build(
             "eval_runs": len(eval_runs),
             "findings": len(findings),
             "control_statuses": len(statuses),
-            "reviewed_mappings": len(mappings),
-            "excluded_draft_mappings": len(excluded_drafts),
+            "reviewed_mappings": len(mappings) - len(draft_mappings),
+            "draft_mappings_included": len(draft_mappings),
         },
         "chain_verification": verification.to_json(),
         "files": {
@@ -489,7 +492,7 @@ def _readme(
     traces: int,
     decisions: int,
     entries: int,
-    excluded_drafts: int,
+    draft_mappings: int,
 ) -> str:
     status = "INTACT" if verification.valid else "TAMPERED"
     return f"""NOMETRIA EVIDENCE PACKAGE
@@ -516,7 +519,9 @@ approvals.json           Human-in-the-loop approvals and who resolved them (NOM-
 eval_runs.json           Evaluation and regression-gate results (NOM-EVL-01).
 findings.json            Governance findings raised in the period.
 control_status.json      Control effectiveness computed from telemetry (NOM-GOV-04).
-framework_mappings.json  Control-to-framework mappings — REVIEWED ONLY.
+framework_mappings.json  Control-to-framework mappings, reviewed and draft alike —
+                         each row carries a "chip" of REVIEWED or DRAFT — UNVERIFIED
+                         / NOT LEGAL ADVICE so you can see exactly what is outstanding.
 risk_assessments.json    Per-agent risk classification and residual risk.
 agents.json              The agent inventory in scope.
 manifest.json            SHA-256 of every file above, plus provenance.
@@ -541,10 +546,12 @@ Scope of this package: {traces} traces, {decisions} decisions, {entries} audit e
 
 Important limitations
 ---------------------
-* {excluded_drafts} control-to-framework mapping(s) were EXCLUDED from this package
-  because they have not completed compliance review. Only mappings marked
-  'reviewed' appear in framework_mappings.json. Draft mappings are engineering
-  drafts produced from framework texts and are not legal advice.
+* {draft_mappings} control-to-framework mapping(s) in framework_mappings.json are
+  chip-labeled 'DRAFT — UNVERIFIED / NOT LEGAL ADVICE' because they have not
+  completed compliance review (only rows chip-labeled 'REVIEWED' have). Draft
+  mappings are engineering drafts produced from framework texts and are not legal
+  advice — do not present them to an auditor as a completed regulatory claim
+  without first running them through the review gate (Appendix B §B.6).
 * Control status is computed from observed telemetry for the stated period. A
   control reported 'effective' means its evidence sources were present and its
   rule passed over this scope — not that the control is effective in general.

@@ -8,7 +8,9 @@
 # ⚠ EVERY MAPPING HERE IS review_status: draft. These are informed engineering
 # drafts produced from the framework texts. They are NOT legal advice and have not
 # been reviewed by compliance counsel or a certification body. Draft mappings are
-# badged in the UI and EXCLUDED from evidence packages (Appendix B §B.6).
+# badged in the UI and ship inside evidence packages tagged with a
+# "DRAFT — UNVERIFIED / NOT LEGAL ADVICE" chip rather than being excluded
+# (Appendix B §B.6), so reviewers can see exactly what is still outstanding.
 version: 0.1.0-draft
 review_status: draft
 frameworks:

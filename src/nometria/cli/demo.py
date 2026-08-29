@@ -437,7 +437,8 @@ def run() -> dict[str, Any]:
         console.print(
             "  [dim]Every status is derived from telemetry — detector coverage, "
             "decision coverage, chain verification — not from an attestation form. "
-            "Framework mappings are DRAFT and excluded from evidence packages.[/]"
+            "Framework mappings are DRAFT and ship in evidence packages chip-labeled "
+            "DRAFT — UNVERIFIED / NOT LEGAL ADVICE.[/]"
         )
         summary["posture"] = overall
 
