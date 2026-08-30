@@ -21,7 +21,9 @@ from nometria.availability import (
     DegradationLedger,
     FailPolicy,
     UnsafeFailMode,
+    get_admission_controller,
     health,
+    reset_admission_controller,
     service_fallback,
 )
 
@@ -208,6 +210,82 @@ def test_ordinary_load_is_admitted():
     """The false-positive floor: a limiter that sheds normal traffic is an outage."""
     controller = AdmissionController(rate_per_second=50, burst=100, max_concurrent=64)
     assert all(controller.admit(now=T0).admitted for _ in range(100))
+
+
+# --- The singleton, and its wiring into the live gateway (P15-6) -----------
+#
+# `AdmissionController` itself was already fully tested above; what was missing
+# — the finding in gap-analysis.md — is that nothing on the request path ever
+# called it. These tests are about that wiring specifically, not the algorithm.
+
+
+def test_get_admission_controller_reads_settings(monkeypatch):
+    monkeypatch.setenv("NOMETRIA_ADMISSION_RATE_PER_SECOND", "5")
+    monkeypatch.setenv("NOMETRIA_ADMISSION_BURST", "7")
+    monkeypatch.setenv("NOMETRIA_ADMISSION_MAX_CONCURRENT", "9")
+    from nometria.config import reset_settings_cache
+
+    reset_settings_cache()
+    reset_admission_controller()
+    try:
+        controller = get_admission_controller()
+        assert (controller.rate, controller.burst, controller.max_concurrent) == (5, 7, 9)
+    finally:
+        reset_settings_cache()
+        reset_admission_controller()
+
+
+def test_the_controller_is_a_singleton_until_reset():
+    reset_admission_controller()
+    try:
+        first = get_admission_controller()
+        assert get_admission_controller() is first
+        reset_admission_controller()
+        assert get_admission_controller() is not first
+    finally:
+        reset_admission_controller()
+
+
+def _saturate_admission(monkeypatch) -> None:
+    """One token, refilling too slowly for the test to ever see a second one."""
+    from nometria.config import reset_settings_cache
+
+    monkeypatch.setenv("NOMETRIA_ADMISSION_BURST", "1")
+    monkeypatch.setenv("NOMETRIA_ADMISSION_RATE_PER_SECOND", "0.0001")
+    reset_settings_cache()
+    reset_admission_controller()
+
+
+def test_the_gate_sheds_inline_traffic_once_saturated(client, monkeypatch):
+    """The same shedding proven algorithmically above, now reachable from a live
+    request — closing the "zero callers on the live request path" gap."""
+    _saturate_admission(monkeypatch)
+    payload = {"agent": "nobody", "content": "hi", "surface": "input"}
+
+    first = client.post("/v1/guard/input", json=payload)
+    assert first.status_code != 429
+
+    shed = client.post("/v1/guard/input", json=payload)
+    assert shed.status_code == 429
+    assert shed.json()["error"]["type"] == "nometria_admission_shed"
+    assert float(shed.headers["Retry-After"]) >= 1
+
+
+def test_the_gate_does_not_apply_to_the_control_plane(client, monkeypatch):
+    """`/api/*` is operator traffic — out of scope for a budget sized for the
+    inline surface an agent calls under load."""
+    _saturate_admission(monkeypatch)
+    client.post("/v1/guard/input", json={"agent": "nobody", "content": "hi"})  # spend the token
+
+    assert client.get("/api/health").status_code == 200
+
+
+def test_ordinary_traffic_through_the_live_gate_is_never_shed(client):
+    """False-positive floor for the wiring: default settings must not shed
+    ordinary traffic through the real gateway."""
+    for _ in range(5):
+        resp = client.post("/v1/guard/input", json={"agent": "nobody", "content": "hi"})
+        assert resp.status_code != 429
 
 
 # --- Health ----------------------------------------------------------------

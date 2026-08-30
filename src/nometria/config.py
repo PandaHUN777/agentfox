@@ -72,6 +72,15 @@ class Settings(BaseSettings):
     fallback_chain: list[str] = []
     breaker_failure_threshold: int = 5
     breaker_recovery_seconds: float = 30.0
+    # P15-6: admission control on the inline surface — shed work before it reaches
+    # governance, never after (availability.py's `AdmissionController`). Defaults
+    # generous enough that no self-host demo ever notices them; sizing these to a
+    # deployment's real capacity is the operator's job, the same as the breaker
+    # thresholds above.
+    admission_rate_per_second: float = 200.0
+    admission_burst: int = 400
+    admission_max_concurrent: int = 256
+    admission_shed_below_priority: str = "normal"
 
     # --- Streaming (PL-1) ------------------------------------------------
     # `buffered` enforces output identically to the non-streaming path at the cost of

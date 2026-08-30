@@ -10,12 +10,12 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | | |
 |---|---|
 | **Capabilities** | 41 tracked |
-| **Built** | 24 ✅ |
-| **Partial** | 17 ◐ |
+| **Built** | 25 ✅ |
+| **Partial** | 16 ◐ |
 | **Absent** | 0 ✗ |
-| **Weighted coverage** | **79%** *(partial counts half)* |
-| **Tests** | 1186 |
-| **Lines** | 60,037 (src + tests) |
+| **Weighted coverage** | **80%** *(partial counts half)* |
+| **Tests** | 1191 |
+| **Lines** | 60,195 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -33,19 +33,19 @@ in [traceability.md](traceability.md).
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 55 |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 41 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ◐ partial | 27 | gates the ingestion and assembly path. Semantic chunk-boundary repair and automatic re-extraction of a corrupt document are not built — a finding is reported and the decision to drop the document belongs to the operator |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 38 | no Ragas adapter, model-based groundedness or annotation queue |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 41 | no Ragas adapter, model-based groundedness or annotation queue |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ◐ partial | 22 | attributes a failure to the step that originated the value and measures what each handoff dropped. Both work on constraints that were written down — an expectation the human held and never typed is invisible here, and no trace analysis recovers it |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 17 |  |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 46 |  |
-| `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 21 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
-| `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ◐ partial | 17 | backpressure/queue shedding (P15-6) absent; caps are hard stops only |
+| `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 24 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
+| `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ✅ built | 25 | AdmissionController (P15-6) was fully built and tested but had zero callers on the live request path; a gateway middleware now gates every /v1/* request through it before routing, shedding by priority under saturation and leaving the /api/* control plane out of scope for the same budget. Caps elsewhere (budgets, breaker thresholds) remain hard stops, not queued backpressure |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
 | `PL-2` | Platform | Database migrations | ✅ built | 2 |  |
-| `PL-3` | Platform | Kill switch and quarantine | ✅ built | 16 |  |
+| `PL-3` | Platform | Kill switch and quarantine | ✅ built | 17 |  |
 | `PL-4` | Platform | Agent loop governance | ◐ partial | 18 | governs the run rather than the step: identical re-issued calls, alternating cycles, and steps producing no new observation. All three are visible without understanding the task, which is what keeps it deterministic — an agent that is wrong but varied still looks like an agent working |
 | `PL-5` | Platform | Async workers | ◐ partial | — | in-process with retries and a dead letter that is public state rather than a log line. The interface is the deliverable; a Redis or SQS implementation belongs behind it, and building that before anyone runs this at that scale would be committing to infrastructure early |
 | `PL-6` | Platform | HA-ready persistence | ◐ partial | — | pooling and pre-ping ship, and SQLite is refused at startup for a multi-worker deployment rather than surfacing as intermittent latency. Actual scale-out under load is still untested |
-| `PL-7` | Platform | Service-level fail-open | ◐ partial | 20 | fail-open is legitimate and must be visible, bounded and impossible for some controls. Admission control sheds work rather than governance. What is not built: distributed state, so the fail-open budget and the rate limit are per-process and a multi-worker deployment gets N times the declared budget |
+| `PL-7` | Platform | Service-level fail-open | ◐ partial | 25 | fail-open is legitimate and must be visible, bounded and impossible for some controls. Admission control sheds work rather than governance. What is not built: distributed state, so the fail-open budget and the rate limit are per-process and a multi-worker deployment gets N times the declared budget |
 | `PL-9` | Platform | Authentication and operator tokens | ◐ partial | 46 | OIDC/SCIM absent; tokens and the dev-mode gate ship |
 | `P18` | 18 Tool Contract | Semantic contract: data access, result fidelity, register, source arbitration | ◐ partial | 60 | governs the gap between the request, the rows a tool touched and the answer. Data-access scoping is exactly as good as the ScopeRule declarations it is given — an undeclared table is reported, never assumed safe. Register checks are lexical and licensed per domain; they judge standing, not content, and a licensed operator turns them off deliberately |
 | `PL-10` | Platform | Operator actions recorded in the decision chain | ✅ built | 22 | the registry of privileged operations is declared and the check is structural, so a new operator surface without an audit call fails the suite. system_scope's cross-tenant operations now land somewhere real: resolving a token's own org before recording (system_log.py, chain.append's org_id) fixed a live misattribution — issuing/revoking a token used to record into whichever tenant the session defaulted to, with its seq computed from a query system_scope had left unfiltered — and the one operation with no tenant to attribute to at all (listing tokens across every org) now writes to a dedicated system-level chain. The registry that makes operator actions structural has no equivalent yet for which system_scope call sites must write to that chain — this one is wired by hand, not enforced by an import-time check |
@@ -84,4 +84,4 @@ above. The 50 modes come from [failure-modes.md](failure-modes.md).
 | **F7** Numeric, temporal & entity integrity | 7 | 7 | 0 | ✅ 7/7 | — |
 | **F8** Context & retrieval integrity | 7 | 5 | 1 | ◐ 5.5/7 | F8.3 |
 
-**Reading the gaps.** Nothing is untouched — every tracked capability has at least a foundation. What remains is 17 partial capabilities, each with a specific, named piece left rather than a blank slate: `P1`, `P2`, `P9`, `P10`, `P8`, `P14`, `P4`, `P13`, `P6`, `P15`, `PL-4`, `PL-5`, `PL-6`, `PL-7`, `PL-9`, `P18`, `P16`. See each row's note for what that piece is.
+**Reading the gaps.** Nothing is untouched — every tracked capability has at least a foundation. What remains is 16 partial capabilities, each with a specific, named piece left rather than a blank slate: `P1`, `P2`, `P9`, `P10`, `P8`, `P14`, `P4`, `P13`, `P6`, `PL-4`, `PL-5`, `PL-6`, `PL-7`, `PL-9`, `P18`, `P16`. See each row's note for what that piece is.

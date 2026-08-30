@@ -11,13 +11,14 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import __version__
+from ..availability import get_admission_controller
 from ..compliance.catalog import load_catalog
 from ..config import get_settings
 from ..db import init_db
@@ -127,6 +128,41 @@ def create_app() -> FastAPI:
             "X-Nometria-Latency-Ms",
         ],
     )
+
+    @app.middleware("http")
+    async def admission_gate(request: Request, call_next):
+        """P15-6 — shed load before it reaches governance, never after.
+
+        Scoped to ``/v1/*``, the inline surface an agent actually calls under load;
+        ``/api/*`` is the operator control plane, low-volume by nature and already
+        outside what this admission budget is sized for. This runs ahead of
+        routing, so a shed request never reaches `Enforcer` — under saturation the
+        thing to drop is work, not the checks on the work that gets through
+        (`availability.py`'s module docstring).
+        """
+        if not request.url.path.startswith("/v1/"):
+            return await call_next(request)
+
+        controller = get_admission_controller()
+        priority = request.headers.get("X-Nometria-Priority", "normal")
+        admission = controller.admit(scope="inline", priority=priority)
+        if not admission.admitted:
+            return JSONResponse(
+                status_code=429,
+                content={
+                    "error": {
+                        "type": "nometria_admission_shed",
+                        "message": admission.reason,
+                        "retry_after_seconds": admission.retry_after_seconds,
+                    }
+                },
+                headers={"Retry-After": str(max(1, round(admission.retry_after_seconds)))},
+            )
+        controller.enter()
+        try:
+            return await call_next(request)
+        finally:
+            controller.leave()
 
     app.include_router(inline.router)
     app.include_router(registry.router)

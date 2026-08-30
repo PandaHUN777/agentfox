@@ -104,7 +104,7 @@ SSO/SAML: 2 references — a seam, not an integration. Questionnaires: 2 referen
 | DB migrations (Alembic) | ✅ real | Alembic wired, migrations applied against prod Neon DB |
 | kill switch / quarantine | ✅ real | Per-agent kill switch shipped, tested |
 | multi-tenant org_id filtering | ✅ real, stronger than "filtering" | `src/nometria/tenancy.py` enforces isolation structurally via session-level `with_loader_criteria`, not per-query filters — closes what was previously called "the single leak that ends the company" |
-| rate limiting | ◐ stub-only | `availability.py::AdmissionController` exists and is tested; zero callers on the live request path |
+| rate limiting | ◐ partial, now wired | `gateway/app.py`'s `admission_gate` middleware now calls `availability.py::AdmissionController` on every `/v1/*` request — the inline surface an agent actually floods — before routing. `/api/*` (the operator control plane 1.3 below was originally about) is deliberately out of scope for the same budget: it is authenticated, low-volume, and sharing one budget risked an inline burst shedding the dashboard along with it |
 | async job queue / scheduler | ◐ stub-only | `jobs.py` exists and is tested; nothing enqueues to it in the live path |
 | cloud connectors (Bedrock/Azure/Vertex/Salesforce) | ◐ partial, different shape than expected | `providers/enterprise.py` ships `AzureOpenAIProvider`/`BedrockProvider`/`VertexProvider`/`LiteLLMProvider` as outbound LLM-API connectors, tested — but these are model-provider connectors, not the estate-discovery connectors (Salesforce/ServiceNow/M365) the Gartner MQ criterion actually means. Salesforce remains absent either way. |
 | framework instrumentation (LangChain/LangGraph callbacks) | ◐ real for LangGraph specifically | `integrations/langgraph.py` (`NometriaGuard`, 386 lines), verified via 34 passing tests in `tests/test_tranche0.py`. LlamaIndex/CrewAI/Claude Agent SDK still absent as instrumentation SDKs (only present as static-scan detection strings) |
@@ -224,13 +224,13 @@ Status as of 2026-08-29: **five of seven closed, two stub-only** (real, tested, 
 
 ### Tier 1 — Procurement blockers (cannot pass a security review)
 
-Status as of 2026-08-29: **four closed, one stub-only, four still organisational** (SOC 2/ISO/pentest/DPA are not code problems and were never going to close from engineering work alone).
+Status as of 2026-08-29: **four closed, one stub-only, four still organisational** (SOC 2/ISO/pentest/DPA are not code problems and were never going to close from engineering work alone). **Update, 2026-08-30:** 1.3's `AdmissionController` is no longer stub-only — it is wired live, on the inline surface rather than literally "the control plane" this row names; see its own row for the distinction.
 
 | # | Gap | Sev | Effort | 2026-08-18 note | 2026-08-29 status |
 |---|---|---|---|---|---|
 | 1.1 | **No real SSO (OIDC/SAML) or SCIM** — dev identity header in production code path | 🔴 | M | 40–60% of a SIG questionnaire is answerable from SOC 2 + SSO evidence | ◐ partial — dev header now refused outside development mode, real API-token auth shipped (`gateway/deps.py`/`gateway/auth.py`); OIDC still only a schema seam (`User.external_id`), no live IdP integration, SCIM 0 matches |
 | 1.2 | **Multi-tenancy not enforced** — `org_id` column exists, 0 queries filter on it | 🔴 | M | a single leak here ends the company | ✅ closed, and closed the strong way — `tenancy.py`'s session-level `with_loader_criteria` enforces isolation structurally, not via per-query filters that could be individually forgotten |
-| 1.3 | **No rate limiting / quota** on the control plane | 🔴 | S | verified absent | ◐ **stub-only** — `availability.py::AdmissionController` built and tested; zero callers live |
+| 1.3 | **No rate limiting / quota** on the control plane | 🔴 | S | verified absent | ◐ partial, not stub-only anymore — `AdmissionController` is now wired live on `/v1/*` (`gateway/app.py::admission_gate`), which is where an overloaded or misbehaving agent actually generates load; the control plane (`/api/*`) this row names specifically is operator-authenticated and was left out of the same budget deliberately — still genuinely unquota'd if that's the literal surface meant here |
 | 1.4 | **Signing key and provider keys in env vars** — no Vault/KMS/CSFLE | 🔴 | M | undermines our own NFR-7 claim | ◐ partial — Fernet encryption at rest for tokens/credentials now real (`config.py:token_encryption_key`, `*_encrypted` model columns); still no external KMS/Vault |
 | 1.5 | **No SOC 2 Type II / ISO 27001** for us as a vendor | 🔴 | XL (org) | *most enterprise buyers require SOC 2 Type II before signing* | ✗ unchanged — organisational, not an engineering task |
 | 1.6 | No third-party penetration test, VDP, or security.txt | 🔴 | M (org) | standard questionnaire item | ✗ unchanged |

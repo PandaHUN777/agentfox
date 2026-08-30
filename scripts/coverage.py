@@ -391,9 +391,13 @@ PROBES: list[Probe] = [
         "Circuit breaker, fallback, caps, backpressure",
         "15 Cost & Reliability",
         ["class CircuitBreaker", "class FallbackLadder", "def check_budget"],
-        ["def apply_backpressure"],
-        "reliability|breaker|budget",
-        "backpressure/queue shedding (P15-6) absent; caps are hard stops only",
+        ["def get_admission_controller", "def admission_gate"],
+        "reliability|breaker|budget|admission|admit|shed",
+        "AdmissionController (P15-6) was fully built and tested but had zero callers "
+        "on the live request path; a gateway middleware now gates every /v1/* request "
+        "through it before routing, shedding by priority under saturation and leaving "
+        "the /api/* control plane out of scope for the same budget. Caps elsewhere "
+        "(budgets, breaker thresholds) remain hard stops, not queued backpressure",
     ),
     # --- Platform
     Probe(

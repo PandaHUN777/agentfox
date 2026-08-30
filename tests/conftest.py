@@ -22,15 +22,18 @@ def isolated_db(tmp_path, monkeypatch) -> Iterator[None]:
     monkeypatch.setenv("NOMETRIA_ALLOW_EGRESS", "false")
 
     from nometria import db
+    from nometria.availability import reset_admission_controller
     from nometria.config import get_settings, reset_settings_cache
 
     reset_settings_cache()
     db.reset_engine()
     get_settings()
     db.init_db()
+    reset_admission_controller()
     yield
     db.reset_engine()
     reset_settings_cache()
+    reset_admission_controller()
 
 
 @pytest.fixture

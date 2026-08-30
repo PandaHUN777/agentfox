@@ -377,6 +377,38 @@ class AdmissionController:
         return self._in_flight
 
 
+#: The process-wide admission gate. Lazily built from settings, unlike
+#: `reliability.BREAKER`'s fixed-default construction at import time — these limits
+#: are exactly the ones an operator is expected to size to their own deployment
+#: (`NOMETRIA_ADMISSION_*`), and building it at import time would freeze in
+#: whatever settings happened to be current then, which is wrong for anything that
+#: overrides them afterwards (every test in this suite included).
+_ADMISSION: AdmissionController | None = None
+
+
+def get_admission_controller() -> AdmissionController:
+    global _ADMISSION
+    if _ADMISSION is None:
+        from .config import get_settings
+
+        settings = get_settings()
+        _ADMISSION = AdmissionController(
+            rate_per_second=settings.admission_rate_per_second,
+            burst=settings.admission_burst,
+            max_concurrent=settings.admission_max_concurrent,
+            shed_below_priority=settings.admission_shed_below_priority,
+        )
+    return _ADMISSION
+
+
+def reset_admission_controller() -> None:
+    """Test-only: drop the singleton so the next call rebuilds it from current
+    settings and with empty state — mirrors `db.reset_engine`. Without this, one
+    test's rate-limit consumption or in-flight count would bleed into the next."""
+    global _ADMISSION
+    _ADMISSION = None
+
+
 def health(ledger: DegradationLedger, *, now: dt.datetime | None = None) -> dict[str, Any]:
     """What is currently not being checked.
 
