@@ -85,10 +85,15 @@ PREDICTION_MARKERS = [
     r"\b\d+\s+years?\s+from\s+now\b",
     r"\bin\s+(?:the\s+next\s+)?\d+\s+years?\b",
     r"\b(?:fifty|forty|thirty|twenty|ten|hundred)\s+years?\s+from\s+now\b",
+    # Hypothetical/conditional forecast shapes — the same structural-not-vocabulary
+    # discipline as the four above. Candidates tested against `known` + CoCoNot
+    # before shipping; see benchmarks/answerability/README.md.
+    r"\bwhat if\b.{0,80}\b(?:would|might|could)\b",
+    r"\bhow might\b.{0,40}\b(?:impact|shape|change|affect|influence)\b",
 ]
 
 _OPINION_MARKERS = [
-    r"\b(?:should i|do you think|what do you (?:think|reckon)|in your opinion)\b",
+    r"\b(?:should i|do you (?:think|believe)|what do you (?:think|reckon)|in your opinion)\b",
     r"\b(?:is it (?:a good|worth)|would you recommend)\b",
     r"\bbest\s+(?:choice|option|approach)\s+for me\b",
     # Third-person subjective/debatable framing — benchmarked on KUQ's
@@ -213,7 +218,21 @@ def get_boundary(session: Session, agent_id: str | None) -> KnowledgeBoundary | 
 # ---------------------------------------------------------------------------
 
 
-def question_type(text: str) -> str:
+def _asks_about_a_resolved_prediction(text: str, now: dt.date) -> bool:
+    """A forecast-shaped question that names only years already past isn't soliciting
+    a new prediction — it's asking to recall a documented one ("what disease was
+    projected to be eradicated by 2018" — 2018 has happened; there's a factual answer
+    on record). No mentioned year at all leaves the question genuinely open-ended, so
+    this only fires when every year named is already behind `now`. A mix that includes
+    any future year (e.g. "in 2020, experts predicted X by 2050") stays a real,
+    unresolved prediction — deliberately, since one still-open year is enough to make
+    the question a forecast again.
+    """
+    years = [int(y) for y in _YEAR_RE.findall(text)]
+    return bool(years) and all(y <= now.year for y in years)
+
+
+def question_type(text: str, now: dt.date | None = None) -> str:
     """Classify the question. Deterministic and ordered by consequence.
 
     Prediction is checked first: a question that is *both* an aggregate and a forecast
@@ -222,6 +241,8 @@ def question_type(text: str) -> str:
     register as a record.
     """
     if any(p.search(text) for p in _PREDICTION_RE):
+        if _asks_about_a_resolved_prediction(text, now or dt.date.today()):
+            return FACT
         return PREDICTION
     if any(p.search(text) for p in _OPINION_RE):
         return OPINION
@@ -386,7 +407,7 @@ def classify_answerability(
     Four checks, cheapest and most decisive first. All deterministic: an answerability
     check that itself calls a model inherits the failure it is meant to prevent.
     """
-    qtype = question_type(text)
+    qtype = question_type(text, now)
     systems = ", ".join((boundary.systems_of_record if boundary else []) or ["its sources"])
     mode = boundary.mode if boundary else "observe"
     reasons: list[dict[str, Any]] = []

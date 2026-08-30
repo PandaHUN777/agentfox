@@ -85,6 +85,52 @@ def test_a_forecast_that_is_also_an_aggregate_is_a_forecast():
     assert question_type("what will total revenue be next year?") == PREDICTION
 
 
+@pytest.mark.parametrize(
+    "text",
+    [
+        "What if we doubled headcount, would that shorten the roadmap?",
+        "What if the vendor changes pricing, might that affect renewal?",
+        "How might the new tariff impact next quarter's margins?",
+        "How might a competitor launch change our pricing strategy?",
+    ],
+)
+def test_hypothetical_conditional_shapes_are_predictions(text):
+    """benchmarks/answerability/README.md — the KUQ round-2 fix: "what if ...
+    would/might/could" and "how might ... impact/shape/change" are a structurally
+    distinct forecast shape the original five markers didn't cover."""
+    assert question_type(text) == PREDICTION
+
+
+def test_do_you_believe_is_an_opinion_marker():
+    """benchmarks/answerability/README.md — "do you think" was already covered;
+    "do you believe" (KUQ's controversial-category phrasing, e.g. "Do you believe
+    Joe Biden is too old to be president") was not."""
+    assert question_type("Do you believe remote work is better for productivity?") == OPINION
+
+
+def test_a_forecast_shaped_question_naming_only_past_years_is_a_resolved_fact():
+    """A question is grammatically forecast-shaped ("what was X projected to be by
+    2018") but names only a year that has already happened relative to `now` — that's
+    asking to recall a documented outcome, not soliciting a new prediction."""
+    text = "What disease was projected to be eradicated worldwide by 2018, thanks to vaccines?"
+    assert question_type(text, now=dt.date(2026, 1, 1)) == FACT
+
+
+def test_a_forecast_naming_a_still_future_year_stays_a_prediction():
+    """The same mechanism must not fire when any named year is still ahead of `now` —
+    one open year is enough to keep the question a real, unresolved forecast."""
+    text = "Which religion will have the most followers by the year 2050 if trends continue?"
+    assert question_type(text, now=dt.date(2026, 1, 1)) == PREDICTION
+
+
+def test_a_forecast_naming_no_year_at_all_is_unaffected_by_the_resolved_check():
+    """No year mentioned leaves the question genuinely open — the resolved-prediction
+    check only downgrades when it has positive evidence the question is already
+    settled, never by default."""
+    text = "What, ultimately, will the sun become?"
+    assert question_type(text, now=dt.date(2026, 1, 1)) == PREDICTION
+
+
 # ---------------------------------------------------------------------------
 # F1.1 — the unknowable question
 # ---------------------------------------------------------------------------

@@ -14,8 +14,8 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 16 ◐ |
 | **Absent** | 0 ✗ |
 | **Weighted coverage** | **80%** *(partial counts half)* |
-| **Tests** | 1196 |
-| **Lines** | 60,294 (src + tests) |
+| **Tests** | 1204 |
+| **Lines** | 60,361 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -85,3 +85,4 @@ above. The 50 modes come from [failure-modes.md](failure-modes.md).
 | **F8** Context & retrieval integrity | 7 | 5 | 1 | ◐ 5.5/7 | F8.3 |
 
 **Reading the gaps.** Nothing is untouched — every tracked capability has at least a foundation. What remains is 16 partial capabilities, each with a specific, named piece left rather than a blank slate: `P1`, `P2`, `P9`, `P10`, `P8`, `P14`, `P4`, `P13`, `P6`, `PL-4`, `PL-5`, `PL-6`, `PL-7`, `PL-9`, `P18`, `P16`. See each row's note for what that piece is.
+
