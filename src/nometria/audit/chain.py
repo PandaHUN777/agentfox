@@ -122,23 +122,49 @@ def append(
     subject_id: str | None = None,
     payload: dict[str, Any] | None = None,
     occurred_at: dt.datetime | None = None,
+    org_id: str | None = None,
 ) -> AuditEntry:
-    """Append one entry. The only write path for :class:`AuditEntry`."""
+    """Append one entry. The only write path for :class:`AuditEntry`.
+
+    ``org_id`` names the chain this entry joins explicitly. It defaults to the
+    session's own bound tenant (:func:`nometria.tenancy.session_org`) — the ordinary
+    case — but is accepted as an override for the one caller that has no ambient
+    tenant to inherit: :mod:`nometria.system_log`, appending to the reserved
+    system-level chain from inside :func:`nometria.tenancy.system_scope`.
+
+    The "last entry" lookup below filters on this org explicitly rather than trusting
+    :mod:`nometria.tenancy`'s session-level ``with_loader_criteria`` hook to have done
+    it, because that hook is *disabled* for the whole session inside
+    ``system_scope`` (by design — reading across every tenant needs an unfiltered
+    query). A caller that binds the session to a real tenant and then appends from
+    inside ``system_scope`` — exactly what minting an operator token does, since the
+    recipient's tenant is only known after a cross-tenant lookup — used to have this
+    query silently see every tenant's rows merged into one sequence instead of just
+    its own, computing a ``seq``/``prev_digest`` against whichever tenant's chain
+    happened to run furthest, not the one the entry was actually joining.
+    """
     settings = get_settings()
     payload = payload or {}
     if settings.redact_at_capture:
         payload = redact_payload(payload)
 
-    # Tenant-filtered by the session, so this is the last entry *in this tenant's
-    # chain*. Each tenant therefore has its own chain starting at seq 1, which is what
-    # lets them verify it without being shown anyone else's entries.
-    last = session.scalars(select(AuditEntry).order_by(AuditEntry.seq.desc()).limit(1)).first()
+    from ..tenancy import session_org
+
+    target_org = org_id or session_org(session)
+
+    last = session.scalars(
+        select(AuditEntry)
+        .where(AuditEntry.org_id == target_org)
+        .order_by(AuditEntry.seq.desc())
+        .limit(1)
+    ).first()
     seq = (last.seq + 1) if last else 1
     prev_digest = last.digest if last else GENESIS
     ts = occurred_at or utcnow()
 
     payload_digest = compute_payload_digest(payload)
     entry = AuditEntry(
+        org_id=target_org,
         seq=seq,
         occurred_at=ts,
         actor_type=actor_type,

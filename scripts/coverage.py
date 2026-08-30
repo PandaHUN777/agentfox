@@ -489,13 +489,20 @@ PROBES: list[Probe] = [
         "Operator actions recorded in the decision chain",
         "Platform",
         ["PRIVILEGED", "def unaudited", "class ReasonRequired"],
-        [],
+        ["SYSTEM_ORG_ID", "class NotInSystemScope"],
         "",
         "the registry of privileged operations is declared and the check is structural, "
-        "so a new operator surface without an audit call fails the suite. system_scope "
-        "is the stated exception: it lifts tenant isolation and so has no tenant chain "
-        "to write to, which needs a separate system-level chain",
-        test_files=("test_operator_log.py",),
+        "so a new operator surface without an audit call fails the suite. system_scope's "
+        "cross-tenant operations now land somewhere real: resolving a token's own org "
+        "before recording (system_log.py, chain.append's org_id) fixed a live "
+        "misattribution — issuing/revoking a token used to record into whichever tenant "
+        "the session defaulted to, with its seq computed from a query system_scope had "
+        "left unfiltered — and the one operation with no tenant to attribute to at all "
+        "(listing tokens across every org) now writes to a dedicated system-level chain. "
+        "The registry that makes operator actions structural has no equivalent yet for "
+        "which system_scope call sites must write to that chain — this one is wired by "
+        "hand, not enforced by an import-time check",
+        test_files=("test_operator_log.py", "test_system_log.py"),
     ),
     Probe(
         "PL-8",

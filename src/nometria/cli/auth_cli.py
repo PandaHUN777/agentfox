@@ -29,13 +29,18 @@ def issue(
     from ..db import session_scope
     from ..gateway.auth import issue_token
     from ..models import User
-    from ..tenancy import system_scope
+    from ..tenancy import bind_session, system_scope
 
     with system_scope("issuing an operator token"), session_scope() as session:
         user = session.scalar(select(User).where(User.email == email))
         if user is None:
             console.print(f"[red]unknown user '{email}'[/]")
             raise typer.Exit(1)
+        # The lookup above has to run unfiltered (that's what system_scope is for —
+        # the recipient's org isn't known yet). Once it is, bind the session to it so
+        # the audit entry `issue_token` records lands in the recipient's own chain
+        # rather than whichever tenant the session happened to default to.
+        bind_session(session, user.org_id)
         token, raw = issue_token(session, user, name=name, ttl_days=days or None)
         summary = {
             "id": token.id,
@@ -70,6 +75,7 @@ def tokens(as_json: bool = typer.Option(False, "--json")) -> None:
 
     from sqlalchemy import select
 
+    from .. import system_log
     from ..db import session_scope
     from ..models import ApiToken, User, utcnow
     from ..tenancy import system_scope
@@ -78,7 +84,8 @@ def tokens(as_json: bool = typer.Option(False, "--json")) -> None:
     rows: list[dict[str, Any]] = []
     with system_scope("listing operator tokens"), session_scope() as session:
         users = {u.id: u for u in session.scalars(select(User))}
-        for token in session.scalars(select(ApiToken).order_by(ApiToken.created_at.desc())):
+        tokens_seen = list(session.scalars(select(ApiToken).order_by(ApiToken.created_at.desc())))
+        for token in tokens_seen:
             expires = token.expires_at
             if expires is not None and expires.tzinfo is None:
                 import datetime as dt
@@ -104,6 +111,18 @@ def tokens(as_json: bool = typer.Option(False, "--json")) -> None:
                     "expires": expires.isoformat() if expires else "never",
                 }
             )
+        # This read has no single tenant to attribute to — it is, by definition, a
+        # view across every one of them — so it goes to the system chain rather than
+        # being silently dropped into whichever tenant the session defaults to (the
+        # thing `operator_log.py` and `system_log.py` both warn against faking).
+        system_log.record(
+            session,
+            "system.tokens.listed",
+            actor="cli",
+            reason="listing operator tokens",
+            subject_type="api_token",
+            extra={"count": len(tokens_seen), "orgs": len({t.org_id for t in tokens_seen})},
+        )
 
     if as_json:
         console.print_json(json.dumps(rows, default=str))
@@ -134,9 +153,18 @@ def revoke(
     """Revoke a token immediately."""
     from ..db import session_scope
     from ..gateway.auth import revoke_token
-    from ..tenancy import system_scope
+    from ..models import ApiToken
+    from ..tenancy import bind_session, system_scope
 
     with system_scope("revoking an operator token"), session_scope() as session:
+        token = session.get(ApiToken, token_id)
+        if token is None:
+            console.print(f"[yellow]{token_id} is unknown or already revoked[/]")
+            raise typer.Exit(1)
+        # Same reasoning as `issue`: the token's own org is known as soon as it is
+        # looked up, so bind to it before recording the revocation, rather than
+        # letting the entry fall back to whichever tenant the session defaults to.
+        bind_session(session, token.org_id)
         if not revoke_token(session, token_id):
             console.print(f"[yellow]{token_id} is unknown or already revoked[/]")
             raise typer.Exit(1)
