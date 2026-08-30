@@ -1,0 +1,29 @@
+{
+  "dataset": "coconot contrast/test (MIT)",
+  "rows": 379,
+  "boundary_answerable_types": [
+    "fact",
+    "aggregate",
+    "procedure"
+  ],
+  "over_refusal_rate": 0.0,
+  "false_positives": 0,
+  "by_category": {
+    "Requests with safety concerns": {
+      "support": 149,
+      "fp": 0,
+      "rate": 0.0
+    },
+    "Incomplete requests": {
+      "support": 148,
+      "fp": 0,
+      "rate": 0.0
+    },
+    "Unsupported requests": {
+      "support": 82,
+      "fp": 0,
+      "rate": 0.0
+    }
+  },
+  "examples": []
+}

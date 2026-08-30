@@ -1,0 +1,265 @@
+{
+  "dataset": "KUQ knowns_unknowns.jsonl (MIT)",
+  "rows": 4782,
+  "boundary_answerable_types": [
+    "fact",
+    "aggregate",
+    "procedure"
+  ],
+  "categories": {
+    "future_unknown": {
+      "support": 659,
+      "recall": 0.39,
+      "tp": 257,
+      "fn": 402,
+      "qtype_distribution": {
+        "fact": 396,
+        "prediction": 257,
+        "aggregate": 6
+      }
+    },
+    "controversial": {
+      "support": 676,
+      "recall": 0.0074,
+      "tp": 5,
+      "fn": 671,
+      "qtype_distribution": {
+        "fact": 653,
+        "procedure": 1,
+        "aggregate": 11,
+        "opinion": 5,
+        "prediction": 6
+      }
+    },
+    "known": {
+      "support": 3447,
+      "over_refusal_rate": 0.009,
+      "tn": 3416,
+      "fp": 31,
+      "qtype_distribution": {
+        "fact": 3208,
+        "aggregate": 207,
+        "prediction": 31,
+        "procedure": 1
+      }
+    }
+  },
+  "examples": {
+    "future_unknown_miss": [
+      {
+        "question": "As the blockchain technology continues to evolve, what unanticipated legal and regulatory challenges will arise in the context of supply chain finance, and how can we develop new frameworks and governance structures to address these challenges while maintaining the benefits of a decentralized, transparent, and secure financial ecosystem?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "How good would your skin look if you used body lotion on dry skin every day for a year?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "How might the integration of design thinking principles into brand strategy impact the future of consumer behavior and preferences in ways that are currently unknown or unpredictable?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "How will the use of digital art in packaging design evolve in the future, and what unforeseen challenges or opportunities might arise as a result of this trend?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "If one child dies with a disease and the parents have another kid, will the other kid get the same disease and die?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "If you try to fail and succeed, which one did you do?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "In the future, how will the evolution of special effects technology change the way filmmakers tell stories and connect with audiences, and what new forms of immersive storytelling might emerge that are currently beyond our imagination?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Is it possible that the  human morphological features may  shrink in future ?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "What if advancements in technology allowed for fabric painting to be done entirely through artificial intelligence and machines, would this lead to a decline in the importance of human creativity and craftsmanship in the art form?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "What if mineral beneficiation became a major priority for governments and companies around the world, would this lead to significant improvements in the social, economic, and environmental impacts of mining activities?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "What if podcasts became the primary medium for storytelling, would this lead to a decline in book publishing?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "What if the use of cannabis in spiritual practices became widely accepted and encouraged, how would this impact the relationship between spirituality and drug use?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "What if women designers outnumbered men in the industry, would this lead to a significant shift in design aesthetics and approaches?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "What is the exact duration of my life?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "What is the last day of the earth?",
+        "classified_as": "fact",
+        "answerable": true
+      }
+    ],
+    "controversial_miss": [
+      {
+        "question": "Are Moms better than Dads?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Are republicans better than democrats?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Can Robot correct excess salt in the recipe?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Can a bus driver drive train?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Can a man legally marry two women?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Can aliens be classified under our existing systematics and taxonomy?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Can animals ever learn to speak a human language?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Can we ever understand the nature of the human mind?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Do all good people go to Heaven?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Do you believe that Joe Biden is too old to be president.",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Does a staircase go up or down?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Does every American deserve the right to vote?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Does fashion have a meaningful impact on literature, enriching and informing the way we interpret characters and themes, or is it a superficial distraction that detracts from deeper literary analysis and interpretation?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Does luck plays an important role in ones life?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "Does pineapple belong on pizza?",
+        "classified_as": "fact",
+        "answerable": true
+      }
+    ],
+    "known_fp": [
+      {
+        "question": "The 2016\u201317 season is the 96th season in the history of CA Osasuna, during the 2016\u201317 season the club will be competing in which league, where the season began on 19 August 2016 and concluded on 21 May 2017?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "How did Apple flourish despite Neal Stephenson's prediction that proprietary software companies would fail?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "What, ultimately, will the sun become?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "What national population is projected (as at 2011) to overtake China in 2020 as the largest in the world?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "The predicted online connectivity of 50 billion smart gadgets by 2020 is called The Internet of?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "Who will be the defending champions in the FIP World Polo Championships in 2015?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "\"What event's results were predicted by a \"\"psychic\"\" octopus?\"",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "What disease is projected to be eradicated worldwide by 2018, thanks to vaccines?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "What was the predicted time of the quake?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "On October 16, 2008, how long did UBS predict the United States' recession would last?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "When Konya Technical University opens, how many total institutes of technology will there be in Turkey and the Ottoman Empire?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "If growth continues as it has, what religion will be the largest in the world by 2050?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "Which religion will have the most followers by the year 2050 if trends continue?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "What will be established in 2023?",
+        "classified_as": "prediction"
+      },
+      {
+        "question": "In what type of organism will the offspring be a genetic copy or clone of the parent organism?",
+        "classified_as": "prediction"
+      }
+    ]
+  }
+}
