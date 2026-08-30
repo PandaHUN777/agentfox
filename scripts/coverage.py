@@ -335,9 +335,15 @@ PROBES: list[Probe] = [
         "Eval runner, CI gating, drift, silent failure, red team",
         "4 Evaluation",
         ["def gate", "class SilentFailureScorer", "def compute", "def run_campaign"],
-        ["class RagasAdapter", "def annotation_queue"],
-        "gate|silent_failure|drift|campaign",
-        "no Ragas adapter, model-based groundedness or annotation queue",
+        ["def score_sample", "class ModelGroundednessScorer", "def annotation_queue"],
+        "gate|silent_failure|drift|campaign|groundedness|ragas",
+        "the 'no Ragas adapter' half of this note was stale: score_sample/score_dataset "
+        "(I-8) were already registered as selectable scorers and callable from the "
+        "runner, not a disconnected integration — the note just never said so. "
+        "Model-based groundedness is now real too (model_groundedness.py, via "
+        "ModelProvider.judge(), the same mechanism LlmJudgeScorer already used), "
+        "alongside the lexical scorer rather than replacing it. An annotation queue "
+        "for human review of borderline eval results is still not built",
     ),
     Probe(
         "P13",

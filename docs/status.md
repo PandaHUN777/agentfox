@@ -14,8 +14,8 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 16 ◐ |
 | **Absent** | 0 ✗ |
 | **Weighted coverage** | **80%** *(partial counts half)* |
-| **Tests** | 1191 |
-| **Lines** | 60,195 (src + tests) |
+| **Tests** | 1196 |
+| **Lines** | 60,294 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -31,9 +31,9 @@ in [traceability.md](traceability.md).
 | `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 40 | cascade analysis is exactly as good as the trigger declarations it is given — an undeclared webhook stays invisible, and shell analysis remains a deny-list rather than a parser |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 16 | OpenFGA adapter is a declared seam, not an implementation |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 55 |  |
-| `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 41 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
+| `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 46 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ◐ partial | 27 | gates the ingestion and assembly path. Semantic chunk-boundary repair and automatic re-extraction of a corrupt document are not built — a finding is reported and the decision to drop the document belongs to the operator |
-| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 41 | no Ragas adapter, model-based groundedness or annotation queue |
+| `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 48 | the 'no Ragas adapter' half of this note was stale: score_sample/score_dataset (I-8) were already registered as selectable scorers and callable from the runner, not a disconnected integration — the note just never said so. Model-based groundedness is now real too (model_groundedness.py, via ModelProvider.judge(), the same mechanism LlmJudgeScorer already used), alongside the lexical scorer rather than replacing it. An annotation queue for human review of borderline eval results is still not built |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ◐ partial | 22 | attributes a failure to the step that originated the value and measures what each handoff dropped. Both work on constraints that were written down — an expectation the human held and never typed is invisible here, and no trace analysis recovers it |
 | `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 17 |  |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 46 |  |

@@ -7,6 +7,7 @@ import pytest
 from nometria.evaluation import evaluate_slos, gate, psi, run_campaign, set_baseline, set_slo
 from nometria.evaluation.drift import ks_statistic
 from nometria.evaluation.gating import to_junit, to_sarif
+from nometria.evaluation.model_groundedness import model_groundedness
 from nometria.evaluation.runner import NativeEvalRunner
 from nometria.evaluation.scorers import ScoreContext, get_scorer
 from nometria.evaluation.silent_failure import (
@@ -16,6 +17,7 @@ from nometria.evaluation.silent_failure import (
     self_consistency,
 )
 from nometria.models import EvalSuite
+from nometria.providers import register_provider
 
 from .conftest import as_user
 
@@ -58,6 +60,103 @@ def test_no_context_is_not_a_failure():
 
 def test_numbers_present_in_context_are_fine():
     assert groundedness("You have 30 days.", CONTEXT).score == 1.0
+
+
+# ---------------------------------------------------------------------------
+# Model-based groundedness — the second opinion `groundedness()` above cannot be,
+# by its own docstring's admission (grounding, not entailment: a paraphrased
+# fabrication scores as fully supported)
+# ---------------------------------------------------------------------------
+
+
+def test_model_groundedness_with_no_context_is_not_a_failure():
+    """Same reading as the lexical scorer: nothing to be grounded against, and
+    nothing a judge could check either."""
+    result = model_groundedness("anything at all here", "")
+    assert result["score"] == 1.0
+
+
+def test_model_groundedness_is_selectable_as_a_scorer():
+    """Registered alongside `groundedness`, not folded into it — an eval suite can
+    run both and see where they disagree."""
+    scorer = get_scorer("model_groundedness")
+    assert scorer is not None
+    result = scorer.score("Refunds are issued to the original payment method.", ctx())
+    assert 0.0 <= result.score <= 1.0
+    assert result.detail["judge_model"] == "echo:deterministic"
+
+
+def test_model_groundedness_uses_the_pinned_offline_judge_by_default():
+    """Offline, the judge is the deterministic `echo` provider — same contract
+    `LlmJudgeScorer` already established, reused rather than reinvented here."""
+    result = model_groundedness("Refunds are issued to the original payment method.", CONTEXT)
+    assert result["judge_model"] == "echo:deterministic"
+    assert "not a substitute for a model judge" in result["rationale"].lower()
+
+
+def test_model_groundedness_delegates_to_a_configured_provider():
+    """The wiring, proven with a fake provider standing in for a real model: the
+    judge's own verdict flows straight through, unmodified."""
+
+    class FakeJudge:
+        key = "fake-judge"
+
+        def available(self):
+            return True
+
+        def supports_native_streaming(self):
+            return False
+
+        def complete(self, request):
+            raise NotImplementedError
+
+        def stream(self, request):
+            raise NotImplementedError
+
+        def judge(self, output, rubric, model="default"):
+            assert CONTEXT in rubric, "the rubric must actually carry the context"
+            return {"score": 0.42, "rationale": "a real model would explain itself here"}
+
+    register_provider(FakeJudge())
+    result = model_groundedness(
+        "Refunds are issued to the original payment method.",
+        CONTEXT,
+        judge_model="fake-judge:v1",
+    )
+    assert result["score"] == 0.42
+    assert result["judge_model"] == "fake-judge:v1"
+    assert "a real model" in result["rationale"]
+
+
+def test_model_groundedness_falls_back_to_lexical_when_the_judge_call_fails():
+    """A scoring signal that can crash an eval run is worse than a weaker one."""
+
+    class BrokenJudge:
+        key = "broken-judge"
+
+        def available(self):
+            return True
+
+        def supports_native_streaming(self):
+            return False
+
+        def complete(self, request):
+            raise NotImplementedError
+
+        def stream(self, request):
+            raise NotImplementedError
+
+        def judge(self, output, rubric, model="default"):
+            raise RuntimeError("judge is down")
+
+    register_provider(BrokenJudge())
+    lexical = groundedness("The refund window is 90 days from purchase.", CONTEXT)
+    result = model_groundedness(
+        "The refund window is 90 days from purchase.", CONTEXT, judge_model="broken-judge:v1"
+    )
+    assert result["judge_model"] == "native-lexical"
+    assert result["score"] == lexical.score
+    assert "judge call failed" in result["rationale"]
 
 
 # ---------------------------------------------------------------------------

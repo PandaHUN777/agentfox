@@ -10,6 +10,7 @@ from .adapters import PromptfooRunner, get_runner
 from .drift import DriftReport, evaluate_slos, ks_statistic, psi, set_slo
 from .drift import compute as compute_drift
 from .gating import GateResult, Regression, gate, set_baseline, to_junit, to_sarif
+from .model_groundedness import ModelGroundednessScorer, model_groundedness
 from .ragas_adapter import (
     RAGAS_METRICS,
     RagasSample,
@@ -59,6 +60,8 @@ __all__ = [
     "get_scorer",
     "groundedness",
     "ks_statistic",
+    "ModelGroundednessScorer",
+    "model_groundedness",
     "psi",
     "redteam",
     "register_scorer",
