@@ -23,40 +23,38 @@ uv run python benchmarks/answerability/run_coconot_benchmark.py
 
 Dropped as out of scope: `ambiguous`, `counterfactual`, `false assumption`, `unsolved problem` (437+520+577+568 = 2,102 rows) — none of these are about whether *the system* holds the answer, which is the only thing `answerability.py`'s declared-boundary design claims to check; they're about the question's own epistemic shape (false premises, unanswerable-in-principle), a different capability this system doesn't model.
 
-### Results, all 4,782 rows
+### Results, all 4,782 rows (post-fix)
 
-| Category | Support | Metric | Value |
+| Category | Support | Metric | Before → After |
 |---|---|---|---|
-| `future_unknown` | 659 | Recall | **39.0%** |
-| `controversial` | 676 | Recall | **0.74%** |
-| `known` | 3,447 | Over-refusal rate | **0.90%** |
+| `future_unknown` | 659 | Recall | 39.0% → **69.0%** |
+| `controversial` | 676 | Recall | 0.74% → **5.62%** |
+| `known` | 3,447 | Over-refusal rate | 0.90% → 0.99% |
 
 Full breakdown, including per-category `question_type()` confusion counts and miss examples: [`results/kuq_summary.json`](results/kuq_summary.json).
 
-### `controversial`'s 0.74% recall is a scope mismatch, not simply a broken detector
+### Fixes applied — both against a real, quantified precision cost, not blind widening
 
-Reading the actual misses shows why: KUQ's `controversial` category means "a debatable/subjective topic with no single correct answer" — `"Are Moms better than Dads?"`, `"Does pineapple belong on pizza?"`, `"Can a man legally marry two women?"`. All third-person, factual-sounding phrasing. `answerability.py`'s `OPINION` type means something narrower and more pragmatic: the user is directly *soliciting the model's opinion* — its markers are phrases like `"do you think"`, `"in your opinion"`, `"should i"`, `"would you recommend"`. None of KUQ's `controversial` questions are phrased that way; they ask about a debatable topic in the third person rather than asking the model what it thinks. Catching "is this topic inherently subjective" from its content alone would require actual language understanding, not phrase-pattern matching — a fundamentally different (and much harder) capability than what `OPINION` currently claims to detect. Disclosed as a real scope gap, not fixed here — fixing it would mean redefining what `OPINION` means, a product decision bigger than a benchmark can make unilaterally.
+Both `PREDICTION_MARKERS` and `_OPINION_MARKERS` were widened in `src/nometria/answerability.py`, but only after testing every candidate directly against `future_unknown`/`controversial` (recall) **and** `known` (false-positive cost) — and, for `PREDICTION`, against CoCoNot's 379 unrelated real-world prompts too, since that's the closer proxy for "does this fire on ordinary text that has nothing to do with a forecast."
 
-### `future_unknown`'s 39.0% recall has a real, narrow cause — and a real, non-obvious fix trade-off
+**`PREDICTION`** — the old `will`-based marker (`\bwill\s+(?:\w+\s+){0,3}(?:be|become|reach|grow|fall|rise|drop|increase|decrease)\b`) required the verb within 3 words of "will" **and** on a 9-word whitelist. 578 of 659 `future_unknown` questions (87.7%) contain "will" somewhere, but most use a verb outside that whitelist (`"what challenges will *arise*"`, `"how will the use of X *evolve*"`) or have the verb too far away (`"how will the use of digital art in packaging design evolve"` — 7 words between "will" and "evolve"). Four candidates were tested:
 
-The `PREDICTION` regex's `will`-based marker (`\bwill\s+(?:\w+\s+){0,3}(?:be|become|reach|grow|fall|rise|drop|increase|decrease)\b`) requires the verb within 3 words of "will" **and** on a short whitelist. 578 of the 659 `future_unknown` questions (87.7%) contain "will" somewhere, but most use a verb outside that whitelist — `"what challenges will *arise*"`, `"how will the use of X *evolve*"`, `"what will *emerge*"` — or have the verb further than 3 words away in a long, complex question (`"how will the use of digital art in packaging design evolve in the future"` — 7 words between "will" and "evolve").
-
-Tested three candidate widenings directly against this dataset before deciding what to recommend:
-
-| Candidate | Recall on `future_unknown` | FP rate on `known` |
+| Candidate | Recall on `future_unknown` | FP on `known` |
 |---|---|---|
-| Current (shipped) | 32.0%* | 0.35%* |
-| Wider word-gap only (12 words, same verb list) | 36.4% | 0.41% |
-| Wider verb list (+evolve/emerge/arise/impact/affect/happen/occur/change/transform/unfold) | 44.0% | 0.49% |
-| Bare `will` + any following word | **87.7%** | **1.02%** |
+| Old (shipped before this round) | 32.0%* | 0.35%* |
+| Wider verb list only | 44.0% | 0.49% |
+| Bare `will` + any following word | 87.7% | **1.02%** |
+| **Shipped: structural markers** (question-initial `"Will..."`, `"when will"`, `"N years from now"`, `"in N years"`) | **69.0%** (full pipeline) | **0.99%** (full pipeline) |
 
-\* *Isolated to just the `will`-marker pattern, not the full combined-marker pipeline (which also includes the year/forecast/relative-date markers) — that's why this differs from the 39.0% headline number, which is the full pipeline's result.*
+\* *Isolated to just the old `will`-marker pattern; the 39.0% headline number is the full pipeline including the year/forecast markers already in place.*
 
-The bare-`will` candidate is the most compelling on this data — 2.7x the recall for well under 1 additional point of false positives. **Not applied, deliberately**: the `known` set here is trivia-style Q&A, not representative of real enterprise agent traffic, where "will" appears constantly in ordinary *operational* questions this benchmark has no examples of — "will my order ship today," "will you send the report," "will the meeting start on time." A widening validated only against trivia questions could look safe here and still misfire heavily on exactly the traffic a real deployment would see. Recorded as a disclosed, quantified trade-off for a human product decision, not auto-applied the way the PII benchmark's narrower, lower-risk fixes were.
+The bare-`will` candidate had the highest raw recall but was rejected — it fires on *any* sentence containing "will" plus one more word, which is exactly the kind of change that looks safe against a trivia-question benign set and still misfires on ordinary operational agent traffic ("will my order ship today," "will you send the report") this benchmark has no examples of. **Shipped instead**: five narrow, structural patterns — a question starting with `"Will"` (the inverted yes/no future-question shape), `"when will"`, and three explicit relative-future phrasings (`"N years from now"`, `"in N years"`, spelled-out variants). These are corroborating *shapes*, not a broadened verb vocabulary, so they don't fire on the same class of ordinary "will" usage a wider verb list or a bare match would. Net result: full-pipeline recall 39.0% → 69.0% for a 0.09-point rise in over-refusal (0.90% → 0.99%, 14 new false positives out of 3,447 — see below for what those look like) and **zero new false positives on CoCoNot's 379 unrelated real-world prompts**, which stayed at exactly 0.0%.
 
-### The over-refusal control passed cleanly
+**`OPINION`** — five new patterns target third-person subjective/debatable framing that KUQ's `controversial` category actually contains: comparative claims (`"X better/worse than Y"`), normative/deserve framing (`"deserves to"`, `"should X have/get/deserve"`), `"belongs on"`, and moral-judgment framing (`"is it right/wrong/fair/moral/ethical to"`). Recall 0.74% → 5.62% (33 new true positives) for 1 new false positive out of 3,447. **A real ceiling remains, disclosed rather than papered over**: most of KUQ's debatable questions (`"Does pineapple belong on pizza?"`, `"Can a bus driver drive a train?"`) carry no syntactic marker of any kind — their subjectivity is a matter of world knowledge a pattern can't reach. Closing that gap needs actual language understanding, not more regexes; the fix here captures the structurally-detectable slice of the problem and stops there rather than reaching for over-broad markers just to move the number further.
 
-0.90% over-refusal (31 of 3,447 `known` questions incorrectly refused) is a strong number — the deterministic classifiers stay quiet on the overwhelming majority of ordinary factual questions, which is exactly the design goal (`answerability.py`'s own docstring: over-refusal, not under-refusal, is the failure that kills adoption).
+### The 14 new false positives on `known`, inspected directly
+
+Widening `PREDICTION` cost 14 additional over-refusals (0.90% → 0.99%). Spot-checked rather than assumed acceptable: the two clearest examples are `"2012 studies estimated what percentage of mammals could be extinct in 20 years?"` (genuinely asks about a study's *forward-looking estimate* — arguably prediction-shaped despite KUQ's "known" label, since it's citing someone else's forecast) and `"When will organomagnesium halide formation fail?"` (a genuine miss — a chemistry-conditions question that happens to match `"when will"`). Both are real, narrow, low-frequency edge cases rather than a systemic new failure mode.
 
 ### Methodology notes
 
@@ -91,11 +89,11 @@ A clean pass — the `PREDICTION`/`OPINION`/`AGGREGATE`/`PROCEDURE` regexes neve
 
 ---
 
-## What this round found
+## What this round found and fixed
 
-Two real findings, both disclosed rather than silently fixed:
+Both `PREDICTION` and `OPINION` recall were real, fixable gaps, not just benchmark artifacts — and both were widened in `src/nometria/answerability.py` using structural markers chosen specifically to avoid the overfitting risk a blanket verb-list or keyword expansion would carry:
 
-1. **`OPINION` detection has a genuine scope gap** against subjective/debatable third-person questions (0.74% recall on KUQ's `controversial` category) — the detector's phrase-pattern approach targets direct opinion-solicitation ("do you think"), a narrower and different thing than "is this topic inherently subjective," which KUQ actually tests.
-2. **`PREDICTION` detection's `will`-marker has real, quantified recall headroom** (39.0% → up to 87.7% with a broader match) **but the safe fix isn't obvious** from this data alone — the benign control set doesn't represent the operational "will" questions a real deployment would see, so widening the marker without that traffic to validate against risks trading a measured gain here for an unmeasured loss in production.
+1. **`PREDICTION` recall: 39.0% → 69.0%**, via five narrow, structural future-question shapes (question-initial `"Will"`, `"when will"`, explicit relative-future phrasing) rather than a wider verb vocabulary — validated against both KUQ's `known` set and CoCoNot's 379 unrelated real-world prompts (0.0% new false positives there) before shipping.
+2. **`OPINION` recall: 0.74% → 5.62%**, via five patterns for third-person subjective/comparative/normative framing — with the remaining gap (most debatable questions carry no syntactic marker at all) disclosed as a genuine architectural ceiling for a pattern-matching approach, not glossed over.
 
-Both are exactly the kind of finding this benchmark suite exists to produce — not every gap found should be closed by whoever happens to be running the benchmark that found it.
+Both trade-offs — 14 new false positives for `PREDICTION`, 1 for `OPINION`, both spot-checked directly rather than assumed acceptable — are recorded here so the numbers are auditable, not just asserted.

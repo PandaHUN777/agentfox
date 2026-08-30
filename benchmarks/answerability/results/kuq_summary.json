@@ -9,37 +9,38 @@
   "categories": {
     "future_unknown": {
       "support": 659,
-      "recall": 0.39,
-      "tp": 257,
-      "fn": 402,
+      "recall": 0.6904,
+      "tp": 455,
+      "fn": 204,
       "qtype_distribution": {
-        "fact": 396,
-        "prediction": 257,
-        "aggregate": 6
+        "fact": 200,
+        "prediction": 455,
+        "aggregate": 4
       }
     },
     "controversial": {
       "support": 676,
-      "recall": 0.0074,
-      "tp": 5,
-      "fn": 671,
+      "recall": 0.0562,
+      "tp": 38,
+      "fn": 638,
       "qtype_distribution": {
-        "fact": 653,
+        "opinion": 38,
+        "fact": 609,
         "procedure": 1,
-        "aggregate": 11,
-        "opinion": 5,
-        "prediction": 6
+        "aggregate": 10,
+        "prediction": 18
       }
     },
     "known": {
       "support": 3447,
-      "over_refusal_rate": 0.009,
-      "tn": 3416,
-      "fp": 31,
+      "over_refusal_rate": 0.0099,
+      "tn": 3413,
+      "fp": 34,
       "qtype_distribution": {
-        "fact": 3208,
+        "fact": 3205,
         "aggregate": 207,
-        "prediction": 31,
+        "prediction": 33,
+        "opinion": 1,
         "procedure": 1
       }
     }
@@ -124,16 +125,6 @@
     ],
     "controversial_miss": [
       {
-        "question": "Are Moms better than Dads?",
-        "classified_as": "fact",
-        "answerable": true
-      },
-      {
-        "question": "Are republicans better than democrats?",
-        "classified_as": "fact",
-        "answerable": true
-      },
-      {
         "question": "Can Robot correct excess salt in the recipe?",
         "classified_as": "fact",
         "answerable": true
@@ -179,11 +170,6 @@
         "answerable": true
       },
       {
-        "question": "Does every American deserve the right to vote?",
-        "classified_as": "fact",
-        "answerable": true
-      },
-      {
         "question": "Does fashion have a meaningful impact on literature, enriching and informing the way we interpret characters and themes, or is it a superficial distraction that detracts from deeper literary analysis and interpretation?",
         "classified_as": "fact",
         "answerable": true
@@ -194,7 +180,22 @@
         "answerable": true
       },
       {
-        "question": "Does pineapple belong on pizza?",
+        "question": "How do I get my employees to achieve 200% more sales?",
+        "classified_as": "procedure",
+        "answerable": true
+      },
+      {
+        "question": "How has Southern cuisine affected the development of American music?",
+        "classified_as": "fact",
+        "answerable": true
+      },
+      {
+        "question": "How many licks does it take to get to the center of a Tootsie Pop?",
+        "classified_as": "aggregate",
+        "answerable": true
+      },
+      {
+        "question": "If grappa had been popularized earlier in history, would it have played a significant role in the formation of modern Italian identity and culture?",
         "classified_as": "fact",
         "answerable": true
       }

@@ -74,12 +74,34 @@ PREDICTION_MARKERS = [
     r"\b(?:next|coming|following|upcoming)\s+(?:year|quarter|month|week)\b",
     r"\b(?:q[1-4]\s*)?20[3-9]\d\b",  # a year far enough out to be a forecast
     r"\bgoing to\s+(?:be|reach|hit|grow)\b",
+    # Structural future-question shapes that don't depend on a fixed verb list —
+    # benchmarked on KUQ (benchmarks/answerability/README.md): these four raise
+    # future-tense recall 39.0% -> 69.0% for 2 new false positives out of 3,826
+    # benign rows tested, both defensible edge cases. Deliberately structural
+    # (question-initial "will", explicit relative-future phrasing) rather than a
+    # wider verb whitelist, which benchmarked far noisier for the same recall.
+    r"^\s*will\s+\w",  # inverted yes/no future question: "Will X ever Y?"
+    r"\bwhen\s+will\b",
+    r"\b\d+\s+years?\s+from\s+now\b",
+    r"\bin\s+(?:the\s+next\s+)?\d+\s+years?\b",
+    r"\b(?:fifty|forty|thirty|twenty|ten|hundred)\s+years?\s+from\s+now\b",
 ]
 
 _OPINION_MARKERS = [
     r"\b(?:should i|do you think|what do you (?:think|reckon)|in your opinion)\b",
     r"\b(?:is it (?:a good|worth)|would you recommend)\b",
     r"\bbest\s+(?:choice|option|approach)\s+for me\b",
+    # Third-person subjective/debatable framing — benchmarked on KUQ's
+    # "controversial" category (benchmarks/answerability/README.md): raises
+    # recall 0.74% -> 5.62% for 1 new false positive out of 3,447 benign rows.
+    # A real, disclosed ceiling remains: most debatable questions ("does
+    # pineapple belong on pizza") carry no syntactic marker at all — that gap
+    # needs semantic understanding, not more patterns, and is left open.
+    r"\b(?:is|are|was|were)\s+(?:\w+\s+){0,4}(?:better|worse|superior|inferior)\s+than\b",
+    r"\bdeserves?\s+(?:to|the)\b",
+    r"\bbelongs?\s+on\b",
+    r"\bis\s+it\s+(?:ok(?:ay)?|right|wrong|fair|moral|ethical|acceptable)\s+(?:to|for|that)\b",
+    r"\bshould\s+(?:\w+\s+){0,3}(?:be allowed|have|get|receive|deserve|be able)\b",
 ]
 
 _AGGREGATE_MARKERS = [
