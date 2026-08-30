@@ -80,6 +80,7 @@ from .guardrails import (
 from .guardrails.actions import analyse_arguments
 from .guardrails.actions import summarise as summarise_actions
 from .guardrails.base import taint_rank
+from .guardrails.composition import check_composed_escalation
 from .guardrails.taint import _flatten
 from .guardrails.tuning import (
     LatencyLedger,
@@ -293,6 +294,7 @@ class Enforcer:
         tool_key: str | None = None,
         arguments: dict[str, Any] | None = None,
         argument_taint: dict[str, str] | None = None,
+        argument_propagated_from: dict[str, str] | None = None,
         intent: str | None = None,
         schema: dict[str, Any] | None = None,
         prior_tools: list[str] | None = None,
@@ -524,6 +526,41 @@ class Enforcer:
                     "severity": "critical",
                     "controls": ["NOM-RTG-09"],
                     "evidence": risk.get("evidence", {}),
+                }
+            )
+
+        # P9-11/F3.8: a read tool's output flowing into a higher-impact tool's
+        # argument is a composed escalation neither tool's own scope permits
+        # alone — a fact about this call's inputs, not a policy opinion, so it
+        # stands on its own exactly like the critical-action-risk check above.
+        composition_findings = (
+            check_composed_escalation(
+                consuming_tool_key=tool_key,
+                consuming_tool_impact=tool_impact,
+                argument_propagated_from=argument_propagated_from or {},
+                tool_impact_lookup=lambda key: self.session.scalar(
+                    select(Tool.impact).where(Tool.key == key)
+                ),
+            )
+            if tool_key
+            else []
+        )
+        taint_summary["composition"] = [f.to_json() for f in composition_findings]
+        for finding in composition_findings:
+            rule_id = f"composition.escalation.{finding.argument_path}"
+            if rule_id in fired_ids:
+                continue
+            verdict = "block"
+            effective = "block"
+            fired_ids.add(rule_id)
+            rules_fired.append(
+                {
+                    "rule_id": "composition.escalation",
+                    "effect": "block",
+                    "reason": finding.reason,
+                    "severity": "critical",
+                    "controls": ["NOM-RTG-09"],
+                    "evidence": finding.to_json(),
                 }
             )
 
@@ -795,6 +832,11 @@ class Enforcer:
         tracker = tracker or TaintTracker(trace_id=trace.id if trace else None)
         marks = tracker.taint_arguments(arguments, provenance)
         argument_taint = {path: mark.source for path, mark in marks.items()}
+        # F3.8: which arguments were inferred (not caller-declared) from an
+        # earlier tool's result, and which tool that was — see composition.py.
+        argument_propagated_from = {
+            path: mark.propagated_from for path, mark in marks.items() if mark.propagated_from
+        }
 
         if trace:
             for path, mark in marks.items():
@@ -823,6 +865,7 @@ class Enforcer:
             tool_key=tool_key,
             arguments=arguments,
             argument_taint=argument_taint,
+            argument_propagated_from=argument_propagated_from,
             intent=intent,
             prior_tools=prior_tools,
             tracker=tracker,

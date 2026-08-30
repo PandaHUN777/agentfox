@@ -48,8 +48,9 @@ covered **1 of 50 failure modes outright** on 2026-08-18; a re-audit now finds *
 against a taxonomy that grew to 57 catalogued modes (a seventh family, F8 context/retrieval
 integrity, was added from the PRD), 3 partial, **11 built-but-not-wired** (all of F6 plus all of
 F8 except F8.3 — F8 has the same "built, not called from a live request" problem as F6, just
-less visible since it's reachable through a separate opt-in endpoint), and 3 genuinely still
-absent (F3.8, F7.7, F8.3). A separate, independent audit also found **5 more failure modes no
+less visible since it's reachable through a separate opt-in endpoint), and, as of 2026-08-30
+(F3.8 composed privilege escalation built — see failure-modes.md), 2 genuinely still
+absent (F7.7, F8.3). A separate, independent audit also found **5 more failure modes no
 version of this taxonomy had ever catalogued** — see failure-modes.md's F9. A study of 10,000+
 failure events found **<10% are hallucination-related**, while **31.1% are escalation/resolution
 breakdowns** and execution/action failures are **up 62%** — those two categories (F5 escalation,
@@ -334,7 +335,7 @@ What a Tier-B/C buyer will require before signing, and our status. Updated 2026-
 
 1. **Wire the stub-only modules** — `agent_loop.py`, `jobs.py`, `availability.py`'s rate limiter/fail-policy, all of F6's `commitments.py`/`register.py`, and all of F8's `context_integrity.py`. This is the single highest-leverage remaining item in this whole document — the logic exists and is tested for eleven separate failure modes across F6 and F8, it just isn't called from anywhere a live request passes through.
 2. **Start the SOC 2 / ISO 27001 / pentest clock.** Still the longest pole, still entirely organisational, still unstarted.
-3. **Close the three genuinely absent failure modes** (F3.8 composed privilege escalation, F7.7 cross-turn self-contradiction, F8.3 stale index) — real, scoped, moderate-effort builds, not XL.
+3. **Close the two remaining genuinely absent failure modes** (F7.7 cross-turn self-contradiction, F8.3 stale index) — real, scoped, moderate-effort builds, not XL. F3.8 composed privilege escalation, previously third on this list, was built 2026-08-30 (`guardrails/composition.py`) — see failure-modes.md.
 4. **Build the five modes an independent audit found that this taxonomy never catalogued** — failure-modes.md's F9 (invalid logical inference, sycophancy, non-English quality parity, crescendo manipulation, context stuffing), each with a concrete detection design that reuses already-wired infrastructure.
 5. **Decide on Salesforce/ServiceNow/M365 estate connectors** — the one remaining Tier 2 gap that's a real, if large, build rather than organisational work or a wiring fix.
 

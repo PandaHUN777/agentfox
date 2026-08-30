@@ -2,7 +2,7 @@
 
 One entry per capability area. Each links to a self-contained directory with its own fetch/run scripts, committed data, committed results, and a README that reports numbers, methodology, and — where they exist — fixes applied with before/after tables. Every number in every subdirectory comes from a script anyone can run themselves; none are asserted.
 
-**Not every capability area has a "recall/precision" benchmark, and that's disclosed rather than hidden.** Three areas here (F2, F4, F3.8) turned out to have a real, investigated reason a standard labeled-dataset benchmark doesn't apply — a declared/registry-based mechanism with no automatic-classifier dataset to score it against, or a genuine product gap with no code yet to benchmark. Each says so directly rather than forcing a number that would misrepresent either the dataset or the product.
+**Not every capability area has a "recall/precision" benchmark, and that's disclosed rather than hidden.** Two areas here (F2, F4) turned out to have a real, investigated reason a standard labeled-dataset benchmark doesn't apply — a declared/registry-based mechanism with no automatic-classifier dataset to score it against. Each says so directly rather than forcing a number that would misrepresent either the dataset or the product. F3.8 started the same way (no dataset tests the specific failure mode) but, unlike F2/F4, the underlying gap was genuinely closeable — a new detection module was built and tested directly instead of only being documented as absent.
 
 | Area | Directory | Status | Headline |
 |---|---|---|---|
@@ -14,12 +14,12 @@ One entry per capability area. Each links to a self-contained directory with its
 | F2 — source authority & provenance | [`source_authority/`](source_authority/README.md) | **Investigated, not benchmarkable** | Mechanism is declared/registry-based; all 3 sourced datasets (HALLMARK, CRED-1, ALCE) test a different, automatic-classifier capability the product doesn't implement |
 | F4 — entitlement & disclosure control | [`entitlement/`](entitlement/README.md) | Self-constructed scenario benchmark | Purpose-limitation check: 100% recall / 0% FP across 493 real PrivacyLens vignettes — a mechanical-correctness check, not a classifier stress test; read the caveat before citing this number |
 | Secrets detection | [`secrets/`](secrets/README.md) | **Investigated, blocked on access** | Both sourced datasets (CredData, SecretBench) need a human license call or an author data-agreement — neither completable same-day |
-| F3.8 — composed privilege escalation | [`composed_privilege_escalation/`](composed_privilege_escalation/README.md) | **Scoped, not built** | The one sourced dataset (InjecAgent) tests a different failure mode; F3.8 needs new cross-tool data-flow tracking, which is product work, not a benchmark |
+| F3.8 — composed privilege escalation | [`composed_privilege_escalation/`](composed_privilege_escalation/README.md) | **Built** | New `guardrails/composition.py` (P9-11) detects a read tool's output flowing into a write tool's argument, using the taint tracker's existing provenance. 11 tests (unit + end-to-end), no labeled dataset exists to score precision/recall against |
 
 ## Reading this table honestly
 
 - **"Benchmarked" rows** score existing code against a public dataset's own independently-authored ground truth — the strongest form of evidence in this list.
 - **The F4 row is a self-constructed scenario benchmark**, not a labeled-dataset score — real content, mechanically-derived scenarios. Its 100%/100% result is expected-by-construction, not a stress-test finding; see `entitlement/README.md` for exactly what it does and doesn't establish.
-- **The three "investigated"/"scoped" rows are real findings, not gaps in effort.** Each required fetching and directly inspecting the candidate dataset's actual schema before concluding it didn't fit — the same discipline that caught (and then fixed) real precision problems everywhere else in this table.
+- **The "investigated" rows (F2, secrets) are real findings, not gaps in effort.** Each required fetching and directly inspecting the candidate dataset's actual schema before concluding it didn't fit (or, for secrets, before confirming a genuine licensing/access blocker) — the same discipline that caught (and then fixed) real precision problems everywhere else in this table. F3.8 is a different outcome from the same discipline: the dataset didn't fit, but the code gap it surfaced turned out to be closeable, and was closed.
 
 See `docs/dataset-sourcing.md` for the original research this build-out worked through, and `docs/failure-modes.md` / `docs/gap-analysis.md` for how these findings map onto the product's own tracked capability status.

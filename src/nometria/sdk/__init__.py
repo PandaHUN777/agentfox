@@ -98,8 +98,23 @@ class AgentSession:
         self.tracker.mark(marker, "retrieved", text)
         return TaggedContent(text=text, source="retrieved", path=marker)
 
-    def tool_result(self, text: str, path: str | None = None) -> TaggedContent:
-        marker = path or f"$.tool_result[{len(self.tracker.marks)}]"
+    def tool_result(self, text: str, path: str | None = None, tool: str | None = None) -> TaggedContent:
+        """Tag a tool's raw output as untrusted.
+
+        ``tool`` names the *producing* tool (its registered `Tool.key`) so a later
+        call whose argument matches this output can be checked for composed
+        privilege escalation (F3.8, `guardrails/composition.py`) — an argument
+        value traced back to a lower-impact tool's result, now feeding a
+        higher-impact one. Omit it and the content is still tainted as before;
+        it just can't be checked against that specific failure mode, since
+        nothing then names which tool produced it.
+        """
+        if path:
+            marker = path
+        elif tool:
+            marker = f"tool:{tool}#{len(self.tracker.marks)}"
+        else:
+            marker = f"$.tool_result[{len(self.tracker.marks)}]"
         self.tracker.mark(marker, "tool_result", text)
         return TaggedContent(text=text, source="tool_result", path=marker)
 
