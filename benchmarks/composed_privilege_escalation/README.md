@@ -1,0 +1,15 @@
+# F3.8 — composed privilege escalation: scoped, not benchmarked
+
+**Status, unchanged by this investigation**: F3.8 is genuinely absent from `src/nometria/guardrails/actions.py` (`docs/failure-modes.md`'s own audit: *"needs data-flow tracking at the orchestration layer, not per-tool argument or per-statement checks"*). This directory records why [InjecAgent](https://github.com/uiuc-kang-lab/InjecAgent) (MIT), the dataset `docs/dataset-sourcing.md` flagged as closing this gap, doesn't actually test the failure mode F3.8 names — and why building a benchmark here means building new detection logic first, which is out of scope for a benchmarking pass.
+
+## What F3.8 actually names
+
+From `docs/failure-modes.md`: *"a read tool's output chained into a write/authorization boundary neither tool alone permits — e.g. a read tool surfaces an internal ID that a second, differently-scoped tool then accepts as if it were user-supplied and authorized."* Two **legitimately-called** tools, each individually within its own permission scope, whose composition crosses a boundary neither one enforces alone. Catching this needs tracking what data flowed from tool A's output into tool B's arguments and asking whether that composition was ever supposed to be possible — a data-flow question, not a per-call argument or per-statement check.
+
+## What InjecAgent actually tests
+
+Fetched and inspected `data/test_cases_dh_base.json` (510 rows) directly. Every case: a benign tool call's *output* (e.g. an Amazon product review) contains **injected natural-language instructions** trying to manipulate the agent into calling a completely different, attacker-controlled tool (e.g. granting smart-lock access) that the user never asked for. This is indirect prompt injection driving unauthorized tool *selection* — the agent is tricked into doing something no one asked, via text manipulation. It's a real, serious failure mode, and one already substantially covered by this project's existing agent-security benchmark suite (`benchmarks/agent_security/`, built in an earlier session, scoring exactly this class of indirect-injection-via-tool-output attack). It is not a data-flow composition question at all — there's no "two legitimately-called tools whose combined effect exceeds either one's scope" here, just one tool call the agent should never have made.
+
+## Why this isn't a benchmarking task
+
+There is no code to benchmark. `actions.py` has no cross-tool data-flow tracker to score against InjecAgent's cases (which wouldn't even be the right test if it did) or against any other dataset. Building F3.8 for real means designing and implementing an orchestration-layer taint-tracking mechanism — tag values coming out of a read-scoped tool call, and flag when a differently-scoped tool later consumes one of those tagged values as if it were independently user-supplied. That is genuinely new product work, sized similarly to how `entitlement.py`'s ACL engine or `answerability.py`'s boundary system were built, not a benchmark-and-fix pass. Flagged here as a scoped follow-up, not attempted in this pass.

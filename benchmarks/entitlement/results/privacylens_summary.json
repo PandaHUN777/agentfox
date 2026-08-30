@@ -1,0 +1,22 @@
+{
+  "dataset": "PrivacyLens main_data.json (MIT) \u2014 self-constructed scenario benchmark",
+  "rows": 493,
+  "skipped": 0,
+  "positive_case": {
+    "description": "disclosure requested through the vignette's own (different) transmission channel \u2014 should be withheld",
+    "support": 493,
+    "tp": 493,
+    "fn": 0,
+    "recall": 1.0
+  },
+  "negative_case": {
+    "description": "disclosure requested for the resource's own declared original purpose \u2014 should be allowed",
+    "support": 493,
+    "tn": 493,
+    "fp": 0,
+    "false_positive_rate": 0.0
+  },
+  "precision": 1.0,
+  "positive_miss_examples": [],
+  "negative_miss_examples": []
+}
