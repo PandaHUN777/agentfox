@@ -1,6 +1,6 @@
 # Nometria: A Governance Control Plane for AI Agents, and What We've Proven About It
 
-**Date:** 2026-08-29 · **Status:** first edition.
+**Date:** 2026-08-29, updated 2026-08-31 · **Status:** first edition, revised — added PII detection (§4.2), destructive-action/blast-radius (§4.4), and entitlement (§4.5) benchmark results once those datasets were built; F1 answerability is intentionally not cited with a benchmark number here (see §4.6) because its strongest measured category doesn't clear this document's own 65%-precision-and-recall bar — full numbers, not filtered, are in [`benchmarks/answerability/README.md`](../benchmarks/answerability/README.md).
 
 **How to read this document:** it's organized around the product, not around benchmark runs. For every capability, we say what it does, why it matters, how we know it works, and how it differs from what else is on the market. The rule we hold ourselves to throughout: every number we cite as "benchmarked" has a public, licensed dataset and a script anyone can re-run — link included.
 
@@ -44,7 +44,18 @@ Each entry below follows the same shape: what the capability does and why it's t
 
 **Vendor context, not our score:** [Lakera's PINT benchmark](https://github.com/lakeraai/pint-benchmark) reports named-vendor numbers (Lakera Guard 95.2%, AWS Bedrock Guardrails 89.2%, Azure Prompt Shield 89.1%) but its dataset was never public and the repo is now archived — we can't reproduce a PINT score, so we don't claim one. Not directly comparable to our own numbers (different dataset, self-reported); cited only so a reader has market context.
 
-### 4.2 Agent-runtime security — structural attacks a text scanner can't see
+### 4.2 PII detection
+
+**What it does.** Two detectors — a regex-only, jurisdiction-aware engine (US/UK/EU/India) and a wrapper around Microsoft Presidio's NER-based recognizers — scan content for personal data. The two are complementary: regex catches well-structured, format-constrained identifiers (email, IBAN, SSN) at near-parity with Presidio; Presidio's NER model is what catches names and locations in free text, which no regex can.
+
+**Benchmarked against three independent datasets** — synthetic short-sentence text, dense multilingual financial documents, and real European Court of Human Rights case law — after two rounds of fixes driven by reading actual false positives rather than trusting the aggregate percentage (a `US_SSN` score-gate, a taxonomy fix separating a birthdate-specific detector from Presidio's generic date recognizer, and others). We're reporting only the results that clear a 65%/65% precision-and-recall bar here, honestly labeled by which policy configuration reached it — the shipped default policy deliberately trades recall on noisy categories (`PERSON`/`LOCATION`/`DATE_TIME`) for precision, so it doesn't clear this bar on its own, and we're not hiding that:
+
+- **Real ECHR case law (TAB dataset, 127 real judgments), full policy: 83.6% precision / 86.9% recall.** The strongest result of the three — coherent single-language legal prose is closer to what a general-purpose NER model was trained on than templated or dense multilingual synthetic text.
+- **Synthetic sentence dataset (presidio-research, 1,500 rows), full policy: 65.2% precision / 75.6% recall.**
+
+Well-structured identifier types (`EMAIL`, `IBAN`, `IP_ADDRESS`) hold 90%+ precision and recall regardless of dataset or language and are not separately broken out here. Full per-dataset numbers, including where the default policy and a multilingual financial-document dataset fall short of this bar and why, are reported without the filter in [`benchmarks/pii/README.md`](../benchmarks/pii/README.md) — we'd rather a reader see the honest full picture there than infer we're hiding a weaker number by omitting it entirely.
+
+### 4.3 Agent-runtime security — structural attacks a text scanner can't see
 
 **What it does and why it's different.** A stateless text scanner (LLM Guard and everything built on the same pattern) evaluates one string at a time, with no memory of the conversation and no visibility into tool-call structure. This is a real, useful control, but it has no axis at all for state, tool-call structure, or capability enforcement. We built and benchmarked four tiers specifically to cover what that architecture structurally cannot: multi-turn payload splitting, indirect injection via tool output, tool-parameter exploitation, and excessive-agency/privilege escalation.
 
@@ -61,47 +72,51 @@ Full methodology: [`benchmarks/agent_security/README.md`](../benchmarks/agent_se
 
 **Real insight this surfaced:** a poisoned tool result that a follow-up tool call tries to act on is caught independent of whether the content-level detector fires on the poisoned text at all — the follow-up call is separately gated because its argument's *provenance* (tool output, not user input) triggers a human-oversight escalation on its own. This is the taint-tracking USP from Section 3 made concrete, not just asserted: a stateless scanner has no mechanism to gate a subsequent, separate tool call based on where an earlier piece of content came from.
 
-### 4.3 Destructive-action & blast-radius analysis (database and irreversible-action safety)
+### 4.4 Destructive-action & blast-radius analysis (database and irreversible-action safety)
 
 **What it does and why it matters.** Deterministic parsing (not an LLM checking its own SQL) of generated database statements and tool calls — classifying operation type, targets, estimated affected rows, reversibility, and environment — with policy expressed on blast radius rather than argument values. This is the control aimed directly at incidents like the 1.9M-row production wipe named in Section 2. Live on the enforcement path (`guardrails/actions.py`, wired into `enforcement.py`): tautology-as-unbounded-`WHERE` detection, comment/stacked-statement evasion, environment binding, state-verification preconditions.
 
-**One mode still genuinely open:** composed privilege escalation — a read tool's output feeding a second tool's authorization boundary in a way neither tool alone permits. Nothing today tracks cross-tool data flow at the orchestration layer to catch this; it's named as a real, scoped gap, not rounded off.
+**Benchmarked.** Destructive-SQL classification against [`gretelai/synthetic_text_to_sql`](https://huggingface.co/datasets/gretelai/synthetic_text_to_sql) (Apache-2.0): **100% accuracy, precision and recall** on the held-out split across all four tested categories (real DML/DDL, and adversarial unbounded/tautology variants), ground-truthed against an independent third-party SQL parser rather than the product's own verdict. The generic argument-scope backstop (catches wildcard-scope values and SQL-injection fragments arriving through *unnamed* fields, not just declared SQL fields) scores **89.3% recall / 100% precision** against [payload-box's SQL-injection payload list](https://github.com/payload-box/sql-injection-payload-list) (MIT) after two rounds of directed fixes. Full methodology: [`benchmarks/action_safety/README.md`](../benchmarks/action_safety/README.md).
 
-### 4.4 Entitlement & disclosure control
+**Composed privilege escalation — closed this cycle, not yet independently benchmarked.** A read tool's output feeding a second tool's authorization boundary in a way neither tool alone permits (e.g. an internal ID a read call surfaces, then reused by a write call as if it were user-supplied and authorized) is now detected by reusing the existing argument-provenance taint tracker against each tool's declared impact tier — no dataset exists yet to score precision/recall against this specific failure shape, so it's verified via unit and end-to-end tests rather than a benchmark number. Named plainly rather than rounded off into the benchmarked claim above.
+
+### 4.5 Entitlement & disclosure control
 
 **What it does and why it matters.** Propagates the actual end-user's identity through retrieval and tool calls, and checks that a response only contains what *that specific person* is entitled to see — not what the agent's own service identity can reach. This is the exact failure named in Section 2's Copilot incident: every permission check passing while the wrong human still sees everything. Real and live on the enforcement path (`entitlement.py`, `tenancy.py`), including cross-tenant isolation enforced structurally at the session level rather than per-query.
 
-### 4.5 Answerability & abstention
+**Benchmarked — a different, more modest kind of evidence than Sections 4.1–4.4.** Purpose-limitation enforcement (`filter_retrieval`, GDPR Art. 5(1)(b)) scores **100% recall / 0% false-positive rate across 493 real, human-authored [PrivacyLens](https://github.com/SALT-NLP/PrivacyLens) vignettes** — real over-sharing scenario content, but a mechanically-constructed test (grant one purpose, request another) rather than a labeled dataset's own ground truth. A correctly-built purpose check was always going to score this way; the real evidence is that it holds across 493 genuinely varied real-world purpose strings without a collision or a wrapper bug. Full caveat and methodology: [`benchmarks/entitlement/README.md`](../benchmarks/entitlement/README.md).
+
+### 4.6 Answerability & abstention
 
 **What it does.** A declared knowledge boundary per agent — which systems it can reach, what time range, which question types are answerable — with a pre-flight classifier that routes unanswerable questions to abstention *before* generation, rather than letting the model invent an answer.
 
 **Why this is a real gap in the market, not a manufactured one:** academic research (AbstentionBench, 35k+ unanswerable queries across 20 datasets) finds that reasoning fine-tuning often makes newer models *worse* at knowing when to say "I don't know" — this is getting worse, not better, as models improve on other axes. All 6 named failure modes are unit-tested and live on the enforcement path (`answerability.py`).
 
-### 4.6 Source authority & provenance
+### 4.7 Source authority & provenance
 
 **What it does.** Every retrieved chunk carries a source tier (system-of-record / approved / unverified / external), freshness, and owner — turning "the answer is grounded in the retrieved context" (a lab metric every RAG eval tool measures) into "the retrieved context was itself authoritative" (the question that actually matters to a business). Citation binding checks that a material claim maps to a chunk that actually supports it. Real, live (`provenance.py`), all 6 modes unit-tested.
 
-### 4.7 Escalation governance
+### 4.8 Escalation governance
 
 **What it does.** Per-agent escalation policy (conditions that must trigger human hand-off), counterfactual detection ("this should have escalated and didn't"), context-complete hand-off packages, and owner + SLA tracking on the resulting queue. This is the single largest category from Section 2's failure data (31.1%), and it went from zero coverage to a dedicated 821-line, unit-tested module this cycle. 6 of 7 named failure modes are unit-tested and live.
 
-### 4.8 Commitment, advice & liability (F6) — built, honestly flagged as not yet reachable
+### 4.9 Commitment, advice & liability (F6) — built, honestly flagged as not yet reachable
 
 **What it exists to do.** Detect binding commitments an agent shouldn't be able to make unilaterally (refunds, SLAs), flag unlicensed financial/medical/legal advice, check EU AI Act Art. 50 disclosure, and run a fairness probe for discriminatory screening outcomes.
 
 **Status, stated plainly:** the logic is real and individually unit-tested (`commitments.py`, `register.py`) — but **nothing in the live enforcement path calls it today.** A real production request gets zero benefit from any of it right now, despite the code being correct in isolation. We're naming this explicitly rather than letting "built and tested" imply "shipping" — see [`docs/gap-analysis.md`](gap-analysis.md) for the fuller pattern (several other modules share this status). Wiring it in is the single highest-leverage remaining fix in the whole product roadmap: it's routing, not invention.
 
-### 4.9 Numeric, temporal & entity integrity
+### 4.10 Numeric, temporal & entity integrity
 
 **What it does.** Verifies record matches against the actual system of record (catching hallucinated matches, the class of error behind real finance-reconciliation incidents), checks arithmetic/aggregation against the cited rows, and disambiguates fiscal-vs-calendar periods and units/currency. Live on the enforcement path (`integrity.py`), 5 of 7 named failure modes unit-tested.
 
-### 4.10 Audit chain, evidence packages, and compliance mapping
+### 4.11 Audit chain, evidence packages, and compliance mapping
 
 **What it does.** A different kind of guarantee than the detectors above — not "did we catch the bad thing" but "can what happened be proven, tamper-evidently, to someone who doesn't trust us." A hash-chained audit log, a standalone stdlib-only verifier an auditor can run offline, evidence packages that exclude unreviewed compliance-framework mappings by construction, and control status computed from live telemetry rather than attested.
 
 **Verified adversarially, not just tested.** "Benchmark" isn't quite the right frame for an integrity guarantee; the equivalent rigor is adversarial — mutation, deletion, insertion/reorder, and checkpoint-forgery attempts, all independently detected, verified by extracting a real evidence package and running its verifier under a clean system Python, outside the repo entirely.
 
-### 4.11 Silent-failure / correctness detection
+### 4.12 Silent-failure / correctness detection
 
 **What it does.** The project's original flagship differentiator: a 6-signal ensemble that discriminates a confidently-wrong answer from a correctly-hedged one, aimed at the failure mode most of the rest of the market's tooling (and most of the "AI safety" conversation) treats as the whole problem. 8 unit tests cover the discrimination logic. Per Section 2's own data, this covers under 10% of real-world failure share — which is precisely why the roadmap put F1–F5 ahead of expanding this further.
 
@@ -129,4 +144,9 @@ A capability counts as "benchmarked" in this document only if: it's scored again
 - [`benchmarks/REPORT.md`](../benchmarks/REPORT.md) — full prompt-injection benchmark methodology, all six rounds.
 - [`benchmarks/agent_security/README.md`](../benchmarks/agent_security/README.md) — the four-tier agent-runtime-security suite, full methodology.
 - [`benchmarks/data_generalization/README.md`](../benchmarks/data_generalization/README.md) — the four generalization datasets: sources, licenses, and datasets considered and rejected.
+- [`benchmarks/pii/README.md`](../benchmarks/pii/README.md) — PII detection, all three datasets, both fix rounds, unfiltered numbers.
+- [`benchmarks/action_safety/README.md`](../benchmarks/action_safety/README.md) — destructive-action/blast-radius, all four datasets.
+- [`benchmarks/entitlement/README.md`](../benchmarks/entitlement/README.md) — the purpose-limitation scenario benchmark and its caveats.
+- [`benchmarks/answerability/README.md`](../benchmarks/answerability/README.md) — F1 answerability/abstention, both rounds of fixes, including the categories that don't clear this document's 65% bar.
+- [`benchmarks/README.md`](../benchmarks/README.md) — index across every capability area, including the two (F2, secrets) investigated and found not benchmarkable, and F3.8 (built this cycle, no dataset exists to score it against).
 - [`docs/gap-analysis.md`](gap-analysis.md), [`docs/failure-modes.md`](failure-modes.md) — full capability-by-capability build status, including what's unit-tested vs. wired to the live request path vs. genuinely absent.

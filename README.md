@@ -87,13 +87,21 @@ We don't ask you to trust a vendor claim. Every number below has a public, licen
 uv run python benchmarks/run_prompt_injection_benchmark.py     # primary + generalization datasets
 uv run python benchmarks/run_generalization_benchmark.py
 uv run python benchmarks/agent_security/tier_a_multiturn.py    # + tier_b/c/d — vs. a real llm-guard install
+uv run python benchmarks/action_safety/run_action_safety_benchmark.py    # + agentdojo/payloadbox
+uv run python benchmarks/pii/run_presidio_research_benchmark.py          # + gretel_multilingual/tab
+uv run python benchmarks/entitlement/run_privacylens_benchmark.py
 ```
+
+**Only results clearing 65% on both precision and recall are headlined below** — a weaker number is disclosed in the linked methodology doc, never omitted or rounded up.
 
 - **Prompt-injection detection**, held-out split of `deepset/prompt-injections`: **0% → 66.7% recall, 100% precision held throughout**, across four rounds of measured, disclosed changes — including a two-model ensemble classifier we tuned ourselves (`leolee99/PIGuard` + a `protectai/deberta` backstop, threshold anchored to llm-guard's own published default, not swept against our own data).
 - **Generalized across four independent datasets** (5,345 examples total) the detectors were never tuned against: 98.0–98.6% recall on two of them, with the real over-defense cost on the other two disclosed rather than hidden.
-- **Agent-runtime security, four tiers vs. a real, independently-installed `llm-guard`**: multi-turn payload splitting (2/2 vs. llm-guard's false triggers on isolated fragments), indirect injection via tool output (100% recall vs. llm-guard's 90%), tool-parameter exploitation and privilege escalation (10/10 and 6/6 — axes llm-guard structurally cannot participate in, since it scans text, not tool-call structure or capability grants).
+- **Agent-runtime security, four tiers vs. a real, independently-installed `llm-guard`**: multi-turn payload splitting (2/2 vs. llm-guard's false triggers on isolated fragments), indirect injection via tool output (100% recall / 66.7% precision vs. llm-guard's 90%/81.8%), tool-parameter exploitation and privilege escalation (10/10 and 6/6 — axes llm-guard structurally cannot participate in, since it scans text, not tool-call structure or capability grants).
+- **Destructive-action / blast-radius analysis**: **100% accuracy, precision and recall** on `gretelai/synthetic_text_to_sql`'s held-out split (real + adversarial unbounded/tautology DML/DDL), ground-truthed against an independent SQL parser. The generic scope backstop (catches SQLi fragments and wildcard values in *unnamed* arguments) scores **89.3% recall / 100% precision** against payload-box's SQLi payload list after two rounds of directed fixes — recall started at 36.1%, and the benign-control false-positive rate started at 17.6% before the same two rounds.
+- **PII detection**, real ECHR case law (127 judgments, [TAB dataset](https://github.com/NorskRegnesentral/text-anonymization-benchmark)): **83.6% precision / 86.9% recall** at full detector policy. A synthetic short-sentence dataset reaches **65.2%/75.6%** at the same policy. (The *shipped default* policy trades recall on noisy categories for precision and doesn't clear this bar by design — full numbers, not filtered, in the linked methodology.)
+- **Entitlement / purpose-limitation enforcement**: **100% recall / 0% false positives** across 493 real [PrivacyLens](https://github.com/SALT-NLP/PrivacyLens) over-sharing scenarios — a mechanically-constructed test on real scenario content, not a labeled-dataset score; see the linked methodology for exactly what that does and doesn't establish.
 
-Full methodology and every round: **[the benchmarking white paper](docs/benchmarking-whitepaper.md)**. Raw methodology: [benchmarks/REPORT.md](benchmarks/REPORT.md), [benchmarks/agent_security/README.md](benchmarks/agent_security/README.md).
+Full methodology and every round: **[the benchmarking white paper](docs/benchmarking-whitepaper.md)**. Raw methodology: [benchmarks/REPORT.md](benchmarks/REPORT.md), [benchmarks/agent_security/README.md](benchmarks/agent_security/README.md), [benchmarks/action_safety/README.md](benchmarks/action_safety/README.md), [benchmarks/pii/README.md](benchmarks/pii/README.md), [benchmarks/entitlement/README.md](benchmarks/entitlement/README.md), or the full index at [benchmarks/README.md](benchmarks/README.md).
 
 ## Quick start (development)
 
