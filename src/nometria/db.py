@@ -32,7 +32,15 @@ def configure_pool(url: str, *, workers: int = 1) -> dict:
 
     For Postgres the pool is sized per worker, with ``pool_pre_ping`` because the
     connection this layer needs is the one it needs during an incident, and a stale
-    handle then costs a request that mattered.
+    handle then costs a request that mattered. ``lock_timeout``/``statement_timeout``
+    are also set for every Postgres connection (see ``_build_engine``'s "connect"
+    listener, not this dict) — without them, two sessions contending for the same
+    row wait on Postgres's default unbounded lock queue, which in a request-scoped
+    caller reads as a silent hang, not a slow query or an error. They're applied via
+    a plain ``SET`` after connecting rather than ``connect_args``' ``options=``
+    startup parameter, because a pooled endpoint (Neon's PgBouncer-style pooler, the
+    actual deployed case this was found against) rejects arbitrary startup
+    parameters outright and refuses the connection entirely.
     """
     if url.startswith("sqlite"):
         if workers > 1:
@@ -47,17 +55,6 @@ def configure_pool(url: str, *, workers: int = 1) -> dict:
         "max_overflow": 10,
         "pool_pre_ping": True,
         "pool_recycle": 1800,
-        # Without a lock_timeout, two sessions contending for the same row (e.g.
-        # two independent resolves of the same agent within one governed call —
-        # see registry/service.py's observe_agent() debounce, added for the same
-        # incident) wait on Postgres's default unbounded lock queue. In a
-        # request-scoped caller (a web handler) that reads as a hang with no
-        # error, not a slow query — found live, a deployed request stalled until
-        # the platform's own hard function timeout killed it. Failing fast here
-        # converts any future contention like that into a clear, immediate
-        # OperationalError instead. statement_timeout is a second, broader
-        # backstop for the same class of problem beyond just row locks.
-        "connect_args": {"options": "-c lock_timeout=5000 -c statement_timeout=20000"},
     }
 
 
@@ -77,6 +74,22 @@ def _build_engine() -> Engine:
             cur.execute("PRAGMA journal_mode=WAL")
             cur.execute("PRAGMA foreign_keys=ON")
             cur.close()
+    else:
+
+        @event.listens_for(engine, "connect")
+        def _postgres_session_gucs(dbapi_conn, _record):  # pragma: no cover - trivial
+            # Set per-session, not via connect_args' `options=` startup parameter:
+            # a pooled Postgres endpoint (Neon's PgBouncer-style pooler, the actual
+            # deployed case) rejects arbitrary startup parameters outright —
+            # "unsupported startup parameter in options: lock_timeout" — which
+            # took the whole app down at startup rather than just this GUC. A
+            # plain SET after connecting works against both a pooled and a direct
+            # connection. See configure_pool()'s docstring for why this exists.
+            cur = dbapi_conn.cursor()
+            cur.execute("SET lock_timeout = '5s'")
+            cur.execute("SET statement_timeout = '20s'")
+            cur.close()
+            dbapi_conn.commit()
 
     return engine
 
