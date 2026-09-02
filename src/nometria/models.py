@@ -203,7 +203,9 @@ class LineageEdge(Base, TimestampMixin):
     """P1-3. Derived from observed spans, not declared config."""
 
     __tablename__ = "lineage_edges"
-    __table_args__ = (UniqueConstraint("src_id", "dst_id", "relation", name="uq_lineage_edge"),)
+    __table_args__ = (
+        UniqueConstraint("org_id", "src_id", "dst_id", "relation", name="uq_lineage_edge"),
+    )
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("lin"))
     src_type: Mapped[str] = mapped_column(String(32))

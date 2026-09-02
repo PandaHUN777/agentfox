@@ -24,6 +24,7 @@ from collections import defaultdict, deque
 from typing import Any
 
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..models import (
@@ -364,6 +365,20 @@ def record_edge(
     relation: str,
     declared: bool = False,
 ) -> LineageEdge:
+    """Record an observed (or declared) lineage edge, idempotent under races.
+
+    The existence check below and the insert it guards are two separate
+    round-trips, so two callers recording the same edge for the first time at
+    nearly the same moment (two concurrent requests each building their own
+    `McpGovernor` — the ordinary case for this same edge, "agent connects_mcp
+    server", which gets (re-)recorded on every governed call) can both pass the
+    check before either commits. The second one then hits uq_lineage_edge's
+    UniqueViolation on flush — found live, a real deployed request crashed this
+    way, not a theoretical race. The insert attempt runs in its own SAVEPOINT
+    (`begin_nested`) so a lost race only unwinds that nested transaction, not
+    the whole session — SQLAlchemy expunges the losing pending object on
+    rollback — and falls through to the row the winner just committed.
+    """
     edge = session.scalar(
         select(LineageEdge).where(
             LineageEdge.src_id == src_id,
@@ -372,18 +387,29 @@ def record_edge(
         )
     )
     if edge is None:
-        edge = LineageEdge(
-            src_type=src_type,
-            src_id=src_id,
-            dst_type=dst_type,
-            dst_id=dst_id,
-            relation=relation,
-            declared=declared,
-            # Set explicitly: the column default is applied at flush, and this
-            # counter is incremented before the flush happens.
-            observed_count=0,
-        )
-        session.add(edge)
+        try:
+            with session.begin_nested():
+                edge = LineageEdge(
+                    src_type=src_type,
+                    src_id=src_id,
+                    dst_type=dst_type,
+                    dst_id=dst_id,
+                    relation=relation,
+                    declared=declared,
+                    # Set explicitly: the column default is applied at flush,
+                    # and this counter is incremented before the flush happens.
+                    observed_count=0,
+                )
+                session.add(edge)
+                session.flush()
+        except IntegrityError:
+            edge = session.scalar(
+                select(LineageEdge).where(
+                    LineageEdge.src_id == src_id,
+                    LineageEdge.dst_id == dst_id,
+                    LineageEdge.relation == relation,
+                )
+            )
     edge.observed_count += 0 if declared else 1
     edge.last_observed_at = utcnow()
     if declared:
