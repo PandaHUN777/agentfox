@@ -14,8 +14,8 @@ there. Probes are shallow by design: they prove a capability is *wired*, not tha
 | **Partial** | 16 ◐ |
 | **Absent** | 0 ✗ |
 | **Weighted coverage** | **80%** *(partial counts half)* |
-| **Tests** | 1204 |
-| **Lines** | 60,361 (src + tests) |
+| **Tests** | 1211 |
+| **Lines** | 61,003 (src + tests) |
 | **Failure modes covered** | **96%** — 54 of 57 outright, 2 partial |
 | **Injection recall** | **100%** — 25/25 adversarial, 0 false positive(s) on 10 benign |
 
@@ -28,20 +28,20 @@ in [traceability.md](traceability.md).
 | `P12` | 12 Policy Composition | Hierarchical policy, override semantics, lint | ✅ built | 19 | non-developer authoring (P12-7) absent |
 | `P2` | 2 Identity | NHI, least privilege, delegation narrowing, approvals | ◐ partial | 13 | no live IdP; Entra/Okta integration (P2-8) absent |
 | `P3` | 3 Guardrails | Runtime detectors across five surfaces + taint | ✅ built | 57 | model-based detectors wired but need an opt-in weights download |
-| `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 40 | cascade analysis is exactly as good as the trigger declarations it is given — an undeclared webhook stays invisible, and shell analysis remains a deny-list rather than a parser |
+| `P9` | 9 Action Assurance | Action semantics, blast radius, verified-state preconditions | ◐ partial | 41 | cascade analysis is exactly as good as the trigger declarations it is given — an undeclared webhook stays invisible, and shell analysis remains a deny-list rather than a parser |
 | `P10` | 10 Entitlement | End-user principal, retrieval entitlement filtering | ◐ partial | 16 | OpenFGA adapter is a declared seam, not an implementation |
 | `P7` | 7 Answerability | Knowledge boundary, forced abstention | ✅ built | 55 |  |
 | `P8` | 8 Provenance | Source tiers, freshness, citation binding | ◐ partial | 46 | catalog ingestion (P8-9: DataHub/OpenMetadata/Unity) absent |
 | `P14` | 14 Context Integrity | Ingestion and retrieval quality gates | ◐ partial | 27 | gates the ingestion and assembly path. Semantic chunk-boundary repair and automatic re-extraction of a corrupt document are not built — a finding is reported and the decision to drop the document belongs to the operator |
 | `P4` | 4 Evaluation | Eval runner, CI gating, drift, silent failure, red team | ◐ partial | 48 | the 'no Ragas adapter' half of this note was stale: score_sample/score_dataset (I-8) were already registered as selectable scorers and callable from the runner, not a disconnected integration — the note just never said so. Model-based groundedness is now real too (model_groundedness.py, via ModelProvider.judge(), the same mechanism LlmJudgeScorer already used), alongside the lexical scorer rather than replacing it. An annotation queue for human review of borderline eval results is still not built |
 | `P13` | 13 Failure Attribution | Failure attribution across handoffs | ◐ partial | 22 | attributes a failure to the step that originated the value and measures what each handoff dropped. Both work on constraints that were written down — an expectation the human held and never typed is invisible here, and no trace analysis recovers it |
-| `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 17 |  |
+| `P11` | 11 Escalation | Escalation policy and missed-escalation detection | ✅ built | 19 |  |
 | `P5` | 5 Audit | Traces, hash chain, evidence packages, SIEM | ✅ built | 46 |  |
-| `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 24 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
+| `P6` | 6 Compliance | Control catalog, computed status, risk, obligations | ◐ partial | 25 | dynamic risk scoring and workflow engine absent (Gartner criteria) |
 | `P15` | 15 Cost & Reliability | Circuit breaker, fallback, caps, backpressure | ✅ built | 25 | AdmissionController (P15-6) was fully built and tested but had zero callers on the live request path; a gateway middleware now gates every /v1/* request through it before routing, shedding by priority under saturation and leaving the /api/* control plane out of scope for the same budget. Caps elsewhere (budgets, breaker thresholds) remain hard stops, not queued backpressure |
 | `PL-1` | Platform | Streaming with inline enforcement | ✅ built | 13 |  |
 | `PL-2` | Platform | Database migrations | ✅ built | 2 |  |
-| `PL-3` | Platform | Kill switch and quarantine | ✅ built | 17 |  |
+| `PL-3` | Platform | Kill switch and quarantine | ✅ built | 18 |  |
 | `PL-4` | Platform | Agent loop governance | ◐ partial | 18 | governs the run rather than the step: identical re-issued calls, alternating cycles, and steps producing no new observation. All three are visible without understanding the task, which is what keeps it deterministic — an agent that is wrong but varied still looks like an agent working |
 | `PL-5` | Platform | Async workers | ◐ partial | — | in-process with retries and a dead letter that is public state rather than a log line. The interface is the deliverable; a Redis or SQS implementation belongs behind it, and building that before anyone runs this at that scale would be committing to infrastructure early |
 | `PL-6` | Platform | HA-ready persistence | ◐ partial | — | pooling and pre-ping ship, and SQLite is refused at startup for a multi-worker deployment rather than surfacing as intermittent latency. Actual scale-out under load is still untested |
@@ -53,9 +53,9 @@ in [traceability.md](traceability.md).
 | `X-1` | Adoption | One-line auto-instrumentation | ✅ built | 13 |  |
 | `X-2` | Adoption | Static repo discovery and zero-effort CLI | ✅ built | 26 |  |
 | `P16` | 16 Business rules | Business-process guardrails and the guardrail catalogue | ◐ partial | 32 | policy compilation is deterministic: 86% of a tuned document and 64% of a held-out one compile with no question. Prose with no parseable structure ("be courteous") is reported as inexpressible rather than guessed at; a model-assisted path for those sentences is not built |
-| `X-4` | Adoption | Protective controls reachable without writing code | ✅ built | 8 |  |
+| `X-4` | Adoption | Protective controls reachable without writing code | ✅ built | 9 |  |
 | `X-3` | Adoption | Control-plane onboarding and attention-first home | ✅ built | 6 |  |
-| `I-1` | Integration | LangGraph-native SDK | ✅ built | 3 |  |
+| `I-1` | Integration | LangGraph-native SDK | ✅ built | 4 |  |
 | `I-2` | Integration | MCP inline governance | ✅ built | 18 |  |
 | `I-3` | Integration | FastAPI middleware and dependency | ✅ built | 7 |  |
 | `I-4` | Integration | LangSmith correlation | ✅ built | 7 |  |

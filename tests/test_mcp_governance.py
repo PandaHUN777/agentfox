@@ -210,6 +210,46 @@ def test_a_string_result_stays_a_string(seeded, governor):
     assert outcome.result == "plain text"
 
 
+def test_a_call_within_an_argument_constraint_is_not_spuriously_blocked_post_call(seeded):
+    """`_govern_result`'s re-check re-runs `check_capability`, but the same
+    `evaluate()` call is also how the result content gets scanned — and it was
+    calling `check_capability` with an empty `{}` in place of the call's real
+    arguments. Any capability with an argument constraint (e.g. `amount < 1000`)
+    then fails that constraint against a missing value and gets denied *after*
+    the transport already ran the (possibly irreversible) side effect — the
+    caller is told the call was blocked when it had already happened. Found
+    while building a live demo target with a constrained refund tool."""
+    agent = seeded.query(Agent).filter_by(slug="support-triage").one()
+    identity = ensure_identity(seeded, agent)
+    tool = {
+        "name": "issue_refund",
+        "description": "Issue a refund.",
+        "inputSchema": {"type": "object"},
+    }
+    grant_capability(
+        seeded,
+        identity,
+        tool_key("billing-server", "issue_refund"),
+        constraints={"amount": {"lt": 1000}},
+        max_taint="tool_result",
+    )
+    gov = McpGovernor(session=seeded, agent_slug="support-triage", server_name="billing-server")
+    gov.register_tools([tool])
+
+    outcome = gov.call(
+        "issue_refund",
+        {"order_id": "ORD-1", "amount": 42.5},
+        transport=lambda t, a: {"status": "refunded"},
+    )
+    assert outcome.pre_decision.blocked is False
+    assert outcome.post_decision is not None
+    assert not outcome.post_decision.blocked, (
+        f"post-call re-check spuriously denied a call the pre-check already "
+        f"authorized: {outcome.post_decision.rules_fired}"
+    )
+    assert outcome.allowed
+
+
 def test_a_missing_transport_is_a_programming_error_not_a_silent_pass(seeded, governor):
     with pytest.raises(ValueError, match="transport"):
         governor.call("search_docs", {})

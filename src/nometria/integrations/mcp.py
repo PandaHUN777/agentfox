@@ -313,7 +313,7 @@ class McpGovernor:
         raw = call(tool, pre.taint.get("arguments_snapshot") or arguments)
         self._prior_tools.append(key)
 
-        post = self._govern_result(key, tool, raw)
+        post = self._govern_result(key, tool, raw, arguments)
         content = post.content if post.content is not None else None
         return McpCallOutcome(
             tool=tool,
@@ -326,12 +326,25 @@ class McpGovernor:
             registered=registered,
         )
 
-    def _govern_result(self, key: str, tool: str, raw: Any) -> EnforcementResult:
+    def _govern_result(
+        self, key: str, tool: str, raw: Any, arguments: dict[str, Any] | None = None
+    ) -> EnforcementResult:
         """Evaluate what came back, and taint it.
 
         MCP results are third-party content arriving as trusted context — the textbook
         indirect-injection path. Marking them ``tool_result`` is what stops an argument
         derived from this text reaching a tool whose ceiling forbids it.
+
+        ``arguments`` is the *original call's* arguments, not the result — passing
+        ``tool_key`` to `evaluate()` re-runs the capability check as a side effect
+        (it needs `tool_impact` either way), and that check reads argument values
+        for any constraint the grant declares (``amount < 1000`` and similar). Omitting
+        it here meant every constrained capability was re-checked against `{}` and
+        denied regardless of the real value — spuriously, and *after* `transport`
+        had already run the call's (possibly irreversible) effect, on every governed
+        MCP call with an argument-value constraint. Found building a demo target
+        with a constrained refund tool; regression test:
+        `test_a_call_within_an_argument_constraint_is_not_spuriously_blocked_post_call`.
         """
         text = raw if isinstance(raw, str) else json.dumps(raw, default=str)
         agent, identity, _ = self.enforcer.resolve(self.agent_slug, self.credential)
@@ -343,6 +356,7 @@ class McpGovernor:
             trace=self.trace,
             taint_source="tool_result",
             tool_key=key,
+            arguments=arguments,
             intent=self.intent,
             tracker=self.tracker,
         )
