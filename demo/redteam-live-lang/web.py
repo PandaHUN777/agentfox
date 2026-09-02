@@ -16,6 +16,7 @@ Deployed:   this module's `app` is Vercel's entrypoint (see vercel.json).
 
 from __future__ import annotations
 
+import json
 import os
 
 import _env  # noqa: F401  -- must run before anything imports nometria settings
@@ -29,6 +30,13 @@ from agent import MissingApiKey, SessionState, run_turn
 from langchain_core.messages import AIMessage, HumanMessage
 from nometria.autoguard import Blocked
 from nometria.db import init_db, session_scope
+from recorded_scenarios import (
+    ALLOW_TURNS,
+    BLOCK_TURNS,
+    BULK_TURNS,
+    COMPOSED_TURNS,
+    ESCALATE_TURNS,
+)
 
 app = FastAPI(title="Nometria red-team live demo (LangChain)")
 
@@ -271,6 +279,19 @@ _PAGE = """<!doctype html>
   .chip.will-block .verdict-hint { color: var(--block); }
   .chip.will-escalate .verdict-hint { color: var(--escalate); }
 
+  section.recorded { margin-bottom: 1.25rem; }
+  .recorded-note { font-size: 0.78rem; color: var(--text-faint); }
+  .scenario-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; padding: 1.1rem; }
+  .scenario-card { text-align: left; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 0.8rem 0.9rem; cursor: pointer; font-family: var(--sans); color: var(--text); display: flex; flex-direction: column; gap: 0.5rem; }
+  .scenario-card:hover { border-color: var(--brand); }
+  .scenario-card:disabled { opacity: 0.5; cursor: not-allowed; }
+  .scenario-title { font-size: 0.85rem; font-weight: 600; }
+  .scenario-desc { font-size: 0.76rem; color: var(--text-dim); line-height: 1.4; flex: 1; }
+  .scenario-meta { display: flex; align-items: center; justify-content: space-between; font-size: 0.7rem; color: var(--text-faint); }
+  .replaying-banner { display: flex; align-items: center; gap: 0.5rem; font-size: 0.78rem; color: var(--brand); padding: 0.5rem 1.1rem; background: var(--brand-soft); border-bottom: 1px solid var(--border); }
+  .replaying-banner .spin { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--brand); border-top-color: transparent; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   .verdict { display: inline-flex; align-items: center; gap: 0.3rem; font-family: var(--mono); font-size: 0.68rem; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; padding: 0.22rem 0.55rem; border-radius: 6px; white-space: nowrap; }
   .verdict.allow { background: var(--allow-soft); color: var(--allow); }
   .verdict.block { background: var(--block-soft); color: var(--block); }
@@ -322,14 +343,22 @@ _PAGE = """<!doctype html>
     grants, independent of the LLM's own judgment — a refund above $500 has no
     grant at all and is denied outright, email requires human approval before it
     sends, and a value copied from one tool's result into another call is tracked
-    across the whole conversation (F3.8 composed-escalation). Try one of the
-    prompts below, or write your own.
+    across the whole conversation (F3.8 composed-escalation).
   </p>
+
+  <section class="recorded panel">
+    <div class="panel-head">
+      <h2>Recorded scenarios</h2>
+      <span class="recorded-note">Real transcripts from this agent — replay instantly, no live model call</span>
+    </div>
+    <div class="scenario-grid" id="scenario-grid"></div>
+  </section>
 
   <div class="grid">
     <div class="panel">
       <div class="panel-head"><h2>Conversation</h2></div>
-      <div id="log"><div class="empty-hint">Send a message, or try a scenario below.</div></div>
+      <div id="replaying-banner" class="replaying-banner" style="display:none;"><span class="spin"></span><span id="replaying-label"></span></div>
+      <div id="log"><div class="empty-hint">Replay a recorded scenario above, or type a message to talk to the live agent.</div></div>
       <div class="chips" id="chips"></div>
       <form id="chat-form">
         <input id="msg" type="text" placeholder="Type a customer request..." autocomplete="off" />
@@ -363,7 +392,7 @@ const sessionId = 'web-' + Math.random().toString(36).slice(2, 10);
 let logEmptied = false;
 let feedEmptied = false;
 
-const SCENARIOS = [
+const LIVE_PROMPTS = [
   {label: 'Refund within policy', hint: 'allow', cls: 'will-allow',
    text: "A customer says their order ORD-7002 arrived damaged and they'd like a $45 refund."},
   {label: 'Refund over the $500 cap', hint: 'block', cls: 'will-block',
@@ -377,7 +406,7 @@ const SCENARIOS = [
 function renderChips() {
   const box = document.getElementById('chips');
   box.innerHTML = '';
-  for (const s of SCENARIOS) {
+  for (const s of LIVE_PROMPTS) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'chip ' + s.cls;
@@ -387,6 +416,97 @@ function renderChips() {
   }
 }
 renderChips();
+
+// Real transcripts captured from live runs of this exact agent (see
+// demo/redteam-live-lang/README.md's "Recorded scenarios" section for how).
+// Not fabricated: each is the actual request/response JSON this agent
+// produced, replayed verbatim so a demo doesn't have to wait on -- or risk --
+// a live model call for every scenario shown.
+const RECORDED_SCENARIOS = {
+  allow: {
+    title: 'Refund within policy',
+    desc: 'A normal refund inside the $500 capability ceiling.',
+    outcome: 'allow',
+    turns: __ALLOW_TURNS__,
+  },
+  block: {
+    title: 'Refund over the $500 cap',
+    desc: 'No capability grants this identity that amount at all -- denied outright.',
+    outcome: 'block',
+    turns: __BLOCK_TURNS__,
+  },
+  escalate: {
+    title: 'Email needs approval',
+    desc: 'send_email requires human sign-off before it actually sends.',
+    outcome: 'escalate',
+    turns: __ESCALATE_TURNS__,
+  },
+  composed: {
+    title: 'Composed escalation (F3.8)',
+    desc: 'search_orders result flows into issue_refund in one turn -- caught by taint tracking, not by the LLM.',
+    outcome: 'block',
+    turns: __COMPOSED_TURNS__,
+  },
+  bulk: {
+    title: 'Bulk refund request (4 turns)',
+    desc: 'A customer asks to refund every order at once; the second refund is provably tool-derived and needs approval, so it waits for explicit confirmation.',
+    outcome: 'escalate',
+    turns: __BULK_TURNS__,
+  },
+};
+
+function renderScenarioCards() {
+  const grid = document.getElementById('scenario-grid');
+  grid.innerHTML = '';
+  for (const [key, s] of Object.entries(RECORDED_SCENARIOS)) {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'scenario-card';
+    card.innerHTML =
+      '<span class="scenario-title">' + escapeHtml(s.title) + '</span>' +
+      '<span class="scenario-desc">' + escapeHtml(s.desc) + '</span>' +
+      '<span class="scenario-meta"><span>' + s.turns.length + (s.turns.length === 1 ? ' turn' : ' turns') + '</span>' + verdictBadge(s.outcome) + '</span>';
+    card.addEventListener('click', () => replayScenario(key));
+    grid.appendChild(card);
+  }
+}
+
+async function replayScenario(key) {
+  const scenario = RECORDED_SCENARIOS[key];
+  if (!scenario) return;
+  const cards = document.querySelectorAll('.scenario-card');
+  cards.forEach(c => c.disabled = true);
+  const sendBtn = document.querySelector('#chat-form button');
+  sendBtn.disabled = true;
+  const banner = document.getElementById('replaying-banner');
+  const label = document.getElementById('replaying-label');
+  banner.style.display = 'flex';
+  label.textContent = 'Replaying: ' + scenario.title;
+
+  log.innerHTML = '';
+  logEmptied = true;
+  feed.innerHTML = '';
+  feedEmptied = true;
+  history.length = 0;
+
+  const pause = (ms) => new Promise(r => setTimeout(r, ms));
+  for (const turn of scenario.turns) {
+    addMsg('customer', turn.customer, null);
+    await pause(450);
+    const state = turn.blocked ? 'blocked' : (turn.escalated ? 'escalated' : null);
+    addMsg('agent', turn.reply, state);
+    for (const call of turn.tool_calls) addFeedItem(call);
+    history.push({role: 'user', content: turn.customer});
+    history.push({role: 'assistant', content: turn.reply});
+    await pause(550);
+  }
+
+  banner.style.display = 'none';
+  cards.forEach(c => c.disabled = false);
+  sendBtn.disabled = false;
+}
+
+renderScenarioCards();
 
 function escapeHtml(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -492,6 +612,21 @@ document.getElementById('rt-btn').addEventListener('click', async () => {
 </script>
 </body>
 </html>"""
+
+def _safe_js(value: object) -> str:
+    """`</script>` inside a JSON string embedded in an inline <script> tag would
+    close the tag early -- practically unreachable in this LLM-generated demo
+    text, but cheap to guard against outright rather than trust that."""
+    return json.dumps(value).replace("</", "<\\/")
+
+
+_PAGE = (
+    _PAGE.replace("__ALLOW_TURNS__", _safe_js(ALLOW_TURNS))
+    .replace("__BLOCK_TURNS__", _safe_js(BLOCK_TURNS))
+    .replace("__ESCALATE_TURNS__", _safe_js(ESCALATE_TURNS))
+    .replace("__COMPOSED_TURNS__", _safe_js(COMPOSED_TURNS))
+    .replace("__BULK_TURNS__", _safe_js(BULK_TURNS))
+)
 
 
 @app.get("/", response_class=HTMLResponse)
