@@ -131,7 +131,7 @@ def _resolve_llm() -> Any:
 # already registered this agent with real metadata (owner, purpose, declared tools)
 # -- auto()'s own registration would overwrite that with generic placeholders on
 # every run.
-nometria.auto(agent=AGENT_SLUG, mode="observe", register=False)
+nometria.auto(agent=AGENT_SLUG, mode="enforce", register=False)
 
 
 # Same instruction, same wording, as demo/redteam-live/crew.py's Agent backstory —
