@@ -175,6 +175,19 @@ def diag() -> dict:
 
     t0 = time.monotonic()
     try:
+        key = os.environ.get("ANTHROPIC_API_KEY", "")
+        r = httpx.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+            json={"model": "claude-haiku-4-5-20251001", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]},
+            timeout=15,
+        )
+        out["raw_anthropic_messages_call_haiku45"] = {"ok": r.status_code == 200, "status": r.status_code, "elapsed_s": round(time.monotonic() - t0, 2), "body": r.text[:300]}
+    except Exception as exc:  # noqa: BLE001
+        out["raw_anthropic_messages_call_haiku45"] = {"ok": False, "error": f"{type(exc).__name__}: {exc}", "elapsed_s": round(time.monotonic() - t0, 2)}
+
+    t0 = time.monotonic()
+    try:
         init_db()
         with session_scope() as session:
             session.execute(__import__("sqlalchemy").text("SELECT 1"))
