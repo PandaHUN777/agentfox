@@ -87,6 +87,23 @@ def chat(req: ChatRequest) -> dict:
             "rules_fired": [],
             "tool_calls": [],
         }
+    except Exception as exc:  # noqa: BLE001 — this is the top of the stack for a
+        # live demo request; the LLM client's own timeout (agent.py's
+        # _LLM_TIMEOUT_S) and the AgentExecutor's max_execution_time both bound how
+        # long this can legitimately take, but a live network call can still fail
+        # in ways neither anticipates (a rate limit, a transient 5xx from the
+        # provider). Surface it as a clean chat-shaped response instead of a bare
+        # 500 with no body — found live: an earlier version of this handler let
+        # exactly that kind of failure crash the request with nothing useful shown
+        # to whoever was watching.
+        return {
+            "reply": f"The agent hit an error talking to the model provider: {exc}",
+            "error": "llm_call_failed",
+            "blocked": False,
+            "escalated": False,
+            "rules_fired": [],
+            "tool_calls": [],
+        }
 
 
 @app.post("/api/redteam")

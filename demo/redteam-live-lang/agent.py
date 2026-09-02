@@ -84,6 +84,17 @@ demo/redteam-live-lang/README.md for full setup instructions.
 """.strip()
 
 
+#: Neither langchain-anthropic nor langchain-openai sets a request timeout by
+#: default — the underlying httpx client is willing to wait indefinitely. Found
+#: live: a real deployed request hung with zero output for 5 minutes before
+#: Vercel's own platform-level function timeout finally killed it (a bare
+#: connection reset, no error body at all — the worst possible failure mode for
+#: something running in front of a live audience). 30s is generous for a single
+#: chat-completion call; failing fast and clearly beats hanging silently.
+_LLM_TIMEOUT_S = 30
+_LLM_MAX_RETRIES = 1
+
+
 def _resolve_llm() -> Any:
     """Build the chat model for whichever provider has credentials set.
 
@@ -96,11 +107,21 @@ def _resolve_llm() -> Any:
     if os.environ.get("ANTHROPIC_API_KEY"):
         from langchain_anthropic import ChatAnthropic
 
-        return ChatAnthropic(model=model_override or "claude-3-5-haiku-20241022", temperature=0)
+        return ChatAnthropic(
+            model=model_override or "claude-3-5-haiku-20241022",
+            temperature=0,
+            timeout=_LLM_TIMEOUT_S,
+            max_retries=_LLM_MAX_RETRIES,
+        )
     if os.environ.get("OPENAI_API_KEY"):
         from langchain_openai import ChatOpenAI
 
-        return ChatOpenAI(model=model_override or "gpt-4o-mini", temperature=0)
+        return ChatOpenAI(
+            model=model_override or "gpt-4o-mini",
+            temperature=0,
+            timeout=_LLM_TIMEOUT_S,
+            max_retries=_LLM_MAX_RETRIES,
+        )
     raise MissingApiKey(_NO_KEY_MESSAGE)
 
 
@@ -180,7 +201,14 @@ def build_agent_executor(toolkit: GovernedToolkit) -> AgentExecutor:
         ]
     )
     agent = create_tool_calling_agent(_resolve_llm(), tools, prompt)
-    return AgentExecutor(agent=agent, tools=tools, verbose=True)
+    # max_execution_time is a second, independent backstop beyond the LLM client's
+    # own per-call timeout above — it also bounds a multi-step tool-calling loop
+    # that keeps making individual calls fast enough to each dodge the client
+    # timeout but never converges. Comfortably under this demo's own _LLM_TIMEOUT_S
+    # x a few tool-call round trips, and well under Vercel's function ceiling.
+    return AgentExecutor(
+        agent=agent, tools=tools, verbose=True, max_execution_time=60, max_iterations=8
+    )
 
 
 @dataclass
