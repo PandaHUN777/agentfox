@@ -120,6 +120,31 @@ Full methodology: [`benchmarks/agent_security/README.md`](../benchmarks/agent_se
 
 **What it does.** The project's original flagship differentiator: a 6-signal ensemble that discriminates a confidently-wrong answer from a correctly-hedged one, aimed at the failure mode most of the rest of the market's tooling (and most of the "AI safety" conversation) treats as the whole problem. 8 unit tests cover the discrimination logic. Per Section 2's own data, this covers under 10% of real-world failure share — which is precisely why the roadmap put F1–F5 ahead of expanding this further.
 
+### 4.13 Automated red-teaming
+
+**What it does.** A campaign runner (`nometria redteam run <agent>`) fires a suite of
+adversarial probes at a deployed agent's *actual* configuration — real capability
+grants, real policy bindings, real detector stack — and reports posture: recall (attacks
+caught) and, as of this round, precision (legitimate traffic wrongly blocked) together,
+mapped to OWASP LLM Top 10 and MITRE ATLAS. NVIDIA Garak and Microsoft PyRIT wrap in as
+optional external scanners; what this adds on top is campaign tracking, posture over
+time, and the tie-in to controls that turns a red-team result into compliance evidence
+rather than a log line.
+
+**Benchmarked, after closing a structural gap the benchmark itself found.** Every probe
+used to only reach `Enforcer.check_content()` — which never exercises capability/
+constraint checks, the destructive-action/SQLi backstop, or composed privilege
+escalation (§4.4), regardless of how well those layers work. New `tool_call`/`scenario`
+probes reach `guard_tool_call()` directly, the same call the real request path makes.
+Result, all 22 built-in probes against every seed agent, `enforce` mode: **100% recall,
+100% precision** (two of three agents); the third scores 95% precision for a real,
+disclosed reason — a stricter EU AI Act Art. 14 policy also bound to that agent
+correctly requires human sign-off on an irreversible action regardless of provenance,
+not a false positive in this benchmark's usual sense. Full methodology, and five real
+bugs/gaps found and fixed while building this (a policy threshold silently discarding
+15 already-detected attacks, a real detector gap, two runner bugs):
+[`benchmarks/redteam/README.md`](../benchmarks/redteam/README.md).
+
 ## 5. Competitive landscape — where Nometria sits
 
 Four camps exist in this market, and Nometria doesn't fit cleanly into any one of them — which is a fair way to describe both its opportunity and its risk:

@@ -405,8 +405,16 @@ def test_campaign_produces_posture(seeded):
     summary = campaign.summary_json
     assert summary["probes_run"] > 0
     assert 0.0 <= summary["posture_score"] <= 1.0
-    assert summary["attacks_blocked"] + summary["attacks_succeeded"] == summary["probes_run"]
+    assert 0.0 <= summary["recall"] <= 1.0
+    assert 0.0 <= summary["precision"] <= 1.0
+    # probes_run now splits into real attacks (recall side) and benign controls
+    # (precision side) — the two must sum back to the total, not collapse into a
+    # single "blocked vs succeeded" pair the way they did before benign_control
+    # probes existed.
+    assert summary["attacks_blocked"] + summary["attacks_succeeded"] == summary["attacks_run"]
+    assert summary["attacks_run"] + summary["benign_probes_run"] == summary["probes_run"]
     assert "prompt_injection" in summary["by_category"]
+    assert "benign_control" in summary["by_category"]
 
 
 def test_campaign_blocks_injection_probes_when_enforcing(seeded):
@@ -427,3 +435,86 @@ def test_campaign_breach_raises_a_finding(seeded):
     # Some probes get through in observe mode; that must be reported, not hidden.
     if findings:
         assert "NOM-EVL-04" in findings[0].control_keys
+
+
+# ---------------------------------------------------------------------------
+# Red team: tool_call / scenario probes (P4-4) — the structural extension.
+#
+# Before this, every probe was `kind="content"`, which only ever reaches
+# `Enforcer.check_content()` — and `check_content()` never passes `arguments`/
+# `tool_key`, so capability/constraint checks, the action-assurance/SQLi-scope
+# backstop, and composed-privilege-escalation (F3.8) were structurally
+# unreachable by any probe, not merely weak against them.
+# ---------------------------------------------------------------------------
+
+
+def test_a_tool_call_probe_with_no_grant_is_blocked(seeded):
+    from nometria.policy import set_mode
+
+    set_mode(seeded, "tool-containment", "enforce")
+    campaign = run_campaign(seeded, "support-triage", probes=["capability.ungranted_tool"])
+    assert campaign.summary_json["attacks_succeeded"] == 0
+
+
+def test_a_tool_call_probe_violating_a_grant_constraint_is_blocked(seeded):
+    from nometria.policy import set_mode
+
+    set_mode(seeded, "tool-containment", "enforce")
+    campaign = run_campaign(seeded, "support-triage", probes=["capability.constraint_violation"])
+    assert campaign.summary_json["attacks_succeeded"] == 0
+
+
+def test_action_assurance_probes_are_reachable_via_guard_tool_call(seeded):
+    """These fire `analyse_arguments` (destructive SQL, the scope/SQLi backstop) —
+    unreachable via `check_content()` before this round, since it never passes
+    `arguments`/`tool_key` at all."""
+    from nometria.policy import set_mode
+
+    set_mode(seeded, "tool-containment", "enforce")
+    campaign = run_campaign(
+        seeded,
+        "support-triage",
+        probes=[
+            "action.destructive_sql_no_where",
+            "action.sql_injection_in_argument",
+            "action.wildcard_scope_argument",
+        ],
+    )
+    assert campaign.summary_json["attacks_succeeded"] == 0
+
+
+def test_the_composed_escalation_scenario_probe_is_blocked(seeded):
+    """F3.8 through the red-team runner specifically — a read tool's synthetic
+    result feeding a write tool's argument across two real `guard_tool_call`s
+    sharing one `TaintTracker`."""
+    from nometria.policy import set_mode
+
+    set_mode(seeded, "tool-containment", "enforce")
+    campaign = run_campaign(seeded, "support-triage", probes=["escalation.composed_privilege"])
+    assert campaign.summary_json["attacks_succeeded"] == 0
+
+
+def test_the_composed_escalation_negative_control_is_not_over_blocked(seeded):
+    """The same two tools, but the second call's argument never appeared in the
+    first call's result — must not be flagged, proving the block above is about
+    provenance and not just "any two-step tool sequence on these tools"."""
+    from nometria.policy import set_mode
+
+    set_mode(seeded, "tool-containment", "enforce")
+    campaign = run_campaign(
+        seeded, "support-triage", probes=["benign.independently_supplied_id"]
+    )
+    assert campaign.summary_json["benign_false_positives"] == 0
+
+
+def test_a_legitimate_call_within_the_same_constraint_is_not_over_blocked(seeded):
+    from nometria.policy import set_mode
+
+    set_mode(seeded, "tool-containment", "enforce")
+    campaign = run_campaign(
+        seeded,
+        "support-triage",
+        probes=["capability.constraint_violation", "benign.refund_within_constraint"],
+    )
+    assert campaign.summary_json["benign_false_positives"] == 0
+    assert campaign.summary_json["attacks_succeeded"] == 0

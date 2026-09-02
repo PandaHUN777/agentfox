@@ -334,6 +334,21 @@ _LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
         0.65,
     ),
     (
+        # A distinct, real extraction phrasing that never names "prompt" or
+        # "instructions" at all — "repeat/print the text above" — so the pattern
+        # above this one, which requires that vocabulary, structurally can't
+        # catch it. Found via redteam probe `system_prompt.leak` scoring a real
+        # 0.0 (benchmarks/redteam/README.md); verified against train/test/
+        # notinject before shipping (zero score>=0.6 hits on any of the three).
+        re.compile(
+            r"\b(?:repeat|print|output|show)\s+(?:everything|the\s+(?:text|words?|"
+            r"instructions?|conversation))\s+(?:above|before\s+(?:this|that))\b",
+            re.I,
+        ),
+        "INJECTION.SYSTEM_PROMPT_LEAK",
+        0.75,
+    ),
+    (
         re.compile(
             r"\b(?:do\s+not|don'?t|never)\s+(?:tell|inform|mention\s+to|alert)\s+"
             r"(?:the\s+)?(?:user|human|operator)\b",

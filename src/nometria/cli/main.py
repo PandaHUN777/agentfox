@@ -1048,27 +1048,43 @@ def redteam_run(agent: str, probes: str | None = None) -> None:
                 "succeeded": f.succeeded,
                 "owasp": f.owasp_id,
                 "verdict": (f.evidence_json or {}).get("verdict"),
+                "expect_blocked": (f.evidence_json or {}).get("expect_blocked", True),
+                "over_blocked": (f.evidence_json or {}).get("over_blocked", False),
             }
             for f in findings
         ]
 
     console.print(
-        f"[bold]{agent}[/] — {stats['probes_run']} probes, "
-        f"[green]{stats['attacks_blocked']} blocked[/], "
-        f"[red]{stats['attacks_succeeded']} got through[/], "
-        f"posture [bold]{stats['posture_score']:.0%}[/]"
+        f"[bold]{agent}[/] — {stats['probes_run']} probes "
+        f"({stats.get('attacks_run', stats['probes_run'])} attacks, "
+        f"{stats.get('benign_probes_run', 0)} benign controls)"
     )
+    console.print(
+        f"  recall (attacks caught) [bold]{stats.get('recall', stats['posture_score']):.0%}[/] — "
+        f"[green]{stats['attacks_blocked']} blocked[/], "
+        f"[red]{stats['attacks_succeeded']} got through[/]"
+    )
+    if stats.get("benign_probes_run"):
+        console.print(
+            f"  precision [bold]{stats.get('precision', 1.0):.0%}[/] — "
+            f"[red]{stats['benign_false_positives']} legitimate call(s) wrongly blocked[/]"
+            if stats["benign_false_positives"]
+            else f"  precision [bold]{stats.get('precision', 1.0):.0%}[/] — "
+            "[green]no benign controls wrongly blocked[/]"
+        )
     table = Table(box=None, pad_edge=False)
     for column in ("probe", "severity", "OWASP", "verdict", "result"):
         table.add_column(column, style="bold" if column == "probe" else None)
     for row in rows:
-        table.add_row(
-            row["probe"],
-            row["severity"],
-            row["owasp"] or "—",
-            row["verdict"] or "—",
-            "[red]NOT BLOCKED[/]" if row["succeeded"] else "[green]blocked[/]",
-        )
+        if row["over_blocked"]:
+            result = "[red]OVER-BLOCKED (false positive)[/]"
+        elif row["expect_blocked"] and row["succeeded"]:
+            result = "[red]NOT BLOCKED (attack succeeded)[/]"
+        elif row["expect_blocked"]:
+            result = "[green]blocked[/]"
+        else:
+            result = "[green]allowed[/]"
+        table.add_row(row["probe"], row["severity"], row["owasp"] or "—", row["verdict"] or "—", result)
     console.print(table)
 
 

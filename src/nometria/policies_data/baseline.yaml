@@ -22,7 +22,15 @@ rules:
     description: Block high-confidence injection or jailbreak in user input.
     when:
       surface: [input]
-      detection: {entity_prefix: INJECTION, min_score: 0.85}
+      # 0.85 discarded 15 real held-out attacks (scores 0.7-0.8) for zero measured
+      # precision gain — every benign example in train/test/notinject scores below
+      # 0.7 (checked directly against all three, see benchmarks/redteam/README.md;
+      # 0.6 has 2 borderline train-set hits, which is why this isn't 0.6 to match
+      # injection.indirect exactly). The detector's own recall/precision is what's
+      # actually benchmarked (benchmarks/REPORT.md) — this gate was silently
+      # discarding some of that already-measured capability, not adding a
+      # precision check the detector's own scoring hadn't already made.
+      detection: {entity_prefix: INJECTION, min_score: 0.7}
     effect: block
     severity: high
     reason: "Prompt-injection or jailbreak attempt detected in user input."

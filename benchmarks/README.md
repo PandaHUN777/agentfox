@@ -15,6 +15,7 @@ One entry per capability area. Each links to a self-contained directory with its
 | F4 — entitlement & disclosure control | [`entitlement/`](entitlement/README.md) | Self-constructed scenario benchmark | Purpose-limitation check: 100% recall / 0% FP across 493 real PrivacyLens vignettes — a mechanical-correctness check, not a classifier stress test; read the caveat before citing this number |
 | Secrets detection | [`secrets/`](secrets/README.md) | **Investigated, blocked on access** | Both sourced datasets (CredData, SecretBench) need a human license call or an author data-agreement — neither completable same-day |
 | F3.8 — composed privilege escalation | [`composed_privilege_escalation/`](composed_privilege_escalation/README.md) | **Built** | New `guardrails/composition.py` (P9-11) detects a read tool's output flowing into a write tool's argument, using the taint tracker's existing provenance. 11 tests (unit + end-to-end), no labeled dataset exists to score precision/recall against |
+| P4-4 — automated red-teaming | [`redteam/`](redteam/README.md) | Benchmarked, structural gaps closed | Recall 100% / precision 100% (support-triage, hr-screening), 95% (payments-ops — a real Art. 14 policy interaction, not a bug). Probes now reach capability/action-assurance/taint/composition checks a content-only probe structurally couldn't; 2 real bugs and a policy-threshold gap found and fixed along the way |
 
 ## Reading this table honestly
 
