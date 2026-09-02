@@ -70,7 +70,7 @@ def _resolve_llm() -> LLM:
     # point it at.
     model_override = os.environ.get("NOMETRIA_DEMO_MODEL")
     if os.environ.get("ANTHROPIC_API_KEY"):
-        return LLM(model=model_override or "anthropic/claude-3-5-haiku-20241022", is_litellm=True)
+        return LLM(model=model_override or "anthropic/claude-haiku-4-5-20251001", is_litellm=True)
     if os.environ.get("OPENAI_API_KEY"):
         return LLM(model=model_override or "gpt-4o-mini", is_litellm=True)
     raise MissingApiKey(_NO_KEY_MESSAGE)

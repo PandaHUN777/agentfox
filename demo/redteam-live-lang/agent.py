@@ -108,7 +108,7 @@ def _resolve_llm() -> Any:
         from langchain_anthropic import ChatAnthropic
 
         return ChatAnthropic(
-            model=model_override or "claude-3-5-haiku-20241022",
+            model=model_override or "claude-haiku-4-5-20251001",
             temperature=0,
             timeout=_LLM_TIMEOUT_S,
             max_retries=_LLM_MAX_RETRIES,
