@@ -140,6 +140,51 @@ def health() -> dict:
     }
 
 
+@app.get("/api/diag")
+def diag() -> dict:
+    """Isolates where a hung /api/chat request is actually stuck: raw egress to the
+    LLM provider (bypassing LangChain and nometria's BaseChatModel.invoke patch
+    entirely) vs. the DB round-trip vs. an actual LangChain+nometria-governed call.
+    Each probe gets its own short, explicit timeout so this endpoint itself always
+    returns quickly and reports which stage failed rather than hanging."""
+    import time
+
+    import httpx
+
+    out = {}
+
+    t0 = time.monotonic()
+    try:
+        r = httpx.get("https://api.anthropic.com/", timeout=8)
+        out["raw_egress_anthropic"] = {"ok": True, "status": r.status_code, "elapsed_s": round(time.monotonic() - t0, 2)}
+    except Exception as exc:  # noqa: BLE001
+        out["raw_egress_anthropic"] = {"ok": False, "error": f"{type(exc).__name__}: {exc}", "elapsed_s": round(time.monotonic() - t0, 2)}
+
+    t0 = time.monotonic()
+    try:
+        key = os.environ.get("ANTHROPIC_API_KEY", "")
+        r = httpx.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={"x-api-key": key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+            json={"model": "claude-3-5-haiku-20241022", "max_tokens": 8, "messages": [{"role": "user", "content": "hi"}]},
+            timeout=15,
+        )
+        out["raw_anthropic_messages_call"] = {"ok": r.status_code == 200, "status": r.status_code, "elapsed_s": round(time.monotonic() - t0, 2), "body": r.text[:300]}
+    except Exception as exc:  # noqa: BLE001
+        out["raw_anthropic_messages_call"] = {"ok": False, "error": f"{type(exc).__name__}: {exc}", "elapsed_s": round(time.monotonic() - t0, 2)}
+
+    t0 = time.monotonic()
+    try:
+        init_db()
+        with session_scope() as session:
+            session.execute(__import__("sqlalchemy").text("SELECT 1"))
+        out["db_roundtrip"] = {"ok": True, "elapsed_s": round(time.monotonic() - t0, 2)}
+    except Exception as exc:  # noqa: BLE001
+        out["db_roundtrip"] = {"ok": False, "error": f"{type(exc).__name__}: {exc}", "elapsed_s": round(time.monotonic() - t0, 2)}
+
+    return out
+
+
 _PAGE = """<!doctype html>
 <html>
 <head>
