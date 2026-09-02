@@ -5,11 +5,15 @@ Two tiers, and the split is a **licence** decision, not a quality one:
 * :class:`GraniteGuardianDetector` — IBM Granite Guardian, **Apache-2.0 weights**.
   The default. Appendix A.1 calls this the cleanest licence in the classifier group,
   which is what a commercial product needs.
-* :class:`RestrictedClassifierDetector` — Meta Llama Guard / Prompt Guard and Google
-  ShieldGemma. Capable, but the Llama Community and Gemma licences are **not
-  OSI-approved**: they add acceptable-use policies and (for Llama) a >700M-MAU
-  clause. Appendix A.4 requires these to be opt-in, so the adapter refuses to load
-  unless ``NOMETRIA_ACCEPT_RESTRICTED_MODEL_LICENSES=1``.
+* :class:`RestrictedClassifierDetector` — Meta Llama Guard 3-8B (the only one of
+  the three named in earlier revisions of this module that is actually wired up
+  here; Prompt Guard and ShieldGemma share the same licence gate but have no
+  registered adapter). The Llama Community licence is **not OSI-approved**: it
+  adds an acceptable-use policy and a >700M-MAU clause. Appendix A.4 requires
+  this to be opt-in, so the adapter refuses to load unless
+  ``NOMETRIA_ACCEPT_RESTRICTED_MODEL_LICENSES=1`` — and, unlike every classifier
+  above, it is not actually a classification model (see that class's docstring
+  for why it cannot share `_TransformersClassifier`'s inference path).
 
 Neither is installed by default. A customer must not inherit a licence obligation
 by running ``docker compose up``.
@@ -256,22 +260,97 @@ class GraniteGuardianDetector(_TransformersClassifier):
 
 
 class RestrictedClassifierDetector(_TransformersClassifier):
-    """Llama Guard / Prompt Guard / ShieldGemma. Opt-in, licence-gated."""
+    """Llama Guard 3-8B. Opt-in, licence-gated.
+
+    Unlike every other detector in this module, Llama Guard is not a
+    classification model — it is a causal LM fine-tuned to *generate* the word
+    "safe" or "unsafe\\nS<n>" in response to a chat-formatted prompt built from
+    its own tokenizer's chat template (the taxonomy the template embeds is baked
+    into the tokenizer config, not passed by the caller). Running it through
+    `_TransformersClassifier`'s `pipeline("text-classification", ...)` — right
+    for Granite Guardian and the two prompt-injection models, which really are
+    fine-tuned classification heads — does not error for this model, but it
+    silently attaches a freshly, randomly-initialized classification head on top
+    of the pretrained base model (`config.json` declares `LlamaForCausalLM`, no
+    classification head) and scores everything against untrained noise. That
+    failure mode produces no error and no obviously-wrong output, so it would
+    ship undetected. `_detect` below instead follows Meta's own documented usage
+    (`apply_chat_template` + `generate`, checking whether the completion starts
+    with "unsafe"), overriding the classification-pipeline machinery entirely
+    while still reusing `available()`/`_weights_present()` from the base class.
+    """
 
     key = "safety.restricted"
     version = "1.0"
     restricted = True
     surfaces = ("input", "output", "retrieved", "tool_result")
-    label_map = {
-        "unsafe": "SAFETY.HARM",
-        "jailbreak": "INJECTION.JAILBREAK",
-        "injection": "INJECTION.INSTRUCTION_OVERRIDE",
-        "s1": "SAFETY.HARM",
-        "s2": "SAFETY.HARM",
-    }
+    #: Generation has no natural per-call confidence score the way a softmax
+    #: over a trained classification head does — "unsafe" is a binary verdict,
+    #: reported at the same fixed confidence schema.py's structural violations
+    #: use for the same reason (see `_TransformersClassifier._detect` for the
+    #: contrasting case where a real softmax score is available).
+    _verdict_score = 1.0
+    max_new_tokens = 20
 
     def __init__(self, model_id: str = "meta-llama/Llama-Guard-3-8B") -> None:
         self.model_id = model_id
+
+    @functools.cached_property
+    def _generator(self):  # pragma: no cover - requires optional dependency + gated weights
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        torch.set_num_threads(1)  # see _TransformersClassifier._pipeline for why
+        tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+        model = AutoModelForCausalLM.from_pretrained(self.model_id, torch_dtype=torch.bfloat16)
+        model.eval()
+        return tokenizer, model
+
+    def warm(self) -> None:  # pragma: no cover - requires optional dependency
+        if self.available():
+            self._detect("hello", DetectionContext())
+
+    def _detect(self, content: str, context: DetectionContext) -> list[Detection]:
+        if not content:
+            return []
+        import torch
+
+        tokenizer, model = self._generator
+        # Llama Guard classifies whichever turn is *last* in the chat it's given,
+        # against a different half of its taxonomy depending on that turn's role.
+        # "output" is the only surface here that is itself a model completion;
+        # everything else (input/retrieved/tool_result) is content arriving at
+        # the model, which maps onto Llama Guard's "user" role.
+        role = "assistant" if context.surface == "output" else "user"
+        chat = [{"role": role, "content": content[:4000]}]
+        input_ids = tokenizer.apply_chat_template(chat, return_tensors="pt")
+        with torch.no_grad():
+            generated = model.generate(
+                input_ids=input_ids, max_new_tokens=self.max_new_tokens, pad_token_id=0
+            )
+        completion = tokenizer.decode(
+            generated[0][input_ids.shape[-1] :], skip_special_tokens=True
+        ).strip()
+
+        if not completion.lower().startswith("unsafe"):
+            return []
+        # The category line ("S1".."S14" in the 3.x taxonomy) is passed through
+        # verbatim rather than mapped to a specific entity type: Llama Guard's
+        # categories are content-harm categories (violence, weapons, CSAE, etc.),
+        # not a jailbreak/injection-specific taxonomy the way this project's other
+        # detectors are, so a blanket SAFETY.HARM is the honest label rather than
+        # guessing which category number should read as something more specific.
+        category = completion.splitlines()[1].strip() if "\n" in completion else ""
+        return [
+            Detection(
+                entity_type="SAFETY.HARM",
+                score=self._verdict_score,
+                end=len(content),
+                sample=redact_sample(content, keep=12),
+                owasp_id="LLM09",
+                detail={"engine": self.key, "model": self.model_id, "category": category},
+            )
+        ]
 
     def license_notice(self) -> str:
         return (

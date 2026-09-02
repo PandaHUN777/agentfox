@@ -1,17 +1,31 @@
 # Nometria — self-hosted control plane.
 #
 # Self-host is the default and only MVP deployment mode (X-8, P3-8, NFR-4). Nothing
-# here reaches the internet at runtime: the default model provider is `echo`, egress
-# is off, and no model weights are downloaded. A regulated customer can run this in
-# an air-gapped VPC and every pillar still functions.
+# here reaches the internet at *runtime*: the default model provider is `echo`, egress
+# is off, and every classifier's weights are already baked into the gateway image
+# (deploy/Dockerfile) rather than fetched on first use. A regulated customer can run
+# the built image in an air-gapped VPC and every pillar still functions.
 #
-#   docker compose -f deploy/docker-compose.yml up --build
+# The *build* is a different story once the classifier tier is enabled: fetching
+# those weights needs network egress, and Llama Guard additionally needs an HF_TOKEN
+# from an account that has accepted Meta's licence — see the `secrets:` block below
+# and deploy/Dockerfile's own comments. Set HF_TOKEN in your shell before building:
+#
+#   export HF_TOKEN=hf_...
+#   docker compose -f deploy/docker-compose.yml build
+#   docker compose -f deploy/docker-compose.yml up
 #
 #   control plane   http://localhost:3000
 #   API + gateway   http://localhost:8080
 #   OPA (optional)  http://localhost:8181
 
 name: nometria
+
+secrets:
+  # Backed by the HF_TOKEN environment variable, never written to a file in the
+  # repo — `docker compose build` reads it from the shell that invokes it.
+  hf_token:
+    environment: HF_TOKEN
 
 services:
   db:
@@ -42,6 +56,8 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile
+      secrets:
+        - hf_token
     environment:
       NOMETRIA_DATABASE_URL: postgresql+psycopg://nometria:nometria@db:5432/nometria
       NOMETRIA_ORG_ID: org_default
@@ -57,6 +73,18 @@ services:
       NOMETRIA_DETECTOR_TIMEOUT_MS: "40"
       NOMETRIA_POLICY_ENGINE: native
       NOMETRIA_OPA_URL: http://opa:8181
+      # Every detector this image has weights baked in for (deploy/Dockerfile),
+      # on top of the 5 zero-dependency defaults. `safety.restricted` is Llama Guard
+      # 3-8B — gated behind the flag below, not behind this list alone.
+      NOMETRIA_ENABLED_DETECTORS: >-
+        ["injection.heuristic","pii.native","secrets.native","safety.lexicon",
+        "schema.json","injection.classifier","safety.granite","injection.similarity",
+        "safety.restricted"]
+      # Appendix A.4: Llama Guard's licence is non-OSI (acceptable-use policy, a
+      # >700M-MAU clause) and the code refuses to load it without this being set.
+      # Setting it to "1" is a legal decision, not a technical one — confirm you've
+      # done the licence review Appendix A.4 calls for before deploying with this on.
+      NOMETRIA_ACCEPT_RESTRICTED_MODEL_LICENSES: "1"
       # CHANGE THIS. The checkpoint signing key should live outside the application
       # database and be held by the customer (NFR-7, Appendix E.2.2).
       NOMETRIA_AUDIT_SIGNING_KEY: change-me-before-any-real-deployment
