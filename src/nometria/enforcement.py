@@ -110,6 +110,7 @@ from .models import (
     TaintTag,
     Tool,
     Trace,
+    as_aware,
     utcnow,
 )
 from .policy import PolicyInput, active_policies, combine, get_engine
@@ -251,7 +252,15 @@ class Enforcer:
         if identity is not None and identity.agent_id and not agent_slug:
             agent = self.session.get(Agent, identity.agent_id)
             if agent is not None:
-                agent.last_seen_at = utcnow()
+                # Debounced for the same reason as observe_agent()'s own
+                # last_seen_at write (registry/service.py) — an unconditional
+                # write here is the same redundant-second-writer hazard when this
+                # session and another already-open session both resolve the same
+                # agent within one logical call.
+                now = utcnow()
+                last_seen = as_aware(agent.last_seen_at)
+                if last_seen is None or (now - last_seen) > dt.timedelta(seconds=5):
+                    agent.last_seen_at = now
                 return agent, identity, False
 
         if not agent_slug:

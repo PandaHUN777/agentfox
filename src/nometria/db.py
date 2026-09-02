@@ -47,6 +47,17 @@ def configure_pool(url: str, *, workers: int = 1) -> dict:
         "max_overflow": 10,
         "pool_pre_ping": True,
         "pool_recycle": 1800,
+        # Without a lock_timeout, two sessions contending for the same row (e.g.
+        # two independent resolves of the same agent within one governed call —
+        # see registry/service.py's observe_agent() debounce, added for the same
+        # incident) wait on Postgres's default unbounded lock queue. In a
+        # request-scoped caller (a web handler) that reads as a hang with no
+        # error, not a slow query — found live, a deployed request stalled until
+        # the platform's own hard function timeout killed it. Failing fast here
+        # converts any future contention like that into a clear, immediate
+        # OperationalError instead. statement_timeout is a second, broader
+        # backstop for the same class of problem beyond just row locks.
+        "connect_args": {"options": "-c lock_timeout=5000 -c statement_timeout=20000"},
     }
 
 

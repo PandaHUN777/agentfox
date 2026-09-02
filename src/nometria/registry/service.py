@@ -35,6 +35,7 @@ from ..models import (
     Span,
     Tool,
     Trace,
+    as_aware,
     utcnow,
 )
 from ..policy import PolicyDocument, save_policy
@@ -237,7 +238,21 @@ def observe_agent(
             )
         )
 
-    agent.last_seen_at = utcnow()
+    # Debounced, not unconditional: a single governed call can resolve the same
+    # agent from more than one DB session in quick succession (e.g. autoguard's
+    # pre-flight check opens its own session independently of whatever session a
+    # caller already has open around the whole call — see autoguard.py's
+    # `_govern`). Writing `last_seen_at` from both stalls one session behind the
+    # other's uncommitted row lock — on Postgres, with no lock_timeout configured,
+    # that's an unbounded hang, not a slow query. Found live: a deployed demo
+    # whose request holds a session open across an `AgentExecutor.invoke()`,
+    # which itself triggers a second, independent resolve of the very same agent
+    # mid-call. Skipping the redundant write when the row was already touched a
+    # moment ago removes the second writer instead of just widening the window.
+    now = utcnow()
+    last_seen = as_aware(agent.last_seen_at)
+    if last_seen is None or (now - last_seen) > dt.timedelta(seconds=5):
+        agent.last_seen_at = now
     if framework and not agent.framework:
         agent.framework = framework
     if model and model not in (agent.declared_models or []):
