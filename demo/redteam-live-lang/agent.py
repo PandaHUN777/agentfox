@@ -232,6 +232,24 @@ class SessionState:
     history: list[BaseMessage] = field(default_factory=list)
 
 
+def _reply_text(output: Any) -> str:
+    """`AgentExecutor.invoke()`'s `output` is a plain string for most models, but
+    Claude's newer message format returns structured content blocks instead — a
+    list of `{"type": "text", "text": ...}` dicts — which `str()` would otherwise
+    render as a literal Python list repr instead of the text itself. Concatenates
+    every text block, in order, the same way a caller reading a normal string
+    reply would expect.
+    """
+    if isinstance(output, str):
+        return output.strip()
+    if isinstance(output, list):
+        return "".join(
+            str(block.get("text", "")) if isinstance(block, dict) else str(block)
+            for block in output
+        ).strip()
+    return str(output).strip()
+
+
 def run_turn(user_message: str, session_state: SessionState | None = None) -> dict[str, Any]:
     """Run one governed turn of conversation. One call = one `AgentExecutor.invoke()`
     against one `GovernedToolkit`, scoped to one `session_scope()` -- the same shape
@@ -245,27 +263,17 @@ def run_turn(user_message: str, session_state: SessionState | None = None) -> di
     turn's tool calls), and `tool_calls` (one governance summary per tool call, in
     call order, via `support_tools.decision_summary`).
     """
-    import time
-
-    _t0 = time.monotonic()
-    print(f"[diag] run_turn start t=0.00", flush=True)
-
     if session_state is None:
         session_state = SessionState()
 
     init_db()
-    print(f"[diag] init_db done t={time.monotonic()-_t0:.2f}", flush=True)
     with session_scope() as session:
-        print(f"[diag] session_scope opened t={time.monotonic()-_t0:.2f}", flush=True)
         toolkit = GovernedToolkit(
             session=session, session_id=session_state.session_id, intent=user_message[:200]
         )
-        print(f"[diag] toolkit built t={time.monotonic()-_t0:.2f}", flush=True)
         executor = build_agent_executor(toolkit)
-        print(f"[diag] executor built t={time.monotonic()-_t0:.2f}", flush=True)
         result = executor.invoke({"input": user_message, "chat_history": session_state.history})
-        print(f"[diag] executor.invoke returned t={time.monotonic()-_t0:.2f}", flush=True)
-        reply = str(result.get("output", "")).strip()
+        reply = _reply_text(result.get("output", ""))
 
         session_state.history.append(HumanMessage(content=user_message))
         session_state.history.append(AIMessage(content=reply))
