@@ -1,0 +1,27 @@
+# This demo is a consumer of the nometria package, not part of it — install both
+# into whatever environment (venv/uv/conda) you'll run the demo from:
+#
+#   pip install -e /path/to/guardrails   # nometria itself, editable
+#   pip install -r requirements.txt      # this file
+#
+# Do NOT `uv sync --all-extras` or `pip install langchain` into the main repo's
+# tracked `.venv` — langchain-anthropic and langchain-openai pull in `anthropic` and
+# `openai` as real transitive dependencies, and several nometria tests
+# (tests/test_autoguard.py, specifically
+# test_missing_litellm_and_langchain_are_reported_not_hidden) assert `langchain_core`
+# (and `litellm`) are *absent* in the tracked venv, to prove auto() reports a missing
+# library honestly rather than hiding it. Use a separate virtualenv for this demo —
+# confirmed empirically while building it: `uv run pytest tests/test_autoguard.py -q`
+# still passes 40/40 in the tracked `.venv` with this demo's dependencies installed
+# only into a scratch venv, never the tracked one. See README.md.
+
+langchain>=0.3,<0.4
+langchain-core>=0.3
+
+# Both providers' integration packages — this demo picks whichever has credentials
+# set at runtime (ANTHROPIC_API_KEY preferred, OPENAI_API_KEY fallback; see
+# agent.py's `_resolve_llm()`). Each pulls in its provider's raw SDK (`anthropic`,
+# `openai`) as a real dependency — that's fine and expected here, unlike in the
+# tracked repo venv.
+langchain-anthropic>=0.3
+langchain-openai>=0.3

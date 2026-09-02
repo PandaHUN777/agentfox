@@ -1,0 +1,37 @@
+# Vercel Python function entrypoint (web.py) installs from this file — same
+# @vercel/python pattern as ../../api/requirements.txt, read that file's own
+# comments first for the full reasoning this mirrors. This is the DEPLOYMENT
+# requirements file; local development uses requirements-dev.txt instead (editable
+# nometria install + no fastapi/wheel — see README.md's "One-time setup").
+fastapi>=0.115
+sqlalchemy>=2.0
+pydantic>=2.9
+pydantic-settings>=2.6
+pyyaml>=6.0
+httpx>=0.27
+argon2-cffi>=23.1
+alembic>=1.14
+rich>=13.9
+psycopg>=3.2
+psycopg-binary>=3.2
+sqlglot>=25.0
+cryptography>=43
+
+# This demo's own dependencies (the agent framework + provider SDKs) — see
+# requirements-dev.txt for why both providers are listed unconditionally.
+langchain>=0.3,<0.4
+langchain-core>=0.3
+langchain-anthropic>=0.3
+langchain-openai>=0.3
+
+# The local `nometria` package, as a prebuilt wheel checked into vendor/ (physically
+# at demo/redteam-live-lang/vendor/) — identical reasoning and the identical
+# leading-"../" path quirk as ../../api/requirements.txt's own copy of this comment
+# (Vercel's local-path resolver treats requirements.txt's own location as one
+# directory deeper than it actually is, regardless of how deep Root Directory
+# itself is — confirmed against api/'s working deployment, not re-derived from
+# scratch). Rebuild after changing src/nometria:
+#   uv build --wheel --out-dir demo/redteam-live-lang/vendor
+# then delete the old wheel file and `git add -f` the new one (vendor/.gitignore
+# excludes build output by default, same as api/vendor/'s).
+../vendor/nometria-0.1.0-py3-none-any.whl
