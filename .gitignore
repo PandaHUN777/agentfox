@@ -11,3 +11,6 @@ node_modules/
 dashboard/.next/
 dashboard/.npm-cache/
 .env
+# Written by `nometria init` when run from the repo root without an explicit
+# --path — a local dev convenience file, not a repo artifact.
+/nometria.toml
