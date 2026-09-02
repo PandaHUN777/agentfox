@@ -245,16 +245,26 @@ def run_turn(user_message: str, session_state: SessionState | None = None) -> di
     turn's tool calls), and `tool_calls` (one governance summary per tool call, in
     call order, via `support_tools.decision_summary`).
     """
+    import time
+
+    _t0 = time.monotonic()
+    print(f"[diag] run_turn start t=0.00", flush=True)
+
     if session_state is None:
         session_state = SessionState()
 
     init_db()
+    print(f"[diag] init_db done t={time.monotonic()-_t0:.2f}", flush=True)
     with session_scope() as session:
+        print(f"[diag] session_scope opened t={time.monotonic()-_t0:.2f}", flush=True)
         toolkit = GovernedToolkit(
             session=session, session_id=session_state.session_id, intent=user_message[:200]
         )
+        print(f"[diag] toolkit built t={time.monotonic()-_t0:.2f}", flush=True)
         executor = build_agent_executor(toolkit)
+        print(f"[diag] executor built t={time.monotonic()-_t0:.2f}", flush=True)
         result = executor.invoke({"input": user_message, "chat_history": session_state.history})
+        print(f"[diag] executor.invoke returned t={time.monotonic()-_t0:.2f}", flush=True)
         reply = str(result.get("output", "")).strip()
 
         session_state.history.append(HumanMessage(content=user_message))

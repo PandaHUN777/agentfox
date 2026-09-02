@@ -68,7 +68,12 @@ def _startup() -> None:
 
 @app.post("/api/chat")
 def chat(req: ChatRequest) -> dict:
+    import time
+
+    _t0 = time.monotonic()
+    print(f"[diag] chat handler start t=0.00", flush=True)
     _ensure_seeded()
+    print(f"[diag] _ensure_seeded done t={time.monotonic()-_t0:.2f}", flush=True)
     state = SessionState(session_id=req.session_id or "web-session")
     for turn in req.history:
         state.history.append(
@@ -77,7 +82,10 @@ def chat(req: ChatRequest) -> dict:
             else AIMessage(content=turn.content)
         )
     try:
-        return run_turn(req.message, state)
+        print(f"[diag] entering run_turn t={time.monotonic()-_t0:.2f}", flush=True)
+        result = run_turn(req.message, state)
+        print(f"[diag] run_turn returned t={time.monotonic()-_t0:.2f}", flush=True)
+        return result
     except MissingApiKey as exc:
         return {
             "reply": str(exc),

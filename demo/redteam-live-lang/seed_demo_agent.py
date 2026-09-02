@@ -33,7 +33,9 @@ from support_tools import AGENT_SLUG, CAPABILITY_GRANTS, SERVER_NAME, TOOL_DESCR
 
 
 def main() -> None:
+    print("[diag] seed_demo_agent.main() start", flush=True)
     init_db()
+    print("[diag] seed_demo_agent init_db() done", flush=True)
     with session_scope() as session:
         agent = register_agent(
             session,
