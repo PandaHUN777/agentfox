@@ -30,7 +30,7 @@ from nometria.autoguard import (
     off,
     state,
 )
-from nometria.models import Agent, Decision, DetectionFinding, Trace
+from nometria.models import Agent, Decision, DetectionFinding, Span, Trace
 
 # ---------------------------------------------------------------------------
 # A fake client library with the real shape
@@ -248,6 +248,51 @@ def test_the_governed_call_leaves_a_trace_and_decisions(app_db, fake_openai):
     with session_scope() as session:
         assert session.query(Trace).count() >= 1
         assert session.query(Decision).count() >= 2, "one per surface"
+
+
+def test_the_governed_call_writes_an_llm_span_with_the_output_text(app_db, fake_openai):
+    """`sample_production()` (P4-2 online eval) finds a trace's output by looking for
+    a `kind="llm"` span with `attributes["nometria.output"]` set — the same shape
+    `enforcement.py`'s `_finish_completion()` writes for the native gateway path. This
+    patched-library path used to skip writing that span entirely: every trace it
+    produced had `guardrail`-kind spans (from tool governance) but never an `llm`-kind
+    one, so `sample_production()` silently dropped every one of its traces (`output`
+    stayed empty) and online eval could never score anything for an agent onboarded
+    purely via `nometria.auto()`. Regression for that gap."""
+    client, _calls = fake_openai
+    auto(agent="support-triage", quiet=True)
+    client().create(model="gpt-4o", messages=[{"role": "user", "content": "hi"}])
+
+    from nometria.db import session_scope
+
+    with session_scope() as session:
+        span = session.query(Span).filter(Span.kind == "llm").one()
+    assert span.attributes_json.get("nometria.output") == "hello back"
+
+
+def test_a_langchain_governed_trace_can_be_scored_by_the_online_evaluator(
+    app_db, fake_langchain
+):
+    """The actual reported bug: `support-crew-live-lang`, a real production agent
+    governed purely through `auto()`'s LangChain patch, had 19+ recorded traces that
+    `sample_production()` always sampled as 0 usable cases. Runs the real online-eval
+    code path end to end against a trace this integration produced, rather than just
+    asserting a span exists."""
+    from nometria.db import session_scope
+    from nometria.evaluation.runner import sample_production
+
+    messages_mod, _calls = fake_langchain
+    auto(agent="support-triage", quiet=True)
+
+    from langchain_core.language_models.chat_models import BaseChatModel
+
+    BaseChatModel().invoke("hi")
+
+    with session_scope() as session:
+        run = sample_production(session, "support-triage", rate=1.0)
+        assert run is not None, "the trace should have been sampled, not silently dropped"
+        assert run.summary_json["cases"] == 1
+        assert run.summary_json["errors"] == 0
 
 
 def test_reserved_evidence_kwargs_record_disclosure_and_never_reach_the_provider(

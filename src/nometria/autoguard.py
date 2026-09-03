@@ -36,9 +36,11 @@ import functools
 import logging
 import os
 import sys
+import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from .audit.trace import ATTR_AGENT, ATTR_REQUEST_MODEL, add_span
 from .config import get_settings
 from .db import init_db, session_scope
 from .enforcement import Enforcer
@@ -400,12 +402,14 @@ def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
         _IN_NOMETRIA.reset(token)
         return call()
 
+    started_call = time.perf_counter()
     try:
         if blocked and state.mode == "enforce":
             raise Blocked(blocking_result)
         response = call()
     finally:
         _IN_NOMETRIA.reset(token)
+    provider_ms = (time.perf_counter() - started_call) * 1000
 
     try:
         text = _text_of(response)
@@ -416,6 +420,33 @@ def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
                     enforcer = Enforcer(session)
                     agent, identity, _shadow = enforcer.resolve(state.agent)
                     from .models import Trace
+
+                    # The only place on this path that writes a kind="llm" span with
+                    # the raw response text — every other surface (openai/anthropic/
+                    # litellm's own SDK response shape) is patched generically here,
+                    # so this is the one span-writing site that has to cover all of
+                    # them. Without it, this whole one-liner integration produced
+                    # traces sample_production() (P4-2 online eval) could never score:
+                    # it looks for exactly this kind+attribute shape, and the only
+                    # other spans this path's traces carry are the McpGovernor tool
+                    # call's "guardrail"-kind ones, which never hold the model's
+                    # actual output text. Mirrors enforcement.py's
+                    # _finish_completion(), the native gateway path's equivalent.
+                    usage = _usage_of(response)
+                    add_span(
+                        session,
+                        trace_id,
+                        kind="llm",
+                        name=f"{state.agent}.invoke",
+                        attributes={
+                            ATTR_AGENT: state.agent,
+                            ATTR_REQUEST_MODEL: str(kwargs.get("model") or ""),
+                            "gen_ai.usage.input_tokens": usage.get("input_tokens", 0),
+                            "gen_ai.usage.output_tokens": usage.get("output_tokens", 0),
+                            "nometria.output": text,
+                        },
+                        duration_ms=provider_ms,
+                    )
 
                     if principal_ref is not None:
                         from sqlalchemy import select
@@ -451,7 +482,6 @@ def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
                     # nothing else on this path ever charges spend against the
                     # agent's budget. Without this, P15-3's hard caps in preflight()
                     # gate against a Budget that never moves, i.e. they never trip.
-                    usage = _usage_of(response)
                     if agent is not None and usage:
                         from types import SimpleNamespace
 
