@@ -2,6 +2,7 @@
 
 from .control import all_controls, get_control, kill, quarantine, resume, set_state, state_of
 from .service import (
+    assess_delegation,
     attest_registry,
     derive_lineage,
     detect_shadow_agents,
@@ -19,6 +20,7 @@ from .service import (
 
 __all__ = [
     "all_controls",
+    "assess_delegation",
     "attest_registry",
     "derive_lineage",
     "detect_shadow_agents",

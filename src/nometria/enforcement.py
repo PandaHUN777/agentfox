@@ -38,6 +38,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from .agent_loop import LoopBudget, Step, govern_loop
 from .agent_messaging import verify_message
 from .answerability import (
     classify_answerability,
@@ -71,13 +72,16 @@ from .entitlement import (
     inference_risk,
     record_disclosure,
 )
+from .data_access import ReferenceTable, ScopeRule
+from .data_access import analyse_access as analyse_data_access
+from .effects import cascade_risk
 from .guardrails import (
     DetectionContext,
     DetectorPipeline,
     TaintTracker,
     redact_content,
 )
-from .guardrails.actions import analyse_arguments
+from .guardrails.actions import analyse_arguments, find_sql_argument
 from .guardrails.actions import summarise as summarise_actions
 from .guardrails.base import taint_rank
 from .guardrails.composition import check_composed_escalation
@@ -97,6 +101,7 @@ from .integrations.correlation import (
 )
 from .integrity import assess_integrity
 from .models import (
+    AccessScopeRule,
     Agent,
     AgentMessageLog,
     AgentSigningKey,
@@ -113,7 +118,7 @@ from .models import (
     as_aware,
     utcnow,
 )
-from .policy import PolicyInput, active_policies, combine, get_engine
+from .policy import EFFECT_RANK, PolicyInput, active_policies, combine, get_engine
 from .provenance import assess_provenance
 from .providers import CompletionRequest, get_provider
 from .registry.service import observe_agent, record_edge
@@ -133,10 +138,12 @@ class ProviderUnavailable(RuntimeError):
     """Every provider on the fallback ladder failed or is circuit-open."""
 
 
-#: Verdict severity ordering, shared by every comparison in this module.
 log = logging.getLogger(__name__)
 
-_RANK = {"allow": 0, "tokenize": 1, "mask": 2, "redact": 3, "abstain": 4, "escalate": 5, "block": 6}
+#: Verdict severity ordering, shared by every comparison in this module — the same
+#: precedence the policy engine itself uses to combine rule effects, not a second
+#: copy of it.
+_RANK = EFFECT_RANK
 
 
 @dataclass
@@ -191,6 +198,29 @@ class EnforcementResult:
             "suppressed": self.suppressed,
             "latency_budget": self.latency_budget,
         }
+
+
+def _fired_rule(
+    rule_id: str,
+    effect: str,
+    reason: str,
+    *,
+    severity: str | None = None,
+    controls: list[str] | None = None,
+    evidence: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """One entry in `rules_fired` for a synthetic (non-policy-authored) rule —
+    the shape a dozen-plus call sites in this module built by hand. Optional keys
+    are omitted rather than set to ``None`` so every call site keeps exactly the
+    keys it had before this was factored out."""
+    rule: dict[str, Any] = {"rule_id": rule_id, "effect": effect, "reason": reason}
+    if severity is not None:
+        rule["severity"] = severity
+    if controls is not None:
+        rule["controls"] = controls
+    if evidence is not None:
+        rule["evidence"] = evidence
+    return rule
 
 
 @dataclass
@@ -307,6 +337,7 @@ class Enforcer:
         intent: str | None = None,
         schema: dict[str, Any] | None = None,
         prior_tools: list[str] | None = None,
+        prior_steps: list[dict[str, Any]] | None = None,
         tracker: TaintTracker | None = None,
         persist: bool = True,
     ) -> EnforcementResult:
@@ -406,8 +437,23 @@ class Enforcer:
             else {}
         )
 
-        # --- budgets & loop containment (P3-10) --------------------------
-        budget = self._budget_state(agent, trace, tool_key, prior_tools or [])
+        # --- P9 cascade risk / P18 data-access scoping, when declared ------
+        # Same block as the action-assurance check above, extending the same
+        # `action["risks"]`/`action["critical"]` the policy engine already reasons
+        # over (`policy/engine.py`'s `action_risk` glob condition) — no policy-layer
+        # change needed for either check to actually start firing.
+        extras = self._cascade_and_access_risks(tool_key, arguments)
+        if extras:
+            extra_risks = extras.pop("risks", [])
+            action.update(extras)
+            if extra_risks:
+                action["risks"] = [*action.get("risks", []), *extra_risks]
+                action["critical"] = [r for r in action["risks"] if r["severity"] == "critical"]
+
+        # --- budgets & loop containment (P3-10, PL-4) ---------------------
+        budget = self._budget_state(
+            agent, trace, tool_key, prior_tools or [], prior_steps, arguments
+        )
 
         taint_summary = tracker.summary() if tracker else {"max_source": taint_source}
         taint_summary = {
@@ -478,13 +524,13 @@ class Enforcer:
             effective = "block"
             if "capability.denied" not in fired_ids:
                 rules_fired.append(
-                    {
-                        "rule_id": "capability.default_deny",
-                        "effect": "block",
-                        "reason": "; ".join(capability.get("reasons") or ["no capability granted"]),
-                        "severity": "high",
-                        "controls": ["NOM-IAM-02"],
-                    }
+                    _fired_rule(
+                        "capability.default_deny",
+                        "block",
+                        "; ".join(capability.get("reasons") or ["no capability granted"]),
+                        severity="high",
+                        controls=["NOM-IAM-02"],
+                    )
                 )
         elif capability.get("requires_approval") and effective != "block":
             effective = "escalate"
@@ -492,13 +538,13 @@ class Enforcer:
                 verdict = "escalate"
             if "capability.approval_required" not in fired_ids:
                 rules_fired.append(
-                    {
-                        "rule_id": "capability.requires_approval",
-                        "effect": "escalate",
-                        "reason": "; ".join(capability.get("reasons") or ["approval required"]),
-                        "severity": "medium",
-                        "controls": ["NOM-IAM-03"],
-                    }
+                    _fired_rule(
+                        "capability.requires_approval",
+                        "escalate",
+                        "; ".join(capability.get("reasons") or ["approval required"]),
+                        severity="medium",
+                        controls=["NOM-IAM-03"],
+                    )
                 )
 
         # F2/F7: an unauthoritative or arithmetically wrong answer is a finding, not
@@ -528,14 +574,14 @@ class Enforcer:
             effective = "block"
             fired_ids.add(risk["code"])
             rules_fired.append(
-                {
-                    "rule_id": risk["code"],
-                    "effect": "block",
-                    "reason": risk["detail"],
-                    "severity": "critical",
-                    "controls": ["NOM-RTG-09"],
-                    "evidence": risk.get("evidence", {}),
-                }
+                _fired_rule(
+                    risk["code"],
+                    "block",
+                    risk["detail"],
+                    severity="critical",
+                    controls=["NOM-RTG-09"],
+                    evidence=risk.get("evidence", {}),
+                )
             )
 
         # P9-11/F3.8: a read tool's output flowing into a higher-impact tool's
@@ -563,14 +609,14 @@ class Enforcer:
             effective = "block"
             fired_ids.add(rule_id)
             rules_fired.append(
-                {
-                    "rule_id": "composition.escalation",
-                    "effect": "block",
-                    "reason": finding.reason,
-                    "severity": "critical",
-                    "controls": ["NOM-RTG-09"],
-                    "evidence": finding.to_json(),
-                }
+                _fired_rule(
+                    "composition.escalation",
+                    "block",
+                    finding.reason,
+                    severity="critical",
+                    controls=["NOM-RTG-09"],
+                    evidence=finding.to_json(),
+                )
             )
 
         # P3-7: a degraded pipeline means reduced coverage. Fail-closed converts that
@@ -579,14 +625,13 @@ class Enforcer:
             verdict = "block"
             effective = "block"
             rules_fired.append(
-                {
-                    "rule_id": "pipeline.fail_closed",
-                    "effect": "block",
-                    "reason": f"detectors degraded ({pipeline_result.degraded}) and "
-                    "fail_mode=closed",
-                    "severity": "medium",
-                    "controls": ["NOM-RTG-06"],
-                }
+                _fired_rule(
+                    "pipeline.fail_closed",
+                    "block",
+                    f"detectors degraded ({pipeline_result.degraded}) and fail_mode=closed",
+                    severity="medium",
+                    controls=["NOM-RTG-06"],
+                )
             )
 
         # The ladder outcome joins here rather than in the rule list, so that its
@@ -599,14 +644,14 @@ class Enforcer:
                 if mode == "enforce":
                     verdict = combined.verdict
             rules_fired.append(
-                {
-                    "rule_id": f"business.{ladder_decision.ladder_key}",
-                    "effect": ladder_decision.outcome,
-                    "reason": ladder_decision.reason,
-                    "severity": "medium",
-                    "controls": ["NOM-GOV-07"],
-                    "evidence": ladder_decision.to_json(),
-                }
+                _fired_rule(
+                    f"business.{ladder_decision.ladder_key}",
+                    ladder_decision.outcome,
+                    ladder_decision.reason,
+                    severity="medium",
+                    controls=["NOM-GOV-07"],
+                    evidence=ladder_decision.to_json(),
+                )
             )
 
         latency_ms = (time.perf_counter() - started) * 1000
@@ -818,6 +863,7 @@ class Enforcer:
         tracker: TaintTracker | None = None,
         credential: str | None = None,
         prior_tools: list[str] | None = None,
+        prior_steps: list[dict[str, Any]] | None = None,
         verified_state: dict[str, Any] | None = None,
         dry_run: bool = False,
     ) -> EnforcementResult:
@@ -877,6 +923,7 @@ class Enforcer:
             argument_propagated_from=argument_propagated_from,
             intent=intent,
             prior_tools=prior_tools,
+            prior_steps=prior_steps,
             tracker=tracker,
         )
 
@@ -980,13 +1027,13 @@ class Enforcer:
                 f"the state read is {int(age)}s old and the capability requires it to "
                 f"be no older than {max_age}s"
             )
-        return {
-            "rule_id": "action.unverified_state",
-            "effect": "block",
-            "reason": reason,
-            "severity": "critical",
-            "controls": ["NOM-RTG-09", "NOM-IAM-03"],
-        }
+        return _fired_rule(
+            "action.unverified_state",
+            "block",
+            reason,
+            severity="critical",
+            controls=["NOM-RTG-09", "NOM-IAM-03"],
+        )
 
     # ------------------------------------------------------------------
     # Memory write governance (P14, NOM-RTG-13) — closes OWASP ASI06
@@ -1163,52 +1210,45 @@ class Enforcer:
             result.effective_verdict = "block"
             result.reason = f"replayed message: (sender='{sender_slug}', nonce) was already seen"
             result.rules_fired.append(
-                {
-                    "rule_id": "agent_message.replay",
-                    "effect": "block",
-                    "reason": result.reason,
-                    "controls": ["NOM-IAM-08"],
-                }
+                _fired_rule(
+                    "agent_message.replay", "block", result.reason, controls=["NOM-IAM-08"]
+                )
             )
         elif not agent_card_match:
             effect = "escalate" if result.verdict == "allow" else result.verdict
             result.verdict = effect
             result.effective_verdict = effect
             result.rules_fired.append(
-                {
-                    "rule_id": "agent_message.agent_card_mismatch",
-                    "effect": effect,
-                    "reason": (
-                        f"sender '{sender_slug}' is not a registered agent — "
-                        "its agent-card cannot be verified"
-                    ),
-                    "controls": ["NOM-IAM-08"],
-                }
+                _fired_rule(
+                    "agent_message.agent_card_mismatch",
+                    effect,
+                    f"sender '{sender_slug}' is not a registered agent — "
+                    "its agent-card cannot be verified",
+                    controls=["NOM-IAM-08"],
+                )
             )
         elif signature_valid is False:
             effect = "block" if result.verdict != "block" else result.verdict
             result.verdict = effect
             result.effective_verdict = effect
             result.rules_fired.append(
-                {
-                    "rule_id": "agent_message.bad_signature",
-                    "effect": effect,
-                    "reason": "signature did not verify against the sender's registered signing key",
-                    "controls": ["NOM-IAM-08"],
-                }
+                _fired_rule(
+                    "agent_message.bad_signature",
+                    effect,
+                    "signature did not verify against the sender's registered signing key",
+                    controls=["NOM-IAM-08"],
+                )
             )
         elif signature is None:
             result.taint["unsigned"] = True
             result.rules_fired.append(
-                {
-                    "rule_id": "agent_message.unsigned",
-                    "effect": "observe",
-                    "reason": (
-                        "message arrived unsigned — either the transport is not "
-                        "Nometria's own, or the sender has no registered signing key"
-                    ),
-                    "controls": ["NOM-IAM-08"],
-                }
+                _fired_rule(
+                    "agent_message.unsigned",
+                    "observe",
+                    "message arrived unsigned — either the transport is not "
+                    "Nometria's own, or the sender has no registered signing key",
+                    controls=["NOM-IAM-08"],
+                )
             )
 
         if persist:
@@ -1263,14 +1303,14 @@ class Enforcer:
         if verdict.answerable:
             return None
 
-        rule = {
-            "rule_id": f"answerability.{verdict.abstention_kind}",
-            "effect": "abstain",
-            "reason": verdict.reasons[0].get("reason")
+        rule = _fired_rule(
+            f"answerability.{verdict.abstention_kind}",
+            "abstain",
+            verdict.reasons[0].get("reason")
             or f"question is {verdict.question_type}, outside the declared boundary",
-            "severity": "medium",
-            "controls": ["NOM-RTG-11"],
-        }
+            severity="medium",
+            controls=["NOM-RTG-11"],
+        )
         chain.append(
             self.session,
             action=f"answerability.{verdict.abstention_kind}",
@@ -1718,13 +1758,13 @@ class Enforcer:
             trace_id=trace.id,
             reason=verdict.reason,
             rules_fired=[
-                {
-                    "rule_id": "budget.exhausted",
-                    "effect": "block",
-                    "reason": verdict.reason,
-                    "severity": "high",
-                    "controls": ["NOM-RTG-08"],
-                }
+                _fired_rule(
+                    "budget.exhausted",
+                    "block",
+                    verdict.reason,
+                    severity="high",
+                    controls=["NOM-RTG-08"],
+                )
             ],
         )
         chain.append(
@@ -1839,13 +1879,13 @@ class Enforcer:
             mode="enforce",
             reason=reason,
             rules_fired=[
-                {
-                    "rule_id": f"agent.{control.state}",
-                    "effect": "block",
-                    "reason": reason,
-                    "severity": "critical",
-                    "controls": ["NOM-DSC-02"],
-                }
+                _fired_rule(
+                    f"agent.{control.state}",
+                    "block",
+                    reason,
+                    severity="critical",
+                    controls=["NOM-DSC-02"],
+                )
             ],
         )
 
@@ -2254,17 +2294,106 @@ class Enforcer:
                 )
         return ids
 
+    def _cascade_and_access_risks(
+        self, tool_key: str | None, arguments: dict[str, Any] | None
+    ) -> dict[str, Any]:
+        """P9 cascade risk (`effects.cascade_risk`) and P18 data-access scoping
+        (`data_access.analyse_access`) — wired into the live path here, rather than
+        living only in their own test files as before. Both are opt-in in the
+        precise sense that nothing is declared by default: a `Tool` with no
+        `triggers_json` and a database with no `AccessScopeRule` rows make this a
+        zero-cost no-op, and an undeclared trigger or an undeclared table stays
+        invisible, matching each module's own documented limitation rather than
+        overclaiming coverage. Never raises — a governance extra must not break the
+        call it exists to police.
+        """
+        extra: dict[str, Any] = {}
+        extra_risks: list[dict[str, Any]] = []
+        try:
+            if arguments and (sql := find_sql_argument(arguments)):
+                scope_rows = self.session.scalars(select(AccessScopeRule)).all()
+                rules = [
+                    ScopeRule(
+                        table=r.table_name,
+                        column=r.column or "",
+                        principal_key=r.principal_key,
+                        restricted_columns=tuple(r.restricted_columns or ()),
+                    )
+                    for r in scope_rows
+                    if not r.is_reference and r.column
+                ]
+                reference = [
+                    ReferenceTable(table=r.table_name) for r in scope_rows if r.is_reference
+                ]
+                if rules or reference:
+                    access = analyse_data_access(
+                        sql,
+                        principal=None,
+                        rules=rules,
+                        reference=reference,
+                        dialect=self.settings.sql_dialect,
+                        strictness=self.settings.data_access_strictness,
+                    )
+                    extra["access"] = access.to_json()
+                    extra_risks.extend(f.to_json() for f in access.findings)
+
+            if tool_key:
+                org_tools = self.session.scalars(select(Tool)).all()
+                triggers = {t.key: t.triggers_json for t in org_tools if t.triggers_json}
+                if triggers:
+                    destructive = tuple(t.key for t in org_tools if t.impact == "irreversible")
+                    cascade = cascade_risk(tool_key, triggers, destructive=destructive)
+                    extra["cascade"] = cascade.to_json()
+                    extra_risks.extend(f.to_json() for f in cascade.findings)
+        except Exception as exc:  # pragma: no cover - governance extra must not break the call
+            log.warning("cascade/access analysis unavailable: %s", exc)
+            return {}
+
+        if extra_risks:
+            extra["risks"] = extra_risks
+        return extra
+
     def _budget_state(
         self,
         agent: Agent | None,
         trace: Trace | None,
         tool_key: str | None,
         prior_tools: list[str],
+        prior_steps: list[dict[str, Any]] | None = None,
+        arguments: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         state: dict[str, Any] = {"exceeded": False, "loop_detected": False}
-        if tool_key and prior_tools:
+        if tool_key and prior_steps is not None:
+            # PL-4: the real loop governor (agent_loop.LoopGovernor) — three
+            # detectors (identical re-issued calls, alternating cycles, no new
+            # observation) instead of "the same tool three times in a row", which
+            # misses an A-B-A-B alternation entirely since neither tool repeats
+            # consecutively. Falls through to the naive counter below only when a
+            # caller has no step history to give it yet (see the `elif`).
+            replay = [
+                Step(tool=s.get("tool", ""), arguments=s.get("arguments") or {},
+                     observation=s.get("observation"))
+                for s in prior_steps
+            ] + [Step(tool=tool_key, arguments=arguments or {}, observation=None)]
+            verdict = govern_loop(
+                replay,
+                budget=LoopBudget(
+                    max_steps=self.settings.loop_max_steps,
+                    max_repeats=self.settings.loop_max_repeats,
+                    max_cycle_length=self.settings.loop_max_cycle_length,
+                    max_steps_without_progress=self.settings.loop_max_steps_without_progress,
+                ),
+            )
+            state["loop_detected"] = verdict.stopped
+            state["loop_reason"] = verdict.reason
+            state["loop_evidence"] = verdict.evidence
+            state["repeat_count"] = prior_tools.count(tool_key)
+            state["depth"] = len(prior_tools)
+        elif tool_key and prior_tools:
             # A tool called repeatedly in one execution path is the runaway-loop
-            # shape (OWASP LLM10 / Agentic T4).
+            # shape (OWASP LLM10 / Agentic T4). Kept as the fallback for a caller
+            # that only supplies prior_tools (no step history yet) — same graceful
+            # degradation as check_conversation_window.
             repeats = prior_tools.count(tool_key)
             state["repeat_count"] = repeats
             state["loop_detected"] = repeats >= 3

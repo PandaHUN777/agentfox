@@ -31,8 +31,9 @@ from ...evaluation import (
 from ...evaluation.adapters import available_runners, get_runner
 from ...evaluation.redteam import BUILTIN_PROBES
 from ...evaluation.runner import NativeEvalRunner, fit_envelope
+from ...evaluation.scorers import get_scorer
 from ...models import (
-    Agent,
+    EvalAnnotation,
     EvalCase,
     EvalResult,
     EvalRun,
@@ -42,7 +43,7 @@ from ...models import (
     Trace,
     User,
 )
-from ..deps import current_user, db, require
+from ..deps import current_user, db, get_agent_or_404, require
 
 router = APIRouter(prefix="/api", tags=["evaluation"])
 
@@ -190,7 +191,7 @@ def promote_trace(
         session,
         "eval.case_promoted",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="eval_case",
         subject_id=case.id,
         payload={"suite": key, "trace_id": trace_id},
@@ -234,7 +235,7 @@ def create_run(
         session,
         "eval.run",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="eval_run",
         subject_id=run.id,
         payload={
@@ -284,6 +285,122 @@ def get_run(
     }
 
 
+def _is_borderline_score(result: EvalResult, band: float) -> bool:
+    scorer = get_scorer(result.scorer_key)
+    threshold = getattr(scorer, "threshold", None) if scorer else None
+    if threshold is None:
+        return False
+    return abs(result.score - threshold) <= band
+
+
+@router.get("/eval/annotations/queue")
+def eval_annotation_queue(
+    run_id: str | None = None,
+    band: float = 0.1,
+    limit: int = 100,
+    session: Session = Depends(db),
+    _user: User = Depends(current_user),
+) -> dict[str, Any]:
+    """Eval results a human should look at: score within `band` of the scorer's
+    own pass/fail threshold, or scorers disagreeing on the same case — both are
+    exactly the shape a human should review rather than trust blindly, not a
+    finding-in-itself the way a failed scorer already is."""
+    query = select(EvalResult).order_by(EvalResult.created_at.desc())
+    if run_id:
+        query = query.where(EvalResult.run_id == run_id)
+    # A bounded scan (not the whole table) — this queue is meant to surface a
+    # recent working set, not paginate the full eval history.
+    results = list(session.scalars(query.limit(2000)))
+
+    by_case: dict[tuple[str, str], list[EvalResult]] = {}
+    for r in results:
+        by_case.setdefault((r.run_id, r.case_id), []).append(r)
+
+    borderline: list[EvalResult] = []
+    for r in results:
+        siblings = by_case[(r.run_id, r.case_id)]
+        disagreement = len({s.passed for s in siblings}) > 1
+        if disagreement or _is_borderline_score(r, band):
+            borderline.append(r)
+        if len(borderline) >= limit:
+            break
+
+    annotated_ids = set()
+    if borderline:
+        annotated_ids = {
+            a.eval_result_id
+            for a in session.scalars(
+                select(EvalAnnotation).where(
+                    EvalAnnotation.eval_result_id.in_([r.id for r in borderline])
+                )
+            )
+        }
+
+    return {
+        "results": [
+            {
+                "id": r.id,
+                "run_id": r.run_id,
+                "case_id": r.case_id,
+                "scorer": r.scorer_key,
+                "score": r.score,
+                "passed": r.passed,
+                "annotated": r.id in annotated_ids,
+            }
+            for r in borderline
+        ],
+    }
+
+
+class AnnotateIn(BaseModel):
+    verdict: str = "agree"
+    note: str
+
+
+@router.post("/eval/results/{result_id}/annotate")
+def annotate_eval_result(
+    result_id: str,
+    payload: AnnotateIn,
+    session: Session = Depends(db),
+    user: User = Depends(require("eval")),
+) -> dict[str, Any]:
+    """Record a human's judgment on a borderline eval result. Requires a note —
+    same reasoning as Finding's own suppress/resolve discipline
+    (registry.py's patch_finding): a one-click verdict with nothing recorded is
+    how a real disagreement about scorer correctness disappears without anyone
+    having actually looked."""
+    result = session.get(EvalResult, result_id)
+    if result is None:
+        raise HTTPException(404, "unknown eval result")
+    if not payload.note:
+        raise HTTPException(400, "annotating requires a note explaining the judgment")
+    if payload.verdict not in ("agree", "disagree"):
+        raise HTTPException(400, "verdict must be 'agree' or 'disagree'")
+
+    existing = session.scalar(
+        select(EvalAnnotation).where(
+            EvalAnnotation.eval_result_id == result_id,
+            EvalAnnotation.annotator == user.email,
+        )
+    )
+    if existing is None:
+        existing = EvalAnnotation(eval_result_id=result_id, annotator=user.email)
+        session.add(existing)
+    existing.verdict = payload.verdict
+    existing.note = payload.note
+    session.flush()
+    chain.append(
+        session,
+        "eval_result.annotated",
+        actor_type="user",
+        actor_id=user.email or user.id,
+        subject_type="eval_result",
+        subject_id=result_id,
+        payload={"verdict": payload.verdict},
+    )
+    return {"id": existing.id, "eval_result_id": result_id, "verdict": existing.verdict}
+
+
 class GateIn(BaseModel):
     suite: str
     target: dict[str, Any] = Field(default_factory=dict)
@@ -313,7 +430,7 @@ def run_gate(
         session,
         "eval.gate",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="eval_run",
         subject_id=run.id,
         payload={
@@ -347,7 +464,7 @@ def create_baseline(
         session,
         "eval.baseline_set",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="baseline",
         subject_id=baseline.id,
         payload={"run_id": run.id, "label": payload.label},
@@ -424,8 +541,7 @@ def declare_slo(
     reads SLOs and never lets anyone set one is a dead end for every org that hasn't
     already seeded them by hand.
     """
-    if session.scalar(select(Agent).where(Agent.slug == payload.agent)) is None:
-        raise HTTPException(404, f"unknown agent '{payload.agent}'")
+    get_agent_or_404(session, payload.agent)
     slo = set_slo(
         session,
         agent_slug=payload.agent,
@@ -483,7 +599,7 @@ def create_campaign(
         session,
         "redteam.campaign",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="redteam_campaign",
         subject_id=campaign.id,
         payload=campaign.summary_json,

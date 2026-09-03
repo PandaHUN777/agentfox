@@ -173,6 +173,40 @@ def test_ordinary_shell_is_not_flagged():
         assert not analyse_shell(command).blocked, command
 
 
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cd /tmp && rm -rf /important-data",
+        "echo done; rm -rf /important-data",
+        "true || rm -rf /important-data",
+        "find . -name '*.tmp' | xargs rm -rf",
+    ],
+)
+def test_a_destructive_command_chained_after_a_harmless_one_is_still_caught(command):
+    """A single whole-string `.search()` already found these (it is not anchored to
+    the start) — this instead proves segmentation reasons over the actual command
+    boundaries rather than accidentally relying on that leniency."""
+    assert analyse_shell(command).blocked, command
+
+
+def test_an_operator_character_inside_a_quoted_string_is_not_a_false_segment_boundary():
+    """`echo "a; b"` is one command, not two — a naive split on `;` without quote
+    awareness would fracture it and could miss a destructive pattern that spans
+    the quoted text's boundary in a more complex command."""
+    from nometria.guardrails.actions import _shell_segments
+
+    assert _shell_segments('echo "a; b && c"') == ['echo "a; b && c"']
+
+
+def test_a_quoted_mention_of_a_destructive_command_still_matches_todays_behavior():
+    """Documents current, unchanged behavior rather than asserting a fix: the
+    deny-list matches substrings regardless of quoting context, both before and
+    after this change (distinguishing "mentioned in a string" from "executed" is
+    a real shell-semantics problem this deny-list has never claimed to solve —
+    see analyse_shell's own docstring)."""
+    assert analyse_shell('echo "you should never run rm -rf /"').blocked
+
+
 def test_http_reads_are_free_and_collection_deletes_are_not():
     assert analyse_http("GET", "/api/users").blast_radius == "none"
     assert analyse_http("DELETE", "/api/users/42").blast_radius == "bounded"

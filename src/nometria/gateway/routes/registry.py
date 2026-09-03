@@ -38,6 +38,7 @@ from ...models import (
 )
 from ...registry.control import UnknownAgent, all_controls, set_state
 from ...registry.service import (
+    assess_delegation,
     attest_registry,
     derive_lineage,
     detect_shadow_agents,
@@ -50,7 +51,7 @@ from ...registry.service import (
     upsert_tool,
 )
 from ..auth import issue_token
-from ..deps import current_user, db, require
+from ..deps import current_user, db, get_agent_or_404, require
 
 router = APIRouter(prefix="/api", tags=["registry", "identity"])
 
@@ -213,7 +214,7 @@ def create_agent(
         session,
         "agent.registered",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="agent",
         subject_id=agent.id,
         payload=payload.model_dump(),
@@ -225,9 +226,7 @@ def create_agent(
 def get_agent(
     slug: str, session: Session = Depends(db), _user: User = Depends(current_user)
 ) -> dict[str, Any]:
-    agent = session.scalar(select(Agent).where(Agent.slug == slug))
-    if agent is None:
-        raise HTTPException(404, f"unknown agent '{slug}'")
+    agent = get_agent_or_404(session, slug)
     return _agent_json(agent, session)
 
 
@@ -245,9 +244,7 @@ def update_agent(
     session: Session = Depends(db),
     user: User = Depends(require("registry")),
 ) -> dict[str, Any]:
-    agent = session.scalar(select(Agent).where(Agent.slug == slug))
-    if agent is None:
-        raise HTTPException(404, f"unknown agent '{slug}'")
+    agent = get_agent_or_404(session, slug)
     changes = payload.model_dump(exclude_unset=True)
     for field, value in changes.items():
         setattr(agent, field, value)
@@ -256,7 +253,7 @@ def update_agent(
         session,
         "agent.updated",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="agent",
         subject_id=agent.id,
         payload=changes,
@@ -279,9 +276,7 @@ def agent_posture(
     from ...evaluation.drift import evaluate_slos
     from ...models import Decision, Trace
 
-    agent = session.scalar(select(Agent).where(Agent.slug == slug))
-    if agent is None:
-        raise HTTPException(404, f"unknown agent '{slug}'")
+    agent = get_agent_or_404(session, slug)
 
     traces = list(session.scalars(select(Trace).where(Trace.agent_slug == slug)))
     decisions = list(session.scalars(select(Decision).where(Decision.agent_id == agent.id)))
@@ -328,21 +323,23 @@ def shadow_agents(
 def run_discovery(
     session: Session = Depends(db), user: User = Depends(require("registry"))
 ) -> dict[str, Any]:
-    """Sweep: lineage, unowned agents, registry drift, identity posture."""
+    """Sweep: lineage, unowned agents, registry drift, identity posture, delegation shape."""
     edges = derive_lineage(session)
     unowned = unowned_agents(session)
     drift = attest_registry(session)
     posture = assess_posture(session)
+    delegation = assess_delegation(session)
     chain.append(
         session,
         "discovery.scan",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         payload={
             "edges": edges,
             "unowned": len(unowned),
             "drift": len(drift),
             "posture": len(posture),
+            "delegation": len(delegation),
         },
     )
     return {
@@ -350,6 +347,7 @@ def run_discovery(
         "unowned_agents": len(unowned),
         "registry_drift": len(drift),
         "identity_posture_findings": len(posture),
+        "delegation_findings": len(delegation),
         "shadow_agents": detect_shadow_agents(session),
     }
 
@@ -603,7 +601,7 @@ def patch_finding(
         session,
         f"finding.{payload.status}",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="finding",
         subject_id=finding.id,
         payload={"type": finding.type, "reason": payload.suppression_reason or payload.note},
@@ -678,7 +676,7 @@ def issue(
         session,
         "credential.issued",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="credential",
         subject_id=credential.id,
         payload={"identity": identity.principal, "ttl_days": ttl_days},
@@ -707,7 +705,7 @@ def rotate(
         session,
         "credential.rotated",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="credential",
         subject_id=credential.id,
         payload={"identity": identity.principal, "overlap_hours": overlap_hours},
@@ -725,7 +723,7 @@ def revoke(
         session,
         "credential.revoked",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="credential",
         subject_id=credential_id,
         payload={},
@@ -765,7 +763,7 @@ def add_capability(
         session,
         "capability.granted",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="capability",
         subject_id=capability.id,
         payload=payload.model_dump(),
@@ -821,7 +819,7 @@ def create_delegation(
         session,
         "identity.delegated",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="delegation",
         subject_id=edge.id,
         payload=edge.capability_diff_json,
@@ -928,7 +926,7 @@ def _resolve(
         session,
         f"approval.{approval.status}",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="approval",
         subject_id=approval.id,
         payload={"tool": approval.tool_key, "rationale": rationale, "reason": approval.reason},

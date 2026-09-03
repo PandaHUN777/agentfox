@@ -10,13 +10,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ...agent_messaging import mint_signing_key
-from ...models import Agent, AgentMessageLog, AgentSigningKey, User
-from ..deps import current_user, db, require
+from ...models import AgentMessageLog, AgentSigningKey, User
+from ..deps import current_user, db, get_agent_or_404, require
 
 router = APIRouter(prefix="/api", tags=["agent-messaging"])
 
@@ -29,9 +29,7 @@ def mint_key(
 ) -> dict[str, Any]:
     """Mint (or rotate) an agent's HMAC signing key. Shown once — like an API
     token, nothing after this call can retrieve the raw value again."""
-    agent = session.scalar(select(Agent).where(Agent.slug == slug))
-    if agent is None:
-        raise HTTPException(404, f"unknown agent '{slug}'")
+    agent = get_agent_or_404(session, slug)
     key, raw = mint_signing_key(session, agent.id, created_by=user.email)
     return {"agent": slug, "key": raw, "created_at": key.created_at.isoformat()}
 
@@ -42,9 +40,7 @@ def key_status(
     session: Session = Depends(db),
     _user: User = Depends(current_user),
 ) -> dict[str, Any]:
-    agent = session.scalar(select(Agent).where(Agent.slug == slug))
-    if agent is None:
-        raise HTTPException(404, f"unknown agent '{slug}'")
+    agent = get_agent_or_404(session, slug)
     key = session.scalar(select(AgentSigningKey).where(AgentSigningKey.agent_id == agent.id))
     return {
         "agent": slug,

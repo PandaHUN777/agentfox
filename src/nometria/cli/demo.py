@@ -35,6 +35,7 @@ from ..registry.service import (
     unowned_agents,
 )
 from ..seed import POISONED_DOCUMENT
+from ._style import SEVERITY_COLOUR
 
 console = Console()
 
@@ -485,9 +486,7 @@ def run() -> dict[str, Any]:
         table.add_column("title")
         order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
         for finding in sorted(findings, key=lambda f: order.get(f.severity, 9))[:12]:
-            colour = {"critical": "red", "high": "red", "medium": "yellow"}.get(
-                finding.severity, "dim"
-            )
+            colour = SEVERITY_COLOUR.get(finding.severity, "dim")
             table.add_row(f"[{colour}]{finding.severity}[/]", finding.type, finding.title[:78])
         console.print(table)
         summary["open_findings"] = len(findings)

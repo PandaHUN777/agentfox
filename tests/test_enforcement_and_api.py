@@ -4,7 +4,16 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.models import Agent, ApprovalRequest, AuditEntry, Decision, Finding, Trace
+from nometria.identity import ensure_identity, grant_capability
+from nometria.models import (
+    Agent,
+    ApprovalRequest,
+    AuditEntry,
+    Decision,
+    Finding,
+    Tool,
+    Trace,
+)
 from nometria.policy import set_mode
 
 from .conftest import INDIRECT_INJECTION, PII_TEXT, SECRET_TEXT, as_user
@@ -220,6 +229,99 @@ def test_enforcement_stays_inside_the_latency_budget(seeded, enforcer):
 
 
 # ---------------------------------------------------------------------------
+# P9 cascade risk / P18 data-access scoping — wired into guard_tool_call
+#
+# Both `effects.cascade_risk()` and `data_access.analyse_access()` were fully
+# built and tested but had zero callers anywhere outside their own test files
+# before this. These tests prove the wiring (enforcement.py's
+# `_cascade_and_access_risks`) actually reaches a real enforcement effect via
+# the shipped `tool-containment.yaml` rules, not just that a finding object
+# gets constructed somewhere.
+# ---------------------------------------------------------------------------
+
+
+def test_a_declared_trigger_reaching_a_destructive_tool_is_blocked(seeded, enforcer):
+    agent = seeded.query(Agent).filter_by(slug="support-triage").one()
+    identity = ensure_identity(seeded, agent)
+    grant_capability(seeded, identity, "cascade-server/reader")
+    seeded.add(
+        Tool(key="cascade-server/reader", name="reader", impact="read",
+             triggers_json=["cascade-server/notifier"])
+    )
+    seeded.add(Tool(key="cascade-server/notifier", name="notifier", impact="irreversible"))
+    seeded.flush()
+
+    result = enforcer.guard_tool_call(
+        agent_slug="support-triage", tool_key="cascade-server/reader", arguments={"q": "x"},
+    )
+    assert result.taint["action"]["cascade"]["verdict"] == "block"
+    codes = [r["code"] for r in result.taint["action"]["cascade"]["findings"]]
+    assert "cascade-reaches-destructive" in codes
+    assert result.blocked
+    assert any(r["rule_id"] == "cascade.reaches_destructive" for r in result.rules_fired)
+
+
+def test_an_undeclared_trigger_stays_invisible(seeded, enforcer):
+    """The honest, documented limitation (effects.cascade_risk's own docstring):
+    a trigger nobody declared is not caught — this proves the wiring does not
+    overclaim coverage it does not have."""
+    agent = seeded.query(Agent).filter_by(slug="support-triage").one()
+    identity = ensure_identity(seeded, agent)
+    grant_capability(seeded, identity, "cascade-server/reader")
+    seeded.add(Tool(key="cascade-server/reader", name="reader", impact="read"))
+    seeded.flush()
+
+    result = enforcer.guard_tool_call(
+        agent_slug="support-triage", tool_key="cascade-server/reader", arguments={"q": "x"},
+    )
+    assert "cascade" not in result.taint["action"]
+    assert not result.blocked
+
+
+def test_an_unscoped_query_on_a_declared_table_is_blocked(seeded, enforcer):
+    from nometria.models import AccessScopeRule
+
+    agent = seeded.query(Agent).filter_by(slug="support-triage").one()
+    identity = ensure_identity(seeded, agent)
+    grant_capability(seeded, identity, "sql-server/run_query")
+    seeded.add(
+        AccessScopeRule(table_name="orders", column="customer_id", principal_key="customer_id")
+    )
+    seeded.flush()
+
+    result = enforcer.guard_tool_call(
+        agent_slug="support-triage",
+        tool_key="sql-server/run_query",
+        arguments={"sql": "SELECT * FROM orders"},
+    )
+    codes = [r["code"] for r in result.taint["action"]["access"]["findings"]]
+    assert "unscoped-table" in codes
+    assert result.blocked
+    assert any(r["rule_id"] == "access.unscoped_table" for r in result.rules_fired)
+
+
+def test_a_query_on_an_undeclared_table_escalates_not_silently_allows(seeded, enforcer):
+    from nometria.models import AccessScopeRule
+
+    agent = seeded.query(Agent).filter_by(slug="support-triage").one()
+    identity = ensure_identity(seeded, agent)
+    grant_capability(seeded, identity, "sql-server/run_query")
+    # A rule exists for a *different* table — proves this isn't "no rules at all".
+    seeded.add(AccessScopeRule(table_name="invoices", column="customer_id"))
+    seeded.flush()
+
+    result = enforcer.guard_tool_call(
+        agent_slug="support-triage",
+        tool_key="sql-server/run_query",
+        arguments={"sql": "SELECT * FROM orders"},
+    )
+    codes = [r["code"] for r in result.taint["action"]["access"]["findings"]]
+    assert "undeclared-table" in codes
+    assert result.escalated
+    assert any(r["rule_id"] == "access.undeclared_table" for r in result.rules_fired)
+
+
+# ---------------------------------------------------------------------------
 # Gateway API
 # ---------------------------------------------------------------------------
 
@@ -405,6 +507,18 @@ def test_evidence_build_and_verify_via_api(client):
     assert response.json()["chain_verification"]["valid"] is True
     verify = client.post("/api/audit/verify", headers=as_user("aisha@example.com"))
     assert verify.json()["valid"] is True
+
+
+def test_legal_hold_placed_and_listed_in_retention(client):
+    response = client.post(
+        "/api/legal-holds",
+        json={"scope": {"agents": ["support-triage"]}, "reason": "Litigation hold — case #4471"},
+        headers=as_user("admin@example.com"),
+    )
+    assert response.status_code == 201
+    retention = client.get("/api/retention", headers=as_user("admin@example.com")).json()
+    holds = retention["legal_holds"]
+    assert any(h["reason"] == "Litigation hold — case #4471" for h in holds)
 
 
 def test_policy_simulation_reports_a_diff(client):
@@ -694,6 +808,105 @@ def test_sdk_check_returns_a_decision(seeded):
     )
     assert result["effective_verdict"] in ("block", "escalate")
     assert result["entities"]
+
+
+def test_borderline_eval_results_appear_in_the_annotation_queue(client):
+    """P4 — a score within `band` of the scorer's own pass/fail threshold is
+    exactly the shape a human should review, mirroring Finding's own
+    cross-pillar queue rather than inventing a new one."""
+    from nometria.db import session_scope
+    from nometria.models import EvalResult, EvalRun
+
+    with session_scope() as s:
+        run = EvalRun(suite_id="test-suite-borderline", status="completed")
+        s.add(run)
+        s.flush()
+        # exact_match's own threshold is 1.0 — 0.95 sits within the default 0.1 band.
+        result = EvalResult(
+            run_id=run.id, case_id="case-1", scorer_key="exact_match",
+            score=0.95, passed=False,
+        )
+        s.add(result)
+        s.flush()
+        run_id, result_id = run.id, result.id
+
+    queue = client.get(
+        f"/api/eval/annotations/queue?run_id={run_id}", headers=as_user("admin@example.com")
+    ).json()
+    rows = {r["id"]: r for r in queue["results"]}
+    assert result_id in rows
+    assert rows[result_id]["annotated"] is False
+
+    annotated = client.post(
+        f"/api/eval/results/{result_id}/annotate",
+        json={"verdict": "disagree", "note": "the scorer is too strict for a near-miss here"},
+        headers=as_user("admin@example.com"),
+    )
+    assert annotated.status_code == 200, annotated.text
+    assert annotated.json()["verdict"] == "disagree"
+
+    queue2 = client.get(
+        f"/api/eval/annotations/queue?run_id={run_id}", headers=as_user("admin@example.com")
+    ).json()
+    rows2 = {r["id"]: r for r in queue2["results"]}
+    assert rows2[result_id]["annotated"] is True
+
+
+def test_annotating_without_a_note_is_rejected(client):
+    """Same discipline as Finding's suppress/resolve: a one-click verdict with
+    nothing recorded is how a real disagreement about scorer correctness
+    disappears without anyone having actually looked."""
+    from nometria.db import session_scope
+    from nometria.models import EvalResult, EvalRun
+
+    with session_scope() as s:
+        run = EvalRun(suite_id="test-suite-note", status="completed")
+        s.add(run)
+        s.flush()
+        result = EvalResult(
+            run_id=run.id, case_id="case-1", scorer_key="exact_match",
+            score=1.0, passed=True,
+        )
+        s.add(result)
+        s.flush()
+        result_id = result.id
+
+    resp = client.post(
+        f"/api/eval/results/{result_id}/annotate",
+        json={"verdict": "agree", "note": ""},
+        headers=as_user("admin@example.com"),
+    )
+    assert resp.status_code == 400
+
+
+def test_scorer_disagreement_on_the_same_case_is_flagged_even_when_no_score_is_borderline(client):
+    """The other borderline shape: two scorers on the same case landing on
+    opposite verdicts, neither of them individually close to its own threshold."""
+    from nometria.db import session_scope
+    from nometria.models import EvalResult, EvalRun
+
+    with session_scope() as s:
+        run = EvalRun(suite_id="test-suite-disagree", status="completed")
+        s.add(run)
+        s.flush()
+        s.add(EvalResult(
+            run_id=run.id, case_id="case-1", scorer_key="exact_match",
+            score=0.5, passed=False,  # far from exact_match's threshold=1.0
+        ))
+        s.add(EvalResult(
+            run_id=run.id, case_id="case-1", scorer_key="fuzzy_match",
+            score=0.9, passed=True,  # far from fuzzy_match's threshold=0.8
+        ))
+        s.flush()
+        run_id = run.id
+
+    # A near-zero band: score-based borderline detection is effectively off, so
+    # only the disagreement path can be surfacing these.
+    queue = client.get(
+        f"/api/eval/annotations/queue?run_id={run_id}&band=0.001",
+        headers=as_user("admin@example.com"),
+    ).json()
+    assert len(queue["results"]) == 2
 
 
 def test_get_eval_suite_returns_its_cases(client):

@@ -411,7 +411,7 @@ def seed(session: Session, *, with_policies: bool = True) -> dict[str, Any]:
             name="Support answer quality",
             description="Grounded question answering against the refund policy. Contains "
             "one deliberately fluent-but-wrong answer to exercise "
-            "silent-failure detection (P4-3).",
+            "silent-failure detection.",
             tags=["support", "grounded", "silent-failure"],
         )
         session.add(suite)

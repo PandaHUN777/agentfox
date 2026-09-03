@@ -49,15 +49,34 @@ def load_from_dir(directory: Path | None = None) -> list[PolicyDocument]:
     return out
 
 
+def _currently_bound(session: Session) -> list[PolicyBinding]:
+    """Every binding active right now — the same effective_from/effective_to window
+    check `active_layers` and `active_policies` both need."""
+    now = utcnow()
+    return list(
+        session.scalars(
+            select(PolicyBinding).where(
+                PolicyBinding.effective_from <= now,
+                (PolicyBinding.effective_to.is_(None)) | (PolicyBinding.effective_to > now),
+            )
+        )
+    )
+
+
+def _open_binding_for_version(session: Session, version_id: str) -> PolicyBinding | None:
+    """The still-open (not yet closed) binding for one policy version, if any —
+    shared by `save_policy` and `set_mode`, both of which need to find or replace it."""
+    return session.scalar(
+        select(PolicyBinding).where(
+            PolicyBinding.policy_version_id == version_id,
+            PolicyBinding.effective_to.is_(None),
+        )
+    )
+
+
 def active_layers(session: Session, subject: dict[str, str] | None = None) -> list[PolicyLayer]:
     """Every bound policy version, as hierarchy layers (P12)."""
-    now = utcnow()
-    rows = session.scalars(
-        select(PolicyBinding).where(
-            PolicyBinding.effective_from <= now,
-            (PolicyBinding.effective_to.is_(None)) | (PolicyBinding.effective_to > now),
-        )
-    ).all()
+    rows = _currently_bound(session)
 
     layers: list[PolicyLayer] = []
     for binding in rows:
@@ -148,16 +167,7 @@ def save_policy(
         session.flush()
 
     mode = bind_mode or doc.mode
-    current_binding = (
-        session.scalar(
-            select(PolicyBinding).where(
-                PolicyBinding.policy_version_id == version.id,
-                PolicyBinding.effective_to.is_(None),
-            )
-        )
-        if body_unchanged
-        else None
-    )
+    current_binding = _open_binding_for_version(session, version.id) if body_unchanged else None
     if (
         current_binding is not None
         and current_binding.mode == mode
@@ -202,13 +212,7 @@ def active_policies(
     session: Session, agent_slug: str | None = None, environment: str | None = None
 ) -> list[tuple[PolicyDocument, PolicyVersion, PolicyBinding]]:
     """Every policy version currently bound and in scope, with its mode applied."""
-    now = utcnow()
-    rows = session.scalars(
-        select(PolicyBinding).where(
-            PolicyBinding.effective_from <= now,
-            (PolicyBinding.effective_to.is_(None)) | (PolicyBinding.effective_to > now),
-        )
-    ).all()
+    rows = _currently_bound(session)
 
     out = []
     for binding in rows:
@@ -249,12 +253,7 @@ def set_mode(session: Session, policy_key: str, mode: str) -> PolicyBinding | No
     ).first()
     if version is None:
         return None
-    binding = session.scalars(
-        select(PolicyBinding).where(
-            PolicyBinding.policy_version_id == version.id,
-            PolicyBinding.effective_to.is_(None),
-        )
-    ).first()
+    binding = _open_binding_for_version(session, version.id)
     if binding is None:
         binding = PolicyBinding(policy_version_id=version.id, scope_json={}, mode=mode)
         session.add(binding)

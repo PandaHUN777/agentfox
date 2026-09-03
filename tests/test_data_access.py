@@ -131,6 +131,19 @@ def test_an_undeclared_table_is_reported_rather_than_assumed_safe():
     analysis = check("SELECT id FROM audit_log WHERE 1=1")
     assert "undeclared-table" in codes(analysis)
     assert "audit_log" in analysis.undeclared
+    # Standard strictness (the default): reported, not refused outright.
+    assert analysis.verdict == "escalate"
+
+
+def test_strict_mode_promotes_an_undeclared_table_to_a_block():
+    """A deployment that wants "no undeclared table is ever queried, period" opts
+    into that outright, rather than the standard "a human should look" default."""
+    analysis = analyse_access(
+        "SELECT id FROM audit_log WHERE 1=1",
+        principal=ME, rules=RULES, reference=REFERENCE, strictness="strict",
+    )
+    assert "undeclared-table" in codes(analysis)
+    assert analysis.verdict == "block"
 
 
 def test_a_restricted_column_is_withheld_even_on_the_callers_own_row():

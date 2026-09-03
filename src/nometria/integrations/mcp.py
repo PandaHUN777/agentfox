@@ -139,6 +139,13 @@ class McpGovernor:
     intent: str | None = None
     credential: str | None = None
     _prior_tools: list[str] = field(default_factory=list)
+    #: PL-4: this session's step history (tool, arguments, observation) — the shape
+    #: agent_loop.LoopGovernor replays to catch alternating cycles and no-new-
+    #: observation runs that per-tool counting (what `_prior_tools` alone drives)
+    #: cannot see. `McpGovernor` is the one place with both the prior-call history
+    #: and each call's actual post-call observation in the same stateful object
+    #: across a session, which is what makes it the real wiring point.
+    _prior_steps: list[dict[str, Any]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.enforcer = Enforcer(self.session)
@@ -250,6 +257,32 @@ class McpGovernor:
 
     # -- the governed call ----------------------------------------------
 
+    def _blocked(
+        self,
+        *,
+        tool: str,
+        key: str,
+        registered: bool,
+        decision: EnforcementResult,
+        drift: dict[str, Any] | None,
+        raise_on_block: bool,
+    ) -> McpCallOutcome:
+        """Build the outcome for a refused call — drift and the pre-flight guard both
+        refuse the same way, raising `McpCallBlocked` for a caller that opted in via
+        `raise_on_block`, or handing back an `allowed=False` outcome otherwise."""
+        outcome = McpCallOutcome(
+            tool=tool,
+            server=self.server_name,
+            key=key,
+            allowed=False,
+            pre_decision=decision,
+            drift=drift,
+            registered=registered,
+        )
+        if raise_on_block:
+            raise McpCallBlocked(decision)
+        return outcome
+
     def call(
         self,
         tool: str,
@@ -270,18 +303,14 @@ class McpGovernor:
         drift = self._check_drift(key, tool)
         if drift is not None:
             result = self._drift_block(key, tool, drift)
-            outcome = McpCallOutcome(
+            return self._blocked(
                 tool=tool,
-                server=self.server_name,
                 key=key,
-                allowed=False,
-                pre_decision=result,
-                drift=drift,
                 registered=registered,
+                decision=result,
+                drift=drift,
+                raise_on_block=raise_on_block,
             )
-            if raise_on_block:
-                raise McpCallBlocked(result)
-            return outcome
 
         pre = self.enforcer.guard_tool_call(
             agent_slug=self.agent_slug,
@@ -293,25 +322,25 @@ class McpGovernor:
             tracker=self.tracker,
             credential=self.credential,
             prior_tools=list(self._prior_tools),
+            prior_steps=list(self._prior_steps),
         )
         if pre.blocked or pre.escalated:
-            outcome = McpCallOutcome(
+            return self._blocked(
                 tool=tool,
-                server=self.server_name,
                 key=key,
-                allowed=False,
-                pre_decision=pre,
                 registered=registered,
+                decision=pre,
+                drift=None,
+                raise_on_block=raise_on_block,
             )
-            if raise_on_block:
-                raise McpCallBlocked(pre)
-            return outcome
 
         call = transport or self.transport
         if call is None:
             raise ValueError("no transport configured for this governor")
-        raw = call(tool, pre.taint.get("arguments_snapshot") or arguments)
+        called_with = pre.taint.get("arguments_snapshot") or arguments
+        raw = call(tool, called_with)
         self._prior_tools.append(key)
+        self._prior_steps.append({"tool": key, "arguments": called_with, "observation": raw})
 
         post = self._govern_result(key, tool, raw, arguments)
         content = post.content if post.content is not None else None

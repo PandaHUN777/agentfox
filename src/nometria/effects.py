@@ -32,6 +32,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from .finding import RiskFinding
+
 # --- Idempotency (F3.7) ----------------------------------------------------
 
 #: Argument names that vary between attempts of the same logical operation. Including
@@ -99,16 +101,7 @@ def is_external(tool: str) -> bool:
     return any(hint in lowered for hint in _EXTERNAL_HINTS)
 
 
-@dataclass
-class ReplayFinding:
-    code: str
-    detail: str
-    severity: str = "high"
-    evidence: dict[str, Any] = field(default_factory=dict)
-
-    def to_json(self) -> dict[str, Any]:
-        return {"code": self.code, "detail": self.detail, "severity": self.severity,
-                "evidence": self.evidence}
+ReplayFinding = RiskFinding
 
 
 @dataclass

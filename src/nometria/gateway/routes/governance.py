@@ -41,7 +41,6 @@ from ...compliance import (
 from ...compliance.risk import assess
 from ...integrations.correlation import links_for, resolve_external
 from ...models import (
-    Agent,
     AuditEntry,
     Control,
     EvidencePackage,
@@ -51,7 +50,7 @@ from ...models import (
     Trace,
     User,
 )
-from ..deps import current_user, db, require
+from ..deps import current_user, db, get_agent_or_404, require
 
 router = APIRouter(prefix="/api", tags=["audit", "compliance"])
 
@@ -300,7 +299,7 @@ def download_evidence(
         session,
         "evidence.downloaded",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="evidence_package",
         subject_id=package.id,
         payload={"scope": package.scope_json},
@@ -360,7 +359,7 @@ def place_hold(
         session,
         "legal_hold.placed",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="legal_hold",
         subject_id=hold.id,
         payload={"scope": payload.scope, "reason": payload.reason},
@@ -430,7 +429,7 @@ def sync_controls(
         session,
         "compliance.catalog_synced",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         payload={**catalog, "obligations": obligations},
     )
     return {"catalog": catalog, "obligations": obligations, "posture": posture(session)}
@@ -447,7 +446,7 @@ def compute_controls(
         session,
         "compliance.computed",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         payload={"controls": len(statuses), "window_days": window_days},
     )
     return {
@@ -495,7 +494,7 @@ def mark_reviewed(
         session,
         "compliance.mapping_reviewed",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="control",
         subject_id=payload.control_key,
         payload=payload.model_dump(),
@@ -528,9 +527,7 @@ def get_register(
 def classify_agent(
     slug: str, session: Session = Depends(db), _user: User = Depends(current_user)
 ) -> dict[str, Any]:
-    agent = session.scalar(select(Agent).where(Agent.slug == slug))
-    if agent is None:
-        raise HTTPException(404, f"unknown agent '{slug}'")
+    agent = get_agent_or_404(session, slug)
     return classify(session, agent)
 
 
@@ -550,9 +547,7 @@ def create_assessment(
     session: Session = Depends(db),
     user: User = Depends(require("compliance")),
 ) -> dict[str, Any]:
-    agent = session.scalar(select(Agent).where(Agent.slug == slug))
-    if agent is None:
-        raise HTTPException(404, f"unknown agent '{slug}'")
+    agent = get_agent_or_404(session, slug)
     assessment = assess(
         session,
         agent,
@@ -568,7 +563,7 @@ def create_assessment(
         session,
         "risk.assessed",
         actor_type="user",
-        actor_id=user.email,
+        actor_id=user.email or user.id,
         subject_type="agent",
         subject_id=agent.id,
         payload={"class": assessment.eu_ai_act_class, "residual_risk": assessment.residual_risk},

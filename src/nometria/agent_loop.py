@@ -37,6 +37,8 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
+from .effects import _canonical
+
 CONTINUE = "continue"
 STOP = "stop"
 ESCALATE = "escalate"
@@ -62,7 +64,12 @@ class Step:
 
     @property
     def observation_fingerprint(self) -> str:
-        return _fingerprint(self.observation)
+        # Canonicalized first (effects._canonical: stable dict ordering, float
+        # formatting, whitespace) so two observations that are the same result in
+        # every way that matters — a timestamp or request id aside — fingerprint
+        # identically. Without this, "no new observation" only ever caught a
+        # byte-for-byte repeat, which a cosmetic diff defeats trivially.
+        return _fingerprint(_canonical(self.observation))
 
 
 @dataclass
@@ -76,6 +83,20 @@ class LoopBudget:
     max_cycle_length: int = 4
     #: Consecutive steps producing nothing new before the run is considered stuck.
     max_steps_without_progress: int = 5
+    #: When set, the effective `max_steps_without_progress` threshold decays
+    #: linearly from its full value at this step index down to 1 at `max_steps` —
+    #: a step deep into a long run is judged more strictly than an early one,
+    #: using only the step index already tracked, no new state. `None` (the
+    #: default) keeps the threshold flat, exactly as before this existed.
+    decay_from_depth: int | None = None
+
+    def effective_max_steps_without_progress(self, index: int) -> int:
+        if self.decay_from_depth is None or index <= self.decay_from_depth:
+            return self.max_steps_without_progress
+        span = max(1, self.max_steps - self.decay_from_depth)
+        progressed = min(index - self.decay_from_depth, span)
+        decayed = self.max_steps_without_progress * (1 - progressed / span)
+        return max(1, round(decayed))
 
 
 @dataclass
@@ -145,7 +166,8 @@ class LoopGovernor:
                 index, {"cycle": cycle},
             )
 
-        if self._steps_without_progress >= self.budget.max_steps_without_progress:
+        threshold = self.budget.effective_max_steps_without_progress(index)
+        if self._steps_without_progress >= threshold:
             first = index - self._steps_without_progress
             return LoopVerdict(
                 ESCALATE,

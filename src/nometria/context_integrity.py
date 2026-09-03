@@ -36,6 +36,8 @@ import unicodedata
 from dataclasses import dataclass, field
 from typing import Any
 
+from .finding import RiskFinding
+
 # --- Findings --------------------------------------------------------------
 
 #: Advisory. Something is off; the pipeline is still usable.
@@ -57,26 +59,18 @@ VERDICT_FOR = {WARN: "allow", DEGRADED: "abstain", REJECT: "block"}
 
 
 @dataclass
-class Finding:
-    """One measurable defect in the context pipeline."""
+class Finding(RiskFinding):
+    """One measurable defect in the context pipeline — same shape as `RiskFinding`,
+    plus the verdict this module's own three-value severity scale maps onto."""
 
-    code: str
-    detail: str
     severity: str = WARN
-    evidence: dict[str, Any] = field(default_factory=dict)
 
     @property
     def verdict(self) -> str:
         return VERDICT_FOR[self.severity]
 
     def to_json(self) -> dict[str, Any]:
-        return {
-            "code": self.code,
-            "detail": self.detail,
-            "severity": self.severity,
-            "verdict": self.verdict,
-            "evidence": self.evidence,
-        }
+        return {**super().to_json(), "verdict": self.verdict}
 
 
 def worst(findings: list[Finding]) -> str:

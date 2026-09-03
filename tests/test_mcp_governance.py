@@ -256,6 +256,92 @@ def test_a_missing_transport_is_a_programming_error_not_a_silent_pass(seeded, go
 
 
 # ---------------------------------------------------------------------------
+# PL-4 — agent loop governance, wired through McpGovernor's real step history
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture
+def loop_governor(seeded):
+    """A governor whose two tools are both plain reads, and whose intent is
+    declared, so nothing but the loop detector itself has a reason to escalate
+    or block a call — isolates the loop-governance signal from every other rule
+    in tool-containment.yaml (`taint.irreversible_tool`,
+    `intent.undeclared_irreversible`) that would otherwise short-circuit the call
+    before it reaches `_prior_steps.append(...)` (integrations/mcp.py)."""
+    agent = seeded.query(Agent).filter_by(slug="support-triage").one()
+    identity = ensure_identity(seeded, agent)
+    tools = [
+        {"name": "tool_a", "description": "Tool A.", "inputSchema": {"type": "object"}},
+        {"name": "tool_b", "description": "Tool B.", "inputSchema": {"type": "object"}},
+    ]
+    for tool in tools:
+        grant_capability(seeded, identity, tool_key("loop-server", tool["name"]))
+    gov = McpGovernor(
+        session=seeded, agent_slug="support-triage", server_name="loop-server",
+        intent="routine test calls",
+    )
+    gov.register_tools(tools)
+    return gov
+
+
+def test_three_identical_calls_trip_the_real_loop_governor(seeded, loop_governor):
+    """agent_loop.LoopBudget's own default (max_repeats=2) trips on the 3rd
+    identical call. The wiring point being tested is McpGovernor tracking real
+    step history (integrations/mcp.py's `_prior_steps`) and Enforcer replaying it
+    through `agent_loop.govern_loop` (enforcement.py's `_budget_state`) — not just
+    the old naive `prior_tools.count(tool_key) >= 3` counter it replaced."""
+    for _ in range(2):
+        outcome = loop_governor.call("tool_a", {"q": "x"}, transport=lambda t, a: "ok")
+        assert outcome.pre_decision.taint["budget"]["loop_detected"] is False
+    outcome = loop_governor.call("tool_a", {"q": "x"}, transport=lambda t, a: "ok")
+    assert outcome.pre_decision.taint["budget"]["loop_detected"] is True
+    assert any(r["rule_id"] == "loop.runaway" for r in outcome.pre_decision.rules_fired)
+
+
+def test_an_alternating_two_tool_cycle_trips_even_though_neither_tool_repeats(
+    seeded, loop_governor
+):
+    """A -> B -> A -> B: per-tool counting cannot see this at all, since neither
+    tool repeats consecutively — this is exactly the shape docs/status.md's PL-4
+    note called out ('an agent alternating between two tools never repeats either
+    one three times in a row'). The real LoopGovernor's cycle detector does."""
+    sequence = ["tool_a", "tool_b", "tool_a", "tool_b"]
+    outcome = None
+    for name in sequence:
+        outcome = loop_governor.call(name, {}, transport=lambda t, a: "ok")
+    assert outcome.pre_decision.taint["budget"]["loop_detected"] is True
+    assert "cycle" in outcome.pre_decision.taint["budget"]["loop_evidence"]
+    assert any(r["rule_id"] == "loop.runaway" for r in outcome.pre_decision.rules_fired)
+
+
+def test_a_caller_with_no_step_history_keeps_the_old_repeat_counter(seeded, enforcer):
+    """Backward compatibility: a caller that only supplies `prior_tools` (no
+    `prior_steps`) — inline.py and langgraph.py, as of this change — must keep
+    getting the pre-PL-4-wiring behavior unchanged, not a silent new default."""
+    agent = seeded.query(Agent).filter_by(slug="support-triage").one()
+    identity = ensure_identity(seeded, agent)
+    grant_capability(seeded, identity, "loop-server/solo_tool")
+
+    result = enforcer.guard_tool_call(
+        agent_slug="support-triage",
+        tool_key="loop-server/solo_tool",
+        arguments={},
+        prior_tools=["loop-server/solo_tool", "loop-server/solo_tool"],
+        # prior_steps intentionally omitted
+    )
+    # The old counter: repeats == 2 (from prior_tools) is not >= 3 yet.
+    assert result.taint["budget"]["loop_detected"] is False
+
+    result = enforcer.guard_tool_call(
+        agent_slug="support-triage",
+        tool_key="loop-server/solo_tool",
+        arguments={},
+        prior_tools=["loop-server/solo_tool"] * 3,
+    )
+    assert result.taint["budget"]["loop_detected"] is True
+
+
+# ---------------------------------------------------------------------------
 # Gateway
 # ---------------------------------------------------------------------------
 

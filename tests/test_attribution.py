@@ -130,6 +130,55 @@ def test_a_faithful_handoff_is_silent():
     assert handoff.dropped == [] and handoff.added == []
 
 
+def test_a_written_constraint_outside_the_five_kinds_is_not_silently_dropped():
+    """"Make sure the vendor doesn't find out about the discount" is a real,
+    written-down requirement (confidentiality) that matches none of LIMIT/
+    PROHIBITION/URGENCY/IDENTIFIER/APPROVAL — mirroring attribute()'s own
+    confident=False honesty pattern for the handoff side, this is surfaced
+    rather than counted as "nothing to lose"."""
+    handoff = handoff_fidelity(
+        "Issue the refund. Make sure the vendor doesn't find out about the discount.",
+        "Issue the refund.",
+    )
+    assert handoff.unclassified
+    assert "vendor" in handoff.unclassified[0]
+    assert handoff.verdict == "escalate"
+    assert "did not clearly carry over" in handoff.explain()
+
+
+def test_an_unclassified_directive_that_survives_is_not_flagged():
+    """The false-positive floor for the unclassified-directive detector: if the
+    child's instruction still contains it, it was not dropped."""
+    text = "Issue the refund. Make sure the vendor doesn't find out about the discount."
+    handoff = handoff_fidelity(text, text)
+    assert handoff.unclassified == []
+
+
+def test_a_capability_constraint_is_kept_even_when_no_prose_mentions_it():
+    """A limit enforced by the child's own granted Capability (P2-2) is real —
+    checked on every call regardless of instruction wording — so it is folded
+    into `kept` even when neither instruction says anything about it, rather
+    than leaving a reader to conclude the constraint does not exist anywhere."""
+    handoff = handoff_fidelity(
+        "Refund the customer.", "Refund the customer.",
+        capability_constraints={"amount": {"lt": 500}},
+    )
+    assert any(c.kind == "capability" for c in handoff.kept)
+    assert handoff.verdict == "allow"
+
+
+def test_a_dropped_prose_limit_still_backed_by_a_capability_is_visible_as_both():
+    """The prose drop is still reported (a caller relying on instruction text
+    alone would see nothing enforcing it) but the capability-backed limit is
+    also visible in `kept` — a fuller picture than prose-only analysis gives."""
+    handoff = handoff_fidelity(
+        "Refund the customer, keep it under $500.", "Refund the customer.",
+        capability_constraints={"amount": {"lt": 500}},
+    )
+    assert LIMIT in kinds(handoff.dropped)
+    assert any(c.kind == "capability" for c in handoff.kept)
+
+
 # --- Goal drift (L3.2) -----------------------------------------------------
 
 

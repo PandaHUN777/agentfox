@@ -19,6 +19,7 @@ So the pipeline:
 from __future__ import annotations
 
 import logging
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeout
@@ -28,6 +29,36 @@ from ..config import get_settings
 from .base import Detection, DetectionContext, Detector, DetectorResult, available_detectors
 
 log = logging.getLogger(__name__)
+
+#: A thread pool is a long-lived, reusable resource — not a per-request
+#: throwaway. `Enforcer.__init__` builds a fresh `DetectorPipeline()` whenever no
+#: pipeline is explicitly injected (the overwhelming majority of call sites,
+#: across every request the gateway serves), and nothing calls `shutdown()` on
+#: the one it replaces, because `Enforcer` has no lifecycle hook to do so from.
+#: Left as-is, every governed call leaks two `ThreadPoolExecutor`s worth of OS
+#: threads for the rest of the process's life — found via a real, reproducible
+#: test-suite failure: after enough Enforcer instantiations accumulate stragglers
+#: (the pool exhaustion this module's own docstring already describes, just
+#: across pools instead of within one), an ordinary detector call blew a 350ms
+#: budget by nearly 2x and every detector on that call was skipped. Sharing
+#: pools by `max_workers` keeps a caller that actually wants isolation (a
+#: non-default worker count) unaffected, while the default case — everyone else —
+#: stops leaking.
+_shared_pool_lock = threading.Lock()
+_shared_pools: dict[int, tuple[ThreadPoolExecutor, ThreadPoolExecutor]] = {}
+
+
+def _get_shared_pools(max_workers: int) -> tuple[ThreadPoolExecutor, ThreadPoolExecutor]:
+    with _shared_pool_lock:
+        pools = _shared_pools.get(max_workers)
+        if pools is None:
+            pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="nom-detect")
+            heavy_pool = ThreadPoolExecutor(
+                max_workers=max_workers, thread_name_prefix="nom-detect-heavy"
+            )
+            pools = (pool, heavy_pool)
+            _shared_pools[max_workers] = pools
+        return pools
 
 #: Rough relative cost, used to start cheap detectors first so that a budget
 #: breach loses the expensive-but-marginal signal rather than the cheap-and-decisive
@@ -102,7 +133,6 @@ class DetectorPipeline:
             detector_timeout_ms if detector_timeout_ms is not None else settings.detector_timeout_ms
         )
         self._explicit = detectors
-        self._pool = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="nom-detect")
         # A timed-out future's worker thread keeps running — Python cannot pre-empt
         # it (see the FutureTimeout handler below) — so a detector whose calls
         # occasionally exceed its own timeout leaves behind a straggler that
@@ -114,9 +144,10 @@ class DetectorPipeline:
         # that declare their own `timeout_ms` (real per-call cost — currently the
         # model-backed ones) get a separate pool so their stragglers can only ever
         # starve each other, never the cheap detectors this one shares nothing with.
-        self._heavy_pool = ThreadPoolExecutor(
-            max_workers=max_workers, thread_name_prefix="nom-detect-heavy"
-        )
+        # Both pools are shared across every DetectorPipeline with the same
+        # max_workers (see _get_shared_pools) rather than created fresh per
+        # instance — see that function's docstring for why.
+        self._pool, self._heavy_pool = _get_shared_pools(max_workers)
 
     # -- selection -------------------------------------------------------
     def select(self, surface: str) -> list[Detector]:
@@ -210,8 +241,14 @@ class DetectorPipeline:
         return out
 
     def shutdown(self) -> None:
-        self._pool.shutdown(wait=False)
-        self._heavy_pool.shutdown(wait=False)
+        """No-op: the pools are shared across every DetectorPipeline with the same
+        max_workers (see _get_shared_pools), so one instance tearing them down
+        would break every other instance still using them. Kept as a method
+        (rather than removed) for callers that already call it expecting a clean
+        no-op rather than an AttributeError; nothing in this codebase currently
+        calls it (confirmed by grep), and process-level cleanup of these pools
+        happens naturally at interpreter exit, the same as any other module-level
+        resource."""
 
 
 def fail_verdict(fail_mode: str | None = None) -> str:

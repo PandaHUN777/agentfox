@@ -26,16 +26,9 @@ from ...answerability import (
     question_type,
 )
 from ...models import Agent, KnowledgeBoundary, User
-from ..deps import current_user, db, require
+from ..deps import current_user, db, get_agent_or_404, require
 
 router = APIRouter(prefix="/api/answerability", tags=["answerability"])
-
-
-def _agent(session: Session, slug: str) -> Agent:
-    agent = session.scalar(select(Agent).where(Agent.slug == slug))
-    if agent is None:
-        raise HTTPException(404, f"unknown agent '{slug}'")
-    return agent
 
 
 class BoundaryIn(BaseModel):
@@ -61,7 +54,7 @@ def write_boundary(
         raise HTTPException(400, f"unknown question type(s): {sorted(unknown)}")
     boundary = declare_boundary(
         session,
-        agent_id=_agent(session, payload.agent).id,
+        agent_id=get_agent_or_404(session, payload.agent).id,
         systems_of_record=payload.systems_of_record,
         coverage_months=payload.coverage_months,
         coverage_start=payload.coverage_start,
@@ -78,7 +71,7 @@ def write_boundary(
 def read_boundary(
     agent: str, session: Session = Depends(db), _user: User = Depends(current_user)
 ) -> dict[str, Any]:
-    boundary = get_boundary(session, _agent(session, agent).id)
+    boundary = get_boundary(session, get_agent_or_404(session, agent).id)
     if boundary is None:
         raise HTTPException(404, f"no knowledge boundary declared for '{agent}'")
     return _boundary_json(boundary, agent)
@@ -116,7 +109,7 @@ def check(
     candidate boundary before enforcing it. Shipping a refusal control without this
     step means discovering the false-positive rate from users.
     """
-    boundary = get_boundary(session, _agent(session, payload.agent).id)
+    boundary = get_boundary(session, get_agent_or_404(session, payload.agent).id)
     verdict = classify_answerability(
         payload.question, boundary, known_entities=payload.known_entities or None
     )

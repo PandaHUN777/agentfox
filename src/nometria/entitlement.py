@@ -443,7 +443,7 @@ def over_permission_report(session: Session, *, days: int = 7) -> dict[str, Any]
             "requests": 0,
             "over_permission": None,
             "note": (
-                "No entitlement checks recorded yet — until the agent is told who's "
+                "No access checks recorded yet — until the agent is told who's "
                 "asking, it can't know whether they're cleared to see the answer."
             ),
         }

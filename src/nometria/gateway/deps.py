@@ -11,10 +11,11 @@ from collections.abc import Iterator
 from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, Request
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_session
-from ..models import User
+from ..models import Agent, User
 from ..tenancy import bind_session
 from .auth import AuthenticationRequired, authenticate, resolve_agent
 
@@ -41,6 +42,14 @@ ALL_ROLES = {"owner", "admin", "security", "compliance", "developer", "auditor"}
 
 def db(session: Session = Depends(get_session)) -> Session:
     return session
+
+
+def get_agent_or_404(session: Session, slug: str) -> Agent:
+    """Resolve an agent by slug, or the 404 every agent-slug route needs otherwise."""
+    agent = session.scalar(select(Agent).where(Agent.slug == slug))
+    if agent is None:
+        raise HTTPException(404, f"unknown agent '{slug}'")
+    return agent
 
 
 def current_user(

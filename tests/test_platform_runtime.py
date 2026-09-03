@@ -88,6 +88,47 @@ def test_the_verdict_names_the_step_it_stopped_at():
     assert Step("crm.lookup", {"id": 1}).call_fingerprint
 
 
+def test_a_cosmetically_different_observation_still_counts_as_no_progress():
+    """Two observations that are the same result in every way that matters — key
+    order, float formatting — must fingerprint identically, or a timestamp field
+    alone defeats "no new observation" entirely."""
+    obs_a = {"status": "pending", "amount": 10.0, "checked_at": "t1"}
+    obs_b = {"amount": 10, "status": "pending", "checked_at": "t2"}
+    # checked_at differs on purpose: canonicalization does not know it is
+    # volatile the way effects.idempotency_key's VOLATILE_ARGS list does. This
+    # test is about ordering/float-formatting, not about ignoring named fields.
+    obs_a.pop("checked_at")
+    obs_b.pop("checked_at")
+    verdict = run([(f"t{i}", {"i": i}, obs_a if i % 2 == 0 else obs_b) for i in range(7)])
+    assert verdict.decision == ESCALATE
+
+
+def test_default_budget_has_no_decay():
+    """`decay_from_depth=None` (the default) must reproduce the exact pre-decay
+    behavior — the false-positive floor from `test_a_run_that_makes_progress_is_left_alone`
+    must not start tripping just because this feature exists."""
+    verdict = run([(f"t{i}", {"i": i}, i) for i in range(20)])
+    assert verdict.decision == CONTINUE
+
+
+def test_decay_makes_the_same_stall_trip_earlier_late_in_a_long_run():
+    """A stall that would be tolerated early in a run (well under the flat
+    threshold) is judged more strictly once the run is deep into its budget —
+    "a step deep into a long loop is scored more strictly than an early one"."""
+    budget = LoopBudget(max_steps=20, max_steps_without_progress=5, decay_from_depth=15)
+    # 15 steps of real progress (past the decay point), then a 3-step stall.
+    # At step 18: progressed=3 of a 5-step span, decayed threshold = 5*(1-3/5) = 2,
+    # so 3 stalled steps trips it. The flat (undecayed) threshold stays 5, so the
+    # identical stall alone would not.
+    steps = [(f"t{i}", {"i": i}, i) for i in range(15)] + [
+        (f"stalled{i}", {"i": i}, "same") for i in range(3)
+    ]
+    verdict = run(steps, budget=budget)
+    assert verdict.decision == ESCALATE
+    without_decay = run(steps, budget=LoopBudget(max_steps=20, max_steps_without_progress=5))
+    assert without_decay.decision == CONTINUE
+
+
 # --- Deferred work (PL-5) --------------------------------------------------
 
 

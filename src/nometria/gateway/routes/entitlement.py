@@ -27,7 +27,7 @@ from ...entitlement import (
     upsert_principal,
 )
 from ...models import Agent, EndUserPrincipal, ResourceGrant, User
-from ..deps import current_user, db, require
+from ..deps import current_user, db, get_agent_or_404, require
 
 router = APIRouter(prefix="/api/entitlement", tags=["entitlement"])
 
@@ -48,12 +48,7 @@ def put_principal(
     session: Session = Depends(db),
     _user: User = Depends(require("identity")),
 ) -> dict[str, Any]:
-    agent_id = None
-    if payload.agent:
-        agent = session.scalar(select(Agent).where(Agent.slug == payload.agent))
-        if agent is None:
-            raise HTTPException(404, f"unknown agent '{payload.agent}'")
-        agent_id = agent.id
+    agent_id = get_agent_or_404(session, payload.agent).id if payload.agent else None
     record = upsert_principal(
         session,
         payload.subject,

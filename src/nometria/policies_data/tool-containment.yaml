@@ -109,6 +109,58 @@ rules:
     reason: "The same tool has been called repeatedly in one execution path — runaway loop."
     controls: [NOM-RTG-08]
 
+  # --- Cascade risk (P9) and data-access scoping (P18) -----------------
+  # action_risk matches on the same action.risks[].code every SQL/shell/HTTP
+  # finding already lands in (guardrails/actions.py) — cascade_risk() and
+  # analyse_access() findings use the identical {code, severity, detail,
+  # evidence} shape and are appended into that same list (enforcement.py's
+  # _cascade_and_access_risks), so these rules are the first ones in this
+  # file to actually react to that condition; nothing shipped did before.
+  - id: cascade.reaches_destructive
+    description: A call that looks harmless reaches a destructive tool through its declared trigger graph.
+    when:
+      action_risk: "cascade-reaches-destructive"
+    effect: block
+    severity: critical
+    reason: "This call reaches a destructive tool through its declared trigger graph."
+    controls: [NOM-RTG-08]
+
+  - id: cascade.cycle
+    description: The declared trigger graph for this call contains a loop.
+    when:
+      action_risk: "cascade-cycle"
+    effect: block
+    severity: critical
+    reason: "The declared trigger graph for this call contains a cycle."
+    controls: [NOM-RTG-08]
+
+  - id: cascade.blast_radius
+    description: A call's declared trigger graph reaches an unusual depth or fan-out.
+    when:
+      action_risk: "cascade-too-deep"
+    effect: escalate
+    severity: high
+    reason: "This call's declared trigger graph reaches an unusual number of downstream effects."
+    controls: [NOM-RTG-08]
+
+  - id: access.unscoped_table
+    description: A query touches a table with per-principal rows but no predicate binding it to the caller.
+    when:
+      action_risk: "unscoped-table"
+    effect: block
+    severity: critical
+    reason: "This query is not shown to be scoped to the calling principal on a table that carries per-principal rows."
+    controls: [NOM-RTG-04]
+
+  - id: access.undeclared_table
+    description: A query touches a table with no scope declaration at all.
+    when:
+      action_risk: "undeclared-table"
+    effect: escalate
+    severity: high
+    reason: "This query touches a table with no declared scope rule — reported, not assumed safe."
+    controls: [NOM-RTG-04]
+
   # --- Injection reaching a tool boundary ------------------------------
   - id: injection.in_tool_arguments
     description: Instruction-like content inside tool arguments.

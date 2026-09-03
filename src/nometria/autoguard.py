@@ -216,6 +216,31 @@ def _text_of(response: Any) -> str:
     return ""
 
 
+def _usage_of(response: Any) -> dict[str, int]:
+    """Pull input/output token counts out of whichever client shape came back —
+    same normalise-across-providers pattern as `_text_of`, needed because this path
+    governs the caller's own raw SDK response, never Nometria's own
+    `CompletionResponse` (the shape `Enforcer._charge_budget` was written against).
+    OpenAI's `usage.prompt_tokens`/`completion_tokens` and Anthropic's
+    `usage.input_tokens`/`output_tokens` are both covered; an unrecognised shape
+    returns an empty dict rather than guessing, which is a silent no-charge, not a
+    wrong one.
+    """
+    usage = getattr(response, "usage", None)
+    if usage is None:
+        return {}
+    try:
+        input_tokens = getattr(usage, "input_tokens", None)
+        output_tokens = getattr(usage, "output_tokens", None)
+        if input_tokens is None:
+            input_tokens = getattr(usage, "prompt_tokens", 0) or 0
+        if output_tokens is None:
+            output_tokens = getattr(usage, "completion_tokens", 0) or 0
+        return {"input_tokens": int(input_tokens or 0), "output_tokens": int(output_tokens or 0)}
+    except Exception:  # pragma: no cover - defensive against SDK shape drift
+        return {}
+
+
 #: LangChain message `.type` -> our role vocabulary.
 _LC_ROLES = {"human": "user", "ai": "assistant", "system": "system", "tool": "tool"}
 
@@ -316,27 +341,24 @@ def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
         messages = _messages_from(kwargs)
         with session_scope() as session:
             enforcer = Enforcer(session)
-            agent, identity, _shadow = enforcer.resolve(state.agent)
-            from .audit.trace import start_trace
-
-            trace = start_trace(
-                session,
-                agent_id=agent.id if agent else None,
+            # The real pre-flight path — kill-switch/quarantine, hard budget caps,
+            # the answerability gate, then per-message evaluation — the same one
+            # every other call surface goes through. This module used to hand-roll
+            # a partial reimplementation (resolve + a single evaluate() over the
+            # joined text) that skipped all three gates; that's the bug this call
+            # fixes, not a rewrite for its own sake.
+            outcome = enforcer.preflight(
                 agent_slug=state.agent,
+                messages=messages,
+                model=str(kwargs.get("model") or "default"),
                 environment=state.environment,
-                model=str(kwargs.get("model") or ""),
+                session_id=state.session_id,
             )
-            inbound = enforcer.evaluate(
-                agent=agent,
-                identity=identity,
-                content="\n".join(str(m.get("content") or "") for m in messages),
-                surface="input",
-                trace=trace,
-            )
+            agent, identity, trace = outcome.agent, outcome.identity, outcome.trace
             trace_id = trace.id
-            blocking_result = inbound
-            blocked = inbound.blocked
-            reason = inbound.reason
+            blocking_result = outcome.result
+            blocked = outcome.stopped
+            reason = outcome.result.reason
 
             # Tier A — payload splitting / multi-turn jailbreaks: the check above
             # only ever sees THIS call's own messages array. An attacker who spreads
@@ -345,7 +367,10 @@ def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
             # caller supplied a stable session_id — the same precondition escalation
             # governance already has for turn continuity — so a caller with no
             # session concept pays nothing extra and loses nothing it had before.
-            if state.session_id:
+            # Skipped entirely once preflight has already stopped the call — no
+            # point flagging a multi-turn injection on a request that never reaches
+            # the model.
+            if not blocked and state.session_id:
                 new_user_text = next(
                     (
                         str(m.get("content") or "")
@@ -361,7 +386,7 @@ def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
                         new_user_text=new_user_text,
                         trace=trace,
                     )
-                    if window_result.blocked and not blocked:
+                    if window_result.blocked:
                         blocked = True
                         window_result.reason = (
                             f"multi-turn: {window_result.reason}"
@@ -420,6 +445,26 @@ def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
                     )
                     if outbound.blocked and state.mode == "enforce":
                         raise Blocked(outbound)
+
+                    # P15: this call never goes through Nometria's own provider
+                    # abstraction — it's the caller's own SDK, patched in place — so
+                    # nothing else on this path ever charges spend against the
+                    # agent's budget. Without this, P15-3's hard caps in preflight()
+                    # gate against a Budget that never moves, i.e. they never trip.
+                    usage = _usage_of(response)
+                    if agent is not None and usage:
+                        from types import SimpleNamespace
+
+                        from .providers.remote import estimate_cost
+
+                        cost = estimate_cost(
+                            str(kwargs.get("model") or ""),
+                            usage.get("input_tokens", 0),
+                            usage.get("output_tokens", 0),
+                        )
+                        enforcer._charge_budget(
+                            agent, SimpleNamespace(usage=usage, cost_usd=cost)
+                        )
             finally:
                 _IN_NOMETRIA.reset(token)
     except Blocked:

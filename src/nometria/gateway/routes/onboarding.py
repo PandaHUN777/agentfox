@@ -133,7 +133,7 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "command": "PUT /api/answerability/boundary",
             "detail": (
                 "Without a knowledge boundary nothing stops an agent inventing an answer "
-                "to a question it has no data for (P7)."
+                "to a question it has no data for."
             ),
         },
         {
@@ -143,7 +143,7 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "command": "register_source(...)",
             "detail": (
                 "Groundedness checks the answer against the context and never asks whether "
-                "the context was authoritative (P8)."
+                "the context was authoritative."
             ),
         },
         {

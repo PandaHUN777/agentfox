@@ -23,15 +23,9 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-console = Console()
+from ._style import SEVERITY_COLOUR
 
-SEVERITY_COLOUR = {
-    "critical": "red",
-    "high": "red",
-    "medium": "yellow",
-    "low": "cyan",
-    "info": "dim",
-}
+console = Console()
 
 _CONFIG_TEMPLATE = """# Nometria configuration.
 # Everything here has a safe default; this file exists so the defaults are visible
@@ -309,7 +303,7 @@ def doctor(as_json: bool = typer.Option(False, "--json")) -> None:
             "warn",
             "answerability",
             "no knowledge boundary declared — nothing stops an agent answering a "
-            "question it has no data for (P7).",
+            "question it has no data for.",
         )
     else:
         add("ok", "answerability", f"{boundaries} boundary/boundaries declared")

@@ -30,18 +30,13 @@ from ...escalation import (
     turn_depth_risk,
 )
 from ...models import Agent, ConversationTurn, Handoff, User, utcnow
-from ..deps import current_user, db, require
+from ..deps import current_user, db, get_agent_or_404, require
 
 router = APIRouter(prefix="/api/escalation", tags=["escalation"])
 
 
 def _agent_id(session: Session, slug: str | None) -> str | None:
-    if not slug:
-        return None
-    agent = session.scalar(select(Agent).where(Agent.slug == slug))
-    if agent is None:
-        raise HTTPException(404, f"unknown agent '{slug}'")
-    return agent.id
+    return get_agent_or_404(session, slug).id if slug else None
 
 
 # ---------------------------------------------------------------------------

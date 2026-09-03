@@ -172,6 +172,11 @@ class Tool(Base, TimestampMixin):
     schema_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     mcp_server_id: Mapped[str | None] = mapped_column(String(40))
     description: Mapped[str] = mapped_column(Text, default="")
+    # P9 cascade analysis (effects.cascade_risk): declared downstream effects this
+    # tool's own call sets off (a DB trigger, a webhook, a fan-out) — the graph
+    # cascade_risk() walks. Undeclared triggers stay invisible by design (see that
+    # function's own docstring); this column is how an operator declares one.
+    triggers_json: Mapped[list[str]] = mapped_column(JSON, default=list)
 
 
 class McpServer(Base, TimestampMixin):
@@ -310,6 +315,27 @@ class Capability(Base, TimestampMixin):
     expires_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
 
     identity: Mapped[Identity] = relationship(back_populates="capabilities")
+
+
+class AccessScopeRule(Base, TimestampMixin):
+    """P18 data-access scoping (data_access.analyse_access): declares what a table
+    means to the SQL-scoping analysis — a scoped table (rows must be filtered to the
+    caller's own principal) or a reference table (lookup data, no principal filter
+    required). Undeclared tables are reported by analyse_access but never assumed
+    safe (see that module's own docstring); this is how an operator declares one.
+    """
+
+    __tablename__ = "access_scope_rules"
+    __table_args__ = (
+        UniqueConstraint("org_id", "table_name", name="ux_access_scope_rules_org_table"),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("asr"))
+    table_name: Mapped[str] = mapped_column(String(160), index=True)
+    is_reference: Mapped[bool] = mapped_column(Boolean, default=False)
+    column: Mapped[str | None] = mapped_column(String(120))
+    principal_key: Mapped[str] = mapped_column(String(120), default="id")
+    restricted_columns: Mapped[list[str]] = mapped_column(JSON, default=list)
 
 
 class DelegationEdge(Base, TimestampMixin):
@@ -977,6 +1003,31 @@ class EvalResult(Base, TimestampMixin):
     output_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     detail_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     duration_ms: Mapped[float] = mapped_column(Float, default=0.0)
+
+
+class EvalAnnotation(Base, TimestampMixin):
+    """P4 — human review of a borderline eval result (score near the scorer's own
+    threshold, or scorers disagreeing on the same case). A pass/fail scorer
+    verdict close to its own cutoff, or two scorers splitting on the same case, is
+    exactly the shape a human should look at rather than trust blindly — this is
+    the queue for that, mirroring Finding's own "the cross-pillar queue" pattern
+    (a status/note/actor triple) rather than inventing a new shape.
+    """
+
+    __tablename__ = "eval_annotations"
+    __table_args__ = (
+        UniqueConstraint(
+            "org_id", "eval_result_id", "annotator", name="ux_eval_annotations_org_result_annotator"
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("ann"))
+    eval_result_id: Mapped[str] = mapped_column(
+        String(40), ForeignKey("eval_results.id"), index=True
+    )
+    verdict: Mapped[str] = mapped_column(String(16), default="agree")  # agree | disagree
+    note: Mapped[str] = mapped_column(Text, default="")
+    annotator: Mapped[str] = mapped_column(String(120), default="")
 
 
 class Baseline(Base, TimestampMixin):

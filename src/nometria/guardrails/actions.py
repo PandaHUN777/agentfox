@@ -32,6 +32,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..finding import RiskFinding
 from .normalize import normalize
 
 log = logging.getLogger(__name__)
@@ -72,22 +73,7 @@ _ADMIN_NODES = ("Grant", "Revoke", "Create", "Set", "Command", "Alter")
 PRODUCTION_ENVIRONMENTS = ("production", "prod")
 
 
-@dataclass
-class ActionRisk:
-    """One reason a statement is dangerous, with the evidence for it."""
-
-    code: str
-    severity: str
-    detail: str
-    evidence: dict[str, Any] = field(default_factory=dict)
-
-    def to_json(self) -> dict[str, Any]:
-        return {
-            "code": self.code,
-            "severity": self.severity,
-            "detail": self.detail,
-            "evidence": self.evidence,
-        }
+ActionRisk = RiskFinding
 
 
 @dataclass
@@ -229,9 +215,9 @@ def analyse_sql(statement: str, *, dialect: str = "postgres") -> ActionAnalysis:
     if not SQLGLOT_AVAILABLE:
         analysis.risks.append(
             ActionRisk(
-                "analysis.unavailable",
-                "critical",
-                "sqlglot is not installed, so this statement cannot be analysed. "
+                code="analysis.unavailable",
+                severity="critical",
+                detail="sqlglot is not installed, so this statement cannot be analysed. "
                 "Install nometria[sql] or the action is refused — an unanalysable "
                 "statement is not a safe statement.",
             )
@@ -246,10 +232,11 @@ def analyse_sql(statement: str, *, dialect: str = "postgres") -> ActionAnalysis:
         analysis.parse_error = f"{type(exc).__name__}: {exc}"
         analysis.risks.append(
             ActionRisk(
-                "sql.unparseable",
-                "critical",
-                "statement could not be parsed, and an unparseable statement cannot be governed",
-                {"error": analysis.parse_error},
+                code="sql.unparseable",
+                severity="critical",
+                detail="statement could not be parsed, and an unparseable statement "
+                "cannot be governed",
+                evidence={"error": analysis.parse_error},
             )
         )
         analysis.blast_radius = "unknown"
@@ -280,11 +267,11 @@ def analyse_sql(statement: str, *, dialect: str = "postgres") -> ActionAnalysis:
     if len(trees) > 1:
         analysis.risks.append(
             ActionRisk(
-                "sql.stacked_statements",
-                "critical",
-                f"{len(trees)} statements in one call: "
+                code="sql.stacked_statements",
+                severity="critical",
+                detail=f"{len(trees)} statements in one call: "
                 + "; ".join(type(t).__name__ for t in trees),
-                {"statements": analysis.normalised},
+                evidence={"statements": analysis.normalised},
             )
         )
 
@@ -295,10 +282,10 @@ def analyse_sql(statement: str, *, dialect: str = "postgres") -> ActionAnalysis:
             analysis.blast_radius = "catastrophic"
             analysis.risks.append(
                 ActionRisk(
-                    "sql.destructive_ddl",
-                    "critical",
-                    f"{name} destroys data or schema and cannot be rolled back after commit",
-                    {"statement": tree.sql(dialect=dialect)},
+                    code="sql.destructive_ddl",
+                    severity="critical",
+                    detail=f"{name} destroys data or schema and cannot be rolled back after commit",
+                    evidence={"statement": tree.sql(dialect=dialect)},
                 )
             )
             continue
@@ -311,11 +298,11 @@ def analyse_sql(statement: str, *, dialect: str = "postgres") -> ActionAnalysis:
                 analysis.blast_radius = "unbounded"
                 analysis.risks.append(
                     ActionRisk(
-                        "sql.unbounded_mutation",
-                        "critical",
-                        f"{name.upper()} with no WHERE clause affects every row in "
+                        code="sql.unbounded_mutation",
+                        severity="critical",
+                        detail=f"{name.upper()} with no WHERE clause affects every row in "
                         f"{', '.join(targets) or 'the target table'}",
-                        {"statement": tree.sql(dialect=dialect)},
+                        evidence={"statement": tree.sql(dialect=dialect)},
                     )
                 )
             elif _is_tautology(where):
@@ -323,11 +310,11 @@ def analyse_sql(statement: str, *, dialect: str = "postgres") -> ActionAnalysis:
                 analysis.blast_radius = "unbounded"
                 analysis.risks.append(
                     ActionRisk(
-                        "sql.tautological_predicate",
-                        "critical",
-                        f"{name.upper()} predicate is always true, so it is unbounded "
+                        code="sql.tautological_predicate",
+                        severity="critical",
+                        detail=f"{name.upper()} predicate is always true, so it is unbounded "
                         "despite having a WHERE clause",
-                        {"predicate": where.sql(dialect=dialect)},
+                        evidence={"predicate": where.sql(dialect=dialect)},
                     )
                 )
             else:
@@ -339,11 +326,11 @@ def analyse_sql(statement: str, *, dialect: str = "postgres") -> ActionAnalysis:
             # control here, so privilege change is never merely a write.
             analysis.risks.append(
                 ActionRisk(
-                    "sql.privilege_change",
-                    "high",
-                    f"{name.upper()} alters access control, which can compose into "
+                    code="sql.privilege_change",
+                    severity="high",
+                    detail=f"{name.upper()} alters access control, which can compose into "
                     "privileges the agent was never granted",
-                    {"statement": tree.sql(dialect=dialect)},
+                    evidence={"statement": tree.sql(dialect=dialect)},
                 )
             )
 
@@ -392,6 +379,50 @@ _SHELL_DESTRUCTIVE = [
 _UNSAFE_METHODS = {"DELETE", "PUT", "PATCH", "POST"}
 
 
+def _shell_segments(command: str) -> list[str]:
+    """Split a command line into its constituent sub-commands on unquoted `;`,
+    `&&`, `||`, `|` — the shape a single whole-string `.search()` treats as one
+    blob rather than the several distinct commands it actually is. Quote-aware:
+    an operator character sitting inside a quoted string (`echo "a; b"`) is not a
+    real segment boundary, so it does not fracture a pattern the un-split string
+    would have matched. Falls back to a single segment (the original string) for
+    a plain command with no operators at all, which is the common case and keeps
+    that path byte-for-byte identical to the pre-tokenization behavior.
+    """
+    segments: list[str] = []
+    current: list[str] = []
+    in_single = False
+    in_double = False
+    i, n = 0, len(command)
+    while i < n:
+        ch = command[i]
+        if ch == "'" and not in_double:
+            in_single = not in_single
+            current.append(ch)
+            i += 1
+            continue
+        if ch == '"' and not in_single:
+            in_double = not in_double
+            current.append(ch)
+            i += 1
+            continue
+        if not in_single and not in_double:
+            if command[i : i + 2] in ("&&", "||"):
+                segments.append("".join(current))
+                current = []
+                i += 2
+                continue
+            if ch in (";", "|"):
+                segments.append("".join(current))
+                current = []
+                i += 1
+                continue
+        current.append(ch)
+        i += 1
+    segments.append("".join(current))
+    return [s.strip() for s in segments if s.strip()]
+
+
 def analyse_shell(command: str) -> ActionAnalysis:
     """Deny-list analysis of a shell command.
 
@@ -399,22 +430,30 @@ def analyse_shell(command: str) -> ActionAnalysis:
     catastrophic shapes and makes no claim to understand arbitrary commands. It is a
     backstop, not a sandbox — the primary control for shell remains not granting the
     capability.
+
+    Matched per sub-command (`_shell_segments`), not once over the whole string —
+    a single `.search()` over `"echo hi; rm -rf /"` still finds `rm -rf` today (it
+    is not anchored to the start), so this is not about missed chained commands;
+    it is about the deny-list reasoning over the actual command boundaries a shell
+    would use, including not letting an operator inside a quoted string fracture a
+    match that spans it.
     """
     analysis = ActionAnalysis(dialect="shell", parsed=True, operation=UNKNOWN)
     analysis.normalised = [command.strip()]
-    for pattern, label in _SHELL_DESTRUCTIVE:
-        if pattern.search(command):
-            analysis.operation = DESTRUCTIVE
-            analysis.reversible = False
-            analysis.blast_radius = "catastrophic"
-            analysis.risks.append(
-                ActionRisk(
-                    "shell.destructive",
-                    "critical",
-                    f"command performs a {label}",
-                    {"pattern": pattern.pattern},
+    for segment in _shell_segments(command):
+        for pattern, label in _SHELL_DESTRUCTIVE:
+            if pattern.search(segment):
+                analysis.operation = DESTRUCTIVE
+                analysis.reversible = False
+                analysis.blast_radius = "catastrophic"
+                analysis.risks.append(
+                    ActionRisk(
+                        code="shell.destructive",
+                        severity="critical",
+                        detail=f"command performs a {label}",
+                        evidence={"pattern": pattern.pattern, "segment": segment},
+                    )
                 )
-            )
     if not analysis.risks:
         analysis.blast_radius = "unknown"
     return analysis
@@ -444,10 +483,11 @@ def analyse_http(method: str, url: str, body: Any = None) -> ActionAnalysis:
         analysis.blast_radius = "unbounded"
         analysis.risks.append(
             ActionRisk(
-                "http.collection_mutation",
-                "critical" if method == "DELETE" else "high",
-                f"{method} against a collection endpoint affects every member, not one record",
-                {"url": url},
+                code="http.collection_mutation",
+                severity="critical" if method == "DELETE" else "high",
+                detail=f"{method} against a collection endpoint affects every member, "
+                "not one record",
+                evidence={"url": url},
             )
         )
     return analysis
@@ -594,18 +634,18 @@ def analyse_scope(key: str, value: str) -> ActionAnalysis | None:
         analysis.reversible = False
         analysis.risks.append(
             ActionRisk(
-                "scope.wildcard_value",
+                code="scope.wildcard_value",
                 # "critical", not "high": a legitimate identifier argument is never
                 # literally the string "*"/"all"/"any" — this is as unambiguous as
                 # `sql.destructive_ddl`, so it gets the same automatic-block
                 # treatment (enforcement.py's P9 "a critical action risk stands on
                 # its own" rule) rather than depending on an operator to author a
                 # policy rule for it first.
-                "critical",
-                f"argument '{key}' is a wildcard/unbounded-scope value ('{stripped}') "
+                severity="critical",
+                detail=f"argument '{key}' is a wildcard/unbounded-scope value ('{stripped}') "
                 "where a specific identifier was expected — this widens the call from "
                 "one record to every record the underlying tool can reach",
-                {"key": key, "value": stripped},
+                evidence={"key": key, "value": stripped},
             )
         )
     elif (sqli_code := _sqli_shaped(value)) is not None:
@@ -619,10 +659,10 @@ def analyse_scope(key: str, value: str) -> ActionAnalysis | None:
         )
         analysis.risks.append(
             ActionRisk(
-                sqli_code,
-                "critical",
-                f"argument '{key}' {detail} though it was never declared as a SQL parameter",
-                {"key": key},
+                code=sqli_code,
+                severity="critical",
+                detail=f"argument '{key}' {detail} though it was never declared as a SQL parameter",
+                evidence={"key": key},
             )
         )
     elif _PATH_TRAVERSAL_RE.search(value):
@@ -630,10 +670,10 @@ def analyse_scope(key: str, value: str) -> ActionAnalysis | None:
         analysis.blast_radius = "unbounded"
         analysis.risks.append(
             ActionRisk(
-                "scope.path_traversal",
-                "high",
-                f"argument '{key}' contains a path-traversal sequence",
-                {"key": key},
+                code="scope.path_traversal",
+                severity="high",
+                detail=f"argument '{key}' contains a path-traversal sequence",
+                evidence={"key": key},
             )
         )
     else:
@@ -675,6 +715,31 @@ def _looks_like_sql(value: str) -> bool:
     return first_word in _SQL_LEADING_VERBS
 
 
+def _is_sql_argument(key: str, value: Any) -> bool:
+    """The exact SQL-detection heuristic `analyse_arguments` uses inline, factored
+    out so P18's data-access scoping (`find_sql_argument`, below) can share it
+    rather than re-implementing SQL-string detection a second time."""
+    if not isinstance(value, str) or not value.strip():
+        return False
+    lowered = str(key).lower()
+    return lowered in _SQL_KEYS_UNCONDITIONAL or (
+        lowered in _SQL_KEYS_AMBIGUOUS and _looks_like_sql(value)
+    )
+
+
+def find_sql_argument(arguments: dict[str, Any]) -> str | None:
+    """The first argument that looks like a SQL statement, or None.
+
+    Shares `_is_sql_argument`'s detection with `analyse_arguments` so the two never
+    drift — a caller wanting the raw statement (P18's `analyse_access`) rather than
+    an `ActionAnalysis` uses this instead of duplicating the key/verb heuristics.
+    """
+    for key, value in (arguments or {}).items():
+        if _is_sql_argument(key, value):
+            return value
+    return None
+
+
 def analyse_arguments(
     arguments: dict[str, Any], *, dialect: str = "postgres"
 ) -> list[ActionAnalysis]:
@@ -683,9 +748,7 @@ def analyse_arguments(
     for key, value in (arguments or {}).items():
         lowered = str(key).lower()
         if isinstance(value, str) and value.strip():
-            if lowered in _SQL_KEYS_UNCONDITIONAL or (
-                lowered in _SQL_KEYS_AMBIGUOUS and _looks_like_sql(value)
-            ):
+            if _is_sql_argument(key, value):
                 out.append(analyse_sql(value, dialect=dialect))
             elif lowered in _SHELL_KEYS:
                 out.append(analyse_shell(value))
@@ -715,11 +778,11 @@ def environment_risk(analysis: ActionAnalysis, environment: str) -> ActionRisk |
     if analysis.reversible and analysis.blast_radius not in ("unbounded", "catastrophic"):
         return None
     return ActionRisk(
-        "action.production_irreversible",
-        "critical",
-        f"irreversible {analysis.operation} action with {analysis.blast_radius} blast "
+        code="action.production_irreversible",
+        severity="critical",
+        detail=f"irreversible {analysis.operation} action with {analysis.blast_radius} blast "
         f"radius, bound to environment '{environment}'",
-        {"targets": analysis.targets, "blast_radius": analysis.blast_radius},
+        evidence={"targets": analysis.targets, "blast_radius": analysis.blast_radius},
     )
 
 

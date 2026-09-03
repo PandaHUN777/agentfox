@@ -48,6 +48,20 @@ def slugify(value: str) -> str:
     return _SLUG.sub("-", (value or "unknown").strip().lower()).strip("-") or "unknown"
 
 
+def _get_or_create(session: Session, model: type, **lookup: Any) -> Any:
+    """Find a row by its unique lookup column, or create and stage a fresh one.
+
+    `register_agent`, `upsert_tool` and `upsert_mcp_server` each hand-rolled this
+    exact find-or-add skeleton before their own field-by-field merge logic; this is
+    the one copy of it.
+    """
+    row = session.scalar(select(model).filter_by(**lookup))
+    if row is None:
+        row = model(**lookup)
+        session.add(row)
+    return row
+
+
 # ---------------------------------------------------------------------------
 # Registration & observation
 # ---------------------------------------------------------------------------
@@ -78,10 +92,7 @@ def register_agent(
     not re-run this function.
     """
     slug = slugify(slug)
-    agent = session.scalar(select(Agent).where(Agent.slug == slug))
-    if agent is None:
-        agent = Agent(slug=slug)
-        session.add(agent)
+    agent = _get_or_create(session, Agent, slug=slug)
 
     agent.name = name or agent.name or slug
     agent.purpose = purpose or agent.purpose
@@ -342,10 +353,7 @@ def upsert_tool(
     description: str = "",
     mcp_server_id: str | None = None,
 ) -> Tool:
-    tool = session.scalar(select(Tool).where(Tool.key == key))
-    if tool is None:
-        tool = Tool(key=key)
-        session.add(tool)
+    tool = _get_or_create(session, Tool, key=key)
     tool.name = name or tool.name or key
     tool.kind = kind
     tool.impact = impact
@@ -546,6 +554,57 @@ def attest_registry(session: Session) -> list[Finding]:
     return findings
 
 
+def assess_delegation(session: Session) -> list[Finding]:
+    """Detect agent-to-agent delegation cycles and runaway depth (L6.6).
+
+    Tool-call loop detection never sees this: A delegating to B delegating back to A
+    is not a repeated tool call — every call is to a different agent — so the loop is
+    only visible in the shape of the delegation graph itself, built here from the
+    "delegates_to" edges derive_lineage already records from subagent spans.
+    """
+    from ..attribution import delegation_graph
+
+    edges = [
+        (str(e.src_id), str(e.dst_id))
+        for e in session.scalars(
+            select(LineageEdge).where(LineageEdge.relation == "delegates_to")
+        )
+    ]
+    if not edges:
+        return []
+
+    graph = delegation_graph(edges)
+    findings: list[Finding] = []
+    for cycle in graph.cycles:
+        findings.append(
+            Finding(
+                type="delegation_cycle",
+                severity="high",
+                title=f"Circular delegation: {' → '.join(cycle)}",
+                subject_type="agent",
+                subject_id=cycle[0],
+                evidence_json={"cycle": cycle},
+                control_keys=["NOM-DSC-04"],
+            )
+        )
+    if graph.over_depth:
+        findings.append(
+            Finding(
+                type="delegation_depth",
+                severity="medium",
+                title=f"Delegation chain depth {graph.max_depth} exceeds the configured limit",
+                subject_type="agent",
+                subject_id=None,
+                evidence_json={"max_depth": graph.max_depth},
+                control_keys=["NOM-DSC-04"],
+            )
+        )
+    for finding in findings:
+        session.add(finding)
+    session.flush()
+    return findings
+
+
 # ---------------------------------------------------------------------------
 # MCP inventory & hygiene (P1-5)
 # ---------------------------------------------------------------------------
@@ -573,10 +632,7 @@ def upsert_mcp_server(
     trust_level: str = "untrusted",
     pinned_version: str | None = None,
 ) -> McpServer:
-    server = session.scalar(select(McpServer).where(McpServer.name == name))
-    if server is None:
-        server = McpServer(name=name)
-        session.add(server)
+    server = _get_or_create(session, McpServer, name=name)
     server.url = url or server.url
     server.transport = transport
     server.trust_level = trust_level

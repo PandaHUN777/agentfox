@@ -84,11 +84,31 @@ _APPROVAL = re.compile(
     re.I,
 )
 
+#: A directive-shaped clause not covered by any of the five typed categories above
+#: — "make sure the vendor doesn't find out about the discount" carries a real
+#: constraint (confidentiality) that matches none of LIMIT/PROHIBITION/URGENCY/
+#: IDENTIFIER/APPROVAL. Narrow on purpose: this is a *signal*, not a general
+#: imperative-mood detector — that would need real NLP, and this module's whole
+#: design is deterministic regex over open-ended parsing. It catches the common
+#: phrasings a human uses to flag "this matters" without claiming to catch every
+#: way an instruction can carry a requirement no typed category models.
+_UNCLASSIFIED_DIRECTIVE = re.compile(
+    r"\b(?:make sure|be sure to|ensure that|ensure|keep (?:this |it )?(?:confidential|"
+    r"private|secret|quiet)|don'?t (?:mention|tell|disclose|reveal|let)|do not "
+    r"(?:mention|tell|disclose|reveal|let)|remember to|don'?t forget to|note that|"
+    r"make it clear that|keep in mind)\b[^.;]{0,80}",
+    re.I,
+)
+
 LIMIT = "limit"
 PROHIBITION = "prohibition"
 URGENCY = "urgency"
 IDENTIFIER = "identifier"
 APPROVAL = "approval"
+#: A structured constraint pulled from a granted Capability's own constraints_json
+#: (models.py's Capability, P2-2), not from instruction prose — see
+#: handoff_fidelity's capability_constraints parameter.
+CAPABILITY = "capability"
 
 #: How much dropping each kind costs. An approval gate and a prohibition change what
 #: the child is *permitted* to do; urgency changes only when it does it.
@@ -162,6 +182,39 @@ def extract_constraints(text: str) -> list[Constraint]:
     return unique
 
 
+def _unclassified_directives(text: str) -> list[str]:
+    """Directive-shaped clauses not covered by any of the five typed constraint
+    kinds — flagged as text, not compared by (kind, value) equality the way a
+    limit or an identifier is, since these are not normalised into a form that
+    comparison makes sense for. Mirrors `attribute()`'s own honesty pattern
+    (returning `confident=False` rather than staying silent when it cannot
+    originate a value) for the handoff side: a written constraint outside the
+    five regex kinds is surfaced, not silently dropped from the picture.
+    """
+    if not text:
+        return []
+    flat = " ".join(text.split())
+    typed_spans = [
+        (m.start(), m.end())
+        for pattern in (_LIMIT, _APPROVAL, _PROHIBITION, _URGENCY, _IDENTIFIER)
+        for m in pattern.finditer(flat)
+    ]
+    found: list[str] = []
+    for match in _UNCLASSIFIED_DIRECTIVE.finditer(flat):
+        # Skip a match already claimed by a typed extractor — "you must not
+        # mention the discount" is a prohibition, not also an unclassified one.
+        if any(match.start() < end and start < match.end() for start, end in typed_spans):
+            continue
+        found.append(_norm(match.group(0)))
+    return found
+
+
+def _format_capability_constraint(key: str, spec: Any) -> str:
+    if isinstance(spec, dict):
+        return f"{key} " + ", ".join(f"{op} {val}" for op, val in spec.items())
+    return f"{key} = {spec}"
+
+
 # --- Handoff fidelity (L6.1, L6.2) -----------------------------------------
 
 
@@ -172,6 +225,9 @@ class Handoff:
     kept: list[Constraint] = field(default_factory=list)
     dropped: list[Constraint] = field(default_factory=list)
     added: list[Constraint] = field(default_factory=list)
+    #: Directive-shaped clauses in the parent that neither reached the child's
+    #: text nor match any typed category — see `_unclassified_directives`.
+    unclassified: list[str] = field(default_factory=list)
     from_agent: str = ""
     to_agent: str = ""
 
@@ -191,12 +247,12 @@ class Handoff:
     def verdict(self) -> str:
         if any(c.kind in (APPROVAL, PROHIBITION, LIMIT) for c in self.dropped):
             return "block"
-        if self.dropped or self.added:
+        if self.dropped or self.added or self.unclassified:
             return "escalate"
         return "allow"
 
     def explain(self) -> str:
-        if not self.dropped and not self.added:
+        if not self.dropped and not self.added and not self.unclassified:
             return "every constraint in the parent instruction reached the child"
         parts = []
         if self.dropped:
@@ -207,6 +263,11 @@ class Handoff:
             parts.append(
                 "invented " + ", ".join(f"{c.kind}: {c.value}" for c in self.added)
             )
+        if self.unclassified:
+            parts.append(
+                "an instruction-shaped clause did not clearly carry over: "
+                + "; ".join(self.unclassified)
+            )
         return "; ".join(parts)
 
     def to_json(self) -> dict[str, Any]:
@@ -216,12 +277,18 @@ class Handoff:
             "kept": [c.to_json() for c in self.kept],
             "dropped": [c.to_json() for c in self.dropped],
             "added": [c.to_json() for c in self.added],
+            "unclassified": self.unclassified,
             "explanation": self.explain(),
         }
 
 
 def handoff_fidelity(
-    parent: str, child: str, *, from_agent: str = "", to_agent: str = ""
+    parent: str,
+    child: str,
+    *,
+    from_agent: str = "",
+    to_agent: str = "",
+    capability_constraints: dict[str, Any] | None = None,
 ) -> Handoff:
     """Compare the instruction an agent was given against the one it passed on.
 
@@ -232,16 +299,34 @@ def handoff_fidelity(
     Constraints *added* by the handoff are reported too. An instruction that acquires a
     limit nobody set is a different failure with the same cause — the intermediate step
     is writing requirements rather than relaying them.
+
+    ``capability_constraints`` widens what counts as a declared constraint beyond
+    instruction prose: the child's own granted `Capability.constraints_json`
+    (P2-2), when a caller has it in hand. A limit enforced there is real —
+    checked on every call, independent of what either agent's instruction says —
+    so it is folded into ``kept`` even when neither instruction mentions it,
+    rather than leaving a caller to conclude a dropped mention means the
+    constraint no longer exists anywhere in the system.
     """
     parent_constraints = extract_constraints(parent)
     child_constraints = extract_constraints(child)
     child_keys = {(c.kind, c.value) for c in child_constraints}
     parent_keys = {(c.kind, c.value) for c in parent_constraints}
 
+    parent_unclassified = _unclassified_directives(parent)
+    child_norm = _norm(child)
+    unclassified = [d for d in parent_unclassified if d not in child_norm]
+
+    enforced = [
+        Constraint(CAPABILITY, _format_capability_constraint(key, spec))
+        for key, spec in (capability_constraints or {}).items()
+    ]
+
     return Handoff(
-        kept=[c for c in parent_constraints if (c.kind, c.value) in child_keys],
+        kept=[c for c in parent_constraints if (c.kind, c.value) in child_keys] + enforced,
         dropped=[c for c in parent_constraints if (c.kind, c.value) not in child_keys],
         added=[c for c in child_constraints if (c.kind, c.value) not in parent_keys],
+        unclassified=unclassified,
         from_agent=from_agent,
         to_agent=to_agent,
     )

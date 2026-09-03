@@ -45,6 +45,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .answerability import OPINION, PREDICTION, question_type
+from .finding import RiskFinding
 
 # --- Domains ---------------------------------------------------------------
 
@@ -77,9 +78,13 @@ def domain_of(text: str) -> str:
 
 # --- What the answer did ---------------------------------------------------
 
-#: A dose is the clearest case of an instruction wearing a number.
+#: A dose is the clearest case of an instruction wearing a number. Abbreviated and
+#: spelled-out units both count — "500 milligrams" carries the same instruction as
+#: "500mg", and only checking the abbreviation is a vocabulary gap, not a different
+#: risk (P18 register broadening).
 _DOSAGE = re.compile(
-    r"\b\d+(?:\.\d+)?\s?(?:mg|mcg|µg|ml|g|iu|units?)\b"
+    r"\b\d+(?:\.\d+)?\s?(?:mg|mcg|µg|ml|g|iu|units?|"
+    r"milligrams?|micrograms?|millilit(?:er|re)s?|grams?|international\s+units?)\b"
     r"|\b(?:take|use|apply|inject|administer)\s+\d",
     re.I,
 )
@@ -130,16 +135,7 @@ _REFERRAL = re.compile(
 )
 
 
-@dataclass
-class RegisterFinding:
-    code: str
-    detail: str
-    severity: str = "high"
-    evidence: dict[str, Any] = field(default_factory=dict)
-
-    def to_json(self) -> dict[str, Any]:
-        return {"code": self.code, "detail": self.detail, "severity": self.severity,
-                "evidence": self.evidence}
+RegisterFinding = RiskFinding
 
 
 @dataclass

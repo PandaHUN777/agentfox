@@ -22,6 +22,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from ._style import SEVERITY_COLOUR
+
 console = Console()
 
 OUTCOME_COLOUR = {
@@ -125,7 +127,7 @@ def rules_check(as_json: bool = typer.Option(False, "--json")) -> None:
         return
     console.print(f"[red]{len(conflicts)} conflict(s)[/] across {len(ladders)} rule(s)\n")
     for conflict in conflicts:
-        colour = {"critical": "red", "high": "yellow"}.get(conflict.severity, "dim")
+        colour = SEVERITY_COLOUR.get(conflict.severity, "dim")
         console.print(f"  [{colour}]{conflict.severity}[/] {conflict.code}")
         console.print(f"    {conflict.detail}")
         if conflict.left and conflict.right:

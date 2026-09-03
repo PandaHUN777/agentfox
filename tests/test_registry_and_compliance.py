@@ -15,12 +15,14 @@ from nometria.compliance import (
 from nometria.compliance.catalog import review_mapping
 from nometria.models import Agent, AuditEntry, Finding, FrameworkMapping
 from nometria.registry.service import (
+    assess_delegation,
     attest_registry,
     derive_lineage,
     detect_shadow_agents,
     inventory,
     lineage,
     observe_agent,
+    record_edge,
     register_agent,
     scan_mcp_server,
     slugify,
@@ -113,6 +115,27 @@ def test_registry_drift_detected(seeded, enforcer):
     drift = [f for f in findings if f.subject_id]
     assert drift
     assert "some-undeclared-model" in drift[0].evidence_json["undeclared_models"]
+
+
+def test_delegation_cycle_detected(session):
+    """A -> B -> A is invisible to tool-call loop detection; only the graph shows it."""
+    record_edge(session, "agent", "agent-a", "agent", "agent-b", "delegates_to")
+    record_edge(session, "agent", "agent-b", "agent", "agent-a", "delegates_to")
+    findings = assess_delegation(session)
+    cycles = [f for f in findings if f.type == "delegation_cycle"]
+    assert cycles
+    assert set(cycles[0].evidence_json["cycle"]) == {"agent-a", "agent-b"}
+
+
+def test_ordinary_fan_out_reports_nothing(session):
+    """One agent delegating to several distinct agents is not a cycle or over-depth."""
+    for child in ("agent-b", "agent-c", "agent-d"):
+        record_edge(session, "agent", "agent-a", "agent", child, "delegates_to")
+    assert assess_delegation(session) == []
+
+
+def test_no_delegation_edges_short_circuits(session):
+    assert assess_delegation(session) == []
 
 
 # ---------------------------------------------------------------------------

@@ -21,6 +21,7 @@ from rich.panel import Panel
 from rich.table import Table
 
 from .. import __version__
+from ._style import SEVERITY_COLOUR
 
 app = typer.Typer(
     name="nometria",
@@ -41,6 +42,8 @@ compliance_app = typer.Typer(help="Controls, frameworks and risk (Pillar 6).", n
 redteam_app = typer.Typer(help="Adversarial testing (Pillar 4).", no_args_is_help=True)
 scan_app = typer.Typer(help="Hygiene scanning (Pillar 1).", no_args_is_help=True)
 db_app = typer.Typer(help="Database schema migrations (PL-2).", no_args_is_help=True)
+tools_app = typer.Typer(help="Declared tool metadata for action assurance (P9).", no_args_is_help=True)
+access_app = typer.Typer(help="Data-access scoping declarations (P18).", no_args_is_help=True)
 
 app.add_typer(agents_app, name="agents")
 app.add_typer(policy_app, name="policy")
@@ -50,6 +53,8 @@ app.add_typer(evidence_app, name="evidence")
 app.add_typer(compliance_app, name="compliance")
 app.add_typer(redteam_app, name="redteam")
 app.add_typer(scan_app, name="scan")
+app.add_typer(tools_app, name="tools")
+app.add_typer(access_app, name="access")
 app.add_typer(db_app, name="db")
 
 # The three commands a new user runs, registered as top-level verbs. The rest of this
@@ -254,9 +259,11 @@ def agents_list(as_json: bool = typer.Option(False, "--json")) -> None:
 
 @agents_app.command("discover")
 def agents_discover() -> None:
-    """Sweep for shadow agents, unowned agents, registry drift and identity posture."""
+    """Sweep for shadow agents, unowned agents, registry drift, identity posture and
+    delegation cycles/depth."""
     from ..identity import assess_posture
     from ..registry.service import (
+        assess_delegation,
         attest_registry,
         derive_lineage,
         detect_shadow_agents,
@@ -269,11 +276,13 @@ def agents_discover() -> None:
         unowned = unowned_agents(session)
         drift = attest_registry(session)
         posture = assess_posture(session)
+        delegation = assess_delegation(session)
     console.print(f"  lineage edges derived   {edges}")
     console.print(f"  shadow agents           [red]{len(shadows)}[/]")
     console.print(f"  unowned agents          [yellow]{len(unowned)}[/]")
     console.print(f"  registry drift findings [yellow]{len(drift)}[/]")
     console.print(f"  identity posture issues [yellow]{len(posture)}[/]")
+    console.print(f"  delegation findings     [yellow]{len(delegation)}[/]")
     for shadow in shadows:
         console.print(
             f"    [red]shadow[/] {shadow['slug']} — {shadow['calls']} calls "
@@ -419,9 +428,7 @@ def policy_lint() -> None:
         table.add_column(column, style="bold" if column == "code" else None)
     order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
     for finding in sorted(report["findings"], key=lambda f: order.get(f["severity"], 9)):
-        colour = {"critical": "red", "high": "red", "medium": "yellow"}.get(
-            finding["severity"], "dim"
-        )
+        colour = SEVERITY_COLOUR.get(finding["severity"], "dim")
         table.add_row(
             f"[{colour}]{finding['severity']}[/]",
             finding["code"],
@@ -1137,9 +1144,7 @@ def scan_mcp(server: str, file: Path | None = typer.Option(None, help="Tool list
     if not result["issues"]:
         console.print("  [green]no hygiene issues[/]")
     for issue in result["issues"]:
-        colour = {"critical": "red", "high": "red", "medium": "yellow"}.get(
-            issue["severity"], "dim"
-        )
+        colour = SEVERITY_COLOUR.get(issue["severity"], "dim")
         console.print(
             f"  [{colour}]{issue['severity']}[/] {issue['type']}"
             + (f" — {issue.get('tool')}" if issue.get("tool") else "")
@@ -1174,7 +1179,7 @@ def analyse_action(
         analysis = analyse_sql(statement, dialect=dialect)
 
     summary = summarise([analysis], environment)
-    colour = {"critical": "red", "high": "red", "medium": "yellow"}.get(analysis.severity, "green")
+    colour = SEVERITY_COLOUR.get(analysis.severity, "green")
     console.print(
         f"[bold]{analysis.operation}[/] · blast radius [{colour}]{analysis.blast_radius}[/] · "
         f"{'reversible' if analysis.reversible else 'IRREVERSIBLE'} · "
@@ -1183,12 +1188,109 @@ def analyse_action(
     if not summary.get("risks"):
         console.print("  [green]no risks identified[/]")
     for risk in summary.get("risks", []):
-        risk_colour = {"critical": "red", "high": "red", "medium": "yellow"}.get(
-            risk["severity"], "dim"
-        )
+        risk_colour = SEVERITY_COLOUR.get(risk["severity"], "dim")
         console.print(f"  [{risk_colour}]{risk['severity']}[/] {risk['code']} — {risk['detail']}")
     if summary.get("critical"):
         raise typer.Exit(1)
+
+
+@tools_app.command("set-triggers")
+def tools_set_triggers(
+    key: str = typer.Argument(..., help="Tool key, e.g. demo.delete_user"),
+    triggers: str = typer.Option(
+        "", "--triggers", help="Comma-separated tool keys this call sets off downstream"
+    ),
+) -> None:
+    """P9 — declare what a tool call sets off downstream (a DB trigger, a webhook, a
+    fan-out), so `cascade_risk()` can actually see it. An undeclared trigger stays
+    invisible by design (see `effects.cascade_risk`'s own docstring) — this is how
+    an operator closes that gap for one tool.
+    """
+    from sqlalchemy import select
+
+    from ..models import Tool
+
+    declared = [t.strip() for t in triggers.split(",") if t.strip()]
+    with _session() as session:
+        tool = session.scalar(select(Tool).where(Tool.key == key))
+        if tool is None:
+            console.print(
+                f"[red]unknown tool '{key}' — register it first "
+                "(nometria scan mcp, or via seed data)[/]"
+            )
+            raise typer.Exit(1)
+        tool.triggers_json = declared
+
+    console.print(f"[bold]{key}[/] triggers: {', '.join(declared) or '(none)'}")
+
+
+@access_app.command("declare-scope")
+def access_declare_scope(
+    table: str = typer.Argument(..., help="Table name"),
+    column: str = typer.Option(
+        ..., "--column", help="Column that decides whose row it is"
+    ),
+    principal_key: str = typer.Option(
+        "id",
+        "--principal-key",
+        help="Attribute of the calling principal the column must equal",
+    ),
+    restricted_columns: str = typer.Option(
+        "",
+        "--restricted-columns",
+        help="Comma-separated columns nobody should receive even for their own row",
+    ),
+) -> None:
+    """P18 — declare which column on a table decides whose row it is, so
+    `analyse_access()` can prove a query is scoped instead of assuming it. An
+    undeclared table is reported, never assumed safe (see `data_access`'s own
+    docstring).
+    """
+    from sqlalchemy import select
+
+    from ..models import AccessScopeRule
+
+    restricted = [c.strip() for c in restricted_columns.split(",") if c.strip()]
+    with _session() as session:
+        rule = session.scalar(
+            select(AccessScopeRule).where(AccessScopeRule.table_name == table)
+        )
+        if rule is None:
+            rule = AccessScopeRule(table_name=table)
+            session.add(rule)
+        rule.is_reference = False
+        rule.column = column
+        rule.principal_key = principal_key
+        rule.restricted_columns = restricted
+
+    suffix = f" (restricted: {', '.join(restricted)})" if restricted else ""
+    console.print(f"[bold]{table}[/] scoped by {column} = principal.{principal_key}{suffix}")
+
+
+@access_app.command("declare-reference")
+def access_declare_reference(
+    table: str = typer.Argument(
+        ..., help="Table name — belongs to nobody (currencies, statuses, postcodes)"
+    ),
+) -> None:
+    """P18 — declare a table that belongs to nobody, so `analyse_access()` does not
+    flag it as an undeclared/unscoped table.
+    """
+    from sqlalchemy import select
+
+    from ..models import AccessScopeRule
+
+    with _session() as session:
+        rule = session.scalar(
+            select(AccessScopeRule).where(AccessScopeRule.table_name == table)
+        )
+        if rule is None:
+            rule = AccessScopeRule(table_name=table, is_reference=True)
+            session.add(rule)
+        else:
+            rule.is_reference = True
+
+    console.print(f"[bold]{table}[/] declared as a reference table")
 
 
 def main() -> None:  # pragma: no cover - console entry point

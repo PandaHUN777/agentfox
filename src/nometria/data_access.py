@@ -40,6 +40,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from .finding import RiskFinding
 from .guardrails.actions import SQLGLOT_AVAILABLE, exp, sqlglot
 
 # --- Declaration -----------------------------------------------------------
@@ -82,16 +83,7 @@ class ReferenceTable:
 # --- Findings --------------------------------------------------------------
 
 
-@dataclass
-class AccessFinding:
-    code: str
-    detail: str
-    severity: str = "high"
-    evidence: dict[str, Any] = field(default_factory=dict)
-
-    def to_json(self) -> dict[str, Any]:
-        return {"code": self.code, "detail": self.detail, "severity": self.severity,
-                "evidence": self.evidence}
+AccessFinding = RiskFinding
 
 
 @dataclass
@@ -192,6 +184,7 @@ def analyse_access(
     rules: list[ScopeRule] | None = None,
     reference: list[ReferenceTable] | None = None,
     dialect: str = "postgres",
+    strictness: str = "standard",
 ) -> AccessAnalysis:
     """Prove that a statement can only return the caller's rows.
 
@@ -199,8 +192,16 @@ def analyse_access(
     "C-1"}`` — and is used to tell a bound scope from one the model wrote out. Passing
     no principal is allowed and makes every literal binding a finding, which is the
     right default: without knowing who is asking, no literal can be shown to be them.
+
+    ``strictness="strict"`` promotes ``undeclared-table`` from ``"high"`` (escalate)
+    to ``"critical"`` (block) — the standard default treats an unreviewed table as
+    something a human should look at, not something to refuse outright, since a
+    schema legitimately grows faster than anyone declares scope rules for it. A
+    deployment that wants "no undeclared table is ever queried, period" opts into
+    that outright.
     """
     principal = principal or {}
+    undeclared_severity = "critical" if strictness == "strict" else "high"
     by_table = {r.key: r for r in (rules or [])}
     reference_tables = {r.key for r in (reference or [])}
 
@@ -257,7 +258,7 @@ def analyse_access(
                         "undeclared-table",
                         f"'{table}' has no scope rule and is not declared as a "
                         "reference table, so there is nothing to check it against",
-                        "high", {"table": table},
+                        undeclared_severity, {"table": table},
                     ))
                 continue
 

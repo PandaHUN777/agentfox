@@ -156,6 +156,17 @@ class Settings(BaseSettings):
     sql_dialect: str = "postgres"
     # P9-7: how fresh a state read must be to authorise an irreversible act.
     verified_state_max_age_seconds: int = 300
+    # P18 — "standard" escalates an undeclared table (a human should look);
+    # "strict" blocks it outright. See data_access.analyse_access's own docstring.
+    data_access_strictness: str = "standard"
+
+    # --- Agent loop governance (PL-4) -------------------------------------
+    # Mirrors agent_loop.LoopBudget's own defaults — kept here, not just as
+    # dataclass defaults, so a deployment can tune them without a code change.
+    loop_max_steps: int = 25
+    loop_max_repeats: int = 2
+    loop_max_cycle_length: int = 4
+    loop_max_steps_without_progress: int = 5
 
     # --- Memory write governance (P14, NOM-RTG-13) -----------------------
     # How long an unverified memory entry survives before it decays — the

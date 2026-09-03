@@ -28,7 +28,7 @@ from ...guardrails.tuning import (
     threshold_recommendations,
 )
 from ...models import Agent, GuardrailFeedback, Suppression, User
-from ..deps import current_user, db, require
+from ..deps import current_user, db, get_agent_or_404, require
 
 router = APIRouter(prefix="/api/guardrails", tags=["guardrails"])
 
@@ -207,12 +207,7 @@ def list_suppressions(
     session: Session = Depends(db),
     _user: User = Depends(current_user),
 ) -> dict[str, Any]:
-    agent_id = None
-    if agent:
-        row = session.scalar(select(Agent).where(Agent.slug == agent))
-        if row is None:
-            raise HTTPException(404, f"unknown agent '{agent}'")
-        agent_id = row.id
+    agent_id = get_agent_or_404(session, agent).id if agent else None
     rows = (
         active_suppressions(session, agent_id)
         if agent
