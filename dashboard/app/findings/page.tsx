@@ -2,6 +2,7 @@ import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
 import { ApiDown } from "@/components/ui";
 import { ExpandableFindingRow } from "@/components/ExpandableFindingRow";
+import { controlTitleMap } from "@/lib/controls";
 
 export const dynamic = "force-dynamic";
 
@@ -15,11 +16,12 @@ export default async function Findings({
   if (sp.severity) qs.set("severity", sp.severity);
   if (sp.agent) qs.set("agent", sp.agent);
 
-  let data: any, agents: any;
+  let data: any, agents: any, controlTitles: Record<string, string>;
   try {
-    [data, agents] = await Promise.all([
+    [data, agents, controlTitles] = await Promise.all([
       api(`/api/findings?${qs}`),
       safeApi("/api/agents", { agents: [] }),
+      controlTitleMap(),
     ]);
   } catch (e: any) {
     return (
@@ -35,7 +37,11 @@ export default async function Findings({
       <h1>Findings</h1>
       <p className="sub">
         Every problem this product detected, ranked by severity. See what kind of
-        problem each one is in the type column below.
+        problem each one is in the type column below. A single detector run only ever
+        judges one request — a{" "}
+        <Link href="/glossary">Finding</Link> is what a detector or scorer flags as a
+        problem worth a person's attention, whether that came from one bad call or a
+        pattern across many.
       </p>
 
       <form action="/findings" method="GET" className="chipbar">
@@ -98,7 +104,12 @@ export default async function Findings({
             </thead>
             <tbody>
               {data.findings.map((f: any) => (
-                <ExpandableFindingRow key={f.id} finding={f} agents={agents.agents || []} />
+                <ExpandableFindingRow
+                  key={f.id}
+                  finding={f}
+                  agents={agents.agents || []}
+                  controlTitles={controlTitles}
+                />
               ))}
             </tbody>
           </table>

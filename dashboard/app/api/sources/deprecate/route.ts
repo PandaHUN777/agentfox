@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { SESSION_COOKIE } from "@/lib/api";
-
-const API_BASE = process.env.NOMETRIA_API_URL || "http://127.0.0.1:8080";
+import { proxyCustomBody } from "@/lib/proxy";
 
 /**
  * Soft-retire a source: `key` travels in the POST body, not the URL path.
@@ -15,31 +12,19 @@ const API_BASE = process.env.NOMETRIA_API_URL || "http://127.0.0.1:8080";
  * the edit/add forms on this page already work.
  */
 export async function POST(req: NextRequest) {
-  const target = new URL("/sources", req.nextUrl.origin);
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
-  if (!token) {
-    target.searchParams.set("review_error", "not signed in");
-    return NextResponse.redirect(target);
-  }
-
   const form = await req.formData();
   const key = String(form.get("key") || "");
   if (!key) {
+    const target = new URL("/sources", req.nextUrl.origin);
     target.searchParams.set("review_error", "missing source key");
     return NextResponse.redirect(target);
   }
 
-  try {
-    const res = await fetch(
-      `${API_BASE}/api/sources/${key.split("/").map(encodeURIComponent).join("/")}`,
-      { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
-    );
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      target.searchParams.set("review_error", body.detail || res.statusText);
-    }
-  } catch (e: any) {
-    target.searchParams.set("review_error", String(e?.message || e));
-  }
-  return NextResponse.redirect(target);
+  return proxyCustomBody(
+    req,
+    "DELETE",
+    `/api/sources/${key.split("/").map(encodeURIComponent).join("/")}`,
+    "/sources",
+    undefined,
+  );
 }

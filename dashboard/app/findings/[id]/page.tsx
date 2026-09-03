@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { ApiError, api, safeApi } from "@/lib/api";
-import { AgentLink, ApiDown, NotFound, Severity, findingTypeInfo, ts } from "@/components/ui";
+import { AgentLink, ApiDown, ControlChip, NotFound, Severity, findingTypeInfo, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FindingEvidence } from "@/components/FindingEvidence";
+import { controlTitleMap } from "@/lib/controls";
 
 export const dynamic = "force-dynamic";
 
@@ -25,11 +25,12 @@ export default async function FindingDetail({
 }) {
   const { id } = await params;
   const { review_error } = await searchParams;
-  let finding: any, agents: any;
+  let finding: any, agents: any, controlTitles: Record<string, string>;
   try {
-    [finding, agents] = await Promise.all([
+    [finding, agents, controlTitles] = await Promise.all([
       api(`/api/findings/${id}`),
       safeApi("/api/agents", { agents: [] }),
+      controlTitleMap(),
     ]);
   } catch (e: any) {
     return (
@@ -80,9 +81,7 @@ export default async function FindingDetail({
           <span>
             <span className="muted">controls </span>
             {finding.controls.map((c: string) => (
-              <Link key={c} href={`/compliance#${c}`} className="mono" style={{ marginRight: 6 }}>
-                {c}
-              </Link>
+              <ControlChip key={c} code={c} titles={controlTitles} />
             ))}
           </span>
         )}

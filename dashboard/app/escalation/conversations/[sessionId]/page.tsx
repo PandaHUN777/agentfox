@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ApiError, api } from "@/lib/api";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ApiDown, InfoTip, NotFound, Severity, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -44,9 +45,7 @@ export default async function EscalationConversation({
 
   return (
     <>
-      <p className="small muted" style={{ marginBottom: 4 }}>
-        <Link href="/approvals?tab=escalation">← Escalation</Link>
-      </p>
+      <Breadcrumbs crumbs={[{ label: "Escalation", href: "/approvals?tab=escalation" }]} />
       <h1>{data.handoff?.summary || data.handoff?.reason || "Conversation"}</h1>
       <p className="mono small muted" style={{ marginTop: -8 }}>{sessionId}</p>
       <p className="sub">

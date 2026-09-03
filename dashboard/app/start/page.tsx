@@ -59,9 +59,8 @@ export default async function Start({
       <p className="sub">
         Getting a fresh instance pointed at something real, end to end: connect a
         source, generate a token if you're integrating by hand, then work through
-        what's still open. Codes like <span className="mono">P7</span> below
-        reference this product's own numbering — see the{" "}
-        <Link href="/glossary">Glossary</Link> if a term doesn't explain itself.
+        what's still open. Any term that doesn't explain itself is decoded on the{" "}
+        <Link href="/glossary">Glossary</Link>.
       </p>
 
       <div className="tabbar">

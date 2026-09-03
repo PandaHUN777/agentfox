@@ -41,7 +41,7 @@ export default async function Entitlement() {
   } catch (e: any) {
     return (
       <>
-        <h1>Entitlement</h1>
+        <h1>Access Control</h1>
         <ApiDown error={String(e?.message || e)} />
       </>
     );
@@ -51,7 +51,7 @@ export default async function Entitlement() {
 
   return (
     <>
-      <h1>Entitlement</h1>
+      <h1>Access Control</h1>
       <p className="sub">
         Most agents run under one shared identity, so a permission check that
         "passes" can still hand someone information meant for a different person

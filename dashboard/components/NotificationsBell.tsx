@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ts } from "@/components/ui";
+import { Severity, ts } from "@/components/ui";
 
 /**
  * The shell had no persistent cross-page signal for "something needs you" —
@@ -32,9 +32,7 @@ export function NotificationsBell({
           <>
             {items.map((item, i) => (
               <Link key={i} href={item.href} className="notif-item">
-                <span className={`tag ${item.severity === "critical" || item.severity === "high" ? "bad" : "warn"}`}>
-                  {item.severity}
-                </span>
+                <Severity value={item.severity} />
                 <span className="notif-item-body">
                   <span className="small">{item.title}</span>
                   <span className="small muted">{ts(item.at)}</span>

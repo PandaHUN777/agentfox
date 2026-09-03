@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ApiError, api } from "@/lib/api";
-import { ApiDown, InfoTip, NotFound, Panel, Verdict, ts } from "@/components/ui";
+import { ApiDown, ControlChip, InfoTip, NotFound, Panel, Verdict, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { controlTitleMap } from "@/lib/controls";
 
 export const dynamic = "force-dynamic";
 
@@ -14,9 +15,9 @@ export default async function TraceDetail({
 }) {
   const { id } = await params;
   const { review_error, review_notice } = await searchParams;
-  let d: any;
+  let d: any, controlTitles: Record<string, string>;
   try {
-    d = await api(`/api/traces/${id}`);
+    [d, controlTitles] = await Promise.all([api(`/api/traces/${id}`), controlTitleMap()]);
   } catch (e: any) {
     return (
       <>
@@ -36,7 +37,7 @@ export default async function TraceDetail({
     <>
       <Breadcrumbs crumbs={[{ label: "Traces", href: "/traces" }]} />
       <h1>
-        {t.intent || "One request"} <Verdict value={t.verdict} />
+        {t.intent || "Untitled trace"} <Verdict value={t.verdict} />
       </h1>
       <p className="sub">
         <Link href={`/agents/${t.agent}`}>{t.agent_name || t.agent}</Link> ·{" "}
@@ -46,15 +47,6 @@ export default async function TraceDetail({
 
       {review_error && <div className="error">{review_error}</div>}
       {review_notice && <div className="note-panel">{review_notice}</div>}
-
-      {t.intent && (
-        <div className="panel" style={{ marginBottom: 16 }}>
-          <div className="body small">
-            <span className="muted">declared intent: </span>
-            {t.intent}
-          </div>
-        </div>
-      )}
 
       <div className="grid2">
         <Panel title="Span timeline" note={`${d.spans.length} spans`}>
@@ -70,7 +62,12 @@ export default async function TraceDetail({
           </div>
         </Panel>
 
-        <Panel title="Argument provenance" note="taint tracking (P3-4)">
+        <Panel
+          title="Argument provenance"
+          note={
+            <InfoTip text="Where each argument's value actually came from — the user, a retrieved document, a prior tool's result — and how much that source is trusted. A value that arrived from an untrusted source (like a document the agent read) is tracked everywhere it resurfaces, so an irreversible tool can't be handed data that was never actually authorized." />
+          }
+        >
           {d.taint.length === 0 ? (
             <div className="body muted small">Nothing tainted.</div>
           ) : (
@@ -123,12 +120,9 @@ export default async function TraceDetail({
                           <span className="tag">{r.effect}</span>
                           <div className="muted small">{r.reason}</div>
                           {r.controls?.length > 0 && (
-                            <div className="mono muted" style={{ fontSize: 11 }}>
-                              {r.controls.map((c: string, ci: number) => (
-                                <span key={c}>
-                                  {ci > 0 && " "}
-                                  <Link href={`/compliance#${c}`}>{c}</Link>
-                                </span>
+                            <div className="muted" style={{ fontSize: 11 }}>
+                              {r.controls.map((c: string) => (
+                                <ControlChip key={c} code={c} titles={controlTitles} />
                               ))}
                             </div>
                           )}
@@ -192,11 +186,13 @@ export default async function TraceDetail({
                       <input type="hidden" name="return_to" value={`/traces/${t.id}`} />
                       <select
                         name="label"
-                        defaultValue="false_positive"
+                        defaultValue=""
+                        required
                         style={{ padding: "2px 6px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 11.5 }}
                       >
-                        <option value="false_positive">wrong — false positive</option>
+                        <option value="" disabled>rate this call…</option>
                         <option value="true_positive">correct — true positive</option>
+                        <option value="false_positive">wrong — false positive</option>
                         <option value="false_negative">missed something</option>
                       </select>
                       <button type="submit" className="chip" style={{ cursor: "pointer" }}>file feedback</button>

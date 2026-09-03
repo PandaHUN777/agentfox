@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AgentLink, Severity, findingTypeInfo, ts } from "@/components/ui";
+import { AgentLink, ControlChip, Severity, findingTypeInfo, ts } from "@/components/ui";
 import { FindingEvidence } from "@/components/FindingEvidence";
 
 /**
@@ -10,7 +10,15 @@ import { FindingEvidence } from "@/components/FindingEvidence";
  * fetches separately) — expanding in place costs no extra request, just a state
  * toggle, so "scan twenty, look closely at one" doesn't force a page jump.
  */
-export function ExpandableFindingRow({ finding, agents }: { finding: any; agents: any[] }) {
+export function ExpandableFindingRow({
+  finding,
+  agents,
+  controlTitles,
+}: {
+  finding: any;
+  agents: any[];
+  controlTitles: Record<string, string>;
+}) {
   const [open, setOpen] = useState(false);
   const typeInfo = findingTypeInfo(finding.type);
 
@@ -37,17 +45,9 @@ export function ExpandableFindingRow({ finding, agents }: { finding: any; agents
           </span>
           {typeInfo.blurb && <div className="small muted">{typeInfo.blurb}</div>}
         </td>
-        <td className="small mono">
+        <td className="small" onClick={(e) => e.stopPropagation()}>
           {(finding.controls || []).map((c: string) => (
-            <Link
-              key={c}
-              href={`/compliance#${c}`}
-              className="muted"
-              style={{ marginRight: 6 }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {c}
-            </Link>
+            <ControlChip key={c} code={c} titles={controlTitles} />
           ))}
         </td>
         <td className="small muted">{ts(finding.created_at)}</td>

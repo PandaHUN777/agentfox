@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { api } from "@/lib/api";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ApiDown } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -36,9 +36,7 @@ export default async function FrameworkReview({
 
   return (
     <>
-      <p className="small">
-        <Link href="/compliance?tab=frameworks">← Frameworks</Link>
-      </p>
+      <Breadcrumbs crumbs={[{ label: "Frameworks", href: "/compliance?tab=frameworks" }]} />
       <h1>{coverage.title}</h1>
       <p className="sub">
         {coverage.controls_mapped} of {coverage.controls_total} controls mapped,{" "}
@@ -68,7 +66,6 @@ export default async function FrameworkReview({
           <thead>
             <tr>
               <th>control</th>
-              <th>implemented by</th>
               <th>reference(s)</th>
               <th>status</th>
               <th></th>
@@ -78,10 +75,9 @@ export default async function FrameworkReview({
             {coverage.controls.map((c: any) => (
               <tr key={c.key}>
                 <td>
-                  <div className="mono small" title={c.key}>{c.key}</div>
-                  <div className="small muted">{c.title}</div>
+                  <div className="small">{c.title}</div>
+                  <div className="mono small muted">{c.key}</div>
                 </td>
-                <td className="mono muted small">{(c.implemented_by || []).join(" ")}</td>
                 <td className="small muted">{(c.references || []).join(", ") || "—"}</td>
                 <td>
                   <span className={`tag ${c.review_status === "reviewed" ? "ok" : "warn"}`}>

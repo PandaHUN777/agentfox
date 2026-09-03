@@ -17,7 +17,7 @@ export async function GET(
   const { id } = await params;
   const token = (await cookies()).get(SESSION_COOKIE)?.value;
   if (!token) {
-    return NextResponse.json({ error: "not signed in" }, { status: 401 });
+    return NextResponse.json({ detail: "not signed in" }, { status: 401 });
   }
 
   const res = await fetch(`${API_BASE}/api/evidence/${id}/download`, {
@@ -26,7 +26,7 @@ export async function GET(
   });
   if (!res.ok) {
     return NextResponse.json(
-      { error: await res.text().catch(() => res.statusText) },
+      { detail: await res.text().catch(() => res.statusText) },
       { status: res.status },
     );
   }

@@ -90,7 +90,7 @@ export default async function AgentDetail({
       </form>
 
       <div className="cards">
-        <Stat n={posture.traces} label="execution paths" />
+        <Stat n={posture.traces} label="traces" />
         <Stat n={posture.decisions} label="decisions" />
         <Stat n={posture.blocked} label="blocked" tone={posture.blocked ? "bad" : "ok"} />
         <Stat n={posture.escalated} label="escalated" tone={posture.escalated ? "warn" : "ok"} />
@@ -99,7 +99,7 @@ export default async function AgentDetail({
           label="hand-offs"
           href={`/approvals?tab=escalation&agent=${a.slug}`}
           tone={posture.handoffs ? "warn" : "ok"}
-          hint="Conversations transferred to a human — recorded independently of traced execution paths, so this can be non-zero even when 'execution paths' above is 0."
+          hint="Conversations transferred to a human — recorded independently of traces, so this can be non-zero even when 'traces' above is 0."
         />
         <Stat
           n={lineage.blast_radius}
@@ -192,7 +192,7 @@ export default async function AgentDetail({
           title="Observed lineage"
           note={
             <>
-              derived from execution paths, not config{" "}
+              derived from traces, not config{" "}
               <InfoTip text="'Observed' means seen actually happening in traced traffic. Contrast with the 'declared models'/'declared tools' rows in Registration, which are just what someone typed in — a mismatch between the two is itself a signal worth noticing. When a target is a registered tool, its impact tier (read/write/irreversible) and — if it came through an MCP server — that server's trust level are shown alongside it." />
             </>
           }
@@ -454,11 +454,11 @@ export default async function AgentDetail({
         </>
       )}
 
-      <h2>Recent execution paths</h2>
+      <h2>Recent traces</h2>
       <div className="panel">
         {traces.traces.length === 0 ? (
           <div className="body muted small">
-            No traced execution paths.
+            No traces recorded yet.
             {posture.handoffs > 0 && (
               <>
                 {" "}This agent does have {posture.handoffs} hand-off{posture.handoffs === 1 ? "" : "s"} on

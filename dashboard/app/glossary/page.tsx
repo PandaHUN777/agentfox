@@ -81,18 +81,33 @@ export default function Glossary() {
               </td>
             </tr>
             <tr>
-              <td className="mono small">Findings</td>
+              <td className="mono small">Decisions / Verdicts</td>
               <td className="small">
-                A concrete problem a detector or scorer actually caught, tied to one
-                specific call — see <a href="/findings">Findings</a>.
+                A <strong>Decision</strong> is the logged record of one policy evaluation —
+                which rules fired, what the outbound effect was. Its{" "}
+                <strong>Verdict</strong> is just the outcome value on that record (allow,
+                block, escalate, redact...) — see it as a colored tag on{" "}
+                <a href="/traces">Traces</a>. A Decision is not itself a Finding: a single
+                blocked call is expected, routine enforcement working correctly.
               </td>
             </tr>
             <tr>
-              <td className="mono small">Entitlement</td>
+              <td className="mono small">Findings</td>
+              <td className="small">
+                How a Detector run and a Decision turn into something that needs a
+                person: a detector tests one call → its outcome is logged as a Decision →
+                a problem that's persistent, high-severity, or part of a pattern (not just
+                one routine block) is raised as a <strong>Finding</strong> — a concrete,
+                actionable problem tied to evidence, ranked by severity — see{" "}
+                <a href="/findings">Findings</a>.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono small">Access Control</td>
               <td className="small">
                 Whether an agent's answer contains only what the specific person asking
                 is allowed to see — not just whether the answer is factually true. See{" "}
-                <a href="/entitlement">Entitlement</a>.
+                <a href="/entitlement">Access Control</a>.
               </td>
             </tr>
             <tr>

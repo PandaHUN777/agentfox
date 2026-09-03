@@ -228,7 +228,7 @@ export default async function Sources({
 
       <h2>
         Check ingestion quality
-        <InfoTip text="A source can be perfectly authoritative and still fail an agent because of how it was extracted or chunked — a lost space glyph glues words together, a PDF-to-text pass leaves mojibake, a chunk boundary cuts a claim's exception onto the wrong side. This is P14: a dry run against real text before it becomes context, distinct from P8's tiering above." />
+        <InfoTip text="A source can be perfectly authoritative and still fail an agent because of how it was extracted or chunked — a lost space glyph glues words together, a PDF-to-text pass leaves mojibake, a chunk boundary cuts a claim's exception onto the wrong side. This is a dry run against real text before it becomes context, distinct from the trust tiering above, which is about whether the source itself is authoritative, not whether the text survived extraction intact." />
       </h2>
       <p className="sub">
         Not tied to a registered source — paste what a loader actually extracted, or

@@ -19,7 +19,7 @@ const PATHS: Record<string, React.ReactNode> = {
 };
 
 export function NavIcon({ href }: { href: string }) {
-  const path = PATHS[href];
+  const path = PATHS[href.split("?")[0]];
   if (!path) return null;
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

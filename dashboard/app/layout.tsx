@@ -10,7 +10,7 @@ import { Wordmark } from "@/components/Logo";
 import { AccountMenu } from "@/components/AccountMenu";
 import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandSearch } from "@/components/CommandSearch";
-import { SideNav } from "@/components/SideNav";
+import { SideNav, type NavItem } from "@/components/SideNav";
 import { TopbarStats } from "@/components/TopbarStats";
 import "./globals.css";
 
@@ -26,11 +26,36 @@ export const metadata: Metadata = {
 /**
  * Plain, predictable category nouns rather than a rhetorical-question framing
  * ("What is it" / "Does it work") — a newcomer scanning the sidebar once should
- * be able to guess which group a page lives in before clicking it. Ordered as
- * the natural pipeline: see what's running and what's wrong, configure what's
- * allowed, test whether it holds up, report on it.
+ * be able to guess which group a page lives in before clicking it.
+ *
+ * Grouping and labels follow the four-stage lifecycle (Discover / Monitor /
+ * Test / Govern) that recurs across the AI-agent-governance and AI-security
+ * category researched for this pass — Noma, Pillar Security, HiddenLayer,
+ * SplxAI, Lasso, and Cisco AI Defense all converge on some version of
+ * discover-what-exists -> test/validate -> runtime-protect -> govern. Two
+ * splits from the previous grouping follow that research directly:
+ *
+ * - "Discover" (Agents, Sources) is pulled out on its own because "Discover"
+ *   is the single most consistently-used word across that whole category for
+ *   exactly this — an inventory of what exists (agents, MCP servers, data
+ *   sources) — not a Nometria-specific choice.
+ * - "Monitor" keeps Findings and Traces, since those are the ongoing-activity
+ *   record rather than the inventory itself, and "Monitor" was never actually
+ *   flagged as unclear by the research — only "Quality" and the standalone
+ *   "Reporting" group of one were.
+ *
+ * Compliance sits in Govern, not its own "Reporting" group of one — every
+ * comparable governance product treats framework/control mapping as part of
+ * governance, not a separate top-level stage, and a group with a single row
+ * was just an extra click for no organizing benefit.
+ *
+ * Guardrail tuning and Escalation get their own (indented, `sub: true`) rows
+ * rather than living only as tabs a user has to already know to click into —
+ * both are substantial pages in their own right (per-detector precision/
+ * latency/suppressions data; the missed-escalation and hand-off queue) that
+ * were previously reachable only after landing on Policies/Approvals first.
  */
-const NAV: { group: string; items: [string, string][] }[] = [
+const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "",
     items: [
@@ -39,31 +64,33 @@ const NAV: { group: string; items: [string, string][] }[] = [
     ],
   },
   {
-    group: "Monitor",
+    group: "Discover",
     items: [
       ["Agents", "/agents"],
+      ["Sources", "/sources"],
+    ],
+  },
+  {
+    group: "Monitor",
+    items: [
       ["Findings", "/findings"],
       ["Traces", "/traces"],
+    ],
+  },
+  {
+    group: "Test",
+    items: [
+      ["Evaluation", "/evals"],
     ],
   },
   {
     group: "Govern",
     items: [
       ["Policies", "/policies"],
-      ["Entitlement", "/entitlement"],
+      ["Guardrail tuning", "/policies?tab=guardrails", true],
+      ["Access Control", "/entitlement"],
       ["Approvals", "/approvals"],
-    ],
-  },
-  {
-    group: "Quality",
-    items: [
-      ["Evaluation", "/evals"],
-      ["Sources", "/sources"],
-    ],
-  },
-  {
-    group: "Reporting",
-    items: [
+      ["Escalation", "/approvals?tab=escalation", true],
       ["Compliance", "/compliance"],
     ],
   },
@@ -79,8 +106,6 @@ const NAV_SEARCH_ONLY: { label: string; href: string; group: string }[] = [
   { label: "Connect GitHub", href: "/start?tab=connect", group: "Start here" },
   { label: "Connect a hosted API", href: "/start?tab=connect", group: "Start here" },
   { label: "API tokens", href: "/start?tab=tokens", group: "Start here" },
-  { label: "Guardrail tuning", href: "/policies?tab=guardrails", group: "Policies" },
-  { label: "Escalation", href: "/approvals?tab=escalation", group: "Approvals" },
   { label: "Board view", href: "/compliance?tab=board", group: "Compliance" },
   { label: "Glossary", href: "/glossary", group: "Reference" },
 ];

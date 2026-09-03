@@ -86,10 +86,10 @@ export default async function PolicyDetail({ params }: { params: Promise<{ key: 
         </span>
       </div>
 
-      <h2>Rules — authored as YAML, compiled to Rego</h2>
+      <h2>Rules — authored as YAML, enforced at runtime</h2>
       <p className="small muted" style={{ marginTop: -8, marginBottom: 14, maxWidth: "70ch" }}>
-        Edit and validate before saving — validation runs the same Pydantic model the
-        engine compiles at enforcement time, so an error here is an error there.
+        Edit and validate before saving — validation runs the exact same check the
+        engine applies at enforcement time, so an error here is an error there.
         Saving creates a new immutable version; nothing currently in force changes
         until you promote it.
       </p>

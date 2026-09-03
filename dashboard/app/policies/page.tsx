@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { api, safeApi } from "@/lib/api";
-import { ApiDown, Empty, InfoTip, Panel, Stat } from "@/components/ui";
+import { ApiDown, Empty, InfoTip, Panel, Severity, Stat } from "@/components/ui";
 import { Countdown } from "@/components/Countdown";
 
 export const dynamic = "force-dynamic";
@@ -208,7 +208,7 @@ async function RulesTab({ agent }: { agent?: string }) {
                 <td className="mono small">{p.key}</td>
                 <td className="small muted">{p.category}</td>
                 <td className="small muted">{p.surface}</td>
-                <td><span className={`tag ${p.severity === "critical" ? "bad" : p.severity === "high" ? "bad" : "warn"}`}>{p.severity}</span></td>
+                <td><Severity value={p.severity} /></td>
                 <td className="small mono muted">{p.owasp_id || "—"}</td>
                 <td className="small mono muted">{p.atlas_id || "—"}</td>
               </tr>

@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import { legacyTabRedirect } from "@/lib/legacyRedirect";
 
 /**
  * Escalation used to be its own nav item; it's now the "Escalation" tab on
@@ -9,11 +9,5 @@ export default async function EscalationRedirect({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
-  const params = await searchParams;
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (typeof value === "string") query.set(key, value);
-  }
-  query.set("tab", "escalation");
-  redirect(`/approvals?${query.toString()}`);
+  return legacyTabRedirect(searchParams, "/approvals", "escalation");
 }

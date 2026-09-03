@@ -42,7 +42,7 @@ export default async function Agents({
       <h1>Agent registry</h1>
       <p className="sub">
         Every agent, its accountable owner and risk tier, and the models and tools it
-        actually uses. Lineage is derived from observed execution paths rather than
+        actually uses. Lineage is derived from observed traces rather than
         self-reported configuration — a registry that only knows what someone typed
         into it is a spreadsheet.
       </p>

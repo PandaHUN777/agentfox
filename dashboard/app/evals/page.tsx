@@ -38,6 +38,9 @@ export default async function Evals({
   }
 
   const latest = runs.runs[0];
+  const latestSuite = latest
+    ? suites.suites.find((s: any) => s.id === latest.suite_id)
+    : null;
 
   return (
     <>
@@ -92,8 +95,15 @@ export default async function Evals({
             <p className="small" style={{ marginTop: 10 }}>
               <span className="tag bad">{latest.summary.failing_count}</span>{" "}
               <span className="muted">
-                case(s) flagged. Promote a production failure into this suite with{" "}
-                <code className="mono">POST /api/eval/suites/&#123;key&#125;/cases/from-trace</code>.
+                case(s) flagged.{" "}
+                {latestSuite ? (
+                  <>
+                    <Link href={`/evals/${latestSuite.key}`}>Promote a production failure</Link>{" "}
+                    into this suite as a regression case.
+                  </>
+                ) : (
+                  "Promote a production failure into a suite as a regression case."
+                )}
               </span>
             </p>
           )}
@@ -202,6 +212,7 @@ export default async function Evals({
         <div id="drift" className={`note-panel ${drift?.drifted ? "" : ""}`} style={{ borderLeftColor: drift?.drifted ? "var(--bad)" : "var(--accent)" }}>
           <strong>
             Drift check: {drift_agent} / {drift_scorer}
+            <InfoTip text="Whether this scorer's results have shifted from its own baseline — measured by PSI (population stability index), a standard statistic for how much a distribution has moved. Above ~0.1 usually means 'worth a look'; above ~0.25 usually means something real changed." />
           </strong>
           {!drift || drift.drifted === null ? (
             <div>
@@ -211,10 +222,10 @@ export default async function Evals({
           ) : (
             <div>
               {drift.drifted ? (
-                <>Drifted ({drift.band}) — PSI {drift.psi?.toFixed(3)}, mean moved from{" "}
+                <>Drifted ({drift.band}) — shift score {drift.psi?.toFixed(3)}, mean moved from{" "}
                 {drift.mean_baseline?.toFixed(3)} to {drift.mean_current?.toFixed(3)}.</>
               ) : (
-                <>No significant drift — PSI {drift.psi?.toFixed(3)}, mean {drift.mean_current?.toFixed(3)}{" "}
+                <>No significant drift — shift score {drift.psi?.toFixed(3)}, mean {drift.mean_current?.toFixed(3)}{" "}
                 (baseline {drift.mean_baseline?.toFixed(3)}).</>
               )}
               {" "}Compared {drift.n_current} recent sample(s) against {drift.n_baseline} baseline sample(s).

@@ -126,6 +126,41 @@ export function ControlStatus({ value }: { value: string }) {
   return <span className={`tag ${STATUS_TONE[value] ?? ""}`}>{value.replace(/_/g, " ")}</span>;
 }
 
+/**
+ * A bare control code ("NOM-RTG-09") means nothing to a reader who hasn't
+ * memorized the catalog — every place one renders links to its full record on
+ * the Compliance page, so `titles` (from `controlTitleMap()`, lib/controls.ts)
+ * gets shown alongside it, not just on hover. The code leads, compact and
+ * mono, since that's the part someone cross-referencing several controls at
+ * once actually scans for; the title trails as a single truncated line —
+ * control titles are full sentences written for their own dedicated column on
+ * the Compliance page, and several of those stacked verbatim in a narrow
+ * table cell (a finding can carry two or three) overwhelmed the row they sat
+ * in. The full sentence is still one hover away via the native `title`
+ * attribute, and a code missing from the map still shows the code rather than
+ * nothing.
+ */
+export function ControlChip({ code, titles }: { code: string; titles: Record<string, string> }) {
+  const title = titles[code];
+  return (
+    <Link
+      href={`/compliance#${code}`}
+      title={title}
+      style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 3, maxWidth: 260 }}
+    >
+      <span className="mono small" style={{ flex: "none" }}>{code}</span>
+      {title && (
+        <span
+          className="small muted"
+          style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}
+        >
+          {title}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 const SEVERITY_TONE: Record<string, string> = {
   critical: "bad",
   high: "bad",

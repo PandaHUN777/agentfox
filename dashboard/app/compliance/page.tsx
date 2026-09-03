@@ -23,7 +23,8 @@ const TABS: { key: string; label: string }[] = [
   { key: "obligations", label: "Obligations" },
   { key: "risk", label: "Risk register" },
   { key: "evidence", label: "Evidence & reports" },
-  { key: "board", label: "Board" },
+  { key: "retention", label: "Retention & legal hold" },
+  { key: "board", label: "Board snapshot" },
 ];
 
 export default async function Compliance({
@@ -37,14 +38,15 @@ export default async function Compliance({
   // never scrolls into view, so the tab that owns those anchors has to be first.
   const tab = TABS.some((t) => t.key === rawTab) ? rawTab! : "controls";
 
-  let controls: any, frameworks: any, obligations: any, register: any, evidencePackages: any;
+  let controls: any, frameworks: any, obligations: any, register: any, evidencePackages: any, retention: any;
   try {
-    [controls, frameworks, obligations, register, evidencePackages] = await Promise.all([
+    [controls, frameworks, obligations, register, evidencePackages, retention] = await Promise.all([
       api("/api/controls"),
       api("/api/frameworks"),
       api("/api/obligations"),
       api("/api/risk/register"),
       api("/api/evidence"),
+      api("/api/retention"),
     ]);
   } catch (e: any) {
     return (
@@ -126,6 +128,7 @@ export default async function Compliance({
               {t.key === "obligations" && obligations.obligations.length}
               {t.key === "risk" && register.register.length}
               {t.key === "evidence" && evidencePackages.packages.length}
+              {t.key === "retention" && retention.legal_holds.length}
             </span>
           </Link>
         ))}
@@ -449,6 +452,93 @@ export default async function Compliance({
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {tab === "retention" && (
+        <>
+          <h2>Retention & legal hold</h2>
+          <p className="small muted" style={{ marginTop: -6, marginBottom: 14 }}>
+            How long each data class is kept before it's purged or redacted, and any
+            active legal hold overriding that schedule — placing one is a record that
+            data covered by it must be preserved regardless of its normal retention
+            policy, e.g. for litigation or a regulatory inquiry.
+          </p>
+
+          <div className="panel" style={{ marginBottom: 20 }}>
+            <div className="head"><span>Retention policies</span></div>
+            {retention.policies.length === 0 ? (
+              <div className="body small muted">
+                No retention policies configured for this deployment yet.
+              </div>
+            ) : (
+              <table>
+                <thead>
+                  <tr><th>data class</th><th>retain for</th><th>redacted fields</th></tr>
+                </thead>
+                <tbody>
+                  {retention.policies.map((p: any) => (
+                    <tr key={p.data_class}>
+                      <td className="mono small">{p.data_class}</td>
+                      <td className="small">{p.retain_days} days</td>
+                      <td className="small muted">{(p.redact_fields || []).join(", ") || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          <div className="panel" style={{ marginBottom: 20 }}>
+            <div className="head"><span>Place a legal hold</span></div>
+            <form action="/api/legal-holds" method="POST" className="body stack">
+              <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                    Agents (comma-separated slugs, blank = all)
+                  </label>
+                  <input type="text" name="agents" placeholder="support-triage, refund-bot" style={inputStyle} />
+                </div>
+                <div style={{ flex: 2, minWidth: 240 }}>
+                  <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                    Reason
+                  </label>
+                  <input type="text" name="reason" required placeholder="Litigation hold — case #4471" style={inputStyle} />
+                </div>
+              </div>
+              <button type="submit" className="btn-primary">Place hold</button>
+            </form>
+          </div>
+
+          {retention.legal_holds.length === 0 ? (
+            <div className="hero empty">
+              <div className="hero-title">No legal holds placed</div>
+              <p>Place one above to preserve data that would otherwise be purged on schedule.</p>
+            </div>
+          ) : (
+            <div className="panel scroll-x">
+              <table>
+                <thead>
+                  <tr><th>placed</th><th>placed by</th><th>scope</th><th>reason</th><th>status</th></tr>
+                </thead>
+                <tbody>
+                  {retention.legal_holds.map((h: any) => (
+                    <tr key={h.id}>
+                      <td className="small muted">{ts(h.placed_at)}</td>
+                      <td className="small muted">{h.placed_by}</td>
+                      <td className="small muted">{(h.scope?.agents || ["*"]).join(", ")}</td>
+                      <td className="small">{h.reason}</td>
+                      <td>
+                        <span className={`tag ${h.released_at ? "" : "warn"}`}>
+                          {h.released_at ? `released ${ts(h.released_at)}` : "active"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
