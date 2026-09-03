@@ -55,7 +55,7 @@ export function SideNav({
               <Link
                 key={href}
                 href={href}
-                className={[isActive ? "active" : "", sub ? "sub" : ""].filter(Boolean).join(" ")}
+                className={[isActive ? "active" : "", sub ? "nav-sub" : ""].filter(Boolean).join(" ")}
               >
                 {!sub && <NavIcon href={href} />}
                 <span>{label}</span>

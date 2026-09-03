@@ -39,41 +39,13 @@ export default async function Agents({
 
   return (
     <>
-      <h1>Agent registry</h1>
-      <p className="sub">
-        Every agent, its accountable owner and risk tier, and the models and tools it
-        actually uses. Lineage is derived from observed traces rather than
-        self-reported configuration — a registry that only knows what someone typed
-        into it is a spreadsheet.
-      </p>
-
-      <div className="cards">
-        <Stat n={inv.agents} label="agents" />
-        <Stat n={inv.registered} label="registered" tone="ok" />
-        <Stat
-          n={inv.shadow}
-          label="shadow"
-          tone={inv.shadow ? "bad" : "ok"}
-          hint="Seen making calls but never registered here — either through a repo scan or the form below. An agent nobody registered is an agent nobody is accountable for."
-        />
-        <Stat
-          n={inv.unowned}
-          label="unowned"
-          tone={inv.unowned ? "warn" : "ok"}
-          hint="Registered, but with no owner_email set — see the 'unowned — assign' links in the table below."
-        />
-        <Stat n={inv.tools} label="tools" />
-        <Stat
-          n={inv.lineage_edges}
-          label="lineage edges"
-          hint="Observed agent-to-tool and agent-to-model calls, not declared config — this is what actually ran, not what someone typed into a form."
-        />
-      </div>
-
-      {review_error && <div className="error">{review_error}</div>}
-
-      <div style={{ marginBottom: 16 }}>
-        <Modal trigger="+ Register an agent manually" title="Register an agent manually">
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+        <h1 style={{ marginBottom: 0 }}>Agent registry</h1>
+        <Modal
+          trigger="+ Register an agent manually"
+          triggerClassName="btn-primary"
+          title="Register an agent manually"
+        >
           <p className="small muted" style={{ marginTop: 0, marginBottom: 12 }}>
             For an agent that doesn't live in a scanned repo, or hasn't been connected yet — see{" "}
             <Link href="/start?tab=connect">Connect</Link> for the repo-scan path instead.
@@ -112,6 +84,37 @@ export default async function Agents({
           </form>
         </Modal>
       </div>
+      <p className="sub">
+        Every agent, its accountable owner and risk tier, and the models and tools it
+        actually uses. Lineage is derived from observed traces rather than
+        self-reported configuration — a registry that only knows what someone typed
+        into it is a spreadsheet.
+      </p>
+
+      <div className="cards">
+        <Stat n={inv.agents} label="agents" />
+        <Stat n={inv.registered} label="registered" tone="ok" />
+        <Stat
+          n={inv.shadow}
+          label="shadow"
+          tone={inv.shadow ? "bad" : "ok"}
+          hint="Seen making calls but never registered here — either through a repo scan or the form below. An agent nobody registered is an agent nobody is accountable for."
+        />
+        <Stat
+          n={inv.unowned}
+          label="unowned"
+          tone={inv.unowned ? "warn" : "ok"}
+          hint="Registered, but with no owner_email set — see the 'unowned — assign' links in the table below."
+        />
+        <Stat n={inv.tools} label="tools" />
+        <Stat
+          n={inv.lineage_edges}
+          label="lineage edges"
+          hint="Observed agent-to-tool and agent-to-model calls, not declared config — this is what actually ran, not what someone typed into a form."
+        />
+      </div>
+
+      {review_error && <div className="error">{review_error}</div>}
 
       {drafts.length > 0 && (
         <>

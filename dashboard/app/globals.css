@@ -272,19 +272,41 @@ nav.side a.active {
   box-shadow: var(--e-1);
 }
 nav.side a.active svg { opacity: 1; }
-nav.side a.sub {
-  padding-left: 26px;
+/*
+ * Named nav-sub rather than sub — .sub is already the intro-paragraph class used
+ * under every page's h1 (margin: 0 0 22px), and sharing that literal class name
+ * on a sidebar link silently pulled its 22px paragraph margin onto these rows,
+ * which is the "big gap after Guardrail tuning / Escalation" bug this replaced.
+ * Padding-left 35px lines the text up under its parent's own text (10px pad +
+ * 16px icon + 9px gap), and the dot marks it as nested rather than a sibling.
+ */
+nav.side a.nav-sub {
+  position: relative;
+  padding: 7px 10px 7px 35px;
   font-size: 12.5px;
   font-weight: 450;
   color: var(--muted);
 }
-nav.side a.sub:hover { color: var(--text); }
-nav.side a.sub.active {
+nav.side a.nav-sub::before {
+  content: "";
+  position: absolute;
+  left: 19px;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--border);
+  transform: translateY(-50%);
+}
+nav.side a.nav-sub:hover { color: var(--text); }
+nav.side a.nav-sub:hover::before { background: var(--muted); }
+nav.side a.nav-sub.active {
   color: var(--accent-ink);
   background: var(--accent);
   box-shadow: none;
   font-weight: 500;
 }
+nav.side a.nav-sub.active::before { background: var(--accent-ink); }
 
 .theme-toggle {
   margin: 14px 8px 0;
@@ -307,7 +329,20 @@ nav.side a.sub.active {
 .theme-toggle button:hover { color: var(--text); background: var(--panel-2); }
 .theme-toggle button[aria-pressed="true"] { color: var(--text); background: var(--panel-2); font-weight: 600; }
 
-main { flex: 1; padding: 28px 32px 64px; max-width: 1400px; min-width: 0; }
+/*
+ * width:100% (not flex-grow) makes main's flex-basis the full width of its line
+ * next to the sidebar; max-width then caps it and margin:auto centers whatever's
+ * left over in the leftover space, the standard centered-column-beside-a-fixed-
+ * sidebar pattern. flex-grow:1 with the default flex-basis:0% computes its own
+ * hypothetical size before capping, and in this browser that leaves the auto
+ * margins with nothing to actually center against — measured 1184px instead of
+ * the 1400px cap, off-center. This needs no change to any page's own content and
+ * doesn't touch how those elements' margins collapse, unlike capping every
+ * direct child of main individually (tried first — h1 among others resets its
+ * own margin-left/margin-right at equal CSS specificity later in this file,
+ * which silently won and left content pinned to the left instead).
+ */
+main { width: 100%; min-width: 0; padding: 28px 32px 64px; max-width: 1400px; margin: 0 auto; }
 
 h1 { font-size: 25px; margin: 0 0 4px; letter-spacing: -0.022em; font-weight: 660; }
 h2 { font-size: 15px; margin: 30px 0 12px; letter-spacing: -0.01em; font-weight: 640; }
@@ -364,6 +399,14 @@ h3 { font-size: 13px; margin: 20px 0 8px; color: var(--muted); font-weight: 620;
 }
 .panel .head .note { font-weight: 400; color: var(--muted); font-size: 12px; }
 .panel .body { padding: 14px 16px; }
+/* .body's padding above is written for the normal <div class="panel"><div
+   class="body">, but three call sites (agent kill switch, escalation policy
+   form, canary panel) put all three classes on one div instead of nesting —
+   that element is never a *descendant* of .panel, just .panel itself, so the
+   descendant selector above never matched and it rendered with zero padding.
+   This covers that combined form directly rather than restructuring three
+   components' markup for a one-line CSS gap. */
+.panel.body { padding: 14px 16px; }
 
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th {

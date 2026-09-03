@@ -184,12 +184,12 @@ export default async function Entitlement() {
 
       <h2>
         Grants
-        <InfoTip text="A resource here is the same identifier space as a source's key on the Sources page — that page tells you whether the resource itself is trustworthy; this one tells you who's allowed to see it." />
+        <InfoTip text="A resource here is the same identifier space as a source's key on the Verified sources page — that page tells you whether the resource itself is trustworthy; this one tells you who's allowed to see it." />
       </h2>
       <p className="sub">
         Default-deny: a resource with no grant is invisible. A grant does not open a
         restricted class — that needs a matching clearance. Resource names correspond
-        to source keys on the <Link href="/sources">Sources</Link> page.
+        to source keys on the <Link href="/sources">Verified sources</Link> page.
       </p>
       <div className="panel">
         {grants.grants?.length ? (

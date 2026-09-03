@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 export default async function Evals({
   searchParams,
 }: {
-  searchParams: Promise<{ review_error?: string; drift_agent?: string; drift_scorer?: string }>;
+  searchParams: Promise<{ review_error?: string; review_notice?: string; drift_agent?: string; drift_scorer?: string }>;
 }) {
-  const { review_error, drift_agent, drift_scorer } = await searchParams;
+  const { review_error, review_notice, drift_agent, drift_scorer } = await searchParams;
   let suites: any, runs: any, scorers: any, campaigns: any, slos: any, agents: any;
   try {
     [suites, runs, scorers, campaigns, slos, agents] = await Promise.all([
@@ -60,6 +60,7 @@ export default async function Evals({
       </div>
 
       {review_error && <div className="error">{review_error}</div>}
+      {review_notice && <div className="note-panel">{review_notice}</div>}
 
       {latest?.summary?.scorers && (
         <>
@@ -207,6 +208,36 @@ export default async function Evals({
           </form>
         </div>
       </div>
+
+      <h2>
+        Score real production traffic
+        <InfoTip text="Runs the same scorers an offline suite uses (groundedness, task completion, silent failure) against traces already recorded for an agent — no synthetic model call, no suite to author first. This is what an SLO's 'attainment' above is actually measured from." />
+      </h2>
+      <p className="sub" style={{ marginTop: -8 }}>
+        Fastest way to get a real number: pick an agent that has traffic and sample it,
+        rather than writing hand-authored cases first.
+      </p>
+      <form action="/api/eval/online" method="POST" className="row" style={{ gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
+        <select
+          name="agent" required defaultValue=""
+          style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+        >
+          <option value="" disabled>choose an agent…</option>
+          {(agents.agents || []).map((a: any) => (
+            <option key={a.slug} value={a.slug}>{a.slug}</option>
+          ))}
+        </select>
+        <select
+          name="since_days" defaultValue="30"
+          style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+        >
+          <option value="1">last 1 day</option>
+          <option value="7">last 7 days</option>
+          <option value="30">last 30 days</option>
+          <option value="90">last 90 days</option>
+        </select>
+        <button type="submit" className="btn-scan">Sample &amp; score</button>
+      </form>
 
       {drift_agent && drift_scorer && (
         <div id="drift" className={`note-panel ${drift?.drifted ? "" : ""}`} style={{ borderLeftColor: drift?.drifted ? "var(--bad)" : "var(--accent)" }}>

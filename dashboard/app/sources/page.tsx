@@ -2,6 +2,7 @@ import Link from "next/link";
 import { api } from "@/lib/api";
 import { ApiDown, InfoTip, Panel } from "@/components/ui";
 import { ContextCheck } from "@/components/ContextCheck";
+import { Modal } from "@/components/Modal";
 import { SourceAddFlow } from "@/components/SourceAddFlow";
 import { SourceRowActions } from "@/components/SourceRowActions";
 import { TIER_TONE } from "@/lib/sourceOptions";
@@ -70,7 +71,7 @@ export default async function Sources({
   } catch (e: any) {
     return (
       <>
-        <h1>Sources</h1>
+        <h1>Verified sources</h1>
         <ApiDown error={String(e?.message || e)} />
       </>
     );
@@ -78,9 +79,18 @@ export default async function Sources({
 
   const counts = sources.counts || {};
 
+  const addSourceModal = (
+    <Modal trigger="+ Add a source" triggerClassName="btn-primary" title="Add a source">
+      <SourceAddFlow />
+    </Modal>
+  );
+
   return (
     <>
-      <h1>Sources</h1>
+      <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+        <h1 style={{ marginBottom: 0 }}>Verified sources</h1>
+        {sources.sources.length > 0 && addSourceModal}
+      </div>
       <p className="sub">
         Which of your sources are systems of record, and which are somebody&rsquo;s
         notebook — a stale or off-domain one raises a{" "}
@@ -142,12 +152,6 @@ export default async function Sources({
               )}
             </div>
           )}
-
-          <div style={{ marginBottom: 20 }}>
-            <Panel title="Add a source">
-              <SourceAddFlow />
-            </Panel>
-          </div>
 
           <h2>Registered sources</h2>
           <p className="sub" style={{ marginTop: -8 }}>

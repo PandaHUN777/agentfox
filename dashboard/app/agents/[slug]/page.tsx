@@ -150,6 +150,84 @@ export default async function AgentDetail({
         )}
       </div>
 
+      {posture.open_findings?.length > 0 && (
+        <>
+          <h2>Open findings</h2>
+          <div className="panel">
+            <table>
+              <thead><tr><th>severity</th><th>type</th><th>finding</th></tr></thead>
+              <tbody>
+                {posture.open_findings.map((f: any) => (
+                  <tr key={f.id}>
+                    <td><Severity value={f.severity} /></td>
+                    <td className="mono small">{f.type}</td>
+                    <td className="small wrap">
+                      <Link href={`/findings/${f.id}`}>{f.title}</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      <h2>Recent traces</h2>
+      <div className="panel">
+        {traces.traces.length === 0 ? (
+          <div className="body muted small">
+            No traces recorded yet.
+            {posture.handoffs > 0 && (
+              <>
+                {" "}This agent does have {posture.handoffs} hand-off{posture.handoffs === 1 ? "" : "s"} on
+                record — hand-offs are logged independently of traced calls, see{" "}
+                <Link href={`/approvals?tab=escalation&agent=${a.slug}`}>Escalation</Link>.
+              </>
+            )}
+          </div>
+        ) : (
+          <table>
+            <thead><tr><th>trace</th><th>verdict</th><th>model</th><th>intent</th><th>when</th></tr></thead>
+            <tbody>
+              {traces.traces.map((t: any) => (
+                <tr key={t.id}>
+                  <td><Link href={`/traces/${t.id}`} className="mono small">{t.id}</Link></td>
+                  <td><span className={`tag ${t.verdict === "block" ? "bad" : t.verdict === "allow" ? "ok" : "warn"}`}>{t.verdict}</span></td>
+                  <td className="small muted">{t.model || "—"}</td>
+                  <td className="small wrap muted" style={{ maxWidth: 280 }}>{t.intent || "—"}</td>
+                  <td className="small muted">{ts(t.started_at)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {posture.slos?.length > 0 && (
+        <>
+          <h2>Reliability objectives</h2>
+          <div className="panel">
+            <table>
+              <thead>
+                <tr><th>scorer</th><th>objective</th><th className="num">target</th><th className="num">attainment</th><th className="num">error budget</th><th>status</th></tr>
+              </thead>
+              <tbody>
+                {posture.slos.map((s: any) => (
+                  <tr key={s.slo_id}>
+                    <td className="mono small">{s.scorer}</td>
+                    <td className="small wrap" style={{ maxWidth: 260 }}>{s.objective || "—"}</td>
+                    <td className="num small">{s.target ?? "—"}</td>
+                    <td className="num small">{s.attainment ?? "—"}</td>
+                    <td className="num small">{s.error_budget_remaining ?? "—"}</td>
+                    <td><span className={`tag ${s.status === "healthy" ? "ok" : s.status === "burned" ? "bad" : ""}`}>{s.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
       <div className="grid2" style={{ marginTop: 22 }}>
         <Panel title="Registration">
           <table>
@@ -362,10 +440,23 @@ export default async function AgentDetail({
 
       {effective && (
         <>
-          <h2>
-            Effective policy
-            <InfoTip text="What actually applies to this agent right now, composed from every level that reaches it (org, team, agent) — with per-rule provenance so 'why did this block?' has a real answer. A rule from a narrower level can loosen or override a broader one; 'loosened' flags exactly that." />
-          </h2>
+          <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
+            <h2 style={{ marginBottom: 0 }}>
+              Effective policy
+              {effective.rules?.some((r: any) => r.source && !r.source.startsWith("org:")) && (
+                <span className="tag warn" title="At least one rule below comes from a team/agent/user-level policy, not the org default.">
+                  customized
+                </span>
+              )}
+              <InfoTip text="What actually applies to this agent right now, composed from every level that reaches it (org, team, agent) — with per-rule provenance so 'why did this block?' has a real answer. A rule from a narrower level can loosen or override a broader one; 'loosened' flags exactly that." />
+            </h2>
+            <Link
+              href={`/policies/${a.slug}-overrides?level=agent&scope_id=${encodeURIComponent(a.slug)}&name=${encodeURIComponent(`${a.name || a.slug} overrides`)}`}
+              className="btn-scan"
+            >
+              + Customize for this agent
+            </Link>
+          </div>
           <div className="panel">
             <div className="body small muted">
               mode <span className="tag">{effective.mode}</span> · default effect{" "}
@@ -385,7 +476,12 @@ export default async function AgentDetail({
                         <div className="mono small muted">{r.rule_id}</div>
                       </td>
                       <td><span className={`tag ${r.effect === "block" ? "bad" : ""}`}>{r.effect}</span></td>
-                      <td className="small muted">{r.source}</td>
+                      <td className="small muted">
+                        {r.source}
+                        {r.source && !r.source.startsWith("org:") && (
+                          <span className="tag warn" title="Applies at a narrower scope than the org default.">custom</span>
+                        )}
+                      </td>
                       <td className="small muted">{r.mode}</td>
                       <td>{r.loosened && <span className="tag warn">loosened</span>}</td>
                     </tr>
@@ -407,83 +503,6 @@ export default async function AgentDetail({
         </>
       )}
 
-      {posture.slos?.length > 0 && (
-        <>
-          <h2>Reliability objectives</h2>
-          <div className="panel">
-            <table>
-              <thead>
-                <tr><th>scorer</th><th>objective</th><th className="num">target</th><th className="num">attainment</th><th className="num">error budget</th><th>status</th></tr>
-              </thead>
-              <tbody>
-                {posture.slos.map((s: any) => (
-                  <tr key={s.slo_id}>
-                    <td className="mono small">{s.scorer}</td>
-                    <td className="small wrap" style={{ maxWidth: 260 }}>{s.objective || "—"}</td>
-                    <td className="num small">{s.target ?? "—"}</td>
-                    <td className="num small">{s.attainment ?? "—"}</td>
-                    <td className="num small">{s.error_budget_remaining ?? "—"}</td>
-                    <td><span className={`tag ${s.status === "healthy" ? "ok" : s.status === "burned" ? "bad" : ""}`}>{s.status}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-
-      {posture.open_findings?.length > 0 && (
-        <>
-          <h2>Open findings</h2>
-          <div className="panel">
-            <table>
-              <thead><tr><th>severity</th><th>type</th><th>finding</th></tr></thead>
-              <tbody>
-                {posture.open_findings.map((f: any) => (
-                  <tr key={f.id}>
-                    <td><Severity value={f.severity} /></td>
-                    <td className="mono small">{f.type}</td>
-                    <td className="small wrap">
-                      <Link href={`/findings/${f.id}`}>{f.title}</Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
-      )}
-
-      <h2>Recent traces</h2>
-      <div className="panel">
-        {traces.traces.length === 0 ? (
-          <div className="body muted small">
-            No traces recorded yet.
-            {posture.handoffs > 0 && (
-              <>
-                {" "}This agent does have {posture.handoffs} hand-off{posture.handoffs === 1 ? "" : "s"} on
-                record — hand-offs are logged independently of traced calls, see{" "}
-                <Link href={`/approvals?tab=escalation&agent=${a.slug}`}>Escalation</Link>.
-              </>
-            )}
-          </div>
-        ) : (
-          <table>
-            <thead><tr><th>trace</th><th>verdict</th><th>model</th><th>intent</th><th>when</th></tr></thead>
-            <tbody>
-              {traces.traces.map((t: any) => (
-                <tr key={t.id}>
-                  <td><Link href={`/traces/${t.id}`} className="mono small">{t.id}</Link></td>
-                  <td><span className={`tag ${t.verdict === "block" ? "bad" : t.verdict === "allow" ? "ok" : "warn"}`}>{t.verdict}</span></td>
-                  <td className="small muted">{t.model || "—"}</td>
-                  <td className="small wrap muted" style={{ maxWidth: 280 }}>{t.intent || "—"}</td>
-                  <td className="small muted">{ts(t.started_at)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
     </>
   );
 }

@@ -22,7 +22,7 @@ export default async function Login({
           <Wordmark />
         </div>
         <small className="muted" style={{ display: "block", marginBottom: 18 }}>
-          agent governance control plane
+          AI agent governance platform
         </small>
         <h1 style={{ fontSize: 20 }}>Welcome back</h1>
         <p className="sub" style={{ maxWidth: "none" }}>

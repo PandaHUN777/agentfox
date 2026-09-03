@@ -1,4 +1,4 @@
-import { api, safeApi } from "@/lib/api";
+import { api, safeApi, ApiError } from "@/lib/api";
 import { ApiDown, Panel, ts } from "@/components/ui";
 import { PolicyEditor } from "@/components/PolicyEditor";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -16,7 +16,7 @@ const EXAMPLE_RULE = `  - id: injection.direct
     reason: "Prompt-injection or jailbreak attempt detected in user input."
     controls: [NOM-RTG-01]`;
 
-function starterTemplate(key: string, name: string, description: string): string {
+function starterTemplate(key: string, name: string, description: string, scopeAgent?: string): string {
   return `# ${name || key} — starts empty; here's a real rule to build from.
 key: ${key}
 name: ${name || key}
@@ -26,7 +26,7 @@ mode: observe
 default_effect: allow
 fail_mode: open
 scope:
-  agents: ["*"]
+  agents: ["${scopeAgent || "*"}"]
 
 rules:
 ${EXAMPLE_RULE}
@@ -44,9 +44,17 @@ function withExampleRuleIfEmpty(body: string): string {
     : body;
 }
 
-export default async function PolicyDetail({ params }: { params: Promise<{ key: string }> }) {
+export default async function PolicyDetail({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ key: string }>;
+  searchParams: Promise<{ level?: string; scope_id?: string; name?: string }>;
+}) {
   const { key } = await params;
+  const { level: qsLevel, scope_id: qsScopeId, name: qsName } = await searchParams;
   let policy: any, bindings: any, canaryData: any;
+  let isNew = false;
   try {
     [policy, bindings, canaryData] = await Promise.all([
       api(`/api/policies/${key}`),
@@ -54,24 +62,44 @@ export default async function PolicyDetail({ params }: { params: Promise<{ key: 
       safeApi(`/api/policies/${key}/canary`, { canary: null }),
     ]);
   } catch (e: any) {
-    return (
-      <>
-        <h1>Policy</h1>
-        <ApiDown error={String(e?.message || e)} />
-      </>
-    );
+    // A key with no policy behind it yet is how a scope-specific policy gets
+    // created — the editor below starts from a blank starter template, pre-scoped
+    // to whatever level/scope_id got us here (e.g. an agent detail page's
+    // "customize for this agent" link), rather than a 404 dead end.
+    if (e instanceof ApiError && e.status === 404) {
+      isNew = true;
+      policy = { key, name: qsName || key, description: "", versions: [] };
+      bindings = { policies: [] };
+      canaryData = { canary: null };
+    } else {
+      return (
+        <>
+          <h1>Policy</h1>
+          <ApiDown error={String(e?.message || e)} />
+        </>
+      );
+    }
   }
 
   const binding = bindings.policies?.find((p: any) => p.key === key);
   const savedBody = policy.body?.trim() || "";
-  const body = savedBody ? withExampleRuleIfEmpty(savedBody) : starterTemplate(key, policy.name, policy.description);
+  const initialLevel = qsLevel || policy.level;
+  const initialScopeId = qsScopeId || policy.scope_id;
+  const scopeAgent = initialLevel === "agent" && initialScopeId && initialScopeId !== "*" ? initialScopeId : undefined;
+  const body = savedBody
+    ? withExampleRuleIfEmpty(savedBody)
+    : starterTemplate(key, policy.name, policy.description, scopeAgent);
   const isTemplate = body !== savedBody;
 
   return (
     <>
       <Breadcrumbs crumbs={[{ label: "Policies", href: "/policies" }]} />
       <h1>{policy.name || key}</h1>
-      <p className="sub">{policy.description || "No description."}</p>
+      <p className="sub">
+        {isNew
+          ? `New policy — nothing saved yet. Save below to create it${initialScopeId && initialScopeId !== "*" ? ` scoped to ${initialScopeId}` : ""}.`
+          : policy.description || "No description."}
+      </p>
 
       <div className="row small" style={{ gap: 16, marginBottom: 16 }}>
         <span>
@@ -98,8 +126,8 @@ export default async function PolicyDetail({ params }: { params: Promise<{ key: 
         initialBody={body}
         canEnforce={true}
         isTemplate={isTemplate}
-        initialLevel={policy.level}
-        initialScopeId={policy.scope_id}
+        initialLevel={initialLevel}
+        initialScopeId={initialScopeId}
         initialCompose={policy.compose}
       />
 

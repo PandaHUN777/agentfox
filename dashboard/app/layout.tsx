@@ -67,7 +67,7 @@ const NAV: { group: string; items: NavItem[] }[] = [
     group: "Discover",
     items: [
       ["Agents", "/agents"],
-      ["Sources", "/sources"],
+      ["Verified sources", "/sources"],
     ],
   },
   {
@@ -149,7 +149,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <nav className="side">
               <div className="brand">
                 <Wordmark />
-                <small>agent governance control plane</small>
+                <small>AI agent governance platform</small>
               </div>
               <SideNav nav={NAV} />
               <ThemeToggle />

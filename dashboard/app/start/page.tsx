@@ -221,7 +221,7 @@ async function ConnectTab({
         Hand over read access to a repository, or point at a live API — either way
         nothing goes live until you approve it on the Agents and Policies pages.
         This finds the <strong>agents</strong> themselves; for the data they read
-        from, that&rsquo;s <Link href="/sources">Sources</Link>.
+        from, that&rsquo;s <Link href="/sources">Verified sources</Link>.
       </p>
 
       {scanError && <div className="error">Scan failed: {scanError}</div>}
