@@ -188,6 +188,10 @@ Escalation maps to LangGraph's own `interrupt()` — one pause mechanism, not tw
 | | |
 |---|---|
 | **[PRD ★](docs/PRD.md)** | **Start here.** The single canonical PRD — argument, product, plan, and what's shipped since |
+| [HLD](docs/hld.md) | High-level design — architecture, pillars, integration surfaces, request path, tech stack |
+| [LLD](docs/lld.md) | Low-level design — module inventory, key classes/methods, data model, API surface, deployment detail |
+| [Production readiness review](docs/production-readiness-review.md) | Gaps found re-checking the HLD/LLD against live code, 2026-09-04 — complements, doesn't replace, gap-analysis.md |
+| [Competitor analysis](docs/competitor-analysis.md) | Market landscape, our niche, what to highlight, where competitors win |
 | **[Implementation status](docs/status.md)** | **Computed coverage — regenerate with `python scripts/coverage.py --write`** |
 | **[Benchmarking white paper](docs/benchmarking-whitepaper.md)** | The product, capability by capability — what it does, how we know it works, and how it differs from the market |
 | **[Failure-mode analysis](docs/failure-modes.md)** | **How deployed agents actually fail** — 50 modes, 7 families, grounded in 10k+ catalogued incidents; 40/50 now covered |
@@ -202,7 +206,7 @@ Escalation maps to LangGraph's own `interrupt()` — one pause mechanism, not tw
 
 ## Honest limits
 
-- **Compliance mappings are DRAFT.** Produced from framework texts by engineers, not reviewed by compliance counsel. The product badges them as such and excludes drafts from evidence packages. See [Appendix B §B.6](docs/appendix-b-control-catalog.md#b6-mapping-review-gate).
+- **Compliance mappings are DRAFT.** Produced from framework texts by engineers, not reviewed by compliance counsel. The product badges them as such: draft mappings ship in evidence packages chip-labeled `DRAFT — UNVERIFIED / NOT LEGAL ADVICE` rather than being excluded. See [Appendix B §B.6](docs/appendix-b-control-catalog.md#b6-mapping-review-gate).
 - **Coverage gaps are declared, not hidden.** Appendix B §B.4 lists what each framework mapping does *not* cover; Appendix E §E.3 does the same for threats.
 - **This is an MVP.** Single-org multi-tenancy enforced at the session (not yet a managed multi-region offering), no live IdP/SSO, no scheduled red-team campaigns, text modalities only. Full non-goals list: [docs/PRD.md §10.3](docs/PRD.md#103-non-goals).
 
