@@ -21,8 +21,10 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ... import jobs_db
 from ...audit import chain, evidence, siem
 from ...audit.trace import full_trace, search_traces
+from ...tenancy import session_org
 from ...compliance import (
     all_frameworks,
     board_view,
@@ -245,24 +247,67 @@ class EvidenceIn(BaseModel):
     period_to: dt.datetime | None = None
 
 
-@router.post("/evidence", status_code=201)
-def build_evidence(
-    payload: EvidenceIn, session: Session = Depends(db), user: User = Depends(require("evidence"))
-) -> dict[str, Any]:
+def _run_evidence_package(session: Session, payload: dict[str, Any]) -> dict[str, Any]:
+    """PL-5 — the job's handler. Runs inside jobs_db.run_pending(), which has
+    already tenant-bound the session to the job's own org_id, not whatever
+    context happened to be ambient when this got registered at import time."""
+    period_from = dt.datetime.fromisoformat(payload["period_from"]) if payload.get("period_from") else None
+    period_to = dt.datetime.fromisoformat(payload["period_to"]) if payload.get("period_to") else None
     package = evidence.build(
         session,
-        agents=payload.agents,
-        controls=payload.controls,
-        period_from=payload.period_from,
-        period_to=payload.period_to,
-        requested_by=user.email,
+        agents=payload.get("agents"),
+        controls=payload.get("controls"),
+        period_from=period_from,
+        period_to=period_to,
+        requested_by=payload.get("requested_by", "system"),
     )
     return {
-        "id": package.id,
+        "evidence_package_id": package.id,
         "path": package.path,
         "scope": package.scope_json,
         "manifest": package.manifest_json,
         "chain_verification": package.chain_verification_json,
+    }
+
+
+jobs_db.register("evidence.package", _run_evidence_package)
+
+
+@router.post("/evidence", status_code=201)
+def build_evidence(
+    payload: EvidenceIn, session: Session = Depends(db), user: User = Depends(require("evidence"))
+) -> dict[str, Any]:
+    """Enqueues through jobs_db (PL-5) rather than calling evidence.build()
+    directly, and processes it within this same request — see jobs_db's own
+    module docstring for why same-request processing, not a deferred worker,
+    is the honest fit here. A transient failure gets one automatic retry
+    inside run_pending() before this returns; a permanent one is a real `Job`
+    row with status="dead" a human can find via GET /jobs, not a bare 500."""
+    job = jobs_db.enqueue(
+        session,
+        "evidence.package",
+        payload={
+            "agents": payload.agents,
+            "controls": payload.controls,
+            "period_from": payload.period_from.isoformat() if payload.period_from else None,
+            "period_to": payload.period_to.isoformat() if payload.period_to else None,
+            "requested_by": user.email,
+        },
+        org_id=session_org(session),
+        requested_by=user.email,
+    )
+    jobs_db.run_pending(session, org_id=job.org_id, limit=1)
+    session.refresh(job)
+    if job.status == "dead":
+        raise HTTPException(502, f"evidence package build failed: {job.last_error}")
+    result = job.result_json
+    return {
+        "id": result.get("evidence_package_id"),
+        "path": result.get("path"),
+        "scope": result.get("scope"),
+        "manifest": result.get("manifest"),
+        "chain_verification": result.get("chain_verification"),
+        "job_id": job.id,
     }
 
 

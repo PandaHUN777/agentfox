@@ -34,6 +34,7 @@ from .routes import (
     governance,
     inline,
     integrations,
+    jobs,
     memory,
     messaging,
     onboarding,
@@ -176,6 +177,7 @@ def create_app() -> FastAPI:
     app.include_router(provenance.router)
     app.include_router(entitlement.router)
     app.include_router(integrations.router)
+    app.include_router(jobs.router)
     app.include_router(discovery.router)
     app.include_router(memory.router)
     app.include_router(messaging.router)

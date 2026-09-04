@@ -1213,6 +1213,32 @@ class AuditCheckpoint(Base, TimestampMixin):
     key_id: Mapped[str] = mapped_column(String(64), default="local")
 
 
+class Job(Base, TimestampMixin):
+    """Deferred work (P4/PL-5), persisted so the dead letter is real public state
+    across requests rather than in-process memory a serverless invocation throws
+    away the moment it returns. Mirrors jobs.py's in-process Job/JobQueue shape —
+    that module stays the reference implementation for local/offline use (`nometria
+    demo`, tests); this is the swappable production backend behind the same
+    enqueue/run/retry/dead-letter interface, the same seam pattern already used for
+    the policy engine (native vs OPA) and entitlement (native vs OpenFGA).
+    """
+
+    __tablename__ = "jobs"
+    __table_args__ = (Index("ix_jobs_status_enqueued", "status", "enqueued_at"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.job_id)
+    kind: Mapped[str] = mapped_column(String(64), index=True)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=3)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    status: Mapped[str] = mapped_column(String(16), default="pending", index=True)
+    last_error: Mapped[str] = mapped_column(Text, default="")
+    result_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    requested_by: Mapped[str] = mapped_column(String(120), default="")
+    enqueued_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    finished_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class EvidencePackage(Base, TimestampMixin):
     __tablename__ = "evidence_packages"
 

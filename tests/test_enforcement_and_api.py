@@ -586,8 +586,107 @@ def test_evidence_build_and_verify_via_api(client):
     )
     assert response.status_code == 201
     assert response.json()["chain_verification"]["valid"] is True
+    assert response.json()["job_id"], "PL-5: an evidence build now goes through jobs_db"
     verify = client.post("/api/audit/verify", headers=as_user("aisha@example.com"))
     assert verify.json()["valid"] is True
+
+
+def test_evidence_build_job_is_recorded_done_in_the_job_queue(client):
+    """PL-5 wiring, from the API side: the job jobs_db created for this build
+    is itself a real, queryable row — not just an implementation detail
+    invisible outside the response it produced."""
+    build = client.post(
+        "/api/evidence", json={"agents": ["*"]}, headers=as_user("aisha@example.com")
+    )
+    job_id = build.json()["job_id"]
+
+    job = client.get(f"/api/jobs/{job_id}", headers=as_user("aisha@example.com")).json()
+    assert job["kind"] == "evidence.package"
+    assert job["status"] == "done"
+    assert job["result"]["evidence_package_id"] == build.json()["id"]
+
+    listing = client.get("/api/jobs?kind=evidence.package", headers=as_user("aisha@example.com")).json()
+    assert any(j["id"] == job_id for j in listing["jobs"])
+
+
+# ---------------------------------------------------------------------------
+# Red-team campaigns via the API (PL-5)
+# ---------------------------------------------------------------------------
+
+
+def test_redteam_campaign_via_api_goes_through_the_job_queue(client):
+    response = client.post(
+        "/api/redteam/campaigns",
+        json={"agent": "support-triage", "runner": "native"},
+        headers=as_user("priya@example.com"),
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["id"], "campaign id must be returned, same contract as before jobs_db"
+    assert body["summary"]
+    assert body["job_id"]
+
+    job = client.get(f"/api/jobs/{body['job_id']}", headers=as_user("priya@example.com")).json()
+    assert job["kind"] == "redteam.sweep"
+    assert job["status"] == "done"
+    assert job["result"]["campaign_id"] == body["id"]
+
+
+# ---------------------------------------------------------------------------
+# Job queue observability + retry (PL-5)
+# ---------------------------------------------------------------------------
+
+
+def test_jobs_are_scoped_to_the_caller_and_unknown_ids_404(client):
+    build = client.post(
+        "/api/evidence", json={"agents": ["*"]}, headers=as_user("aisha@example.com")
+    )
+    job_id = build.json()["job_id"]
+
+    ok = client.get(f"/api/jobs/{job_id}", headers=as_user("aisha@example.com"))
+    assert ok.status_code == 200
+
+    missing = client.get("/api/jobs/job_doesnotexist", headers=as_user("aisha@example.com"))
+    assert missing.status_code == 404
+
+
+def test_retrying_a_job_that_is_not_dead_is_rejected(client):
+    build = client.post(
+        "/api/evidence", json={"agents": ["*"]}, headers=as_user("aisha@example.com")
+    )
+    job_id = build.json()["job_id"]  # already "done" — retrying it makes no sense
+
+    response = client.post(f"/api/jobs/{job_id}/retry", headers=as_user("aisha@example.com"))
+    assert response.status_code == 409
+
+
+def test_the_cron_endpoint_is_disabled_without_a_configured_secret(client):
+    """cron_secret defaults to None (unlike service_auth_secret's insecure-but-
+    present default) — this endpoint can run arbitrary tenants' queued work,
+    so "unset" must mean "refused", not "open"."""
+    response = client.post("/api/internal/jobs/run", headers={"Authorization": "Bearer anything"})
+    assert response.status_code == 503
+
+
+def test_the_cron_endpoint_rejects_a_wrong_secret_once_configured(client, monkeypatch):
+    from nometria.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "cron_secret", "the-real-secret")
+    response = client.post("/api/internal/jobs/run", headers={"Authorization": "Bearer wrong"})
+    assert response.status_code == 401
+
+
+def test_the_cron_endpoint_processes_pending_work_across_every_tenant_with_the_right_secret(
+    client, monkeypatch
+):
+    from nometria.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "cron_secret", "the-real-secret")
+    response = client.post(
+        "/api/internal/jobs/run", headers={"Authorization": "Bearer the-real-secret"}
+    )
+    assert response.status_code == 200
+    assert "processed" in response.json()
 
 
 def test_legal_hold_placed_and_listed_in_retention(client):

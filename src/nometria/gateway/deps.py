@@ -35,6 +35,10 @@ WRITE_ROLES: dict[str, set[str]] = {
     # silencing a control to unblock a demo is the failure mode this separation exists
     # to prevent.
     "suppressions": {"owner", "admin", "security"},
+    # Retrying a dead-lettered job re-runs already-attempted work (evidence
+    # export, a red-team sweep) — same blast radius as the operation itself,
+    # so the same roles that can run evidence/eval in the first place.
+    "jobs": {"owner", "admin", "security", "compliance", "auditor", "developer"},
 }
 
 ALL_ROLES = {"owner", "admin", "security", "compliance", "developer", "auditor"}

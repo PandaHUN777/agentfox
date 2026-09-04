@@ -1,4 +1,5 @@
 {
   "builds": [{ "src": "index.py", "use": "@vercel/python" }],
-  "routes": [{ "src": "/(.*)", "dest": "index.py" }]
+  "routes": [{ "src": "/(.*)", "dest": "index.py" }],
+  "crons": [{ "path": "/api/internal/jobs/run", "schedule": "0 6 * * *" }]
 }

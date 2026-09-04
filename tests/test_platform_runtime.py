@@ -9,9 +9,11 @@ from __future__ import annotations
 
 import pytest
 
+from nometria import jobs_db
 from nometria.agent_loop import CONTINUE, ESCALATE, STOP, LoopBudget, Step, govern_loop
 from nometria.db import configure_pool
 from nometria.jobs import DEFERRABLE, JobQueue
+from nometria.models import Job
 
 
 def run(tools_and_observations, budget=None):
@@ -198,6 +200,135 @@ def test_a_job_carries_the_tenant_that_created_it():
     queue.register("evidence.package", lambda p: None)
     job = queue.enqueue("evidence.package", org_id="org-1")
     assert job.to_json()["org_id"] == "org-1"
+
+
+# --- Persisted queue (PL-5, jobs_db) ----------------------------------------
+#
+# jobs.py's JobQueue above is the in-process reference implementation — right
+# for `nometria demo`, the CLI, and the tests above. The two real production
+# callers (POST /api/evidence, POST /api/redteam/campaigns) go through
+# jobs_db instead, because a Vercel invocation's memory doesn't survive past
+# the response — a dead-lettered job living only in a `deque` that's about to
+# be garbage-collected isn't "public state", it's a value nobody ever saw.
+# These tests exercise the same enqueue/run/retry/dead-letter contract
+# against the DB-backed version.
+
+
+def test_db_queue_refuses_a_kind_with_no_handler(session):
+    jobs_db._HANDLERS.pop("test.no_handler", None)
+    with pytest.raises(KeyError, match="no handler"):
+        jobs_db.enqueue(session, "test.no_handler", org_id="org-1")
+
+
+def test_db_queue_runs_a_job_and_records_its_result(session):
+    jobs_db.register("test.echo", lambda s, p: {"got": p})
+    job = jobs_db.enqueue(session, "test.echo", {"trace": "t1"}, org_id="org-1")
+    assert job.status == "pending", "nothing runs until a worker asks it to"
+
+    finished = jobs_db.run_pending(session, org_id="org-1")
+
+    assert finished == 1
+    session.refresh(job)
+    assert job.status == "done"
+    assert job.result_json == {"got": {"trace": "t1"}}
+    assert job.finished_at is not None
+
+
+def test_db_queue_retries_then_dead_letters_never_discarding_the_record(session):
+    attempts = []
+
+    def explode(s, payload):
+        attempts.append(payload)
+        raise RuntimeError("upstream down")
+
+    jobs_db.register("test.explode", explode)
+    job = jobs_db.enqueue(session, "test.explode", {"trace": "t1"}, org_id="org-1", max_attempts=3)
+
+    for _ in range(3):
+        jobs_db.run_pending(session, org_id="org-1")
+
+    assert len(attempts) == 3
+    session.refresh(job)
+    assert job.status == "dead"
+    assert job.last_error.startswith("RuntimeError")
+    # Still queryable — the point of persisting it at all.
+    assert session.get(Job, job.id) is not None
+
+
+def test_db_queue_dead_lettered_work_can_be_replayed_once_the_cause_is_fixed(session):
+    state = {"broken": True}
+
+    def handler(s, payload):
+        if state["broken"]:
+            raise RuntimeError("upstream down")
+        return {"ok": True}
+
+    jobs_db.register("test.flaky", handler)
+    job = jobs_db.enqueue(session, "test.flaky", {}, org_id="org-1", max_attempts=1)
+    jobs_db.run_pending(session, org_id="org-1")
+    session.refresh(job)
+    assert job.status == "dead"
+
+    state["broken"] = False
+    revived = jobs_db.retry_dead(session, job.id)
+    assert revived is not None
+    assert revived.status == "pending"
+    assert revived.attempts == 0
+
+    jobs_db.run_pending(session, org_id="org-1")
+    session.refresh(job)
+    assert job.status == "done"
+    assert job.result_json == {"ok": True}
+
+
+def test_db_queue_retry_dead_is_a_noop_on_a_job_that_is_not_dead(session):
+    jobs_db.register("test.noop", lambda s, p: {})
+    job = jobs_db.enqueue(session, "test.noop", org_id="org-1")
+    assert jobs_db.retry_dead(session, job.id) is None, "job is pending, not dead — nothing to revive"
+
+
+def test_db_queue_run_pending_with_an_org_id_never_touches_another_tenants_jobs(session):
+    jobs_db.register("test.tenant_scoped", lambda s, p: {"ran": True})
+    other_org_job = jobs_db.enqueue(session, "test.tenant_scoped", org_id="org-other")
+
+    finished = jobs_db.run_pending(session, org_id="org-mine")
+
+    assert finished == 0
+    session.refresh(other_org_job)
+    assert other_org_job.status == "pending", "a request in one tenant must never run another tenant's queued work"
+
+
+def test_db_queue_run_pending_with_no_org_id_is_the_cron_backstop_across_every_tenant(session):
+    jobs_db.register("test.cron_scoped", lambda s, p: {"ran": True})
+    job_a = jobs_db.enqueue(session, "test.cron_scoped", org_id="org-a")
+    job_b = jobs_db.enqueue(session, "test.cron_scoped", org_id="org-b")
+
+    finished = jobs_db.run_pending(session, org_id=None)
+
+    assert finished == 2
+    session.refresh(job_a)
+    session.refresh(job_b)
+    assert job_a.status == "done"
+    assert job_b.status == "done"
+
+
+def test_db_queue_binds_the_jobs_own_tenant_before_running_the_handler(session):
+    """A worker processing a job later has no ambient request context — the
+    job's own org_id, not whatever was bound (or unbound) when it happened to
+    run, has to be what a row the handler creates gets stamped with."""
+    seen_org = {}
+
+    def handler(s, payload):
+        from nometria.tenancy import session_org
+
+        seen_org["value"] = session_org(s)
+        return {}
+
+    jobs_db.register("test.tenant_binding", handler)
+    jobs_db.enqueue(session, "test.tenant_binding", org_id="org-specific")
+    jobs_db.run_pending(session, org_id="org-specific")
+
+    assert seen_org["value"] == "org-specific"
 
 
 # --- Persistence (PL-6) ----------------------------------------------------

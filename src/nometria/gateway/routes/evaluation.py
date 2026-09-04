@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ... import jobs_db
 from ...audit import chain
 from ...evaluation import (
     all_scorers,
@@ -43,6 +44,7 @@ from ...models import (
     Trace,
     User,
 )
+from ...tenancy import session_org
 from ..deps import current_user, db, get_agent_or_404, require
 
 router = APIRouter(prefix="/api", tags=["evaluation"])
@@ -582,16 +584,17 @@ class CampaignIn(BaseModel):
     runner: str = "native"
 
 
-@router.post("/redteam/campaigns", status_code=201)
-def create_campaign(
-    payload: CampaignIn, session: Session = Depends(db), user: User = Depends(require("eval"))
-) -> dict[str, Any]:
+def _run_redteam_sweep(session: Session, payload: dict[str, Any]) -> dict[str, Any]:
+    """PL-5 — the job's handler. See governance.py's _run_evidence_package for
+    why the audit-chain entry lives here rather than in the route: this is what
+    actually ran, whether that happened synchronously in the enqueueing
+    request or later via the cron backstop."""
     campaign = run_campaign(
         session,
-        payload.agent,
-        name=payload.name,
-        runner=payload.runner,
-        probes=payload.probes,
+        payload["agent"],
+        name=payload.get("name", ""),
+        runner=payload.get("runner", "native"),
+        probes=payload.get("probes"),
     )
     findings = list(
         session.scalars(select(RedTeamFinding).where(RedTeamFinding.campaign_id == campaign.id))
@@ -600,13 +603,13 @@ def create_campaign(
         session,
         "redteam.campaign",
         actor_type="user",
-        actor_id=user.email or user.id,
+        actor_id=payload.get("requested_by") or "system",
         subject_type="redteam_campaign",
         subject_id=campaign.id,
         payload=campaign.summary_json,
     )
     return {
-        "id": campaign.id,
+        "campaign_id": campaign.id,
         "status": campaign.status,
         "summary": campaign.summary_json,
         "findings": [
@@ -620,6 +623,43 @@ def create_campaign(
             }
             for f in findings
         ],
+    }
+
+
+jobs_db.register("redteam.sweep", _run_redteam_sweep)
+
+
+@router.post("/redteam/campaigns", status_code=201)
+def create_campaign(
+    payload: CampaignIn, session: Session = Depends(db), user: User = Depends(require("eval"))
+) -> dict[str, Any]:
+    """Enqueues through jobs_db (PL-5) and processes within this same request
+    — see jobs_db's own module docstring and governance.py's build_evidence
+    for the same reasoning applied to the other named candidate operation."""
+    job = jobs_db.enqueue(
+        session,
+        "redteam.sweep",
+        payload={
+            "agent": payload.agent,
+            "name": payload.name,
+            "runner": payload.runner,
+            "probes": payload.probes,
+            "requested_by": user.email,
+        },
+        org_id=session_org(session),
+        requested_by=user.email,
+    )
+    jobs_db.run_pending(session, org_id=job.org_id, limit=1)
+    session.refresh(job)
+    if job.status == "dead":
+        raise HTTPException(502, f"red-team campaign failed: {job.last_error}")
+    result = job.result_json
+    return {
+        "id": result.get("campaign_id"),
+        "status": result.get("status"),
+        "summary": result.get("summary"),
+        "findings": result.get("findings"),
+        "job_id": job.id,
     }
 
 

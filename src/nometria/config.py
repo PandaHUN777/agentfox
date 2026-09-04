@@ -150,6 +150,18 @@ class Settings(BaseSettings):
     # configured" — connecting a repo fails closed rather than storing a raw token.
     token_encryption_key: str | None = None
 
+    # --- Deferred job queue (PL-5) ----------------------------------------
+    # POST /api/internal/jobs/run is the cron backstop for a job stuck in
+    # "running" because the request that started it crashed or hit a platform
+    # timeout mid-attempt. `None` means unset, and the route refuses every
+    # call rather than defaulting to an insecure shared value the way
+    # service_auth_secret does — this endpoint can run arbitrary tenants'
+    # queued work, a materially different blast radius than the GitHub
+    # provisioning call that secret guards. Vercel's own cron integration sets
+    # this from the project's CRON_SECRET env var and sends it as
+    # `Authorization: Bearer <value>` automatically once that env var exists.
+    cron_secret: str | None = None
+
     # --- Action assurance (P9) -------------------------------------------
     # The dialect artefacts are parsed against. Wrong dialect means wrong parse, and
     # a wrong parse fails closed rather than passing through.
