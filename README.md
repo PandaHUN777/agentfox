@@ -135,6 +135,18 @@ Or bring up the full stack (gateway, OPA sidecar, Postgres, dashboard):
 docker compose -f deploy/docker-compose.yml up
 ```
 
+If you're touching `src/nometria/`, install the pre-commit hook once so the wheels
+vendored into `api/` and `demo/redteam-live-lang/` can't silently drift from source
+(the failure mode behind two real production incidents):
+
+```bash
+uvx pre-commit install
+```
+
+CI (`.github/workflows/ci.yml`) runs the backend and dashboard test suites, a
+Docker build smoke test, and the same wheel-freshness check as a backstop for a
+commit made with `--no-verify`.
+
 ## What the demo shows
 
 `nometria demo` walks the request path in [docs/PRD.md §7.3](docs/PRD.md#73-request-path) and prints each step:

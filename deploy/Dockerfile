@@ -35,6 +35,16 @@ COPY src ./src
 # every model-based detector below.
 RUN pip install --upgrade pip && pip install ".[postgres,otel,classifiers]"
 
+# CI builds and stops here (`docker build --target deps`, no secret, no GPU-scale
+# download) — enough to catch what actually broke production once already (finding
+# 1.1, production-readiness-review.md §1.1: COPY paths pointing at directories that
+# don't exist in the repo). A real smoke test, not just Dockerfile syntax: this stage
+# fails the same way an operator's build would if `src ./src` or the extras install
+# ever stopped matching what the app needs to import.
+FROM base AS deps
+RUN python -c "from nometria.gateway.app import create_app; create_app(); print('image smoke: OK')"
+
+FROM deps AS weights
 RUN mkdir -p /var/nometria/hf-cache
 
 # Permissive tier — Apache-2.0/MIT, no licence gate, no secret needed.

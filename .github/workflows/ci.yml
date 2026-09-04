@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install (matches the documented dev venv, not --all-extras)
+        run: uv sync --extra pii --extra classifiers --extra otel --extra postgres --extra sql --extra dev
+      - run: uv run pytest -q
+
+  dashboard-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  # Builds only through the `deps` stage (deploy/Dockerfile) — everything past it
+  # downloads ~1-2GB of model weights and needs a Hugging Face token, neither of
+  # which belongs in a per-push check. `deps` still catches what actually broke
+  # production once already: COPY paths that don't exist, or an extras install that
+  # no longer covers what the app imports.
+  docker-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          target: deps
+          push: false
+
+  # Belt-and-suspenders for the local pre-commit hook (.pre-commit-config.yaml):
+  # catches the case where src/nometria/ changed and the vendored wheel(s) didn't,
+  # e.g. a commit made with --no-verify. This is what let guardrails-api and the
+  # redteam demo silently run stale code in production before this existed.
+  vendored-wheel-freshness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fail if src/nometria changed without rebuilding the vendored wheels
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            echo "no usable base commit to diff against (e.g. first push on a new branch) — skipping"
+            exit 0
+          fi
+          CHANGED="$(git diff --name-only "$BASE" "${{ github.sha }}")"
+          if echo "$CHANGED" | grep -q '^src/nometria/' \
+             && ! echo "$CHANGED" | grep -qE '^(api|demo/redteam-live-lang)/vendor/.*\.whl$'; then
+            echo "src/nometria/ changed but the vendored wheel(s) weren't rebuilt alongside it."
+            echo "Run: uv build --wheel --out-dir api/vendor && uv build --wheel --out-dir demo/redteam-live-lang/vendor"
+            echo "(the local pre-commit hook does this automatically — see .pre-commit-config.yaml)"
+            exit 1
+          fi
