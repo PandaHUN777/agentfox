@@ -26,6 +26,7 @@ from .escalation import Trigger, raise_handoff, record_turn
 from .identity import ensure_identity, grant_capability, issue_credential
 from .models import (
     SLO,
+    AccessScopeRule,
     Budget,
     DriftWindow,
     EvalCase,
@@ -72,6 +73,10 @@ TOOLS: list[dict[str, Any]] = [
         "name": "Update support ticket",
         "impact": "write",
         "description": "Update an existing ticket.",
+        # P9 — a status change fires the helpdesk's own notification webhook, which
+        # sends mail nobody asked this call to send. Looks like a plain write; the
+        # declared trigger is what lets cascade_risk() see the irreversible tail.
+        "triggers": ["email.send"],
     },
     {
         "key": "email.send",
@@ -301,7 +306,7 @@ def seed(session: Session, *, with_policies: bool = True) -> dict[str, Any]:
 
     # --- Tools & MCP (Pillar 1) --------------------------------------
     for spec in TOOLS:
-        upsert_tool(
+        tool = upsert_tool(
             session,
             spec["key"],
             name=spec.get("name", ""),
@@ -309,6 +314,38 @@ def seed(session: Session, *, with_policies: bool = True) -> dict[str, Any]:
             schema=spec.get("schema"),
             description=spec.get("description", ""),
         )
+        if "triggers" in spec:
+            tool.triggers_json = spec["triggers"]
+
+    # --- Access scope declarations (P18) ------------------------------
+    # Without these, analyse_access() has nothing to check a query against and
+    # cascade_risk's sibling feature stays as inert as it was before it was wired
+    # in — declaring a couple of real tables is what lets a fresh `nometria demo`
+    # actually exercise it rather than only the test suite.
+    for table_name, column, principal_key, restricted in [
+        ("customers", "owner_id", "id", ["ssn", "credit_card"]),
+        ("tickets", "customer_id", "id", []),
+    ]:
+        rule = session.scalar(
+            select(AccessScopeRule).where(AccessScopeRule.table_name == table_name)
+        )
+        if rule is None:
+            session.add(
+                AccessScopeRule(
+                    table_name=table_name,
+                    is_reference=False,
+                    column=column,
+                    principal_key=principal_key,
+                    restricted_columns=restricted,
+                )
+            )
+    for table_name in ["ticket_statuses", "currencies"]:
+        rule = session.scalar(
+            select(AccessScopeRule).where(AccessScopeRule.table_name == table_name)
+        )
+        if rule is None:
+            session.add(AccessScopeRule(table_name=table_name, is_reference=True))
+    session.flush()
 
     server = upsert_mcp_server(
         session,

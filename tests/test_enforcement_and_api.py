@@ -261,10 +261,37 @@ def test_a_declared_trigger_reaching_a_destructive_tool_is_blocked(seeded, enfor
     assert any(r["rule_id"] == "cascade.reaches_destructive" for r in result.rules_fired)
 
 
+def test_seeded_demo_data_exercises_cascade_risk_without_manual_setup(seeded, enforcer):
+    """The smoke test the plan called for: seed.py itself (not a hand-built test
+    fixture, unlike the two tests above) now declares tickets.update ->
+    email.send as a real trigger reaching a real irreversible tool, so a fresh
+    `nometria seed`/`nometria demo` environment exercises cascade_risk() out of
+    the box instead of leaving it a permanent no-op until an operator runs
+    `nometria tools set-triggers` by hand."""
+    agent = seeded.query(Agent).filter_by(slug="support-triage").one()
+    ensure_identity(seeded, agent)
+
+    result = enforcer.guard_tool_call(
+        agent_slug="support-triage",
+        tool_key="tickets.update",
+        arguments={"ticket_id": "TCK-1", "status": "resolved"},
+        intent="resolve a customer's ticket",
+    )
+    codes = [r["code"] for r in result.taint["action"]["cascade"]["findings"]]
+    assert "cascade-reaches-destructive" in codes
+
+
 def test_an_undeclared_trigger_stays_invisible(seeded, enforcer):
     """The honest, documented limitation (effects.cascade_risk's own docstring):
     a trigger nobody declared is not caught — this proves the wiring does not
-    overclaim coverage it does not have."""
+    overclaim coverage it does not have.
+
+    Asserts on this call's own cascade result rather than the "cascade" key's
+    presence in `taint["action"]` — seed.py now declares real triggers on other
+    tools (tickets.update -> email.send, P9's own demo data), so the org-wide
+    `cascade_risk()` call runs for every tool_key once any tool anywhere has a
+    trigger, and correctly reports an empty walk for one that has none of its
+    own, rather than being skipped entirely."""
     agent = seeded.query(Agent).filter_by(slug="support-triage").one()
     identity = ensure_identity(seeded, agent)
     grant_capability(seeded, identity, "cascade-server/reader")
@@ -274,7 +301,8 @@ def test_an_undeclared_trigger_stays_invisible(seeded, enforcer):
     result = enforcer.guard_tool_call(
         agent_slug="support-triage", tool_key="cascade-server/reader", arguments={"q": "x"},
     )
-    assert "cascade" not in result.taint["action"]
+    assert result.taint["action"]["cascade"]["reached"] == []
+    assert result.taint["action"]["cascade"]["verdict"] == "allow"
     assert not result.blocked
 
 
@@ -402,6 +430,59 @@ def test_guard_tool_call_endpoint(client):
     body = response.json()
     assert body["verdict"] == "escalate"
     assert body["approval_id"]
+
+
+def test_guard_tool_call_endpoint_with_prior_steps_trips_alternating_cycle(client):
+    """PL-4 fast-follow: /v1/guard/tool_call now accepts prior_steps alongside the
+    existing prior_tools, so an HTTP caller threading its own step history through
+    this endpoint gets the real LoopGovernor's cycle detection, not just a per-tool
+    repeat count — an A-B-A-B alternation that per-tool counting would miss
+    entirely since neither tool repeats consecutively."""
+    response = client.post(
+        "/v1/guard/tool_call",
+        json={
+            "agent": "support-triage",
+            "tool": "crm.lookup",
+            "arguments": {},
+            "prior_tools": ["kb.search", "crm.lookup", "kb.search"],
+            "prior_steps": [
+                {"tool": "kb.search", "arguments": {}, "observation": "a"},
+                {"tool": "crm.lookup", "arguments": {}, "observation": "b"},
+                {"tool": "kb.search", "arguments": {}, "observation": "c"},
+            ],
+        },
+    )
+    body = response.json()
+    assert body["taint"]["budget"]["loop_detected"] is True
+    assert any(r["rule_id"] == "loop.runaway" for r in body["rules_fired"])
+
+
+def test_guard_tool_call_endpoint_without_prior_steps_keeps_the_old_counter(client):
+    """Backward compatibility over the wire: a caller that sends prior_tools but
+    never adopted prior_steps must keep the pre-fast-follow repeats>=3 behavior —
+    prior_steps has to default to None, not [], or every un-upgraded caller would
+    silently get an always-false loop_detected from an implicit empty replay."""
+    response = client.post(
+        "/v1/guard/tool_call",
+        json={
+            "agent": "support-triage",
+            "tool": "kb.search",
+            "arguments": {},
+            "prior_tools": ["kb.search", "kb.search"],
+        },
+    )
+    assert response.json()["taint"]["budget"]["loop_detected"] is False
+
+    response = client.post(
+        "/v1/guard/tool_call",
+        json={
+            "agent": "support-triage",
+            "tool": "kb.search",
+            "arguments": {},
+            "prior_tools": ["kb.search", "kb.search", "kb.search"],
+        },
+    )
+    assert response.json()["taint"]["budget"]["loop_detected"] is True
 
 
 def test_otlp_ingest_populates_the_registry(client):

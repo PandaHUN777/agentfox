@@ -273,6 +273,7 @@ def get_run(
         **_run_json(run),
         "results": [
             {
+                "id": r.id,
                 "case_id": r.case_id,
                 "scorer": r.scorer_key,
                 "score": r.score,

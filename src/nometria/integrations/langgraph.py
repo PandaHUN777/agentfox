@@ -255,6 +255,7 @@ class NometriaGuard:
             @functools.wraps(inner)
             def wrapper(state: Any, *args: Any, **kwargs: Any) -> Any:
                 arguments = dict(kwargs)
+                prior_steps = self.state_of(state).get("steps", [])
                 with self._db() as session:
                     enforcer = Enforcer(session)
                     result = enforcer.guard_tool_call(
@@ -264,13 +265,19 @@ class NometriaGuard:
                         provenance=provenance,
                         intent=self.intent,
                         prior_tools=self.state_of(state).get("tools_called", []),
+                        prior_steps=prior_steps,
                     )
                 if result.blocked or result.escalated:
                     self._stop(result)
 
                 out = inner(state, *args, **kwargs)
                 called = [*self.state_of(state).get("tools_called", []), tool]
-                return _with_governance(out, self._merge({"tools_called": called}))
+                # PL-4 fast-follow: the same step-history shape McpGovernor already
+                # threads through guard_tool_call, so LoopGovernor sees an alternating
+                # A/B/A/B cycle or a stalled no-new-observation run here too, not just
+                # a per-tool repeat count.
+                steps = [*prior_steps, {"tool": tool, "arguments": arguments, "observation": out}]
+                return _with_governance(out, self._merge({"tools_called": called, "steps": steps}))
 
             return wrapper
 

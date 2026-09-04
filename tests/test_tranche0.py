@@ -552,6 +552,32 @@ def test_tool_node_records_call_sequence(seeded):
     assert out[STATE_KEY]["tools_called"] == ["kb.search"]
 
 
+def test_tool_node_alternating_cycle_trips_the_real_loop_governor(seeded):
+    """PL-4 fast-follow: tool_node now threads a real step history (not just
+    tools_called) into guard_tool_call via graph state, so an A-B-A-B alternation
+    trips the real LoopGovernor here too — the same shape test_mcp_governance.py's
+    McpGovernor tests already prove for its own `_prior_steps` tracking. Per-tool
+    counting alone would miss this, since neither tool repeats consecutively."""
+    guard = NometriaGuard(agent="support-triage", session=seeded)
+
+    @guard.tool_node(tool="kb.search")
+    def search(state, **kwargs):
+        return {"hits": 1}
+
+    @guard.tool_node(tool="crm.lookup")
+    def lookup(state, **kwargs):
+        return {"found": True}
+
+    state = search({})
+    state = lookup(state)
+    state = search(state)
+    assert [s["tool"] for s in state[STATE_KEY]["steps"]] == ["kb.search", "crm.lookup", "kb.search"]
+
+    with pytest.raises(PolicyViolation) as excinfo:
+        lookup(state)
+    assert any(r["rule_id"] == "loop.runaway" for r in excinfo.value.result.rules_fired)
+
+
 def test_langchain_message_objects_are_normalised():
     from nometria.integrations.langgraph import _normalise
 

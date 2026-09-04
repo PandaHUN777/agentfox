@@ -503,6 +503,13 @@ class GuardToolCallRequest(BaseModel):
     provenance: dict[str, str] = Field(default_factory=dict)
     intent: str | None = None
     prior_tools: list[str] = Field(default_factory=list)
+    # PL-4 — a caller that already tracks its own step history (tool, arguments,
+    # observation) can pass it so the real LoopGovernor sees alternating cycles and
+    # stalled runs, not just a per-tool repeat count. Must default to None, not [] —
+    # _budget_state() branches on `prior_steps is not None`, so an empty list from a
+    # caller that never heard of this field would silently disable the old
+    # repeats>=3 fallback instead of falling through to it.
+    prior_steps: list[dict[str, Any]] | None = None
     session_id: str | None = None
 
 
@@ -549,6 +556,7 @@ def guard_tool_call(
         trace=trace,
         credential=credential,
         prior_tools=payload.prior_tools,
+        prior_steps=payload.prior_steps,
     )
     return result.to_json()
 
