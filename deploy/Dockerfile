@@ -67,9 +67,6 @@ AutoTokenizer.from_pretrained('meta-llama/Llama-Guard-3-8B'); \
 AutoModelForSequenceClassification.from_pretrained('meta-llama/Llama-Guard-3-8B'); \
 print('restricted-tier weights cached')"
 
-COPY compliance ./compliance
-COPY policies ./policies
-
 RUN useradd --create-home --uid 10001 nometria \
  && mkdir -p /var/nometria/evidence \
  && chown -R nometria:nometria /var/nometria /app
