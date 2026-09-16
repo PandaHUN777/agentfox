@@ -26,6 +26,15 @@ from ._style import SEVERITY_COLOUR
 
 console = Console()
 
+
+def _session():
+    """A session on an initialised database. `init_db` is idempotent, and without it
+    a command run before `nometria init` dies on "no such table"."""
+    from ..db import init_db, session_scope
+
+    init_db()
+    return session_scope()
+
 OUTCOME_COLOUR = {
     "allow": "green",
     "verify": "cyan",
@@ -42,7 +51,6 @@ def rules_apply(
 ) -> None:
     """Author or update a business rule from a YAML file."""
     from ..business import Ladder, save_ladder
-    from ..db import session_scope
 
     try:
         payload = yaml.safe_load(file.read_text())
@@ -59,7 +67,7 @@ def rules_apply(
         console.print(f"[red]{file.name} is not a valid ladder:[/] {exc}")
         raise typer.Exit(1) from exc
 
-    with session_scope() as session:
+    with _session() as session:
         save_ladder(session, ladder, agent_slug=agent)
 
     console.print(
@@ -74,9 +82,8 @@ def rules_apply(
 def rules_show(key: str | None = typer.Argument(None, help="Rule key; omit for all.")) -> None:
     """Show the resolved bands, so an author sees exactly what they wrote."""
     from ..business import all_ladders
-    from ..db import session_scope
 
-    with session_scope() as session:
+    with _session() as session:
         ladders = [lad for lad in all_ladders(session) if key is None or lad.key == key]
 
     if not ladders:
@@ -112,9 +119,8 @@ def rules_check(as_json: bool = typer.Option(False, "--json")) -> None:
     silently means one of them is wrong and does not know.
     """
     from ..business import all_ladders, find_conflicts
-    from ..db import session_scope
 
-    with session_scope() as session:
+    with _session() as session:
         ladders = all_ladders(session)
         conflicts = find_conflicts(ladders)
 
@@ -141,9 +147,8 @@ def rules_test(
 ) -> None:
     """Try values against a rule without running anything."""
     from ..business import all_ladders, evaluate_ladder
-    from ..db import session_scope
 
-    with session_scope() as session:
+    with _session() as session:
         ladder = next((lad for lad in all_ladders(session) if lad.key == key), None)
     if ladder is None:
         console.print(f"[red]unknown rule '{key}'[/]")
@@ -270,9 +275,8 @@ def suggest_cmd(
 def graph() -> None:
     """The decision path as it will actually run, stage by stage."""
     from ..business import all_ladders, build_graph
-    from ..db import session_scope
 
-    with session_scope() as session:
+    with _session() as session:
         ladders = all_ladders(session)
     nodes = build_graph(ladders=ladders)
 
@@ -347,16 +351,27 @@ def compile_cmd(
         console.print(f"\n[dim]not expressible as a guardrail:[/dim] {sentence[:100]}")
 
     if apply:
-        saved = 0
-        for rule in result.rules:
-            if rule.kind == "threshold_ladder":
-                save_ladder(rule.definition)
-                saved += 1
+        from nometria.business import Ladder
+
+        ladders = [
+            Ladder.model_validate({k: v for k, v in rule.definition.items() if k != "kind"})
+            for rule in result.rules
+            if rule.kind == "threshold_ladder"
+        ]
+        with _session() as session:
+            for ladder in ladders:
+                save_ladder(session, ladder, actor="cli", reason=f"compiled from {file.name}")
+        skipped = len(result.rules) - len(ladders)
         console.print(
-            f"\n[green]Saved {saved} ladder(s) in observe mode.[/green] "
+            f"\n[green]Saved {len(ladders)} ladder(s) in observe mode.[/green] "
             "Run [bold]nometria guardrails check[/bold], then promote with "
-            "[bold]guardrails apply --enforce[/bold]."
+            "[bold]nometria guardrails apply <ladder.yaml> --mode enforce[/bold]."
         )
+        if skipped:
+            console.print(
+                f"  [dim]{skipped} other rule(s) are not threshold ladders and were not "
+                "saved — author them with their own commands.[/dim]"
+            )
 
 
 def _print_bands(bands: list[dict]) -> None:

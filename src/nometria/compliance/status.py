@@ -120,17 +120,7 @@ def evaluate_control(
     since = utcnow() - dt.timedelta(days=window_days)
     evidence: dict[str, Any] = {"window_days": window_days, "rule": kind}
 
-    handler = {
-        "presence": _rule_presence,
-        "ratio": _rule_ratio,
-        "freshness": _rule_freshness,
-        "detector_coverage": _rule_detector_coverage,
-        "decision_coverage": _rule_decision_coverage,
-        "degradation": _rule_degradation,
-        "scorer_active": _rule_scorer_active,
-        "chain_valid": _rule_chain_valid,
-        "capability_active": _rule_capability_active,
-    }.get(kind, _rule_presence)
+    handler = _RULE_HANDLERS.get(kind, _rule_presence)
 
     status, rationale, detail = handler(session, control, rule, since)
     evidence.update(detail)
@@ -410,6 +400,24 @@ def _rule_capability_active(session, control, rule, since) -> tuple[str, str, di
             {"counts": counts},
         )
     return "effective", f"Capability exercised: {counts}.", {"counts": counts}
+
+
+_RULE_HANDLERS = {
+    "presence": _rule_presence,
+    "ratio": _rule_ratio,
+    "freshness": _rule_freshness,
+    "detector_coverage": _rule_detector_coverage,
+    "decision_coverage": _rule_decision_coverage,
+    "degradation": _rule_degradation,
+    "scorer_active": _rule_scorer_active,
+    "chain_valid": _rule_chain_valid,
+    "capability_active": _rule_capability_active,
+}
+
+#: Every ``status_rule.kind`` that ``evaluate_control`` understands. An unknown kind
+#: silently falls back to ``presence``, which is why ``nometria compliance validate``
+#: checks the catalog against this set.
+RULE_KINDS = frozenset(_RULE_HANDLERS)
 
 
 # ---------------------------------------------------------------------------

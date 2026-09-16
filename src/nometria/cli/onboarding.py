@@ -29,20 +29,51 @@ console = Console()
 
 _CONFIG_TEMPLATE = """# Nometria configuration.
 # Everything here has a safe default; this file exists so the defaults are visible
-# rather than implicit. Environment variables (NOMETRIA_*) override it.
+# rather than implicit. The [nometria] table is read from the working directory;
+# environment variables (NOMETRIA_*) override it.
 
 [nometria]
 environment = "{environment}"
 
-# Observe-first. Nothing is blocked until someone changes this deliberately.
-default_policy_mode = "observe"
+# Default mode for a policy that does not declare its own. Packs that declare a mode
+# keep it (the shipped tool-containment pack declares enforce).
+default_policy_mode = "{default_policy_mode}"
 
 # Zero egress: no model call leaves this machine unless you turn it on.
-allow_egress = false
+allow_egress = {allow_egress}
 
 # The whole pre-flight pipeline's latency ceiling, in milliseconds.
-enforcement_budget_ms = 100
+enforcement_budget_ms = {enforcement_budget_ms}
 """
+
+# What each policy mode means to someone who has not read the PRD.
+_MODE_MEANING = {
+    "observe": "recorded, nothing blocked",
+    "enforce": "violations are blocked now",
+}
+
+
+def _config_text(environment: str) -> str:
+    """Render the template from the real Settings defaults, so the file never drifts
+    from what the runtime does when the file is absent."""
+    from ..config import Settings
+
+    fields = Settings.model_fields
+    return _CONFIG_TEMPLATE.format(
+        environment=environment,
+        default_policy_mode=fields["default_policy_mode"].default,
+        allow_egress=str(fields["allow_egress"].default).lower(),
+        enforcement_budget_ms=fields["enforcement_budget_ms"].default,
+    )
+
+
+def _session():
+    """A session on an initialised database. `init_db` is idempotent, and without it
+    a command run before `nometria init` dies on "no such table"."""
+    from ..db import init_db, session_scope
+
+    init_db()
+    return session_scope()
 
 
 def _print_next_steps(steps: list[tuple[str, str]]) -> None:
@@ -62,8 +93,10 @@ def init(
     """Set everything up. Idempotent, offline, and safe to run twice.
 
     Creates the database, applies migrations, loads the control catalog and the
-    baseline policy pack in observe mode, and writes a config file so the defaults are
-    visible rather than implicit.
+    shipped policy packs, each in the mode it declares (baseline and
+    eu-ai-act-high-risk observe; tool-containment enforces), and writes a
+    nometria.toml carrying the real runtime defaults so they are visible rather than
+    implicit. NOMETRIA_* environment variables override that file.
     """
     from ..compliance import load_catalog, sync_catalog
     from ..config import get_settings
@@ -89,16 +122,27 @@ def init(
             documents = load_from_dir(settings.policies_dir)
             for document in documents:
                 save_policy(session, document, author="init", notes="loaded by nometria init")
-            console.print(
-                f"  [green]✓[/] {len(documents)} policy pack(s) loaded  "
-                f"[dim]observe mode — nothing is blocked yet[/]"
-            )
+            # Say the truth per pack: a blanket "observe mode" was wrong the moment one
+            # shipped pack (tool-containment) declared enforce.
+            console.print(f"  [green]✓[/] {len(documents)} policy pack(s) loaded")
+            for document in sorted(documents, key=lambda d: d.key):
+                colour = "red" if document.mode == "enforce" else "yellow"
+                meaning = _MODE_MEANING.get(document.mode, "")
+                console.print(
+                    f"      {document.key:<24} [{colour}]{document.mode}[/]  [dim]{meaning}[/]"
+                )
+            enforcing = [d.key for d in documents if d.mode == "enforce"]
+            if enforcing:
+                console.print(
+                    f"      [dim]{', '.join(enforcing)} blocks from the start — "
+                    "demote with `nometria policy observe <key>`.[/]"
+                )
 
     config_path = Path(path) / "nometria.toml"
     if config_path.exists():
         console.print(f"  [dim]·[/] {config_path.name} already exists, left alone")
     else:
-        config_path.write_text(_CONFIG_TEMPLATE.format(environment=environment))
+        config_path.write_text(_config_text(environment))
         console.print(f"  [green]✓[/] wrote {config_path.name}")
 
     if demo:
@@ -112,7 +156,11 @@ def init(
         [
             ("nometria check", "scan this repo and see what is ungoverned"),
             ("import nometria; nometria.auto()", "one line in your entry point"),
-            ("nometria serve", "open the control plane"),
+            (
+                "nometria tools declare <key> --impact irreversible",
+                "declare what each tool can do — this is what still holds when a detector misses",
+            ),
+            ("nometria doctor", "check containment readiness, not just detectors"),
         ]
     )
 
@@ -211,7 +259,16 @@ def doctor(as_json: bool = typer.Option(False, "--json")) -> None:
     from ..config import get_settings
     from ..db import session_scope
     from ..guardrails import available_detectors
-    from ..models import Agent, Decision, Finding, KnowledgeBoundary, Trace
+    from ..models import (
+        AccessScopeRule,
+        Agent,
+        Capability,
+        Decision,
+        Finding,
+        KnowledgeBoundary,
+        Tool,
+        Trace,
+    )
     from ..providers import available_providers
 
     settings = get_settings()
@@ -230,6 +287,14 @@ def doctor(as_json: bool = typer.Option(False, "--json")) -> None:
             decisions = session.query(Decision).count()
             findings = session.query(Finding).filter_by(status="open").count()
             boundaries = session.query(KnowledgeBoundary).count()
+            tools_declared = session.query(Tool).count()
+            tools_acting = (
+                session.query(Tool)
+                .filter(Tool.impact.in_(["write", "high_impact", "irreversible"]))
+                .count()
+            )
+            grants = session.query(Capability).count()
+            scoped_tables = session.query(AccessScopeRule).count()
             enforcing = (
                 session.query(Decision).filter_by(mode="enforce").count() if decisions else 0
             )
@@ -237,6 +302,7 @@ def doctor(as_json: bool = typer.Option(False, "--json")) -> None:
     except Exception as exc:
         add("bad", "database", f"unreachable: {exc}")
         agents = traces = decisions = findings = boundaries = enforcing = 0
+        tools_declared = tools_acting = grants = scoped_tables = 0
 
     if decisions == 0:
         add(
@@ -271,6 +337,55 @@ def doctor(as_json: bool = typer.Option(False, "--json")) -> None:
         )
     else:
         add("ok", "authentication", "API tokens required; the identity header is refused")
+
+    # Containment before detection, deliberately. Every published adversarial-robustness
+    # result says a determined attacker eventually gets past content inspection; what is
+    # left at that moment is what an agent is *allowed to do*. That is declared, not
+    # detected, so a deployment that has declared nothing is undefended in the case that
+    # actually matters — however many detectors it has loaded.
+    if tools_declared == 0:
+        # "bad" only once something has actually run: a fresh install has declared
+        # nothing because nothing has happened yet, which is a starting state, not a
+        # misconfiguration. A deployment with live traffic and no declarations is the
+        # real failure, and it gets the hard verdict.
+        add(
+            "bad" if decisions else "warn",
+            "containment",
+            "no tools declared — nothing constrains what an agent may do when a detector "
+            "misses. Declare them with `nometria tools declare <key> --impact ...`."
+            + (" Traffic is already being governed without them." if decisions else ""),
+        )
+    elif tools_acting == 0:
+        add(
+            "warn",
+            "containment",
+            f"{tools_declared} tool(s) declared, none of them write/high-impact/irreversible "
+            "— if this agent can act, its impact tiers are understated and containment "
+            "rules cannot fire.",
+        )
+    elif grants == 0:
+        add(
+            "warn",
+            "containment",
+            f"{tools_acting} acting tool(s) declared but no capability grants — least "
+            "privilege is unconfigured, so policy is the only thing standing in the way.",
+        )
+    else:
+        add(
+            "ok",
+            "containment",
+            f"{tools_acting} of {tools_declared} tool(s) can act, {grants} capability "
+            "grant(s) — an action outside these is refused whether or not a detector fires",
+        )
+
+    add(
+        "ok" if scoped_tables else "warn",
+        "data scope",
+        f"{scoped_tables} table(s) declared row-scoped"
+        if scoped_tables
+        else "no table row-scoping declared — a query across every customer's rows reads "
+        "as ordinary. Declare with `nometria access declare-scope <table> --column ...`.",
+    )
 
     detectors = available_detectors()
     add(
@@ -313,11 +428,15 @@ def doctor(as_json: bool = typer.Option(False, "--json")) -> None:
     else:
         add("ok", "findings", "none open")
 
+    failed = any(state == "bad" for state, _w, _d in checks)
+
     if as_json:
         console.print_json(
             json.dumps([{"state": s, "check": c, "detail": d} for s, c, d in checks])
         )
-        return
+        # Same exit contract as the table: JSON mode is what CI uses, so it is the
+        # mode that most needs to fail on a bad check.
+        raise typer.Exit(1 if failed else 0)
 
     console.print("[bold]Runtime check[/]")
     marks = {"ok": "[green]✓[/]", "warn": "[yellow]![/]", "bad": "[red]✗[/]"}
@@ -326,7 +445,7 @@ def doctor(as_json: bool = typer.Option(False, "--json")) -> None:
         table.add_row(marks[state], f"[bold]{what}[/]", detail)
     console.print(table)
 
-    if any(state == "bad" for state, _w, _d in checks):
+    if failed:
         raise typer.Exit(1)
 
 
@@ -338,10 +457,9 @@ def findings_cmd(
     """What the platform found. The list `nometria.auto()` tells you to read."""
     from sqlalchemy import select
 
-    from ..db import session_scope
     from ..models import Finding
 
-    with session_scope() as session:
+    with _session() as session:
         stmt = (
             select(Finding)
             .where(Finding.status == "open")

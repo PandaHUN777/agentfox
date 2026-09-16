@@ -7,21 +7,47 @@ months. The measured version of this: eleven of eleven engineers use LangGraph, 
 not one of them adopted a governance product — they hand-rolled a wrapper, because a
 wrapper they wrote is cheaper than a migration they have to justify.
 
-So this module patches the client libraries in place. The developer adds one line at
-startup and every existing `client.chat.completions.create(...)` in the codebase is
-governed, traced and audited without any of them being touched.
+So this module patches the client libraries in place — sync *and* async entry points,
+streamed and buffered responses. The developer adds one line at startup and every
+existing `client.chat.completions.create(...)` in the codebase is governed, traced and
+audited without any of them being touched.
+
+Modes — who decides whether a call is refused in-process:
+
+* ``"policy"`` (the default) — the policies decide. Each policy's own mode applies,
+  plus the agent's kill switch, quarantine and hard budget caps: `Blocked` is raised
+  exactly when the *enforced* verdict stops the call, i.e. when the gateway would have
+  refused it. The shipped ``baseline`` pack is in observe mode, so adding the import
+  blocks nothing; ``nometria policy enforce baseline`` is the one step that starts
+  blocking, with no second knob to find here.
+* ``"observe"`` — never raise. A library-level safety valve: every decision is still
+  recorded, and what *would* have been blocked is logged and counted.
+* ``"enforce"`` — strict: raise whenever the *effective* verdict (what the policies
+  would do if they were all enforced) blocks, even for a policy still in observe.
+  Meant for tests and CI, where a would-have-blocked should fail the build.
 
 What is deliberately *not* done here:
 
-* **No enforcement by default.** `auto()` starts in observe mode. A library that
-  silently starts blocking production traffic on an import is indefensible, however
-  correct its policy. Enforcement is `auto(mode="enforce")`, typed deliberately.
+* **No enforcement on import.** The default mode defers to the policies, and the
+  shipped policies observe. A library that silently starts blocking production
+  traffic because someone added an import is indefensible, however correct its policy.
 * **No silent failure.** If patching fails — a version we do not recognise, an SDK
   that moved its internals — we say so and leave the client alone. A governance layer
   that quietly stops governing is the failure mode this product exists to prevent, so
-  it must never be one we ship.
+  it must never be one we ship. If *pre-flight* fails at call time, the configured
+  ``fail_mode`` decides: ``open`` (default) lets the call through with a warning;
+  ``closed`` refuses it (except in observe mode, which never raises).
 * **No re-entrancy.** Patching twice, or governing our own internal model calls, would
   double-count spend and recurse. Guarded explicitly.
+* **No recall of streamed output.** A streamed response is passed through chunk by
+  chunk and evaluated once it is exhausted; a block raises `Blocked` at the end of
+  iteration, but chunks already yielded to the caller cannot be taken back. Windowed
+  enforcement that can cut a stream mid-flight is the gateway's job
+  (``NOMETRIA_STREAMING_MODE=windowed``), not something a patched SDK can offer.
+
+Frameworks (LangGraph, CrewAI, LlamaIndex, AutoGen, ...) are detected, not patched:
+they reach the model through one of the client libraries above, and the summary says
+which of those routes are actually governed.
 
 Everything is import-guarded: a codebase with only `anthropic` installed never sees an
 OpenAI import error, and `auto()` on a machine with neither still succeeds — it simply
@@ -37,25 +63,36 @@ import logging
 import os
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
 from .audit.trace import ATTR_AGENT, ATTR_REQUEST_MODEL, add_span
 from .config import get_settings
 from .db import init_db, session_scope
-from .enforcement import Enforcer
+from .enforcement import EnforcementResult, Enforcer
 from .registry.service import register_agent
 
 log = logging.getLogger(__name__)
 
 #: Guards against governing the model calls the platform makes for itself — an
 #: LLM-as-judge call inside an eval would otherwise be traced as agent traffic and
-#: charged against the agent's budget.
+#: charged against the agent's budget. It also stays set for the duration of a
+#: governed call, so a LangChain `invoke` that calls the patched OpenAI client
+#: underneath is governed once, not twice.
 _IN_NOMETRIA: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "nometria_internal", default=False
 )
 
 _STATE: AutoState | None = None
+
+#: The accepted values of `auto(mode=...)`. See the module docstring.
+MODES = ("policy", "observe", "enforce")
+
+#: label -> (owner, attribute, owner-had-its-own-attribute). Everything we swapped,
+#: so `off()` restores exactly that — including entry points that were inherited
+#: rather than defined on the class we patched.
+_PATCHED: dict[str, tuple[Any, str, bool]] = {}
 
 
 @dataclass
@@ -84,6 +121,11 @@ class AutoState:
     patches: list[PatchResult] = field(default_factory=list)
     frameworks: list[str] = field(default_factory=list)
     calls_governed: int = 0
+    #: Calls refused in-process (`Blocked` raised) under this state's mode.
+    calls_blocked: int = 0
+    #: Calls a policy flagged but that were let through — because the flagging policy
+    #: is in observe, or because this state's mode is ``"observe"``.
+    would_have_blocked: int = 0
     started: bool = False
     #: Groups turns into a conversation. Without one every exchange looks like a
     #: separate single-turn conversation, and turn-depth and repeated-failure
@@ -94,6 +136,11 @@ class AutoState:
     def active(self) -> bool:
         return any(p.patched for p in self.patches)
 
+    def framework_routes(self) -> dict[str, dict[str, str]]:
+        """Which client libraries each detected framework reaches the model through,
+        and whether that route is governed. Frameworks are never patched directly."""
+        return _framework_routes(self.frameworks, self.patches)
+
     def to_json(self) -> dict[str, Any]:
         return {
             "agent": self.agent,
@@ -102,13 +149,16 @@ class AutoState:
             "active": self.active,
             "patches": [p.to_json() for p in self.patches],
             "frameworks": self.frameworks,
+            "framework_routes": self.framework_routes(),
             "calls_governed": self.calls_governed,
+            "calls_blocked": self.calls_blocked,
+            "would_have_blocked": self.would_have_blocked,
         }
 
     def summary(self) -> str:
         """One paragraph a developer reads once and never again."""
+        by_label = {p.library: p for p in self.patches}
         patched = [p.library for p in self.patches if p.patched]
-        skipped = [p for p in self.patches if not p.patched]
         lines = [
             f"Nometria is governing '{self.agent}' in {self.mode} mode ({self.environment}).",
         ]
@@ -119,14 +169,49 @@ class AutoState:
                 "  Nothing patched — no supported client library was importable. "
                 "Install openai or anthropic, or use the SDK directly."
             )
-        for result in skipped:
+        for result in self.patches:
+            if result.patched:
+                continue
+            # "anthropic.async: not installed" under "anthropic: not installed" says
+            # nothing new; every other skip is its own fact and is reported.
+            base = by_label.get(result.library.removesuffix(".async"))
+            if (
+                result.library.endswith(".async")
+                and base is not None
+                and not base.patched
+                and base.detail == result.detail
+            ):
+                continue
             lines.append(f"  Skipped {result.library}: {result.detail}")
         if self.frameworks:
             lines.append(f"  Detected: {', '.join(self.frameworks)}")
-        if self.mode == "observe":
+            for framework, routes in self.framework_routes().items():
+                if routes:
+                    parts = ", ".join(f"{client}: {status}" for client, status in routes.items())
+                    lines.append(f"    {framework} → {parts}")
+                else:
+                    clients = "/".join(_FRAMEWORK_ROUTES[framework])
+                    lines.append(
+                        f"    {framework} → none of {clients} is installed or patched; "
+                        "its model calls are NOT governed"
+                    )
+        if self.mode == "policy":
             lines.append(
-                "  Observe mode: decisions are recorded, nothing is blocked. "
-                "Run `nometria policy enforce baseline` when the findings look right."
+                "  Policy mode: each policy's own mode decides. Observe-mode policies "
+                "(baseline ships in observe) record what they would have blocked; "
+                "enforce-mode policies, the kill switch and budget caps raise "
+                "nometria.Blocked. `nometria policy enforce baseline` is the one step "
+                "that starts blocking."
+            )
+        elif self.mode == "observe":
+            lines.append(
+                "  Observe mode: decisions are recorded, nothing is blocked in-process — "
+                "not even by an enforce-mode policy or the kill switch."
+            )
+        else:
+            lines.append(
+                "  Enforce mode (strict): any call a policy would block raises "
+                "nometria.Blocked, even when that policy is still in observe."
             )
         return "\n".join(lines)
 
@@ -152,9 +237,50 @@ _FRAMEWORK_MODULES = {
     "litellm": "litellm",
 }
 
+#: Detected framework -> the client libraries (patch labels) it calls the model
+#: through. Only frameworks that make model calls are listed; web frameworks and MCP
+#: carry no model traffic of their own.
+_FRAMEWORK_ROUTES: dict[str, tuple[str, ...]] = {
+    "langgraph": ("langchain", "openai", "anthropic"),
+    "langchain": ("langchain",),
+    "crewai": ("litellm", "openai", "anthropic"),
+    "llamaindex": ("openai", "anthropic"),
+    "autogen": ("openai", "anthropic"),
+    "ragas": ("langchain", "openai"),
+}
+
 
 def detect_frameworks() -> list[str]:
     return sorted({name for module, name in _FRAMEWORK_MODULES.items() if module in sys.modules})
+
+
+def _framework_routes(
+    frameworks: list[str], patches: list[PatchResult]
+) -> dict[str, dict[str, str]]:
+    by_label = {p.library: p for p in patches}
+    routes: dict[str, dict[str, str]] = {}
+    for framework in frameworks:
+        clients = _FRAMEWORK_ROUTES.get(framework)
+        if not clients:
+            continue
+        statuses: dict[str, str] = {}
+        for client in clients:
+            sync = by_label.get(client)
+            async_ = by_label.get(f"{client}.async")
+            sync_ok = bool(sync and sync.patched)
+            async_ok = bool(async_ and async_.patched)
+            if sync_ok and async_ok:
+                statuses[client] = "governed"
+            elif sync_ok:
+                statuses[client] = "governed (sync only)"
+            elif async_ok:
+                statuses[client] = "governed (async only)"
+            elif sync is not None and sync.detail != "not installed":
+                # Installed but we could not patch it: say so, loudly.
+                statuses[client] = f"NOT governed ({sync.detail})"
+            # Not installed: the framework cannot be routing through it — omitted.
+        routes[framework] = statuses
+    return routes
 
 
 def default_agent_slug() -> str:
@@ -176,7 +302,7 @@ def default_agent_slug() -> str:
 
 
 # ---------------------------------------------------------------------------
-# The governed call
+# Normalisation
 # ---------------------------------------------------------------------------
 
 
@@ -241,6 +367,33 @@ def _usage_of(response: Any) -> dict[str, int]:
         return {"input_tokens": int(input_tokens or 0), "output_tokens": int(output_tokens or 0)}
     except Exception:  # pragma: no cover - defensive against SDK shape drift
         return {}
+
+
+def _chunk_text(chunk: Any) -> str:
+    """The text a single streamed chunk carries.
+
+    OpenAI and LiteLLM: ``chunk.choices[0].delta.content``. Anthropic: the
+    ``content_block_delta`` event's ``delta.text`` (other event types carry none).
+    """
+    try:
+        choices = getattr(chunk, "choices", None)
+        if choices:
+            content = getattr(getattr(choices[0], "delta", None), "content", None)
+            return content if isinstance(content, str) else ""
+        if getattr(chunk, "type", None) == "content_block_delta":
+            text = getattr(getattr(chunk, "delta", None), "text", None)
+            return text if isinstance(text, str) else ""
+    except Exception:  # pragma: no cover - defensive against SDK shape drift
+        pass
+    return ""
+
+
+def _chunk_usage(chunk: Any) -> dict[str, int]:
+    """Token counts a streamed chunk carries: OpenAI's final ``include_usage`` chunk,
+    Anthropic's ``message_start`` (input) and ``message_delta`` (output) events."""
+    if getattr(chunk, "type", None) == "message_start":
+        return _usage_of(getattr(chunk, "message", None))
+    return _usage_of(chunk)
 
 
 #: LangChain message `.type` -> our role vocabulary.
@@ -316,209 +469,483 @@ def _record_turn(
 
 
 class Blocked(RuntimeError):
-    """Raised in enforce mode when a governed call is refused."""
+    """Raised when a governed call is refused in-process.
+
+    When it is raised depends on the `auto()` mode (see the module docstring);
+    ``.result`` is the `EnforcementResult` that refused it.
+    """
 
     def __init__(self, result: Any) -> None:
         super().__init__(result.reason or "blocked by policy")
         self.result = result
 
 
-def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
-    """Pre-flight, call, post-flight. The whole patch, in one place."""
+# ---------------------------------------------------------------------------
+# The governed call
+# ---------------------------------------------------------------------------
+
+#: Reserved kwargs the caller may pass to any patched entry point. Popped before the
+#: real provider sees them (it would reject them as unrecognised).
+_EVIDENCE_KWARGS = ("nometria_principal", "nometria_chunks", "nometria_purpose")
+
+
+def _raises(mode: str, *, enforced: bool, effective: bool) -> bool:
+    """Whether a flagged call is refused in-process under `mode`.
+
+    ``enforced`` — the enforced verdict stops the call (what the gateway would do).
+    ``effective`` — the counterfactual verdict blocks (what it would do were every
+    policy enforced).
+    """
+    if mode == "observe":
+        return False
+    if mode == "enforce":
+        return enforced or effective
+    return enforced  # "policy"
+
+
+def _fail_closed_result(exc: Exception) -> EnforcementResult:
+    reason = f"pre-flight failed and fail_mode=closed: {exc}"
+    return EnforcementResult(
+        verdict="block",
+        effective_verdict="block",
+        mode="enforce",
+        reason=reason,
+        degraded=["preflight"],
+        rules_fired=[
+            {
+                "rule_id": "autoguard.fail_closed",
+                "effect": "block",
+                "reason": reason,
+                "controls": ["NOM-RTG-06"],
+            }
+        ],
+    )
+
+
+@dataclass
+class _Call:
+    """What pre-flight established, carried to post-flight — which, for a streamed
+    response, runs only once the caller has exhausted the stream."""
+
+    state: AutoState
+    model: str
+    messages: list[dict[str, Any]]
+    trace_id: str
+    evidence: dict[str, Any]
+    #: Reason a policy flagged this call but it was let through (see
+    #: `AutoState.would_have_blocked`); None when nothing was flagged.
+    flagged: str | None = None
+    started: float = 0.0
+
+
+def _pop_evidence(kwargs: dict[str, Any]) -> dict[str, Any]:
     # P10 — the caller's end-user identity and retrieved context, if it supplied
     # them. Popped before anything else so they never leak to the real provider
     # call, which sees these as unrecognised kwargs otherwise. A subject that
     # doesn't resolve to a registered principal still gets recorded correctly
     # downstream (as "declared but unregistered" — see entitlement.filter_retrieval),
     # so no lookup happens here.
-    principal_ref = kwargs.pop("nometria_principal", None)
-    retrieved_chunks = kwargs.pop("nometria_chunks", None)
-    purpose = kwargs.pop("nometria_purpose", None)
+    return {key: kwargs.pop(key, None) for key in _EVIDENCE_KWARGS}
 
-    if _IN_NOMETRIA.get():
-        return call()
 
-    token = _IN_NOMETRIA.set(True)
-    try:
-        messages = _messages_from(kwargs)
-        with session_scope() as session:
-            enforcer = Enforcer(session)
-            # The real pre-flight path — kill-switch/quarantine, hard budget caps,
-            # the answerability gate, then per-message evaluation — the same one
-            # every other call surface goes through. This module used to hand-roll
-            # a partial reimplementation (resolve + a single evaluate() over the
-            # joined text) that skipped all three gates; that's the bug this call
-            # fixes, not a rewrite for its own sake.
-            outcome = enforcer.preflight(
-                agent_slug=state.agent,
-                messages=messages,
-                model=str(kwargs.get("model") or "default"),
-                environment=state.environment,
-                session_id=state.session_id,
+def _run_preflight(
+    state: AutoState, kwargs: dict[str, Any], evidence: dict[str, Any]
+) -> tuple[_Call, EnforcementResult, bool, bool]:
+    """The pre-flight itself. Returns (call, worst result, enforced, effective)."""
+    messages = _messages_from(kwargs)
+    with session_scope() as session:
+        enforcer = Enforcer(session)
+        # The real pre-flight path — kill-switch/quarantine, hard budget caps, the
+        # answerability gate, then per-message evaluation — the same one every other
+        # call surface goes through.
+        outcome = enforcer.preflight(
+            agent_slug=state.agent,
+            messages=messages,
+            model=str(kwargs.get("model") or "default"),
+            environment=state.environment,
+            session_id=state.session_id,
+        )
+        trace = outcome.trace
+        result = outcome.result
+        # `stopped` is the enforced outcome: an enforce-mode policy blocked or
+        # escalated, or the kill switch / budget / answerability gate refused. An
+        # observe-mode policy's block shows only in `effective_verdict`.
+        enforced = outcome.stopped
+        effective = enforced or result.effective_verdict == "block"
+
+        # Tier A — payload splitting / multi-turn jailbreaks: the check above only
+        # ever sees THIS call's own messages array. An attacker who spreads a payload
+        # across several separate calls in the same conversation (each individually
+        # innocuous) defeats it completely. Only runs when the caller supplied a
+        # stable session_id; skipped once pre-flight has already stopped the call.
+        if not enforced and state.session_id:
+            new_user_text = next(
+                (
+                    str(m.get("content") or "")
+                    for m in reversed(messages)
+                    if str(m.get("role")) == "user"
+                ),
+                "",
             )
-            agent, identity, trace = outcome.agent, outcome.identity, outcome.trace
-            trace_id = trace.id
-            blocking_result = outcome.result
-            blocked = outcome.stopped
-            reason = outcome.result.reason
-
-            # Tier A — payload splitting / multi-turn jailbreaks: the check above
-            # only ever sees THIS call's own messages array. An attacker who spreads
-            # a payload across several separate calls in the same conversation (each
-            # individually innocuous) defeats it completely. Only runs when the
-            # caller supplied a stable session_id — the same precondition escalation
-            # governance already has for turn continuity — so a caller with no
-            # session concept pays nothing extra and loses nothing it had before.
-            # Skipped entirely once preflight has already stopped the call — no
-            # point flagging a multi-turn injection on a request that never reaches
-            # the model.
-            if not blocked and state.session_id:
-                new_user_text = next(
-                    (
-                        str(m.get("content") or "")
-                        for m in reversed(messages)
-                        if str(m.get("role")) == "user"
-                    ),
-                    "",
+            if new_user_text:
+                window = enforcer.check_conversation_window(
+                    agent_slug=state.agent,
+                    session_id=state.session_id,
+                    new_user_text=new_user_text,
+                    trace=trace,
                 )
-                if new_user_text:
-                    window_result = enforcer.check_conversation_window(
-                        agent_slug=state.agent,
-                        session_id=state.session_id,
-                        new_user_text=new_user_text,
-                        trace=trace,
+                window_enforced = window.blocked
+                window_effective = window_enforced or window.effective_verdict == "block"
+                if window_effective:
+                    window.reason = (
+                        f"multi-turn: {window.reason}"
+                        if window.reason
+                        else "multi-turn conversation window flagged an injection"
                     )
-                    if window_result.blocked:
-                        blocked = True
-                        window_result.reason = (
-                            f"multi-turn: {window_result.reason}"
-                            if window_result.reason
-                            else "multi-turn conversation window flagged an injection"
-                        )
-                        blocking_result = window_result
-                        reason = window_result.reason
-    except Exception as exc:  # never take the caller's request down
-        log.warning("nometria: pre-flight failed, allowing the call: %s", exc)
-        _IN_NOMETRIA.reset(token)
-        return call()
+                if window_enforced or (window_effective and not effective):
+                    result = window
+                enforced = enforced or window_enforced
+                effective = effective or window_effective
 
-    started_call = time.perf_counter()
-    try:
-        if blocked and state.mode == "enforce":
-            raise Blocked(blocking_result)
-        response = call()
-    finally:
-        _IN_NOMETRIA.reset(token)
-    provider_ms = (time.perf_counter() - started_call) * 1000
+    call = _Call(
+        state=state,
+        model=str(kwargs.get("model") or ""),
+        messages=messages,
+        trace_id=trace.id,
+        evidence=evidence,
+    )
+    return call, result, enforced, effective
 
+
+def _preflight(
+    state: AutoState, kwargs: dict[str, Any], evidence: dict[str, Any]
+) -> _Call | None:
+    """Pre-flight, decided. Raises `Blocked` when the call must be refused under
+    ``state.mode`` (or pre-flight failed with ``fail_mode=closed``); returns None when
+    pre-flight failed open, in which case the call proceeds ungoverned."""
     try:
-        text = _text_of(response)
-        if text:
+        call, result, enforced, effective = _run_preflight(state, kwargs, evidence)
+    except Exception as exc:
+        try:
+            fail_mode = get_settings().fail_mode
+        except Exception:  # pragma: no cover - settings themselves unreadable
+            fail_mode = "open"
+        if fail_mode == "closed" and state.mode != "observe":
+            log.error("nometria: pre-flight failed, refusing the call (fail_mode=closed): %s", exc)
+            state.calls_blocked += 1
+            raise Blocked(_fail_closed_result(exc)) from exc
+        log.warning("nometria: pre-flight failed, allowing the call (fail_mode=open): %s", exc)
+        return None
+
+    # Decided after the session has committed, so the refused call's trace and
+    # decisions are on the record rather than rolled back with the exception.
+    if _raises(state.mode, enforced=enforced, effective=effective):
+        state.calls_governed += 1
+        state.calls_blocked += 1
+        raise Blocked(result)
+    if enforced or effective:
+        call.flagged = result.reason or "flagged by policy"
+    return call
+
+
+def _postflight(call: _Call, text: str, usage: dict[str, int], *, may_raise: bool = True) -> None:
+    """Span, output evaluation, budget charge, turn record. Shared by buffered,
+    streamed, sync and async calls. Raises `Blocked` when the output must be refused
+    under the state's mode and ``may_raise``."""
+    state = call.state
+    provider_ms = (time.perf_counter() - call.started) * 1000
+    refusal: EnforcementResult | None = None
+    try:
+        if text or usage:
             token = _IN_NOMETRIA.set(True)
             try:
                 with session_scope() as session:
                     enforcer = Enforcer(session)
                     agent, identity, _shadow = enforcer.resolve(state.agent)
-                    from .models import Trace
-
-                    # The only place on this path that writes a kind="llm" span with
-                    # the raw response text — every other surface (openai/anthropic/
-                    # litellm's own SDK response shape) is patched generically here,
-                    # so this is the one span-writing site that has to cover all of
-                    # them. Without it, this whole one-liner integration produced
-                    # traces sample_production() (P4-2 online eval) could never score:
-                    # it looks for exactly this kind+attribute shape, and the only
-                    # other spans this path's traces carry are the McpGovernor tool
-                    # call's "guardrail"-kind ones, which never hold the model's
-                    # actual output text. Mirrors enforcement.py's
-                    # _finish_completion(), the native gateway path's equivalent.
-                    usage = _usage_of(response)
-                    add_span(
-                        session,
-                        trace_id,
-                        kind="llm",
-                        name=f"{state.agent}.invoke",
-                        attributes={
-                            ATTR_AGENT: state.agent,
-                            ATTR_REQUEST_MODEL: str(kwargs.get("model") or ""),
-                            "gen_ai.usage.input_tokens": usage.get("input_tokens", 0),
-                            "gen_ai.usage.output_tokens": usage.get("output_tokens", 0),
-                            "nometria.output": text,
-                        },
-                        duration_ms=provider_ms,
-                    )
-
-                    if principal_ref is not None:
-                        from sqlalchemy import select
-
-                        from .models import EndUserPrincipal
-
-                        subject = (
-                            principal_ref.get("subject")
-                            if isinstance(principal_ref, dict)
-                            else str(principal_ref)
+                    if text:
+                        refusal = _evaluate_output(
+                            call, session, enforcer, agent, identity, text, usage, provider_ms
                         )
-                        principal_obj = session.scalar(
-                            select(EndUserPrincipal).where(EndUserPrincipal.subject == subject)
-                        )
-                        enforcer.evidence = {
-                            "principal": principal_obj,
-                            "chunks": retrieved_chunks or [],
-                            "purpose": purpose,
-                        }
-
-                    outbound = enforcer.evaluate(
-                        agent=agent,
-                        identity=identity,
-                        content=text,
-                        surface="output",
-                        trace=session.get(Trace, trace_id),
-                    )
-                    if outbound.blocked and state.mode == "enforce":
-                        raise Blocked(outbound)
-
                     # P15: this call never goes through Nometria's own provider
                     # abstraction — it's the caller's own SDK, patched in place — so
                     # nothing else on this path ever charges spend against the
-                    # agent's budget. Without this, P15-3's hard caps in preflight()
-                    # gate against a Budget that never moves, i.e. they never trip.
+                    # agent's budget. Charged even when the output is refused: the
+                    # tokens were spent either way.
                     if agent is not None and usage:
                         from types import SimpleNamespace
 
                         from .providers.remote import estimate_cost
 
                         cost = estimate_cost(
-                            str(kwargs.get("model") or ""),
-                            usage.get("input_tokens", 0),
-                            usage.get("output_tokens", 0),
+                            call.model, usage.get("input_tokens", 0), usage.get("output_tokens", 0)
                         )
-                        enforcer._charge_budget(
-                            agent, SimpleNamespace(usage=usage, cost_usd=cost)
-                        )
+                        enforcer._charge_budget(agent, SimpleNamespace(usage=usage, cost_usd=cost))
             finally:
                 _IN_NOMETRIA.reset(token)
-    except Blocked:
-        raise
     except Exception as exc:  # pragma: no cover - defensive
         log.warning("nometria: post-flight failed: %s", exc)
 
+    if refusal is not None and not may_raise:
+        # The caller abandoned the stream early; there is nobody left to raise to.
+        log.warning(
+            "nometria: output of an abandoned stream would have been blocked — %s",
+            refusal.reason,
+        )
+        call.flagged = call.flagged or refusal.reason
+        refusal = None
+
+    state.calls_governed += 1
+    if refusal is not None:
+        state.calls_blocked += 1
+        raise Blocked(refusal)
+
     # P11: capture the exchange as a conversation turn. Escalation governance was
     # complete and inert for anyone using the one-liner — the detector reads recorded
-    # turns, and nothing was recording them, so the largest failure family was covered
-    # in code and uncovered in practice. Session grouping falls back to the trace when
-    # the caller has no session concept, which at least keeps single-turn
-    # conversations attributable.
+    # turns, and nothing was recording them. Session grouping falls back to the trace
+    # when the caller has no session concept.
     try:
-        _record_turn(state, messages, _text_of(response), trace_id)
+        _record_turn(state, call.messages, text, call.trace_id)
     except Exception as exc:  # pragma: no cover - defence in depth
         # Guarded here as well as inside, so that a future change to turn capture
         # cannot become a change to whether the caller's request succeeds.
         log.debug("nometria: turn capture failed: %s", exc)
 
-    state.calls_governed += 1
-    if blocked and state.mode == "observe":
-        log.info("nometria: would have blocked (observe mode) — %s", reason)
+    if call.flagged:
+        state.would_have_blocked += 1
+        log.info("nometria: would have blocked (%s mode) — %s", state.mode, call.flagged)
+
+
+def _evaluate_output(
+    call: _Call,
+    session: Any,
+    enforcer: Enforcer,
+    agent: Any,
+    identity: Any,
+    text: str,
+    usage: dict[str, int],
+    provider_ms: float,
+) -> EnforcementResult | None:
+    """Write the llm span and evaluate the output surface. Returns the result when it
+    must be refused under the state's mode."""
+    from .models import Trace
+
+    state = call.state
+    # The only place on this path that writes a kind="llm" span with the raw
+    # response text — the shape sample_production() (P4-2 online eval) scores.
+    # Mirrors enforcement.py's _finish_completion(), the gateway path's equivalent.
+    add_span(
+        session,
+        call.trace_id,
+        kind="llm",
+        name=f"{state.agent}.invoke",
+        attributes={
+            ATTR_AGENT: state.agent,
+            ATTR_REQUEST_MODEL: call.model,
+            "gen_ai.usage.input_tokens": usage.get("input_tokens", 0),
+            "gen_ai.usage.output_tokens": usage.get("output_tokens", 0),
+            "nometria.output": text,
+        },
+        duration_ms=provider_ms,
+    )
+
+    principal_ref = call.evidence.get("nometria_principal")
+    if principal_ref is not None:
+        from sqlalchemy import select
+
+        from .models import EndUserPrincipal
+
+        subject = (
+            principal_ref.get("subject") if isinstance(principal_ref, dict) else str(principal_ref)
+        )
+        principal_obj = session.scalar(
+            select(EndUserPrincipal).where(EndUserPrincipal.subject == subject)
+        )
+        enforcer.evidence = {
+            "principal": principal_obj,
+            "chunks": call.evidence.get("nometria_chunks") or [],
+            "purpose": call.evidence.get("nometria_purpose"),
+        }
+
+    outbound = enforcer.evaluate(
+        agent=agent,
+        identity=identity,
+        content=text,
+        surface="output",
+        trace=session.get(Trace, call.trace_id),
+    )
+    # The gateway withholds an output whose enforced verdict is block.
+    enforced = outbound.blocked
+    effective = enforced or outbound.effective_verdict == "block"
+    if _raises(state.mode, enforced=enforced, effective=effective):
+        return outbound
+    if enforced or effective:
+        call.flagged = call.flagged or outbound.reason or "output flagged by policy"
+    return None
+
+
+def _is_stream(kwargs: dict[str, Any], response: Any) -> bool:
+    return bool(kwargs.get("stream")) and getattr(response, "choices", None) is None
+
+
+def _govern(state: AutoState, kwargs: dict[str, Any], call: Callable[[], Any]) -> Any:
+    """Pre-flight, call, post-flight — for a synchronous entry point."""
+    evidence = _pop_evidence(kwargs)
+    if _IN_NOMETRIA.get():
+        return call()
+
+    token = _IN_NOMETRIA.set(True)
+    try:
+        governed = _preflight(state, kwargs, evidence)
+        started = time.perf_counter()
+        response = call()
+    finally:
+        _IN_NOMETRIA.reset(token)
+    if governed is None:  # pre-flight failed open
+        return response
+    governed.started = started
+
+    if _is_stream(kwargs, response) and hasattr(response, "__iter__"):
+        return _GovernedStream(response, governed)
+    _postflight(governed, _text_of(response), _usage_of(response))
     return response
+
+
+async def _agovern(state: AutoState, kwargs: dict[str, Any], call: Callable[[], Any]) -> Any:
+    """`_govern` for an async entry point: the same pre- and post-flight (whose
+    database work stays synchronous), with the provider call awaited."""
+    evidence = _pop_evidence(kwargs)
+    if _IN_NOMETRIA.get():
+        return await call()
+
+    token = _IN_NOMETRIA.set(True)
+    try:
+        governed = _preflight(state, kwargs, evidence)
+        started = time.perf_counter()
+        response = await call()
+    finally:
+        _IN_NOMETRIA.reset(token)
+    if governed is None:  # pre-flight failed open
+        return response
+    governed.started = started
+
+    if _is_stream(kwargs, response):
+        if hasattr(response, "__aiter__"):
+            return _AsyncGovernedStream(response, governed)
+        if hasattr(response, "__iter__"):
+            return _GovernedStream(response, governed)
+    _postflight(governed, _text_of(response), _usage_of(response))
+    return response
+
+
+# ---------------------------------------------------------------------------
+# Streamed responses
+# ---------------------------------------------------------------------------
+
+
+class _StreamBase:
+    """Shared by the sync and async stream wrappers: chunks pass through unchanged,
+    their text and usage are accumulated, and post-flight runs once — when the stream
+    is exhausted, or when the caller leaves its context manager / closes it early.
+
+    Anything else (``.response``, ``.close()``, SDK helpers) is proxied to the
+    original stream object. `isinstance` checks against the SDK's own stream class do
+    not hold for the wrapper.
+    """
+
+    def __init__(self, stream: Any, call: _Call) -> None:
+        self._nm_stream = stream
+        self._nm_call = call
+        self._nm_iter: Any = None
+        self._nm_parts: list[str] = []
+        self._nm_usage: dict[str, int] = {}
+        self._nm_done = False
+
+    def __getattr__(self, name: str) -> Any:
+        stream = self.__dict__.get("_nm_stream")
+        if stream is None:
+            raise AttributeError(name)
+        return getattr(stream, name)
+
+    def _nm_observe(self, chunk: Any) -> None:
+        try:
+            text = _chunk_text(chunk)
+            if text:
+                self._nm_parts.append(text)
+            for key, value in _chunk_usage(chunk).items():
+                if value:
+                    self._nm_usage[key] = max(self._nm_usage.get(key, 0), value)
+        except Exception as exc:  # pragma: no cover - never break the caller's stream
+            log.debug("nometria: stream chunk not read: %s", exc)
+
+    def _nm_finish(self, *, may_raise: bool = True) -> None:
+        if self._nm_done:
+            return
+        self._nm_done = True
+        _postflight(
+            self._nm_call, "".join(self._nm_parts), dict(self._nm_usage), may_raise=may_raise
+        )
+
+
+class _GovernedStream(_StreamBase):
+    def __iter__(self) -> _GovernedStream:
+        return self
+
+    def __next__(self) -> Any:
+        if self._nm_iter is None:
+            self._nm_iter = iter(self._nm_stream)
+        try:
+            chunk = next(self._nm_iter)
+        except StopIteration:
+            self._nm_finish()
+            raise
+        self._nm_observe(chunk)
+        return chunk
+
+    def __enter__(self) -> _GovernedStream:
+        enter = getattr(self._nm_stream, "__enter__", None)
+        if enter is not None:
+            enter()
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, tb: Any) -> Any:
+        exit_ = getattr(self._nm_stream, "__exit__", None)
+        suppressed = exit_(exc_type, exc, tb) if exit_ is not None else None
+        self._nm_finish(may_raise=exc_type is None)
+        return suppressed
+
+    def close(self) -> None:
+        close = getattr(self._nm_stream, "close", None)
+        if close is not None:
+            close()
+        self._nm_finish(may_raise=False)
+
+
+class _AsyncGovernedStream(_StreamBase):
+    def __aiter__(self) -> _AsyncGovernedStream:
+        return self
+
+    async def __anext__(self) -> Any:
+        if self._nm_iter is None:
+            self._nm_iter = self._nm_stream.__aiter__()
+        try:
+            chunk = await self._nm_iter.__anext__()
+        except StopAsyncIteration:
+            self._nm_finish()
+            raise
+        self._nm_observe(chunk)
+        return chunk
+
+    async def __aenter__(self) -> _AsyncGovernedStream:
+        enter = getattr(self._nm_stream, "__aenter__", None)
+        if enter is not None:
+            await enter()
+        return self
+
+    async def __aexit__(self, exc_type: Any, exc: Any, tb: Any) -> Any:
+        exit_ = getattr(self._nm_stream, "__aexit__", None)
+        suppressed = await exit_(exc_type, exc, tb) if exit_ is not None else None
+        self._nm_finish(may_raise=exc_type is None)
+        return suppressed
 
 
 # ---------------------------------------------------------------------------
@@ -526,141 +953,196 @@ def _govern(state: AutoState, kwargs: dict[str, Any], call: Any) -> Any:
 # ---------------------------------------------------------------------------
 
 
-def _patch_openai(state: AutoState) -> PatchResult:
+def _live(state: AutoState) -> AutoState:
+    """The state a patched entry point governs under. A second `auto()` finds the
+    patches already in place; reading the current state (rather than the one captured
+    when the patch went in) is what lets it change the mode or the agent."""
+    return _STATE if _STATE is not None else state
+
+
+def _sdk_method(state: AutoState, *, is_async: bool) -> Callable[[Any], Any]:
+    """Wrapper factory for `Resource.create(self, **kwargs)` and module-level
+    functions alike: whatever is called, its kwargs are the request."""
+
+    def build(original: Any) -> Any:
+        if is_async:
+
+            @functools.wraps(original)
+            async def agoverned(*args: Any, **kwargs: Any) -> Any:
+                return await _agovern(_live(state), kwargs, lambda: original(*args, **kwargs))
+
+            return agoverned
+
+        @functools.wraps(original)
+        def governed(*args: Any, **kwargs: Any) -> Any:
+            return _govern(_live(state), kwargs, lambda: original(*args, **kwargs))
+
+        return governed
+
+    return build
+
+
+def _lc_method(state: AutoState, *, is_async: bool) -> Callable[[Any], Any]:
+    """Wrapper factory for `BaseChatModel.invoke` / `.ainvoke`."""
+
+    def request(self: Any, chat_input: Any, kwargs: dict[str, Any]) -> dict[str, Any]:
+        model_name = getattr(self, "model_name", None) or getattr(self, "model", None) or ""
+        govern_kwargs: dict[str, Any] = {
+            "messages": _lc_messages_from(chat_input),
+            "model": str(model_name),
+        }
+        for key in _EVIDENCE_KWARGS:  # never forwarded to the chat model
+            if key in kwargs:
+                govern_kwargs[key] = kwargs.pop(key)
+        return govern_kwargs
+
+    def build(original: Any) -> Any:
+        if is_async:
+
+            @functools.wraps(original)
+            async def agoverned(
+                self: Any, chat_input: Any, config: Any = None, *, stop: Any = None, **kwargs: Any
+            ) -> Any:
+                govern_kwargs = request(self, chat_input, kwargs)
+
+                def call() -> Any:
+                    if config is not None:
+                        return original(self, chat_input, config, stop=stop, **kwargs)
+                    return original(self, chat_input, stop=stop, **kwargs)
+
+                return await _agovern(_live(state), govern_kwargs, call)
+
+            return agoverned
+
+        @functools.wraps(original)
+        def governed(
+            self: Any, chat_input: Any, config: Any = None, *, stop: Any = None, **kwargs: Any
+        ) -> Any:
+            govern_kwargs = request(self, chat_input, kwargs)
+
+            def call() -> Any:
+                if config is not None:
+                    return original(self, chat_input, config, stop=stop, **kwargs)
+                return original(self, chat_input, stop=stop, **kwargs)
+
+            return _govern(_live(state), govern_kwargs, call)
+
+        return governed
+
+    return build
+
+
+def _patch_attr(
+    label: str,
+    library: str,
+    owner: Any,
+    attr: str,
+    build: Callable[[Any], Any],
+    version: str | None,
+    detail: str,
+) -> PatchResult:
+    """Swap `owner.attr` for its governed wrapper, idempotently, and remember it."""
+    current = getattr(owner, attr, None) if owner is not None else None
+    if current is None:  # SDK shape drift
+        return PatchResult(
+            label,
+            False,
+            f"this {library} version has no {detail}; leaving it alone rather than guessing",
+            version,
+        )
+    if getattr(current, "__nometria__", False):
+        return PatchResult(label, True, "already patched", version)
+    had_own = attr in getattr(owner, "__dict__", {})
+    governed = build(current)
+    governed.__nometria__ = True
+    governed.__nometria_original__ = current
+    setattr(owner, attr, governed)
+    _PATCHED[label] = (owner, attr, had_own)
+    return PatchResult(label, True, detail, version)
+
+
+def _not_importable(library: str, exc: Exception) -> list[PatchResult]:
+    detail = "not installed" if isinstance(exc, ImportError) else f"import failed: {exc}"
+    return [PatchResult(library, False, detail), PatchResult(f"{library}.async", False, detail)]
+
+
+def _patch_openai(state: AutoState) -> list[PatchResult]:
     try:
         import openai
         from openai.resources.chat import completions
-    except ImportError:
-        return PatchResult("openai", False, "not installed")
-    except Exception as exc:  # pragma: no cover
-        return PatchResult("openai", False, f"import failed: {exc}")
+    except Exception as exc:
+        return _not_importable("openai", exc)
 
-    target = completions.Completions
-    if getattr(target.create, "__nometria__", False):
-        return PatchResult("openai", True, "already patched", getattr(openai, "__version__", None))
-    if not hasattr(target, "create"):  # pragma: no cover - SDK shape drift
-        return PatchResult(
-            "openai",
-            False,
-            "this openai version has no Completions.create; leaving it alone rather than guessing",
-        )
-
-    original = target.create
-
-    @functools.wraps(original)
-    def governed(self, *args: Any, **kwargs: Any) -> Any:
-        return _govern(state, kwargs, lambda: original(self, *args, **kwargs))
-
-    governed.__nometria__ = True  # type: ignore[attr-defined]
-    governed.__nometria_original__ = original  # type: ignore[attr-defined]
-    target.create = governed
-    return PatchResult(
-        "openai", True, "chat.completions.create", getattr(openai, "__version__", None)
-    )
+    version = getattr(openai, "__version__", None)
+    return [
+        _patch_attr(
+            "openai", "openai", getattr(completions, "Completions", None), "create",
+            _sdk_method(state, is_async=False), version, "chat.completions.create",
+        ),
+        _patch_attr(
+            "openai.async", "openai", getattr(completions, "AsyncCompletions", None), "create",
+            _sdk_method(state, is_async=True), version, "AsyncCompletions.create",
+        ),
+    ]
 
 
-def _patch_anthropic(state: AutoState) -> PatchResult:
+def _patch_anthropic(state: AutoState) -> list[PatchResult]:
     try:
         import anthropic
         from anthropic.resources import messages as messages_module
-    except ImportError:
-        return PatchResult("anthropic", False, "not installed")
-    except Exception as exc:  # pragma: no cover
-        return PatchResult("anthropic", False, f"import failed: {exc}")
+    except Exception as exc:
+        return _not_importable("anthropic", exc)
 
-    target = messages_module.Messages
-    if getattr(target.create, "__nometria__", False):
-        return PatchResult(
-            "anthropic", True, "already patched", getattr(anthropic, "__version__", None)
-        )
-    original = target.create
-
-    @functools.wraps(original)
-    def governed(self, *args: Any, **kwargs: Any) -> Any:
-        return _govern(state, kwargs, lambda: original(self, *args, **kwargs))
-
-    governed.__nometria__ = True  # type: ignore[attr-defined]
-    governed.__nometria_original__ = original  # type: ignore[attr-defined]
-    target.create = governed
-    return PatchResult(
-        "anthropic", True, "messages.create", getattr(anthropic, "__version__", None)
-    )
+    version = getattr(anthropic, "__version__", None)
+    return [
+        _patch_attr(
+            "anthropic", "anthropic", getattr(messages_module, "Messages", None), "create",
+            _sdk_method(state, is_async=False), version, "messages.create",
+        ),
+        _patch_attr(
+            "anthropic.async", "anthropic", getattr(messages_module, "AsyncMessages", None),
+            "create", _sdk_method(state, is_async=True), version, "AsyncMessages.create",
+        ),
+    ]
 
 
-def _patch_litellm(state: AutoState) -> PatchResult:
+def _patch_litellm(state: AutoState) -> list[PatchResult]:
     try:
         import litellm
-    except ImportError:
-        return PatchResult("litellm", False, "not installed")
-    except Exception as exc:  # pragma: no cover
-        return PatchResult("litellm", False, f"import failed: {exc}")
+    except Exception as exc:
+        return _not_importable("litellm", exc)
 
-    if not hasattr(litellm, "completion"):  # pragma: no cover - SDK shape drift
-        return PatchResult(
-            "litellm",
-            False,
-            "this litellm version has no top-level completion; leaving it alone rather than guessing",
-        )
-    if getattr(litellm.completion, "__nometria__", False):
-        return PatchResult(
-            "litellm", True, "already patched", getattr(litellm, "__version__", None)
-        )
-
-    original = litellm.completion
-
-    @functools.wraps(original)
-    def governed(*args: Any, **kwargs: Any) -> Any:
-        return _govern(state, kwargs, lambda: original(*args, **kwargs))
-
-    governed.__nometria__ = True  # type: ignore[attr-defined]
-    governed.__nometria_original__ = original  # type: ignore[attr-defined]
-    litellm.completion = governed
-    return PatchResult("litellm", True, "litellm.completion", getattr(litellm, "__version__", None))
+    version = getattr(litellm, "__version__", None)
+    return [
+        _patch_attr(
+            "litellm", "litellm", litellm, "completion",
+            _sdk_method(state, is_async=False), version, "litellm.completion",
+        ),
+        _patch_attr(
+            "litellm.async", "litellm", litellm, "acompletion",
+            _sdk_method(state, is_async=True), version, "litellm.acompletion",
+        ),
+    ]
 
 
-def _patch_langchain(state: AutoState) -> PatchResult:
+def _patch_langchain(state: AutoState) -> list[PatchResult]:
     try:
         import langchain_core
         from langchain_core.language_models.chat_models import BaseChatModel
-    except ImportError:
-        return PatchResult("langchain", False, "not installed")
-    except Exception as exc:  # pragma: no cover
-        return PatchResult("langchain", False, f"import failed: {exc}")
+    except Exception as exc:
+        return _not_importable("langchain", exc)
 
-    target = BaseChatModel
-    if not hasattr(target, "invoke"):  # pragma: no cover - SDK shape drift
-        return PatchResult(
-            "langchain",
-            False,
-            "this langchain-core version has no BaseChatModel.invoke; leaving it alone "
-            "rather than guessing",
-        )
-    if getattr(target.invoke, "__nometria__", False):
-        return PatchResult(
-            "langchain", True, "already patched", getattr(langchain_core, "__version__", None)
-        )
-
-    original = target.invoke
-
-    @functools.wraps(original)
-    def governed(self: Any, chat_input: Any, config: Any = None, *, stop: Any = None, **kwargs: Any) -> Any:
-        messages = _lc_messages_from(chat_input)
-        model_name = getattr(self, "model_name", None) or getattr(self, "model", None) or ""
-        govern_kwargs = {"messages": messages, "model": str(model_name)}
-
-        def call() -> Any:
-            if config is not None:
-                return original(self, chat_input, config, stop=stop, **kwargs)
-            return original(self, chat_input, stop=stop, **kwargs)
-
-        return _govern(state, govern_kwargs, call)
-
-    governed.__nometria__ = True  # type: ignore[attr-defined]
-    governed.__nometria_original__ = original  # type: ignore[attr-defined]
-    target.invoke = governed
-    return PatchResult(
-        "langchain", True, "BaseChatModel.invoke", getattr(langchain_core, "__version__", None)
-    )
+    version = getattr(langchain_core, "__version__", None)
+    return [
+        _patch_attr(
+            "langchain", "langchain-core", BaseChatModel, "invoke",
+            _lc_method(state, is_async=False), version, "BaseChatModel.invoke",
+        ),
+        _patch_attr(
+            "langchain.async", "langchain-core", BaseChatModel, "ainvoke",
+            _lc_method(state, is_async=True), version, "BaseChatModel.ainvoke",
+        ),
+    ]
 
 
 _PATCHERS = (_patch_openai, _patch_anthropic, _patch_litellm, _patch_langchain)
@@ -674,7 +1156,7 @@ _PATCHERS = (_patch_openai, _patch_anthropic, _patch_litellm, _patch_langchain)
 def auto(
     agent: str | None = None,
     *,
-    mode: str = "observe",
+    mode: str = "policy",
     environment: str | None = None,
     session_id: str | None = None,
     register: bool = True,
@@ -685,18 +1167,24 @@ def auto(
         import nometria
         nometria.auto()
 
-    Starts in **observe** mode: every call is traced, evaluated and audited, and
-    nothing is blocked. That default is not timidity — a library that begins refusing
-    production traffic because someone added an import is indefensible, and a team
-    that gets burned once will never trust the tool again. Turn it up with
-    ``auto(mode="enforce")`` once the findings look right.
+    Every call is traced, evaluated and audited. Whether a call is ever refused is
+    decided by ``mode``:
+
+    * ``"policy"`` (default) — the policies decide: `Blocked` is raised exactly when
+      the enforced verdict stops the call (an enforce-mode policy, the kill switch,
+      quarantine or a hard budget cap) — what the gateway would refuse. The shipped
+      baseline observes, so this blocks nothing until
+      ``nometria policy enforce baseline``.
+    * ``"observe"`` — never raise; would-have-blocked is logged and counted.
+    * ``"enforce"`` — strict: raise whenever the effective verdict blocks, even for a
+      policy still in observe. For tests and CI.
 
     Returns the state, so a developer can assert on it in a test rather than trusting
     that it worked.
     """
     global _STATE
-    if mode not in ("observe", "enforce"):
-        raise ValueError("mode must be 'observe' or 'enforce'")
+    if mode not in MODES:
+        raise ValueError("mode must be 'policy' (default), 'observe' or 'enforce'")
 
     settings = get_settings()
     state = AutoState(
@@ -725,7 +1213,7 @@ def auto(
         # appeared in the registry.
         log.warning("nometria: could not register agent '%s': %s", state.agent, exc)
 
-    state.patches = [patch(state) for patch in _PATCHERS]
+    state.patches = [result for patch in _PATCHERS for result in patch(state)]
     state.started = True
     _STATE = state
 
@@ -750,44 +1238,24 @@ def state() -> AutoState | None:
 
 
 def off() -> list[str]:
-    """Undo the patches. Mostly for tests, and for a developer proving it is reversible."""
+    """Undo the patches. Mostly for tests, and for a developer proving it is reversible.
+
+    Returns the labels restored (``"openai"``, ``"openai.async"``, ...).
+    """
     global _STATE
     restored: list[str] = []
-    try:
-        from openai.resources.chat import completions
-
-        original = getattr(completions.Completions.create, "__nometria_original__", None)
-        if original is not None:
-            completions.Completions.create = original
-            restored.append("openai")
-    except Exception:
-        pass
-    try:
-        from anthropic.resources import messages as messages_module
-
-        original = getattr(messages_module.Messages.create, "__nometria_original__", None)
-        if original is not None:
-            messages_module.Messages.create = original
-            restored.append("anthropic")
-    except Exception:
-        pass
-    try:
-        import litellm
-
-        original = getattr(litellm.completion, "__nometria_original__", None)
-        if original is not None:
-            litellm.completion = original
-            restored.append("litellm")
-    except Exception:
-        pass
-    try:
-        from langchain_core.language_models.chat_models import BaseChatModel
-
-        original = getattr(BaseChatModel.invoke, "__nometria_original__", None)
-        if original is not None:
-            BaseChatModel.invoke = original
-            restored.append("langchain")
-    except Exception:
-        pass
+    for label, (owner, attr, had_own) in list(_PATCHED.items()):
+        try:
+            current = getattr(owner, attr, None)
+            original = getattr(current, "__nometria_original__", None)
+            if original is not None:
+                if had_own:
+                    setattr(owner, attr, original)
+                else:
+                    delattr(owner, attr)  # it was inherited; let inheritance resume
+                restored.append(label)
+        except Exception:  # pragma: no cover - a module torn down under us
+            pass
+    _PATCHED.clear()
     _STATE = None
     return restored

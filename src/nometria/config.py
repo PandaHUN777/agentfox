@@ -7,16 +7,105 @@ classifier is configuration, never a rewrite.
 
 from __future__ import annotations
 
+import logging
+import os
+import threading
+import tomllib
 from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import PrivateAttr, field_validator
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+    TomlConfigSettingsSource,
+)
+
+log = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
+#: Env var naming an explicit config file. Deliberately *not* a Settings field: it
+#: decides where settings come from, so it cannot itself come from that file.
+CONFIG_ENV_VAR = "NOMETRIA_CONFIG"
+#: The file `nometria init` writes, looked up in the current working directory.
+DEFAULT_CONFIG_FILENAME = "nometria.toml"
+#: The only table read from the file. Other tables are left for other tools.
+CONFIG_TABLE = "nometria"
+
+WEBHOOK_SEVERITIES = ("low", "medium", "high", "critical")
+
+
+class ConfigFileError(RuntimeError):
+    """The config file the operator pointed at explicitly cannot be used."""
+
+
+def resolve_config_file() -> Path | None:
+    """Which config file settings would be read from right now, if any.
+
+    ``NOMETRIA_CONFIG`` wins and must exist — the operator named it, so a typo is an
+    error rather than a silent fall-back to defaults. ``NOMETRIA_CONFIG=none`` turns file
+    loading off entirely. Otherwise ``./nometria.toml``
+    in the current working directory, only if present.
+    """
+    explicit = os.environ.get(CONFIG_ENV_VAR)
+    if explicit and explicit.strip().lower() in {"none", "off", "-"}:
+        return None  # explicit opt-out: env and defaults only (tests, CI, containers)
+    if explicit:
+        path = Path(explicit).expanduser()
+        if not path.is_file():
+            raise ConfigFileError(
+                f"{CONFIG_ENV_VAR}={explicit!r} does not point at a readable file."
+            )
+        return path.resolve()
+    candidate = Path.cwd() / DEFAULT_CONFIG_FILENAME
+    return candidate.resolve() if candidate.is_file() else None
+
+
+# The file resolved by the most recent Settings() construction on this thread, handed
+# from ``settings_customise_sources`` (a classmethod, no instance yet) to
+# ``model_post_init`` so the instance can say where it came from.
+_resolved = threading.local()
+
 
 class Settings(BaseSettings):
+    """Source precedence, highest first: init kwargs > ``NOMETRIA_*`` environment
+    variables > the ``[nometria]`` table of the config file (see
+    :func:`resolve_config_file`) > the defaults below. ``.env`` files are not read.
+    """
+
     model_config = SettingsConfigDict(env_prefix="NOMETRIA_", extra="ignore")
+
+    _config_file: Path | None = PrivateAttr(default=None)
+
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        path = resolve_config_file()
+        _resolved.path = path
+        sources: list[PydanticBaseSettingsSource] = [init_settings, env_settings]
+        toml_source = _toml_source(settings_cls, path)
+        if toml_source is not None:
+            sources.append(toml_source)
+        sources.extend([dotenv_settings, file_secret_settings])
+        return tuple(sources)
+
+    def model_post_init(self, __context: Any) -> None:
+        self._config_file = getattr(_resolved, "path", None)
+        _resolved.path = None
+
+    @property
+    def config_file(self) -> Path | None:
+        """The config file these settings were read from, or ``None``."""
+        return self._config_file
 
     # --- Persistence -----------------------------------------------------
     database_url: str = f"sqlite:///{REPO_ROOT / 'nometria.db'}"
@@ -66,6 +155,24 @@ class Settings(BaseSettings):
     # localhost origins in `gateway/app.py`, never a replacement for them.
     playground_cors_origin: str | None = None
 
+    # --- Outbound finding webhooks ----------------------------------------
+    # Every newly committed Finding at or above `webhook_min_severity` is POSTed
+    # to `webhook_url` (see webhooks.py). Still gated by `allow_egress` above: a
+    # configured URL with egress off sends nothing. With `webhook_secret` set,
+    # each request carries `X-Nometria-Signature: sha256=<hmac of the raw body>`.
+    webhook_url: str | None = None
+    webhook_secret: str | None = None
+    webhook_timeout_seconds: float = 3.0
+    webhook_min_severity: str = "high"  # critical | high | medium | low
+
+    @field_validator("webhook_min_severity")
+    @classmethod
+    def _check_webhook_min_severity(cls, value: str) -> str:
+        value = value.strip().lower()
+        if value not in WEBHOOK_SEVERITIES:
+            raise ValueError(f"must be one of {', '.join(WEBHOOK_SEVERITIES)}")
+        return value
+
     # --- Cost & reliability (P15) ----------------------------------------
     # Degradation ladder, preferred-first. Empty means no fallback: fail rather than
     # silently serve from a model the agent was never evaluated against.
@@ -81,6 +188,15 @@ class Settings(BaseSettings):
     admission_burst: int = 400
     admission_max_concurrent: int = 256
     admission_shed_below_priority: str = "normal"
+    # Gap 0.7: how long a service-availability probe's answer is reused before the
+    # dependency is re-checked (availability.py's `probe_services`). This exists
+    # because the probes are not free — the database probe opens a connection beyond
+    # the request's own session, and with `policy_engine = "opa"` the policy probe is
+    # an HTTP call to the sidecar. Paying either per request would make the module
+    # that exists to prevent a latency problem into one. The status endpoints ignore
+    # this and always probe fresh: an operator asking "is it up *now*" must not be
+    # told what was true five seconds ago.
+    service_probe_interval_seconds: float = 5.0
 
     # --- Streaming (PL-1) ------------------------------------------------
     # `buffered` enforces output identically to the non-streaming path at the cost of
@@ -261,9 +377,44 @@ class Settings(BaseSettings):
         return self.accept_restricted_model_licenses
 
 
+def _toml_source(
+    settings_cls: type[BaseSettings], path: Path | None
+) -> PydanticBaseSettingsSource | None:
+    """The ``[nometria]`` table of ``path`` as a settings source, or ``None``.
+
+    Values go through the same field validation as every other source, so
+    ``enabled_detectors = ["pii.native"]`` and ``allow_egress = false`` land as a
+    list and a bool. Unknown keys are ignored (``extra="ignore"``) but named in a
+    warning, since a misspelled key otherwise looks exactly like a setting that
+    silently didn't apply.
+    """
+    if path is None:
+        return None
+    try:
+        with path.open("rb") as fh:
+            data = tomllib.load(fh)
+    except tomllib.TOMLDecodeError as exc:
+        raise ConfigFileError(f"{path} is not valid TOML: {exc}") from exc
+    table = data.get(CONFIG_TABLE)
+    if table is None:
+        log.warning("%s has no [%s] table; nothing read from it", path, CONFIG_TABLE)
+        return None
+    if not isinstance(table, dict):
+        raise ConfigFileError(f"{path}: `{CONFIG_TABLE}` must be a table")
+    unknown = sorted(set(table) - set(settings_cls.model_fields))
+    if unknown:
+        log.warning("%s: ignoring unknown [%s] key(s): %s", path, CONFIG_TABLE, ", ".join(unknown))
+    return TomlConfigSettingsSource(settings_cls, toml_file=path, toml_table_header=(CONFIG_TABLE,))
+
+
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
+
+
+def loaded_config_file() -> Path | None:
+    """The config file the active (cached) settings were read from, if any."""
+    return get_settings().config_file
 
 
 def reset_settings_cache() -> None:

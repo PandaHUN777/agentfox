@@ -18,6 +18,15 @@ from rich.table import Table
 console = Console()
 
 
+def _session():
+    """A session on an initialised database. `init_db` is idempotent, and without it
+    a command run before `nometria init` dies on "no such table"."""
+    from ..db import init_db, session_scope
+
+    init_db()
+    return session_scope()
+
+
 def issue(
     email: str = typer.Argument(..., help="Operator the token acts as."),
     name: str = typer.Option("", "--name", "-n", help="What this token is for."),
@@ -26,12 +35,11 @@ def issue(
     """Mint an API token. The value is shown once and cannot be retrieved again."""
     from sqlalchemy import select
 
-    from ..db import session_scope
     from ..gateway.auth import issue_token
     from ..models import User
     from ..tenancy import bind_session, system_scope
 
-    with system_scope("issuing an operator token"), session_scope() as session:
+    with system_scope("issuing an operator token"), _session() as session:
         user = session.scalar(select(User).where(User.email == email))
         if user is None:
             console.print(f"[red]unknown user '{email}'[/]")
@@ -76,13 +84,12 @@ def tokens(as_json: bool = typer.Option(False, "--json")) -> None:
     from sqlalchemy import select
 
     from .. import system_log
-    from ..db import session_scope
     from ..models import ApiToken, User, utcnow
     from ..tenancy import system_scope
 
     now = utcnow()
     rows: list[dict[str, Any]] = []
-    with system_scope("listing operator tokens"), session_scope() as session:
+    with system_scope("listing operator tokens"), _session() as session:
         users = {u.id: u for u in session.scalars(select(User))}
         tokens_seen = list(session.scalars(select(ApiToken).order_by(ApiToken.created_at.desc())))
         for token in tokens_seen:
@@ -151,12 +158,11 @@ def revoke(
     token_id: str = typer.Argument(..., help="Token id from `nometria auth tokens`."),
 ) -> None:
     """Revoke a token immediately."""
-    from ..db import session_scope
     from ..gateway.auth import revoke_token
     from ..models import ApiToken
     from ..tenancy import bind_session, system_scope
 
-    with system_scope("revoking an operator token"), session_scope() as session:
+    with system_scope("revoking an operator token"), _session() as session:
         token = session.get(ApiToken, token_id)
         if token is None:
             console.print(f"[yellow]{token_id} is unknown or already revoked[/]")

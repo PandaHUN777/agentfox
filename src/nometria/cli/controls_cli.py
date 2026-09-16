@@ -24,6 +24,15 @@ from rich.table import Table
 
 console = Console()
 
+
+def _session():
+    """A session on an initialised database. `init_db` is idempotent, and without it
+    a command run before `nometria init` dies on "no such table"."""
+    from ..db import init_db, session_scope
+
+    init_db()
+    return session_scope()
+
 TIER_COLOUR = {
     "system_of_record": "green",
     "approved": "cyan",
@@ -55,7 +64,6 @@ def boundary_set(
     from sqlalchemy import select
 
     from ..answerability import QUESTION_TYPES, declare_boundary
-    from ..db import session_scope
     from ..models import Agent
 
     types = [t.strip() for t in answerable.split(",") if t.strip()]
@@ -65,7 +73,7 @@ def boundary_set(
         console.print(f"[dim]choose from: {', '.join(QUESTION_TYPES)}[/]")
         raise typer.Exit(1)
 
-    with session_scope() as session:
+    with _session() as session:
         record = session.scalar(select(Agent).where(Agent.slug == agent))
         if record is None:
             console.print(f"[red]unknown agent '{agent}'[/]")
@@ -104,10 +112,9 @@ def boundary_check(
     from sqlalchemy import select
 
     from ..answerability import classify_answerability, get_boundary
-    from ..db import session_scope
     from ..models import Agent
 
-    with session_scope() as session:
+    with _session() as session:
         record = session.scalar(select(Agent).where(Agent.slug == agent))
         if record is None:
             console.print(f"[red]unknown agent '{agent}'[/]")
@@ -152,7 +159,6 @@ def sources_add(
     title: str = typer.Option("", "--title"),
 ) -> None:
     """Register a source and its authority tier (P8)."""
-    from ..db import session_scope
     from ..models import utcnow
     from ..provenance import TIERS, register_source
 
@@ -171,7 +177,7 @@ def sources_add(
                 console.print(f"[red]could not read '{updated}' as a date — use ISO or 'now'[/]")
                 raise typer.Exit(1) from None
 
-    with session_scope() as session:
+    with _session() as session:
         register_source(
             session,
             key,
@@ -204,7 +210,6 @@ def sources_import(
     Tiering a corpus is inherently a bulk act. Nobody classifies four hundred sources
     one command at a time, and making them try is how the tiering never happens.
     """
-    from ..db import session_scope
     from ..provenance import TIERS, register_source
 
     try:
@@ -215,7 +220,7 @@ def sources_import(
 
     items = payload.get("sources", payload) if isinstance(payload, dict) else payload
     written = 0
-    with session_scope() as session:
+    with _session() as session:
         for item in items:
             tier = item.get("tier", "unverified")
             if tier not in TIERS:
@@ -239,11 +244,10 @@ def sources_list(as_json: bool = typer.Option(False, "--json")) -> None:
     """Every registered source, worst tier first."""
     from sqlalchemy import select
 
-    from ..db import session_scope
     from ..models import SourceRecord
     from ..provenance import TIER_RANK, freshness_breach
 
-    with session_scope() as session:
+    with _session() as session:
         rows = [
             {
                 "key": r.key,
@@ -308,7 +312,6 @@ def escalation_set(
     """Declare when this agent must hand off to a human (P11)."""
     from sqlalchemy import select
 
-    from ..db import session_scope
     from ..escalation import set_policy
     from ..models import Agent
 
@@ -318,7 +321,7 @@ def escalation_set(
     if repeated_failure is not None:
         conditions["repeated_failure"] = repeated_failure
 
-    with session_scope() as session:
+    with _session() as session:
         agent_id = None
         if agent:
             record = session.scalar(select(Agent).where(Agent.slug == agent))
@@ -351,10 +354,9 @@ def escalation_scan(
     conversation where the agent kept going instead of handing off looks entirely
     ordinary in the telemetry.
     """
-    from ..db import session_scope
     from ..escalation import detect_missed_escalation
 
-    with session_scope() as session:
+    with _session() as session:
         result = detect_missed_escalation(session, since_hours=hours, raise_findings=apply)
 
     rate = result["missed_rate"]
@@ -395,10 +397,9 @@ def principal_set(
     the agent runs under its own identity, inherits everything that identity can reach,
     and every permission check passes.
     """
-    from ..db import session_scope
     from ..entitlement import upsert_principal
 
-    with session_scope() as session:
+    with _session() as session:
         upsert_principal(
             session,
             subject,
@@ -422,10 +423,9 @@ def grant_add(
     purposes: str = typer.Option("", "--purposes", help="GDPR Art. 5(1)(b) purposes."),
 ) -> None:
     """Grant access to a resource pattern (P10-2)."""
-    from ..db import session_scope
     from ..entitlement import grant
 
-    with session_scope() as session:
+    with _session() as session:
         grant(
             session,
             resource,
@@ -445,10 +445,9 @@ def entitlement_report(days: int = typer.Option(7, "--days")) -> None:
     Worth running before any entitlement model exists — a ratio of 1.0 with no grants
     configured is exactly the point.
     """
-    from ..db import session_scope
     from ..entitlement import over_permission_report
 
-    with session_scope() as session:
+    with _session() as session:
         report = over_permission_report(session, days=days)
 
     if not report["requests"]:
@@ -461,8 +460,8 @@ def entitlement_report(days: int = typer.Option(7, "--days")) -> None:
             )
         )
         console.print(
-            "  [dim]Register a principal with `nometria principal set`, then filter "
-            "retrieval through /api/entitlement/filter.[/]"
+            "  [dim]Register a principal with `nometria entitlement principal <subject>`, "
+            "then filter retrieval through /api/entitlement/filter.[/]"
         )
         return
 

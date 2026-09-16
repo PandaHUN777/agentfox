@@ -75,8 +75,57 @@ def _show(result, label: str) -> None:
         console.print(f"      [dim]detected: {', '.join(result.entities)}[/]")
 
 
+#: Step 08 promotes this policy to enforce to show the difference. The promotion is
+#: part of the show, not a configuration change: `run` puts it back afterwards.
+DEMO_PROMOTED_POLICY = "baseline"
+
+
+def _current_mode(key: str) -> str | None:
+    """The mode of the open binding on a policy's latest version, or None."""
+    from sqlalchemy import select
+
+    from ..models import Policy, PolicyBinding, PolicyVersion
+
+    with session_scope() as session:
+        policy = session.scalar(select(Policy).where(Policy.key == key))
+        if policy is None:
+            return None
+        latest = session.scalars(
+            select(PolicyVersion)
+            .where(PolicyVersion.policy_id == policy.id)
+            .order_by(PolicyVersion.version.desc())
+        ).first()
+        if latest is None:
+            return None
+        binding = session.scalars(
+            select(PolicyBinding).where(
+                PolicyBinding.policy_version_id == latest.id,
+                PolicyBinding.effective_to.is_(None),
+            )
+        ).first()
+        return binding.mode if binding else None
+
+
 def run() -> dict[str, Any]:
-    """Run the walkthrough. Returns a summary so tests can assert on it."""
+    """Run the walkthrough. Returns a summary so tests can assert on it.
+
+    A demo must not leave the deployment more restrictive than it found it, so the
+    promoted policy's previous mode is restored even if a step raises.
+    """
+    previous = _current_mode(DEMO_PROMOTED_POLICY)
+    try:
+        return _walkthrough()
+    finally:
+        if previous is not None and _current_mode(DEMO_PROMOTED_POLICY) != previous:
+            with session_scope() as session:
+                set_mode(session, DEMO_PROMOTED_POLICY, previous)
+            console.print(
+                f"[dim]{DEMO_PROMOTED_POLICY} policy restored to {previous} — "
+                "the demo's promotion was temporary.[/]"
+            )
+
+
+def _walkthrough() -> dict[str, Any]:
     summary: dict[str, Any] = {}
 
     console.print(

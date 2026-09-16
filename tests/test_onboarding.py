@@ -202,11 +202,15 @@ def test_init_leaves_an_existing_config_alone(isolated_db, tmp_path):
     assert (tmp_path / "nometria.toml").read_text() == "# hand-edited\n"
 
 
-def test_init_loads_controls_and_policies_in_observe_mode(isolated_db, tmp_path):
+def test_init_loads_controls_and_policies_in_their_declared_modes(isolated_db, tmp_path):
+    """Each pack is reported in the mode it actually binds in. A blanket "observe
+    mode — nothing is blocked" was false: tool-containment ships `mode: enforce`."""
     result = runner.invoke(app, ["init", "--path", str(tmp_path)])
-    assert "controls" in flat(result.output)
-    assert "observe mode" in flat(result.output)
-    assert "nothing is blocked" in flat(result.output)
+    output = flat(result.output)
+    assert "controls" in output
+    assert "baseline observe recorded, nothing blocked" in output
+    assert "tool-containment enforce violations are blocked now" in output
+    assert "nothing is blocked yet" not in output
 
 
 def test_init_ends_by_telling_you_what_to_do_next(isolated_db, tmp_path):

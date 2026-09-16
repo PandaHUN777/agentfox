@@ -114,6 +114,14 @@ def get_sessionmaker() -> sessionmaker[Session]:
 
         _SessionLocal = sessionmaker(bind=get_engine(), expire_on_commit=False, future=True)
         install_tenancy(_SessionLocal)
+        try:
+            from .webhooks import install as install_webhooks
+
+            install_webhooks(_SessionLocal)
+        except Exception:  # pragma: no cover - webhooks must never block sessions
+            import logging
+
+            logging.getLogger(__name__).warning("finding webhooks not installed", exc_info=True)
     return _SessionLocal
 
 

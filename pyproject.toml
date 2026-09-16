@@ -70,7 +70,7 @@ all = ["nometria[pii,classifiers,rails,validators,redteam,otel,postgres,langgrap
 restricted-classifiers = ["transformers>=4.44", "torch>=2.4"]
 
 [project.scripts]
-nometria = "nometria.cli.main:app"
+nometria = "nometria.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]

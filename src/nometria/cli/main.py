@@ -62,6 +62,7 @@ app.add_typer(db_app, name="db")
 # ten minutes.
 from .auth_cli import register as _register_auth  # noqa: E402
 from .business_cli import register as _register_business  # noqa: E402
+from .mcp_cli import register as _register_mcp  # noqa: E402
 from .controls_cli import register as _register_controls  # noqa: E402
 from .onboarding import register as _register_onboarding  # noqa: E402
 from .quickscan import register as _register_quickscan  # noqa: E402
@@ -71,6 +72,7 @@ _register_quickscan(app)
 _register_auth(app)
 _register_controls(app)
 _register_business(app)
+_register_mcp(app)
 
 
 def _session():
@@ -114,8 +116,24 @@ def version() -> None:
     )
 
 
+def _mask_key(key: str) -> str:
+    """Keep the recognisable prefix (``nom_agt_``) and four characters, hide the rest."""
+    import re
+
+    match = re.match(r"^((?:[a-z]+_)+)", key)
+    prefix = match.group(1) if match else ""
+    return f"{prefix}{key[len(prefix) : len(prefix) + 4]}…"
+
+
 @app.command()
-def seed() -> None:
+def seed(
+    show_keys: bool = typer.Option(
+        False,
+        "--show-keys",
+        help="Print newly issued agent API keys in full. Keys are shown only once, "
+        "when first issued; this flag is the only way to see them.",
+    ),
+) -> None:
     """Create a demonstrable environment: agents, policies, controls, eval suite."""
     from ..seed import seed as run_seed
 
@@ -131,8 +149,15 @@ def seed() -> None:
     console.print(f"  policies    {', '.join(summary.get('policies', []))}")
     console.print(f"  agents      {', '.join(summary['agents'])}")
     console.print(f"  eval suite  {summary['eval_suite']}")
-    for slug, key in (summary.get("credentials") or {}).items():
-        console.print(f"  [dim]key {slug}: {key}[/]")
+    credentials = summary.get("credentials") or {}
+    for slug, key in credentials.items():
+        console.print(f"  [dim]key {slug}: {key if show_keys else _mask_key(key)}[/]")
+    if credentials and not show_keys:
+        console.print(
+            "  [dim]keys masked. Only a hash is stored and each key is issued once — "
+            "`nometria seed --show-keys` on a fresh database is the only way to see "
+            "them in full.[/]"
+        )
 
 
 @app.command()
@@ -450,14 +475,21 @@ def policy_effective(
     agent: str | None = None,
     team: str | None = None,
     user: str | None = None,
-    environment: str = "production",
+    environment: str | None = typer.Option(
+        None,
+        "--environment",
+        help="Environment to resolve for. Defaults to the configured environment "
+        "(NOMETRIA_ENVIRONMENT), which is what the runtime itself uses.",
+    ),
 ) -> None:
     """Show the policy actually in force for a subject, and where each rule came from.
 
     Opacity is what makes layered policy dangerous, so the resolver explains itself.
     """
+    from ..config import get_settings
     from ..policy import effective_for
 
+    environment = environment or get_settings().environment
     with _session() as session:
         effective = effective_for(
             session, agent_slug=agent, environment=environment, team=team, user=user
@@ -465,7 +497,8 @@ def policy_effective(
         explanation = effective.explain()
 
     console.print(
-        f"[bold]effective policy[/] — mode [bold]{explanation['mode']}[/], "
+        f"[bold]effective policy[/] in [bold]{environment}[/] — "
+        f"mode [bold]{explanation['mode']}[/], "
         f"default {explanation['default_effect']}"
     )
     console.print(f"  [dim]layers: {', '.join(explanation['layers']) or 'none'}[/]\n")
@@ -876,7 +909,12 @@ def compliance_status(framework: str | None = None, verbose: bool = False) -> No
     """Show control posture, optionally for one framework."""
     from sqlalchemy import select
 
-    from ..compliance import framework_coverage, latest_statuses, posture
+    from ..compliance import (
+        controls_for_framework,
+        framework_coverage,
+        latest_statuses,
+        posture,
+    )
     from ..models import Control
 
     with _session() as session:
@@ -884,6 +922,9 @@ def compliance_status(framework: str | None = None, verbose: bool = False) -> No
         statuses = latest_statuses(session)
         coverage = framework_coverage(session, framework) if framework else None
         controls = {c.key: c for c in session.scalars(select(Control))}
+        in_scope = (
+            {c["key"] for c in controls_for_framework(session, framework)} if framework else None
+        )
 
     title = framework or "all frameworks"
     counts = overall["counts"]
@@ -902,15 +943,20 @@ def compliance_status(framework: str | None = None, verbose: bool = False) -> No
         for column in ("control", "status", "rationale"):
             table.add_column(column, style="bold" if column == "control" else None)
         for key in sorted(statuses):
-            if framework and key not in {c["key"] for c in (coverage or {}).get("controls", [])}:
-                pass
+            if in_scope is not None and key not in in_scope:
+                continue
             status = statuses[key]
             colour = {"effective": "green", "degraded": "yellow", "failing": "red"}.get(
                 status.status, "dim"
             )
             table.add_row(key, f"[{colour}]{status.status}[/]", status.rationale[:88])
         console.print(table)
-        console.print(f"  [dim]{len(controls)} controls in catalog[/]")
+        if in_scope is not None:
+            console.print(
+                f"  [dim]{len(in_scope)} of {len(controls)} catalog controls map to {framework}[/]"
+            )
+        else:
+            console.print(f"  [dim]{len(controls)} controls in catalog[/]")
 
     if coverage:
         console.print(
@@ -922,6 +968,239 @@ def compliance_status(framework: str | None = None, verbose: bool = False) -> No
             for gap in coverage["declared_gaps"]:
                 console.print(f"    [dim]· {gap}[/]")
         console.print(f"\n  [yellow]{coverage['caveat']}[/]")
+
+
+@compliance_app.command("validate")
+def compliance_validate() -> None:
+    """Check the control catalog and obligation calendar are internally consistent.
+
+    Read-only and offline: parses controls.yaml and obligations.yaml under the
+    configured compliance directory and never touches the database. Exits 1 on any
+    problem, so it can gate a catalog change the way `policy lint` gates a policy.
+    """
+    import yaml
+
+    from ..compliance.catalog import catalog_path, obligations_path
+    from ..compliance.status import RULE_KINDS
+
+    problems: list[str] = []
+
+    def _load(path: Path) -> dict[str, Any]:
+        if not path.exists():
+            problems.append(f"{path}: not found")
+            return {}
+        try:
+            data = yaml.safe_load(path.read_text()) or {}
+        except yaml.YAMLError as exc:
+            problems.append(f"{path.name}: does not parse — {exc}")
+            return {}
+        if not isinstance(data, dict):
+            problems.append(f"{path.name}: top level must be a mapping")
+            return {}
+        return data
+
+    catalog_file = catalog_path()
+    catalog = _load(catalog_file)
+    frameworks = catalog.get("frameworks") or {}
+    if not isinstance(frameworks, dict) or not frameworks:
+        if catalog:
+            problems.append("controls.yaml: no frameworks declared")
+        frameworks = {}
+    known = set(frameworks)
+    review_status = catalog.get("review_status", "draft")
+
+    controls = catalog.get("controls") or []
+    seen: set[str] = set()
+    mappings = 0
+    for index, spec in enumerate(controls):
+        if not isinstance(spec, dict):
+            problems.append(f"controls[{index}]: not a mapping")
+            continue
+        key = spec.get("key")
+        label = key or f"controls[{index}]"
+        if not key:
+            problems.append(f"{label}: missing key")
+        elif key in seen:
+            problems.append(f"{key}: duplicate control key")
+        else:
+            seen.add(key)
+        for field in ("title", "objective", "family", "status_rule"):
+            if not spec.get(field):
+                problems.append(f"{label}: missing {field}")
+        rule = spec.get("status_rule")
+        if rule and not isinstance(rule, dict):
+            problems.append(f"{label}: status_rule must be a mapping")
+        elif rule:
+            # evaluate_control defaults a missing kind to presence, so that is valid;
+            # an unknown one silently falls back to presence, which is not.
+            kind = rule.get("kind", "presence")
+            if kind not in RULE_KINDS:
+                problems.append(
+                    f"{label}: status_rule kind {kind!r} is not one compute understands "
+                    f"({', '.join(sorted(RULE_KINDS))})"
+                )
+        spec_mappings = spec.get("mappings") or {}
+        if not isinstance(spec_mappings, dict):
+            problems.append(f"{label}: mappings must be a mapping of framework → references")
+            continue
+        for framework, references in spec_mappings.items():
+            if framework not in known:
+                problems.append(f"{label}: mapped to undeclared framework {framework!r}")
+            if not isinstance(references, list) or not all(
+                isinstance(r, str) and r.strip() for r in references
+            ):
+                problems.append(f"{label}: {framework} references must be a list of strings")
+                continue
+            mappings += len(references)
+
+    for framework in catalog.get("gaps") or {}:
+        if framework not in known:
+            problems.append(f"gaps: undeclared framework {framework!r}")
+
+    obligations_file = obligations_path()
+    obligations = _load(obligations_file).get("obligations") or []
+    for index, spec in enumerate(obligations):
+        if not isinstance(spec, dict):
+            problems.append(f"obligations[{index}]: not a mapping")
+            continue
+        label = f"obligation {spec.get('reference') or f'[{index}]'}"
+        if not spec.get("reference"):
+            problems.append(f"{label}: missing reference")
+        framework = spec.get("framework")
+        if not framework:
+            problems.append(f"{label}: missing framework")
+        elif framework not in known:
+            problems.append(f"{label}: undeclared framework {framework!r}")
+
+    # Per-mapping review status lives in the database (set by `review_mapping`); the
+    # file carries one catalog-wide status, which is what a fresh sync starts from.
+    reviewed = mappings if review_status == "reviewed" else 0
+    console.print(
+        f"[bold]control catalog[/] v{catalog.get('version', '?')}  [dim]{catalog_file}[/]"
+    )
+    console.print(f"  controls     {len(controls)}")
+    console.print(f"  frameworks   {len(known)}")
+    console.print(
+        f"  mappings     {mappings}  ([yellow]{mappings - reviewed} draft[/], "
+        f"{reviewed} reviewed)"
+    )
+    console.print(f"  obligations  {len(obligations)}")
+
+    if problems:
+        console.print(f"\n[bold red]{len(problems)} problem(s)[/]")
+        for problem in problems:
+            console.print(f"  [red]✗[/] {problem}")
+        raise typer.Exit(1)
+    console.print("\n[green]catalog valid[/]")
+
+
+@compliance_app.command("review-packet")
+def compliance_review_packet(
+    framework: str = typer.Option(..., "--framework", help="Framework key, e.g. eu-ai-act."),
+    out: Path | None = typer.Option(None, "--out", help="Write markdown here instead of stdout."),
+) -> None:
+    """Everything a qualified reviewer needs to sign off one framework, in one file (B.6).
+
+    Every mapping ships `DRAFT — UNVERIFIED / NOT LEGAL ADVICE` until a named human reviews
+    it, and that is the loudest "not ready" signal in an audit conversation. The blocker has
+    never been the workflow, it has been that nobody could hand a reviewer a reviewable
+    artefact. This is that artefact: the control, what implements it, what evidence it
+    produces, and the exact clause claimed — one row per decision the reviewer has to make.
+    """
+    from sqlalchemy import select
+
+    from ..compliance import load_catalog
+    from ..models import FrameworkMapping
+
+    catalog = load_catalog()
+    known = {f.get("key") if isinstance(f, dict) else f for f in catalog.get("frameworks", [])}
+    if framework not in known:
+        console.print(f"[red]unknown framework '{framework}'[/] — known: {', '.join(sorted(known))}")
+        raise typer.Exit(1)
+
+    controls = {c["key"]: c for c in catalog.get("controls", [])}
+    with _session() as session:
+        mappings = list(
+            session.scalars(
+                select(FrameworkMapping).where(FrameworkMapping.framework == framework)
+            )
+        )
+        rows = [
+            {
+                "control_key": m.control_key,
+                "reference": m.reference,
+                "status": m.review_status,
+                "reviewed_by": m.reviewed_by or "",
+            }
+            for m in mappings
+        ]
+
+    rows.sort(key=lambda r: (r["control_key"], r["reference"]))
+    drafts = [r for r in rows if r["status"] != "reviewed"]
+
+    lines = [
+        f"# Compliance mapping review packet — {framework}",
+        "",
+        f"{len(rows)} mapping(s), {len(drafts)} awaiting review.",
+        "",
+        "For each row: does this control, as implemented, support the clause claimed? Approve with",
+        "`nometria compliance review <control> --framework "
+        f"{framework} --reviewer \"<your name>\"`, optionally `--reference` for a single clause.",
+        "",
+    ]
+    for key in sorted({r["control_key"] for r in rows}):
+        control = controls.get(key, {})
+        objective = " ".join(str(control.get("objective", "")).split())
+        lines += [
+            f"## {key} — {control.get('title', '')}",
+            "",
+            f"**Objective.** {objective}" if objective else "",
+            f"**Implemented by.** {', '.join(control.get('implemented_by', [])) or 'not recorded'}",
+            f"**Evidence produced.** {', '.join(control.get('evidence_sources', [])) or 'not recorded'}",
+            "",
+            "| Clause claimed | Current status | Reviewed by |",
+            "|---|---|---|",
+        ]
+        for row in [r for r in rows if r["control_key"] == key]:
+            lines.append(f"| {row['reference']} | {row['status']} | {row['reviewed_by'] or '—'} |")
+        lines.append("")
+
+    document = "\n".join(line for line in lines if line is not None)
+    if out:
+        out.write_text(document)
+        console.print(f"[green]wrote[/] {out}  [dim]{len(rows)} mapping(s), {len(drafts)} draft[/]")
+    else:
+        console.print(document)
+
+
+@compliance_app.command("review")
+def compliance_review(
+    control: str,
+    framework: str = typer.Option(..., "--framework"),
+    reviewer: str = typer.Option(..., "--reviewer", help="The human accountable for this sign-off."),
+    reference: str | None = typer.Option(
+        None, "--reference", help="Sign off one clause only; default is every clause for the control."
+    ),
+) -> None:
+    """Record a qualified reviewer's sign-off on a control's framework mapping(s).
+
+    This is an attestation by a named person, recorded and auditable. It is the step that
+    moves a mapping from `DRAFT — UNVERIFIED / NOT LEGAL ADVICE` to reviewed, and it should
+    be run by whoever is actually accountable for the claim — not by whoever runs the CLI.
+    """
+    from ..compliance.catalog import review_mapping
+
+    with _session() as session:
+        count = review_mapping(session, control, framework, reviewer, reference)
+
+    if not count:
+        console.print(
+            f"[yellow]no mapping matched[/] {control} / {framework}"
+            + (f" / {reference}" if reference else "")
+        )
+        raise typer.Exit(1)
+    console.print(f"[green]{count} mapping(s) reviewed[/] — {control} / {framework}, by {reviewer}")
+    console.print("  [dim]recorded as an attestation by that named reviewer[/]")
 
 
 @compliance_app.command("frameworks")
@@ -1034,8 +1313,29 @@ def compliance_board() -> None:
 
 
 @redteam_app.command("run")
-def redteam_run(agent: str, probes: str | None = None) -> None:
-    """Run adversarial probes against the deployed configuration (P4-4)."""
+def redteam_run(
+    agent: str,
+    probes: str | None = None,
+    adaptive: bool = typer.Option(
+        False,
+        "--adaptive",
+        help="Mutate a blocked probe and try again, steering from the failure. Reports a "
+        "posture delta against the last comparable campaign, not a pass rate.",
+    ),
+    budget: int = typer.Option(3, "--budget", help="Attempts per probe in adaptive mode."),
+    seed: int = typer.Option(1337, "--seed", help="Fixes the mutation program."),
+    deployment_probes: bool = typer.Option(
+        True,
+        "--deployment-probes/--no-deployment-probes",
+        help="Generate probes from this deployment's own grants, impacts and bound policies.",
+    ),
+) -> None:
+    """Run adversarial probes against the deployed configuration (P4-4).
+
+    This measures whether *this configuration* got weaker, against known attack classes.
+    It is not a robustness certificate, and `--adaptive` does not make it one: every
+    published result says an attacker who adapts eventually gets through.
+    """
     from sqlalchemy import select
 
     from ..evaluation import run_campaign
@@ -1043,7 +1343,15 @@ def redteam_run(agent: str, probes: str | None = None) -> None:
 
     keys = [p.strip() for p in probes.split(",")] if probes else None
     with _session() as session:
-        campaign = run_campaign(session, agent, probes=keys)
+        campaign = run_campaign(
+            session,
+            agent,
+            probes=keys,
+            adaptive=adaptive,
+            budget=budget,
+            seed=seed,
+            include_deployment_probes=deployment_probes,
+        )
         stats = campaign.summary_json
         findings = list(
             session.scalars(select(RedTeamFinding).where(RedTeamFinding.campaign_id == campaign.id))
@@ -1079,6 +1387,34 @@ def redteam_run(agent: str, probes: str | None = None) -> None:
             else f"  precision [bold]{stats.get('precision', 1.0):.0%}[/] — "
             "[green]no benign controls wrongly blocked[/]"
         )
+    # Adaptive mode answers a different question from the static suite, so it leads with
+    # a different line: not "what share did we catch" but "did this deployment get weaker".
+    if stats.get("headline"):
+        console.print(f"\n  [bold]{stats['headline']}[/]")
+    posture = stats.get("posture") or {}
+    if posture.get("direction") and posture["direction"] != "no_baseline":
+        colour = {"weaker": "red", "stronger": "green"}.get(posture["direction"], "dim")
+        console.print(
+            f"  posture [{colour}]{posture['direction']}[/] vs. the last comparable campaign — "
+            f"{len(posture.get('new_escapes') or [])} new escape(s), "
+            f"{len(posture.get('resolved_escapes') or [])} resolved"
+        )
+    elif adaptive and not stats.get("headline"):
+        console.print("  [dim]no comparable baseline yet — this campaign becomes it[/]")
+    adaptive_stats = stats.get("adaptive") or {}
+    by_class = adaptive_stats.get("escape_rate_by_semantics") or {}
+    if by_class:
+        console.print(
+            "  escapes by payload kind: "
+            + "  ".join(f"{name} {value}" for name, value in sorted(by_class.items()))
+        )
+    if adaptive_stats.get("observe_mode_policies"):
+        console.print(
+            "  [yellow]note[/] — "
+            f"{', '.join(adaptive_stats['observe_mode_policies'])} bound in observe mode; "
+            "probes score the counterfactual verdict, so this campaign cannot see that."
+        )
+
     table = Table(box=None, pad_edge=False)
     for column in ("probe", "severity", "OWASP", "verdict", "result"):
         table.add_column(column, style="bold" if column == "probe" else None)
@@ -1124,13 +1460,35 @@ def redteam_probes() -> None:
 
 
 @scan_app.command("mcp")
-def scan_mcp(server: str, file: Path | None = typer.Option(None, help="Tool list JSON.")) -> None:
+def scan_mcp(
+    server: str,
+    file: Path | None = typer.Option(
+        None, "--file", help="Tool list JSON (what the server's tools/list returned)."
+    ),
+    seed_fixture: bool = typer.Option(
+        False,
+        "--seed-fixture",
+        help="Scan the built-in demo tool list instead of --file. For demos only.",
+    ),
+) -> None:
     """Snapshot an MCP server's tools and check hygiene (P1-5)."""
     from sqlalchemy import select
 
     from ..models import McpServer
     from ..registry.service import scan_mcp_server
     from ..seed import MCP_TOOLS
+
+    if file is None and not seed_fixture:
+        # Silently scanning the seed fixture reported a clean (or dirty) bill of health
+        # for tools that server never declared.
+        console.print(
+            "[red]--file is required[/] — pass the server's tool list as JSON. "
+            "[dim](--seed-fixture scans the built-in demo tool list instead.)[/]"
+        )
+        raise typer.Exit(2)
+    if file is not None and seed_fixture:
+        console.print("[red]pass either --file or --seed-fixture, not both[/]")
+        raise typer.Exit(2)
 
     tools = json.loads(file.read_text()) if file else MCP_TOOLS
     with _session() as session:
@@ -1192,6 +1550,90 @@ def analyse_action(
         console.print(f"  [{risk_colour}]{risk['severity']}[/] {risk['code']} — {risk['detail']}")
     if summary.get("critical"):
         raise typer.Exit(1)
+
+
+@tools_app.command("declare")
+def tools_declare(
+    key: str,
+    impact: str = typer.Option(
+        ...,
+        "--impact",
+        help="read | write | high_impact | irreversible — the axis every containment rule reasons over.",
+    ),
+    name: str = typer.Option("", "--name"),
+    description: str = typer.Option("", "--description"),
+    triggers: str = typer.Option("", "--triggers", help="Comma-separated downstream effects."),
+) -> None:
+    """Declare a tool and what it can do (P9).
+
+    Containment is declared, not detected: an irreversible tool recorded as `read` is one
+    a tainted argument can reach. This is the command that makes least privilege real, and
+    it is deliberately the first thing `nometria init` points at.
+    """
+    from ..registry.service import upsert_tool
+
+    valid = ("read", "write", "high_impact", "irreversible")
+    if impact not in valid:
+        console.print(f"[red]impact must be one of: {', '.join(valid)}[/]")
+        raise typer.Exit(2)
+
+    with _session() as session:
+        tool = upsert_tool(
+            session,
+            key,
+            name=name,
+            impact=impact,
+            description=description,
+        )
+        if triggers:
+            tool.triggers_json = [t.strip() for t in triggers.split(",") if t.strip()]
+        declared_triggers = list(tool.triggers_json or [])
+
+    console.print(f"[bold]{key}[/] declared — impact [bold]{impact}[/]")
+    if declared_triggers:
+        console.print(f"  triggers: {', '.join(declared_triggers)}")
+    if impact in ("high_impact", "irreversible"):
+        console.print(
+            "  [dim]arguments carrying untrusted provenance now require approval or are "
+            "refused, whether or not a detector fires[/]"
+        )
+
+
+@tools_app.command("list")
+def tools_list(as_json: bool = typer.Option(False, "--json")) -> None:
+    """Every declared tool and what it is allowed to do."""
+    from sqlalchemy import select
+
+    from ..models import Tool
+
+    with _session() as session:
+        tools = list(session.scalars(select(Tool).order_by(Tool.key)))
+        rows = [
+            {
+                "key": t.key,
+                "impact": t.impact,
+                "triggers": list(t.triggers_json or []),
+                "description": t.description,
+            }
+            for t in tools
+        ]
+
+    if as_json:
+        _emit(rows, True)
+        return
+    if not rows:
+        console.print("[yellow]no tools declared[/] — `nometria tools declare <key> --impact ...`")
+        return
+    table = Table(box=None, padding=(0, 2))
+    table.add_column("tool")
+    table.add_column("impact")
+    table.add_column("triggers")
+    for row in rows:
+        colour = {"irreversible": "red", "high_impact": "yellow", "write": "cyan"}.get(
+            row["impact"], "dim"
+        )
+        table.add_row(row["key"], f"[{colour}]{row['impact']}[/]", ", ".join(row["triggers"]) or "—")
+    console.print(table)
 
 
 @tools_app.command("set-triggers")
