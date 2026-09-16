@@ -17,7 +17,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ...guardrails.tuning import (
+    LABEL_REFUSED_ROLES,
     LABELS,
+    SUPPRESSION_SCOPES,
     active_suppressions,
     apply_suppression,
     latency_report,
@@ -72,7 +74,18 @@ def submit_feedback(
     session: Session = Depends(db),
     user: User = Depends(current_user),
 ) -> dict[str, Any]:
-    """ "This was wrong", attached to the decision it is about."""
+    """ "This was wrong", attached to the decision it is about.
+
+    The label's author is the signed-in caller and nobody else — the request body has
+    no actor field to spoof. Filing it again for the same decision changes the caller's
+    label rather than adding a vote. Auditors are refused: they observe the controls,
+    and a control its auditor can tune is not independently audited.
+    """
+    if user.role in LABEL_REFUSED_ROLES:
+        raise HTTPException(
+            403,
+            f"role '{user.role}' observes guardrails and may not label their decisions",
+        )
     try:
         feedback = record_feedback(
             session,
@@ -81,12 +94,14 @@ def submit_feedback(
             detector_key=payload.detector_key,
             entity_type=payload.entity_type,
             note=payload.note,
-            actor=user.email,
+            actor=user.email or user.id,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return {
         "id": feedback.id,
+        "decision_id": feedback.decision_id,
+        "actor": feedback.actor,
         "label": feedback.label,
         "detector_key": feedback.detector_key,
         "entity_type": feedback.entity_type,
@@ -169,7 +184,7 @@ def recommendations(
 
 class SuppressionRequest(BaseModel):
     feedback_id: str
-    scope: str = Field("agent", description="agent | global")
+    scope: str = Field("agent", description=" | ".join(SUPPRESSION_SCOPES))
     ttl_days: int = Field(30, ge=1, le=365)
     exact: bool = Field(False, description="suppress only this exact matched text")
     reason: str = ""

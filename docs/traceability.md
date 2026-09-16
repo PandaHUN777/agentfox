@@ -56,7 +56,7 @@ are [§6.3](PRD.md#63-out-of-scope-for-mvp-v01).
 | **P4-1** Offline eval + CI gating | ✅ | `evaluation/runner.py`, `evaluation/gating.py::gate, to_junit, to_sarif` | NOM-EVL-01 | `test_evaluation.py::test_gate_passes_against_itself`, `::test_gate_respects_scorer_direction`, `::test_gate_reports_are_wellformed` |
 | **P4-2** Online eval + drift | ✅ | `evaluation/runner.py::sample_production`, `evaluation/drift.py::compute` | NOM-EVL-02 | `::test_psi_rises_on_shift`, `::test_ks_statistic` |
 | **P4-3** Silent-failure detection | ✅ | `evaluation/silent_failure.py` — all six signal families | NOM-EVL-03 | `::test_ensemble_flags_confident_and_wrong`, `::test_refusal_is_not_a_silent_failure`, `::test_groundedness_alone_can_trip_the_ensemble` |
-| **P4-4** Automated red-teaming | ◐ probe suite + adapters; no scheduled campaigns | `evaluation/redteam.py` | NOM-EVL-04 | `::test_campaign_produces_posture`, `::test_campaign_blocks_injection_probes_when_enforcing` |
+| **P4-4** Automated red-teaming | ✅ probe suite, adapters, adaptive search; weekly posture schedule per tenant (opt-in) | `evaluation/redteam.py`, `job_handlers.py::redteam_posture` | NOM-EVL-04 | `::test_campaign_produces_posture`, `::test_campaign_blocks_injection_probes_when_enforcing` |
 | **P4-5** Scorer library & custom scorers | ✅ | `evaluation/scorers.py` | NOM-EVL-01 | `::test_task_completion_does_not_punish_correct_answers` |
 | **P4-6** Datasets & golden sets | ✅ | `models.py::EvalSuite/EvalCase`, `gateway/routes/evaluation.py::promote_trace` | NOM-EVL-01 | `::test_runner_scores_every_case` |
 | **P4-7** Reliability SLOs | ✅ | `evaluation/drift.py::evaluate_slos` | NOM-EVL-05 | surfaced via `/api/agents/{slug}/posture` |
@@ -141,7 +141,7 @@ are [§6.3](PRD.md#63-out-of-scope-for-mvp-v01).
 ## Known gaps carried from PRD §6.3
 
 Multi-tenancy enforcement · live IdP (OIDC/SAML) integration · managed cloud, billing
-· scheduled red-team campaigns · cross-org benchmarking · partner marketplace ·
+· cross-org benchmarking · partner marketplace ·
 non-text modalities · credential brokerage (P2-6) · automated retention deletion ·
 framework-mapping diff engine (P6-8) · load testing (NFR-3).
 

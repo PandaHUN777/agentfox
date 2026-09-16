@@ -24,7 +24,9 @@ REJECTED = "rejected"
 ROLLED_BACK = "rolled_back"
 SUPERSEDED = "superseded"
 
-STATUSES = (PROPOSED, PROVEN, APPROVED, CANARY, APPLIED, VERIFIED, REJECTED, ROLLED_BACK, SUPERSEDED)
+STATUSES = (
+    PROPOSED, PROVEN, APPROVED, CANARY, APPLIED, VERIFIED, REJECTED, ROLLED_BACK, SUPERSEDED
+)
 TERMINAL = frozenset({VERIFIED, REJECTED, ROLLED_BACK, SUPERSEDED})
 #: Still awaiting a decision or an outcome — the set dedupe and inbox views care about.
 OPEN = frozenset({PROPOSED, PROVEN, APPROVED, CANARY, APPLIED})
@@ -91,6 +93,16 @@ def may_apply_automatically(*, direction: str, kind: str, autonomy_level: str) -
     if kind in NEVER_AUTOMATIC_KINDS:
         return False
     return autonomy_level in AUTO_APPLY_LEVELS
+
+
+def may_rollback_automatically(*, direction: str) -> bool:
+    """Can the loop undo this change with no person deciding?
+
+    Undoing a change runs its direction backwards. Reverting a tightening loosens a
+    control, so it falls under the same rule as any other loosening: a person decides.
+    Reverting a loosening or a neutral change is always safe to automate.
+    """
+    return direction in DIRECTIONS and direction != TIGHTENS
 
 
 def requires_second_approver(*, direction: str, scope_level: str) -> bool:

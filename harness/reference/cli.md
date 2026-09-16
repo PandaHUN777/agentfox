@@ -26,7 +26,7 @@ installed console script, use `uv run nometria …` or `python -m nometria.cli.m
 
 `--json` exists **only** on: `agents list`, `check`, `doctor`, `findings`, `quickscan`,
 `auth tokens`, `sources list`, `guardrails check`, `guardrails catalogue`,
-`guardrails compile`. Everything else prints Rich tables — parse text, or prefer the
+`guardrails compile`, `proposals list`, `proposals show`, `proposals from-labels`. Everything else prints Rich tables — parse text, or prefer the
 HTTP API (`reference/http-api.md`) when you need structure.
 
 ## Onboarding and top level
@@ -145,6 +145,21 @@ All framework mappings are `review_status: draft` and ship chip-labelled
 | `guardrails show [KEY]` · `guardrails graph` | R | Resolved bands · the decision path stage by stage. |
 | `guardrails test KEY "V1,V2,..."` | R | Try values against a rule. |
 | `guardrails check [--json]` | R | **Exit 1 if two teams' rules conflict.** |
+
+## `proposals` — governed changes (improvement loop)
+
+Every change the improvement loop wants to make is a proposal. A proposal moves from
+proposed to proven, approved, canary, applied and verified, or ends rejected, rolled back
+or superseded. A change that loosens a control is never applied automatically.
+
+| Command | Effect | Notes |
+|---|---|---|
+| `proposals list [--status] [--kind] [--scope] [--json]` | R | Newest first; loosening changes are shown in red. |
+| `proposals show ID [--json]` | R | Diff, evidence, proof and the decision trail. |
+| `proposals from-labels [--days 30] [--json]` | W | Turns labelled false positives into rule cut-off proposals. Files proposals only and applies nothing. Also runs daily as the `tuning.propose` job. |
+| `proposals approve ID --actor --note` · `proposals reject ID --actor --note` | W | An org-level loosening needs two different approvers. |
+| `proposals apply ID [--actor] [--automated]` | **BLK** | Changes live configuration, directly or through a canary. `--automated` runs every automation check and refuses loosening changes. |
+| `proposals rollback ID --actor --reason` | **BLK** | Undoing a tightening loosens a control, so only a person can do it. |
 
 ## `mcp` — MCP server for agents
 

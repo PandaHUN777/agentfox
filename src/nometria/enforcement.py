@@ -97,6 +97,7 @@ from .guardrails.actions import summarise as summarise_actions
 from .guardrails.base import taint_rank
 from .guardrails.composition import check_composed_escalation
 from .guardrails.taint import _flatten
+from .findings import raise_finding, record_detector_health
 from .guardrails.tuning import (
     LatencyLedger,
     active_suppressions,
@@ -121,7 +122,6 @@ from .models import (
     Decision,
     DetectionFinding,
     DetectorRun,
-    Finding,
     Identity,
     MemoryEntry,
     TaintTag,
@@ -646,20 +646,22 @@ class Enforcer:
         # currency mismatch, and the failure this addresses is *silent* wrongness —
         # surfacing it is the control.
         for issue in evidence.get("evidence_issues", []):
-            self.session.add(
-                Finding(
-                    type=issue["type"],
-                    severity=issue.get("severity", "medium"),
-                    title=issue["title"],
-                    subject_type="agent",
-                    subject_id=agent.id if agent else None,
-                    evidence_json={**issue, "trace_id": trace_id},
-                    # F2/F7 evidence issues evidence NOM-RTG-12; the F6/F8 issues that
-                    # now flow through this same loop evidence different controls and
-                    # say so, rather than being filed under a control they do not
-                    # support.
-                    control_keys=issue.get("control_keys") or ["NOM-RTG-12"],
-                )
+            raise_finding(
+                self.session,
+                type=issue["type"],
+                severity=issue.get("severity", "medium"),
+                title=issue["title"],
+                subject_type="agent",
+                subject_id=agent.id if agent else None,
+                evidence={**issue, "trace_id": trace_id},
+                # F2/F7 evidence issues evidence NOM-RTG-12; the F6/F8 issues that
+                # now flow through this same loop evidence different controls and
+                # say so, rather than being filed under a control they do not
+                # support.
+                control_keys=issue.get("control_keys") or ["NOM-RTG-12"],
+                # One finding per (agent, issue type, issue code, surface): the same
+                # integrity failure on every answer is one problem with a count.
+                fingerprint_parts=(issue.get("code"), surface),
             )
 
         # P9: a critical action risk stands on its own, exactly as a capability denial
@@ -881,18 +883,7 @@ class Enforcer:
                 duration_ms=latency_ms,
             )
 
-        if pipeline_result.degraded:
-            self.session.add(
-                Finding(
-                    type="budget_breach",
-                    severity="medium",
-                    title=f"Detector(s) degraded on {surface}: {pipeline_result.degraded}",
-                    subject_type="agent",
-                    subject_id=agent.id if agent else None,
-                    evidence_json=pipeline_result.summary(),
-                    control_keys=["NOM-RTG-06"],
-                )
-            )
+        self._record_degradation(agent, surface, pipeline_result)
 
         chain.append(
             self.session,
@@ -1462,16 +1453,16 @@ class Enforcer:
             return
         verdict = classify_answerability(answer, boundary)
         for breach in verify_boundary(answer, verdict, boundary):
-            self.session.add(
-                Finding(
-                    type="boundary_breach",
-                    severity="medium",
-                    title=f"Answer exceeded the declared knowledge boundary: {breach['breach']}",
-                    subject_type="agent",
-                    subject_id=agent.id if agent else None,
-                    evidence_json={**breach, "trace_id": trace.id},
-                    control_keys=["NOM-RTG-11"],
-                )
+            raise_finding(
+                self.session,
+                type="boundary_breach",
+                severity="medium",
+                title=f"Answer exceeded the declared knowledge boundary: {breach['breach']}",
+                subject_type="agent",
+                subject_id=agent.id if agent else None,
+                evidence={**breach, "trace_id": trace.id},
+                control_keys=["NOM-RTG-11"],
+                fingerprint_parts=(breach.get("breach"),),
             )
         detect_over_refusal(
             self.session,
@@ -2845,32 +2836,44 @@ class Enforcer:
         entity_types = sorted(by_entity)
         severity = "high" if effective in ("block", "escalate") else "medium"
 
-        self.session.add(
-            Finding(
-                type="guardrail_detection",
-                severity=severity,
-                title=f"{effective.capitalize()}ed on {surface}: {', '.join(entity_types)}",
-                subject_type="agent",
-                subject_id=agent.id if agent else None,
-                evidence_json={
-                    "trace_id": trace_id,
-                    "decision_id": decision_id,
-                    "surface": surface,
-                    "verdict": effective,
-                    "reason": reason,
-                    "detections": [
-                        {
-                            "entity_type": d.entity_type,
-                            "score": d.score,
-                            "sample": d.sample,
-                            "owasp_id": d.owasp_id,
-                            "atlas_id": d.atlas_id,
-                        }
-                        for d in by_entity.values()
-                    ],
-                },
-                control_keys=controls,
-            )
+        # One finding per (agent, surface, verdict, entity set): the same detector firing
+        # on the same kind of content is one pattern with a count, and the refreshed
+        # evidence always points at the latest decision.
+        raise_finding(
+            self.session,
+            type="guardrail_detection",
+            severity=severity,
+            title=f"{effective.capitalize()}ed on {surface}: {', '.join(entity_types)}",
+            subject_type="agent",
+            subject_id=agent.id if agent else None,
+            fingerprint_parts=(surface, effective, *entity_types),
+            evidence={
+                "trace_id": trace_id,
+                "decision_id": decision_id,
+                "surface": surface,
+                "verdict": effective,
+                "reason": reason,
+                "detections": [
+                    {
+                        "entity_type": d.entity_type,
+                        "score": d.score,
+                        "sample": d.sample,
+                        "owasp_id": d.owasp_id,
+                        "atlas_id": d.atlas_id,
+                    }
+                    for d in by_entity.values()
+                ],
+            },
+            control_keys=controls,
+        )
+
+    def _record_degradation(self, agent: Agent | None, surface: str, pipeline_result) -> None:
+        """P3-7: a degraded detector is a finding — one per detector, closed on recovery."""
+        record_detector_health(
+            self.session,
+            subject_id=agent.id if agent else None,
+            surface=surface,
+            pipeline_result=pipeline_result,
         )
 
     def _persist_detectors(self, pipeline_result, trace_id: str | None, surface: str) -> list[str]:

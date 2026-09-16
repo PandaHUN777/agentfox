@@ -27,6 +27,7 @@ from argon2.exceptions import VerifyMismatchError
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..findings import auto_resolve, raise_finding
 from ..guardrails.base import taint_rank
 from ..models import (
     Agent,
@@ -478,6 +479,11 @@ def expire_stale_approvals(session: Session) -> int:
 # ---------------------------------------------------------------------------
 
 
+#: Every finding type identity posture can raise, so a posture that changed can close
+#: the finding for the posture it left.
+_POSTURE_FINDING_TYPES = ("orphaned_identity", "stale_identity", "over_privileged")
+
+
 def assess_posture(session: Session) -> list[Finding]:
     """Flag stale, over-privileged and orphaned identities.
 
@@ -512,21 +518,33 @@ def assess_posture(session: Session) -> list[Finding]:
             reasons.append("holds an unrestricted '*' tool grant")
 
         identity.posture = posture
-        if posture != "healthy":
-            findings.append(
-                Finding(
-                    type=f"{posture}_identity"
-                    if posture != "over_privileged"
-                    else "over_privileged",
-                    severity="high" if posture == "over_privileged" else "medium",
-                    title=f"Identity {identity.principal} is {posture}",
+        current_type = (
+            None
+            if posture == "healthy"
+            else (f"{posture}_identity" if posture != "over_privileged" else "over_privileged")
+        )
+        # A posture that no longer holds closes its finding: an identity that was stale
+        # and has since been used is not stale, whatever the queue still says.
+        for posture_type in _POSTURE_FINDING_TYPES:
+            if posture_type != current_type:
+                auto_resolve(
+                    session,
+                    type=posture_type,
                     subject_type="identity",
                     subject_id=identity.id,
-                    evidence_json={"reasons": reasons, "capabilities": len(caps)},
-                    control_keys=["NOM-IAM-01", "NOM-IAM-02"],
+                    note=f"identity {identity.principal} is now {posture}",
                 )
+        if posture != "healthy":
+            finding, _ = raise_finding(
+                session,
+                type=current_type,
+                severity="high" if posture == "over_privileged" else "medium",
+                title=f"Identity {identity.principal} is {posture}",
+                subject_type="identity",
+                subject_id=identity.id,
+                evidence={"reasons": reasons, "capabilities": len(caps)},
+                control_keys=["NOM-IAM-01", "NOM-IAM-02"],
             )
-    for finding in findings:
-        session.add(finding)
+            findings.append(finding)
     session.flush()
     return findings

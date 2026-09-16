@@ -28,7 +28,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..config import get_settings
-from ..models import SLO, DriftWindow, EvalResult, EvalRun, Finding, utcnow
+from ..findings import auto_resolve, raise_finding
+from ..models import SLO, DriftWindow, EvalResult, EvalRun, utcnow
 
 PSI_BANDS = ((0.1, "stable"), (0.25, "moderate"), (float("inf"), "significant"))
 
@@ -193,17 +194,31 @@ def compute(
             drifted=report.drifted,
         )
         session.add(record)
+        # One finding per (agent, scorer). Computing the view again while it is still
+        # drifted counts an occurrence; a window that no longer drifts closes it.
         if report.drifted:
-            session.add(
-                Finding(
-                    type="drift",
-                    severity="high" if report.band == "significant" else "medium",
-                    title=f"{scorer_key} drifted for {agent_slug} (PSI {value:.3f}, {report.band})",
-                    subject_type="agent",
-                    subject_id=agent_slug,
-                    evidence_json=report.to_json(),
-                    control_keys=["NOM-EVL-02"],
-                )
+            raise_finding(
+                session,
+                type="drift",
+                severity="high" if report.band == "significant" else "medium",
+                title=f"{scorer_key} drifted for {agent_slug} (PSI {value:.3f}, {report.band})",
+                subject_type="agent",
+                subject_id=agent_slug,
+                evidence=report.to_json(),
+                control_keys=["NOM-EVL-02"],
+                fingerprint_parts=(scorer_key,),
+            )
+        else:
+            auto_resolve(
+                session,
+                type="drift",
+                subject_type="agent",
+                subject_id=agent_slug,
+                fingerprint_parts=(scorer_key,),
+                note=(
+                    f"latest {scorer_key} window is within threshold "
+                    f"(PSI {value:.3f} < {threshold:.3f})"
+                ),
             )
         session.flush()
     return report

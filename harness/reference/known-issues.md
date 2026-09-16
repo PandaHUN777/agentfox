@@ -3,7 +3,7 @@ title: Known issues an agent must work around
 layer: reference
 audience: agents
 source_of_truth: this file — delete an entry in the same commit that fixes it
-verified_against: commit 6863b8b, 2026-09-15
+verified_against: branch claude/improvement-loop-phase0, 2026-09-16
 ---
 
 # Known issues
@@ -27,6 +27,21 @@ Fixed on 2026-09-15 and removed from this list: the misleading `init` message,
 `scan mcp` silently scanning the fixture, `guardrails compile --apply`, the
 `entitlement report` hint, the `compliance status --verbose` filter, the `policy effective`
 environment default, and Ctrl-C handling.
+
+## Improvement loop and scheduled work
+
+1. **Canaries now wait an hour between steps by default.** `canary/advance` holds until
+   `min_dwell_seconds` has passed. Pass `min_dwell_seconds: 0` when starting a canary in a
+   demo or test. Scheduled advancement runs hourly, but only as often as the cron actually
+   fires. On a once-a-day cron each step takes at least a day.
+2. **A canary now also rolls back when the candidate blocks much less than stable.** A
+   deliberate loosening has to raise `max_block_rate_drop` when it starts the canary.
+3. **Recording guardrail feedback needs a named person.** `record_feedback` refuses a blank
+   actor, and auditors get a 403 from the feedback route.
+4. **Threshold proposals are never applied by the loop.** Raising a rule's `min_score` loosens it,
+   so `proposals from-labels` only files proposals. A person approves and applies each one.
+5. **Undoing a tightening needs a person.** `proposals rollback --automated` is refused for a
+   change that tightened a control, because reverting it would loosen one.
 
 ## `nometria.auto()` limits
 

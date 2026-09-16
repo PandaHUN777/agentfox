@@ -185,6 +185,27 @@ def append(
     return entry
 
 
+def attribution(*, automated: bool, actor: str | None = None) -> dict[str, str]:
+    """``actor_type``/``actor_id`` for an entry, splatted into :func:`append`.
+
+    An automated change is recorded under the improvement loop's own identity and the
+    distinct ``automation`` actor type — never as the person or operator who happened
+    to trigger it — so the chain can always answer "did a human decide this?". A human
+    step must name the human: an anonymous decision is refused rather than defaulted.
+    Only attribution; it has no bearing on how an entry is hashed.
+    """
+    if automated:
+        from ..improvement.contract import AUTOMATION_ACTOR_TYPE
+
+        return {
+            "actor_type": AUTOMATION_ACTOR_TYPE,
+            "actor_id": get_settings().improvement_actor_id,
+        }
+    if not (actor or "").strip():
+        raise ValueError("a human step must name the person who took it")
+    return {"actor_type": "user", "actor_id": actor.strip()}
+
+
 # ---------------------------------------------------------------------------
 # Checkpoints
 # ---------------------------------------------------------------------------

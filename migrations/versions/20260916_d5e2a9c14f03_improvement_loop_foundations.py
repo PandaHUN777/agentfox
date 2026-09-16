@@ -28,6 +28,9 @@ from alembic import op
 
 revision: str = "d5e2a9c14f03"
 down_revision: str | None = "b3f8e29a71c4"
+
+#: Frozen copy of models.PROPOSAL_OPEN_FINGERPRINT as of this revision.
+_OPEN_FINGERPRINT = "fingerprint IS NOT NULL AND status IN ('proposed', 'proven', 'approved', 'canary', 'applied')"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -73,6 +76,13 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f("ix_change_proposals_fingerprint"), ["fingerprint"], unique=False)
         batch_op.create_index(batch_op.f("ix_change_proposals_org_id"), ["org_id"], unique=False)
         batch_op.create_index("ix_proposals_status_created", ["status", "created_at"], unique=False)
+        batch_op.create_index(
+            "ux_proposals_open_fingerprint",
+            ["org_id", "fingerprint"],
+            unique=True,
+            sqlite_where=sa.text(_OPEN_FINGERPRINT),
+            postgresql_where=sa.text(_OPEN_FINGERPRINT),
+        )
 
     op.create_table(
         "job_schedules",
@@ -153,6 +163,7 @@ def downgrade() -> None:
     op.drop_table("job_schedules")
 
     with op.batch_alter_table("change_proposals", schema=None) as batch_op:
+        batch_op.drop_index("ux_proposals_open_fingerprint")
         batch_op.drop_index("ix_proposals_status_created")
         batch_op.drop_index(batch_op.f("ix_change_proposals_org_id"))
         batch_op.drop_index(batch_op.f("ix_change_proposals_fingerprint"))

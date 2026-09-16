@@ -244,8 +244,12 @@ def test_db_queue_retries_then_dead_letters_never_discarding_the_record(session)
     jobs_db.register("test.explode", explode)
     job = jobs_db.enqueue(session, "test.explode", {"trace": "t1"}, org_id="org-1", max_attempts=3)
 
-    for _ in range(3):
-        jobs_db.run_pending(session, org_id="org-1")
+    # Retries back off (jobs_db.backoff_delay), so each later pass runs an hour on.
+    import datetime as dt
+
+    start = dt.datetime.now(dt.UTC)
+    for hour in range(3):
+        jobs_db.run_pending(session, org_id="org-1", now=start + dt.timedelta(hours=hour))
 
     assert len(attempts) == 3
     session.refresh(job)

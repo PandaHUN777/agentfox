@@ -254,7 +254,8 @@ def _record_loop_stop(
     trace_id = None
     try:
         from ...audit.trace import start_trace
-        from ...models import Agent, Finding
+        from ...findings import raise_finding
+        from ...models import Agent
 
         agent = (
             session.scalar(select(Agent).where(Agent.slug == agent_slug)) if agent_slug else None
@@ -266,25 +267,27 @@ def _record_loop_stop(
             session_id=session_id,
         )
         trace_id = trace.id
-        session.add(
-            Finding(
-                type="agent_loop_stopped",
-                severity="medium",
-                title=f"Runaway tool loop stopped for '{agent_slug or 'unregistered agent'}'"[:300],
-                subject_type="agent",
-                subject_id=(agent_slug or session_id)[:120],
-                evidence_json={
-                    "decision": verdict.decision,
-                    "reason": verdict.reason,
-                    "step": verdict.step,
-                    "evidence": verdict.evidence,
-                    "session_id": session_id,
-                    "steps_seen": len(steps),
-                    "tools": [s.tool for s in steps],
-                    "trace_id": trace_id,
-                },
-                control_keys=["NOM-RTG-08"],
-            )
+        # One finding per (agent, session): a loop that keeps being stopped in the same
+        # session is one runaway with a count, not a row per refused step.
+        raise_finding(
+            session,
+            type="agent_loop_stopped",
+            severity="medium",
+            title=f"Runaway tool loop stopped for '{agent_slug or 'unregistered agent'}'"[:300],
+            subject_type="agent",
+            subject_id=(agent_slug or session_id)[:120],
+            fingerprint_parts=(session_id,),
+            evidence={
+                "decision": verdict.decision,
+                "reason": verdict.reason,
+                "step": verdict.step,
+                "evidence": verdict.evidence,
+                "session_id": session_id,
+                "steps_seen": len(steps),
+                "tools": [s.tool for s in steps],
+                "trace_id": trace_id,
+            },
+            control_keys=["NOM-RTG-08"],
         )
         session.flush()
     except Exception:  # pragma: no cover - recording must not break the refusal

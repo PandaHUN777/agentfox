@@ -63,6 +63,7 @@ from typing import Any, Protocol
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..findings import raise_finding, resolve_finding
 from ..models import Agent, Capability, Finding, RedTeamCampaign, RedTeamFinding, Tool, utcnow
 
 
@@ -1121,67 +1122,138 @@ def run_campaign(
     campaign.status = "completed"
     campaign.finished_at = utcnow()
 
+    run_keys = {o.probe.key for o in scoring}
+    breached_keys = sorted(o.probe.key for o in scoring if o.succeeded)
+    over_blocked_keys = sorted(o.probe.key for o in benign_outcomes if o.blocked)
+
+    # Identity is the set of seed probes that got through. Re-running the same campaign
+    # against the same gap counts an occurrence on one finding; a different set of
+    # escaping probes is a different problem.
+    current_breach = None
     if breaches:
-        session.add(
-            Finding(
-                type="redteam",
-                severity="critical" if campaign.summary_json["critical_breaches"] else "high",
-                title=f"Agent '{agent_slug}' did not block {breaches} of {attacks_total} simulated attacks",
-                subject_type="agent",
-                subject_id=agent_slug,
-                evidence_json=campaign.summary_json,
-                control_keys=["NOM-EVL-04", "NOM-RTG-01"],
-            )
+        current_breach, _ = raise_finding(
+            session,
+            type="redteam",
+            severity="critical" if campaign.summary_json["critical_breaches"] else "high",
+            title=f"Agent '{agent_slug}' did not block {breaches} of {attacks_total} simulated attacks",
+            subject_type="agent",
+            subject_id=agent_slug,
+            evidence={
+                **campaign.summary_json,
+                "campaign_id": campaign.id,
+                _PROBE_SET_KEY: breached_keys,
+            },
+            control_keys=["NOM-EVL-04", "NOM-RTG-01"],
+            fingerprint_parts=tuple(breached_keys),
         )
+    _close_covered(session, "redteam", agent_slug, run_keys, current_breach, campaign.id)
+
+    current_over_block = None
     if benign_false_positives:
-        session.add(
-            Finding(
-                type="redteam_over_block",
-                severity="medium",
-                title=(
-                    f"Agent '{agent_slug}' wrongly blocked {benign_false_positives} of "
-                    f"{benign_total} legitimate benign-control probes"
-                ),
-                subject_type="agent",
-                subject_id=agent_slug,
-                evidence_json=campaign.summary_json,
-                control_keys=["NOM-EVL-04"],
-            )
+        current_over_block, _ = raise_finding(
+            session,
+            type="redteam_over_block",
+            severity="medium",
+            title=(
+                f"Agent '{agent_slug}' wrongly blocked {benign_false_positives} of "
+                f"{benign_total} legitimate benign-control probes"
+            ),
+            subject_type="agent",
+            subject_id=agent_slug,
+            evidence={
+                **campaign.summary_json,
+                "campaign_id": campaign.id,
+                _PROBE_SET_KEY: over_blocked_keys,
+            },
+            control_keys=["NOM-EVL-04"],
+            fingerprint_parts=tuple(over_blocked_keys),
         )
+    _close_covered(
+        session, "redteam_over_block", agent_slug, run_keys, current_over_block, campaign.id
+    )
+
     if adaptive:
         worked = campaign.summary_json["adaptive"]["mutation_classes_that_worked"]
         if worked:
             # Surfaced as its own finding rather than left inside a rate. "Encoding
             # defeats this deployment" is an actionable sentence; "escape rate 4%"
             # is not, and is the shape that lets a real gap be shipped as a KPI.
-            session.add(
-                Finding(
-                    type="redteam_mutation_class",
-                    severity="high",
-                    title=(
-                        f"Agent '{agent_slug}': mutation class(es) {', '.join(worked)} "
-                        "defeated this configuration on a known attack class"
-                    ),
-                    subject_type="agent",
-                    subject_id=agent_slug,
-                    evidence_json=campaign.summary_json["adaptive"],
-                    control_keys=["NOM-EVL-04", "NOM-RTG-01"],
-                )
+            raise_finding(
+                session,
+                type="redteam_mutation_class",
+                severity="high",
+                title=(
+                    f"Agent '{agent_slug}': mutation class(es) {', '.join(worked)} "
+                    "defeated this configuration on a known attack class"
+                ),
+                subject_type="agent",
+                subject_id=agent_slug,
+                evidence=campaign.summary_json["adaptive"],
+                control_keys=["NOM-EVL-04", "NOM-RTG-01"],
+                fingerprint_parts=tuple(sorted(worked)),
             )
         if campaign.summary_json["posture"]["direction"] == "weaker":
-            session.add(
-                Finding(
-                    type="redteam_posture_regression",
-                    severity="high",
-                    title=campaign.summary_json["posture"]["headline"],
-                    subject_type="agent",
-                    subject_id=agent_slug,
-                    evidence_json=campaign.summary_json["posture"],
-                    control_keys=["NOM-EVL-04"],
-                )
+            raise_finding(
+                session,
+                type="redteam_posture_regression",
+                severity="high",
+                title=campaign.summary_json["posture"]["headline"],
+                subject_type="agent",
+                subject_id=agent_slug,
+                evidence=campaign.summary_json["posture"],
+                control_keys=["NOM-EVL-04"],
+                # Identity is the escaping seed-probe set, so a campaign repeated
+                # against the same regression counts rather than refiles.
+                fingerprint_parts=tuple(
+                    sorted(campaign.summary_json["adaptive"].get("escaping_probes") or [])
+                ),
             )
     session.flush()
     return campaign
+
+
+#: Evidence key naming the probe keys a campaign-level red-team finding is about.
+_PROBE_SET_KEY = "probe_keys"
+
+
+def _close_covered(
+    session: Session,
+    finding_type: str,
+    agent_slug: str,
+    run_keys: set[str],
+    current: Finding | None,
+    campaign_id: str,
+) -> None:
+    """Close open red-team findings this campaign has re-tested and no longer shows.
+
+    Only a finding whose *every* probe was run again is eligible: a campaign that ran a
+    subset has not re-tested the rest, and closing on its silence would be a claim it
+    cannot support.
+    """
+    for finding in list(
+        session.scalars(
+            select(Finding).where(
+                Finding.type == finding_type,
+                Finding.subject_type == "agent",
+                Finding.subject_id == agent_slug,
+                Finding.status == "open",
+            )
+        )
+    ):
+        if current is not None and finding.id == current.id:
+            continue
+        keys = set((finding.evidence_json or {}).get(_PROBE_SET_KEY) or [])
+        if not keys or not keys <= run_keys:
+            continue
+        note = (
+            f"campaign {campaign_id} re-ran all {len(keys)} probe(s) and none reproduced"
+            if current is None
+            else f"campaign {campaign_id} re-ran all {len(keys)} probe(s); the set that "
+            f"still reproduces is tracked as finding {current.id}"
+        )
+        resolve_finding(
+            session, finding, actor="nometria.redteam", note=note, automated=True
+        )
 
 
 def _by_category(outcomes: list[ProbeOutcome]) -> dict[str, dict[str, int]]:

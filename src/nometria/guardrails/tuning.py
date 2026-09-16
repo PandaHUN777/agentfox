@@ -35,6 +35,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..audit import chain
 from ..models import (
     Agent,
     Decision,
@@ -48,6 +49,7 @@ from ..operator_log import record
 from .base import Detection
 
 LABELS = ("false_positive", "true_positive", "false_negative")
+SUPPRESSION_SCOPES = ("agent", "global")
 
 # Below this many labelled false positives a "recommendation" is numerology. We say so
 # rather than emitting a confident number off three data points.
@@ -232,6 +234,11 @@ def explain(
     entity_types = [m.entity_type for m in matches if m.decisive] or [
         m.entity_type for m in matches
     ]
+    # The dispute names the detector that produced the decisive match. Naming the first
+    # match's detector instead filed the label against whichever detector happened to
+    # run first — a false positive recorded against a detector that did nothing wrong,
+    # which is precisely the input threshold tuning then acts on.
+    decisive_detector = next((m.detector for m in matches if m.decisive), None)
     return Explanation(
         verdict=result.verdict,
         effective_verdict=result.effective_verdict,
@@ -249,7 +256,7 @@ def explain(
             "payload": {
                 "decision_id": result.decision_id,
                 "label": "false_positive",
-                "detector_key": decisive and matches and matches[0].detector,
+                "detector_key": decisive_detector,
                 "entity_type": decisive.entity_type if decisive else None,
                 "note": "why this was wrong",
             },
@@ -386,6 +393,11 @@ def latency_report(
 # ---------------------------------------------------------------------------
 
 
+#: Roles whose labels do not shape detectors. An auditor's job is to observe the
+#: control, and a control its auditor can tune is not independently audited.
+LABEL_REFUSED_ROLES = frozenset({"auditor"})
+
+
 def record_feedback(
     session: Session,
     *,
@@ -396,9 +408,23 @@ def record_feedback(
     note: str = "",
     actor: str | None = None,
 ) -> GuardrailFeedback:
-    """P3-14 — "this was wrong", attached to the decision it is about."""
+    """P3-14 — "this was wrong", attached to the decision it is about.
+
+    Labels are the input precision reporting, threshold recommendations and the
+    improvement loop all trust, so three rules hold here rather than at each caller:
+
+    * **A label has an author.** ``actor`` is required and must be the authenticated
+      identity — the HTTP route passes the signed-in user, never a body field.
+    * **One label per decision per person.** Labelling the same decision again changes
+      that person's label instead of adding a row; otherwise one insistent reviewer
+      outvotes a team and a precision number becomes a measure of persistence.
+    * **Every label is on the audit chain,** and a change records what it was before.
+    """
     if label not in LABELS:
         raise ValueError(f"label must be one of {LABELS}")
+    actor = (actor or "").strip()
+    if not actor:
+        raise ValueError("feedback needs the identity of the person filing it")
     decision = session.get(Decision, decision_id)
     if decision is None:
         raise ValueError("unknown decision")
@@ -422,6 +448,39 @@ def record_feedback(
         )
         entity_type = finding.entity_type if finding else None
 
+    existing = session.scalar(
+        select(GuardrailFeedback)
+        .where(GuardrailFeedback.decision_id == decision_id, GuardrailFeedback.actor == actor)
+        .order_by(GuardrailFeedback.created_at.desc(), GuardrailFeedback.id.desc())
+        .limit(1)
+    )
+    if existing is not None:
+        before = _feedback_state(existing)
+        if existing.status == "applied" and existing.label != label:
+            raise ValueError(
+                "this label backs an applied suppression; revoke the suppression before "
+                "changing the label it was granted on"
+            )
+        existing.label = label
+        existing.detector_key = detector_key
+        existing.entity_type = entity_type
+        existing.score = score
+        existing.verdict = decision.verdict
+        existing.note = note
+        session.flush()
+        after = _feedback_state(existing)
+        if after != before:
+            chain.append(
+                session,
+                "guardrail.feedback.changed",
+                actor_type="user",
+                actor_id=actor,
+                subject_type="decision",
+                subject_id=decision_id,
+                payload={"feedback_id": existing.id, "before": before, "after": after},
+            )
+        return existing
+
     feedback = GuardrailFeedback(
         decision_id=decision_id,
         trace_id=decision.trace_id,
@@ -436,7 +495,26 @@ def record_feedback(
     )
     session.add(feedback)
     session.flush()
+    chain.append(
+        session,
+        "guardrail.feedback.recorded",
+        actor_type="user",
+        actor_id=actor,
+        subject_type="decision",
+        subject_id=decision_id,
+        payload={"feedback_id": feedback.id, "after": _feedback_state(feedback)},
+    )
     return feedback
+
+
+def _feedback_state(row: GuardrailFeedback) -> dict[str, Any]:
+    return {
+        "label": row.label,
+        "detector_key": row.detector_key,
+        "entity_type": row.entity_type,
+        "score": round(float(row.score or 0.0), 4),
+        "note": row.note,
+    }
 
 
 def precision_report(
@@ -613,6 +691,10 @@ def apply_suppression(
     right: a pattern that is noise for one agent is usually signal for another. A
     global suppression is possible but must be asked for.
     """
+    if scope not in SUPPRESSION_SCOPES:
+        # Anything but an exact "agent" used to fall through to a global suppression —
+        # a typo silencing a detector for every agent in the tenant.
+        raise ValueError(f"scope must be one of {SUPPRESSION_SCOPES}, got {scope!r}")
     feedback = session.get(GuardrailFeedback, feedback_id)
     if feedback is None:
         raise ValueError("unknown feedback")
@@ -621,12 +703,28 @@ def apply_suppression(
     if not feedback.detector_key:
         raise ValueError("feedback has no detector to suppress")
 
-    hashed = None
-    if exact and feedback.decision_id:
-        finding = session.scalar(
-            select(DetectionFinding).where(DetectionFinding.trace_id == feedback.trace_id)
+    if scope == "agent" and not feedback.agent_id:
+        raise ValueError(
+            "feedback is not attributed to an agent, so an agent-scoped suppression has "
+            "nothing to scope to; ask for scope='global' explicitly if that is intended"
         )
+
+    hashed = None
+    if exact:
+        # The sample is the one this decision's run of *this* detector matched, highest
+        # score first. Looking it up by trace alone, unordered, hashed whichever
+        # detection the database returned first — possibly another detector's, or
+        # another decision's on the same trace — so the "exact" suppression silenced
+        # text nobody had labelled.
+        finding = _labelled_detection(session, feedback)
         hashed = sample_hash(finding.sample) if finding and finding.sample else None
+        if hashed is None:
+            # Falling back to a class-wide suppression when an exact one was asked for
+            # would be a wider exception than anyone approved.
+            raise ValueError(
+                "no matched sample is recorded for this decision's detector, so an "
+                "exact-match suppression cannot be built"
+            )
 
     suppression = Suppression(
         feedback_id=feedback.id,
@@ -660,6 +758,29 @@ def apply_suppression(
         },
     )
     return suppression
+
+
+def _labelled_detection(session: Session, feedback: GuardrailFeedback) -> DetectionFinding | None:
+    """The detection a label is about: this decision, this detector, this entity."""
+    decision = session.get(Decision, feedback.decision_id) if feedback.decision_id else None
+    if decision is None or not decision.detector_run_ids:
+        return None
+    run_ids = list(
+        session.scalars(
+            select(DetectorRun.id).where(
+                DetectorRun.id.in_(list(decision.detector_run_ids)),
+                DetectorRun.detector_key == feedback.detector_key,
+            )
+        )
+    )
+    if not run_ids:
+        return None
+    stmt = select(DetectionFinding).where(DetectionFinding.detector_run_id.in_(run_ids))
+    if feedback.entity_type:
+        stmt = stmt.where(DetectionFinding.entity_type == feedback.entity_type)
+    return session.scalar(
+        stmt.order_by(DetectionFinding.score.desc(), DetectionFinding.id).limit(1)
+    )
 
 
 def active_suppressions(session: Session, agent_id: str | None) -> list[Suppression]:

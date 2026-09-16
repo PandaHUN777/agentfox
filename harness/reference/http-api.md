@@ -59,20 +59,21 @@ curl -s localhost:8080/v1/guard/input -H 'content-type: application/json' \
 | Health | `GET /api/health`, `GET /api/version`, `GET /metrics` (no auth) · `GET /api/me`, `GET /api/onboarding`, `GET /api/attention?hours=` |
 | Agents | `GET/POST /api/agents`, `GET/PATCH /api/agents/{slug}`, `GET …/lineage?depth=`, `GET …/posture`, `POST …/quarantine`, `…/kill`, `…/resume`, `GET /api/agent-controls` |
 | Discovery | `GET /api/discovery/shadow?window_days=`, `POST /api/discovery/scan`, `POST /api/discovery/submit` |
-| Findings | `GET /api/findings`, `GET /api/findings/{id}`, `PATCH /api/findings/{id}` `{status, suppression_reason?, note?}` — suppress needs a reason, resolve needs a note |
+| Findings | `GET /api/findings`, `GET /api/findings/{id}`, `PATCH /api/findings/{id}` `{status, suppression_reason?, note?}`. Status must be open, suppressed or resolved; suppressing needs a reason and resolving needs a note. A recurring problem updates one finding's `occurrences` rather than adding rows. |
 | Approvals | `GET /api/approvals?status=pending`, `POST /api/approvals/{id}/approve`, `…/deny` |
 | Policies | `GET /api/policies`, `GET /api/policies/{key}`, `GET …/{key}/rego`, `GET /api/policies/effective`, `GET /api/policies/lint`, `POST /api/policies/validate` (no auth), `POST /api/policies/simulate`, `POST /api/policies` `{body: <yaml>, notes, mode?}`, `POST /api/policies/{key}/mode` |
-| Canary rollout | `POST /api/policies/{key}/canary/start`, `GET …/canary`, `POST …/canary/advance`, `…/canary/rollback` |
+| Canary rollout | `POST /api/policies/{key}/canary/start` `{…, max_block_rate_drop?, min_dwell_seconds?}` (rolls back if the candidate blocks much more *or* much less than stable), `GET …/canary`, `POST …/canary/advance`, `…/canary/rollback` |
 | Tools / MCP | `GET/POST /api/tools`, `GET/POST /api/mcp-servers`, `POST /api/mcp-servers/{name}/scan` |
 | Identity | `GET /api/identities`, `POST /api/identities/{id}/capabilities`, `POST /api/identities/{id}/check`, credentials issue/rotate/revoke |
-| Eval | `GET/POST /api/eval/suites`, `POST /api/eval/suites/{key}/cases`, `…/cases/from-trace?trace_id=`, `POST /api/eval/runs`, `POST /api/eval/gate`, `POST /api/eval/baselines`, `GET /api/eval/drift`, `GET/POST /api/eval/slos` |
-| Red team | `GET /api/redteam/probes`, `GET/POST /api/redteam/campaigns` |
+| Eval | `GET/POST /api/eval/suites`, `POST /api/eval/suites/{key}/cases`, `…/cases/from-trace?trace_id=`, `POST /api/eval/runs`, `POST /api/eval/gate`, `POST /api/eval/baselines`, `GET /api/eval/drift` (read-only), `POST /api/eval/drift` (records a window and finding), `GET/POST /api/eval/slos` |
+| Red team | `GET /api/redteam/probes`, `GET/POST /api/redteam/campaigns` `{agent, adaptive?, budget?, seed?, include_deployment_probes?}` |
 | Traces / audit | `GET /api/traces`, `GET /api/traces/{id}`, `GET /api/audit/entries`, `POST /api/audit/verify`, `POST /api/audit/checkpoint`, `GET /api/export/siem` |
 | Evidence | `POST /api/evidence` `{agents, controls, period_from, period_to}`, `GET /api/evidence`, `GET /api/evidence/{id}/download` |
 | Compliance | `GET /api/controls`, `POST /api/controls/sync`, `…/compute`, `GET /api/frameworks`, `GET /api/compliance/status`, `GET /api/risk/register`, `GET /api/obligations`, `GET /api/board` |
 | Agent controls | `/api/answerability/*`, `/api/sources/*`, `/api/escalation/*`, `/api/entitlement/*`, `/api/memory/*` |
 | Guardrail tuning | `GET /api/guardrails/latency`, `…/precision`, `…/recommendations`, `POST/GET …/feedback`, `POST/GET/DELETE …/suppressions` |
-| Jobs | `GET /api/jobs`, `POST /api/jobs/{id}/retry`, `POST /api/internal/jobs/run` (cron secret) |
+| Proposals | `GET /api/proposals?status=&kind=&scope_level=`, `GET /api/proposals/{id}`, `POST …/{id}/decide` `{approve, note}`, `POST …/{id}/apply`, `POST …/{id}/rollback` `{reason}`, `POST …/{id}/verify` `{verified, note}`. Actors come from auth; apply, rollback and verify need `policy_production`. |
+| Jobs | `GET /api/jobs`, `POST /api/jobs/{id}/retry`, `GET` or `POST /api/internal/jobs/run` (cron secret). Each cron run creates default schedules, recovers stuck jobs and runs due work. A failed first attempt of evidence or red-team work returns 202 `queued_for_retry`. |
 | Playground | `/api/playground/*` — unauthenticated, rate-limited, sandboxed per session |
 
 For push-style integration there are **finding webhooks** (`NOMETRIA_WEBHOOK_URL`, see

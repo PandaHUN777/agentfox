@@ -156,7 +156,11 @@ def test_canary_rollout_holds_when_sample_too_small(session):
 
 def test_canary_rollout_advances_when_healthy(session):
     policy, v1, v2 = _make_two_versions(session)
-    canary = start_canary(session, "canary-test", steps=[10, 50, 100], min_sample=20)
+    # No dwell: this test is about the health decision, not the rate limit on advancing
+    # (settings default a dwell time; see tests/test_canary_two_way_gate.py).
+    canary = start_canary(
+        session, "canary-test", steps=[10, 50, 100], min_sample=20, min_dwell_seconds=0
+    )
     _record_decisions(session, v1.id, total=100, blocked=5)  # 5% stable
     _record_decisions(session, v2.id, total=25, blocked=1)  # 4% candidate — healthy
     result = canary_rollout(session, canary.id)
@@ -167,7 +171,7 @@ def test_canary_rollout_advances_when_healthy(session):
 
 def test_canary_rollout_completes_and_promotes_candidate_on_last_step(session):
     policy, v1, v2 = _make_two_versions(session)
-    canary = start_canary(session, "canary-test", steps=[100], min_sample=5)
+    canary = start_canary(session, "canary-test", steps=[100], min_sample=5, min_dwell_seconds=0)
     _record_decisions(session, v1.id, total=10, blocked=1)
     _record_decisions(session, v2.id, total=10, blocked=1)
     result = canary_rollout(session, canary.id)

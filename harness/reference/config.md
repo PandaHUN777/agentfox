@@ -41,7 +41,7 @@ Settings are cached per process, so restart after changing them.
 | `NOMETRIA_AUDIT_SIGNING_KEY` | `dev-insecure-checkpoint-key` | **Must be changed in production.** |
 | `NOMETRIA_SERVICE_AUTH_SECRET` | `dev-insecure-service-secret` | Dashboard OAuth callback. **Must be changed in production.** |
 | `NOMETRIA_TOKEN_ENCRYPTION_KEY` | unset | Fernet key for stored GitHub tokens; that feature fails closed without it. |
-| `NOMETRIA_CRON_SECRET` | unset | Required for `/api/internal/jobs/run` (deferred job queue). |
+| `NOMETRIA_CRON_SECRET` (or `CRON_SECRET`) | unset | Required for `/api/internal/jobs/run`, which accepts GET (Vercel Cron) or POST. Returns 503 if unset. |
 
 ## Budgets and reliability
 
@@ -58,6 +58,18 @@ Settings are cached per process, so restart after changing them.
 | `NOMETRIA_EMBEDDING_SIMILARITY_ATTACK_THRESHOLD` / `_BENIGN_MARGIN` | 0.6 / 0.05 — `injection.similarity` cut-offs |
 | `NOMETRIA_PROMPT_INJECTION_CLASSIFIER_SECONDARY_THRESHOLD` | 0.92 — the backstop classifier's bar (llm-guard's default for that model) |
 | `NOMETRIA_POLICY_ENGINE` / `OPA_URL` | `native` / `http://localhost:8181` |
+
+## Improvement loop and scheduler
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `NOMETRIA_IMPROVEMENT_FROZEN` | `false` | Kill switch. While true nothing is applied automatically, but proposals are still filed. |
+| `NOMETRIA_IMPROVEMENT_ACTOR_ID` | `nometria-improver` | The name automated steps are recorded under on the audit chain. |
+| `NOMETRIA_IMPROVEMENT_MAX_AUTO_CHANGES_PER_DAY` | 20 | Cap on automated applies per tenant per day. |
+| `NOMETRIA_IMPROVEMENT_ROLLBACK_BUDGET` | 0.05 | A change kind rolled back more often than this drops one autonomy level. |
+| `NOMETRIA_CANARY_MIN_DWELL_SECONDS` / `_MAX_BLOCK_RATE_DROP` | 3600 / 0.15 | Default canary dwell time, and how much *less* the candidate may block before it rolls back. |
+| `NOMETRIA_SCHEDULER_ENABLED` | `true` | Whether cron runs queue scheduled work: canary advance hourly; compliance, drift and threshold proposals daily; red-team posture weekly (off by default). |
+| `NOMETRIA_JOB_STUCK_AFTER_SECONDS` / `_BACKOFF_BASE_SECONDS` | 900 / 60 | When a running job counts as crashed, and the base of its exponential retry delay. |
 
 ## Providers and integrations
 

@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import FileResponse, PlainTextResponse
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -281,7 +281,7 @@ def build_evidence(
     directly, and processes it within this same request — see jobs_db's own
     module docstring for why same-request processing, not a deferred worker,
     is the honest fit here. A transient failure gets one automatic retry
-    inside run_pending() before this returns; a permanent one is a real `Job`
+    later, with backoff, and this returns 202 queued_for_retry meanwhile; a permanent one is a real `Job`
     row with status="dead" a human can find via GET /jobs, not a bare 500."""
     job = jobs_db.enqueue(
         session,
@@ -296,10 +296,27 @@ def build_evidence(
         org_id=session_org(session),
         requested_by=user.email,
     )
-    jobs_db.run_pending(session, org_id=job.org_id, limit=1)
+    # Run exactly this job: run_pending(limit=1) picks the tenant's oldest eligible job,
+    # which need not be the one just queued.
+    jobs_db.run_job(session, job)
     session.refresh(job)
     if job.status == "dead":
         raise HTTPException(502, f"evidence package build failed: {job.last_error}")
+    if job.status != "done":
+        # A failed first attempt is queued for retry with backoff. Returning 201 with an
+        # empty package here used to look like success.
+        return JSONResponse(
+            status_code=202,
+            content={
+                "id": None,
+                "status": "queued_for_retry",
+                "job_id": job.id,
+                "attempts": job.attempts,
+                "max_attempts": job.max_attempts,
+                "last_error": job.last_error,
+                "retry_after": jobs_db.job_json(job)["available_at"],
+            },
+        )
     result = job.result_json
     return {
         "id": result.get("evidence_package_id"),
@@ -582,6 +599,11 @@ class AssessIn(BaseModel):
     residual_risk: str = "low"
     answers: dict[str, Any] = Field(default_factory=dict)
     review_months: int = 12
+    #: Whether the caller signs the assessment off. The signer is always the
+    #: authenticated caller: a sign-off naming someone else is a forged signature.
+    sign_off: bool = False
+    #: Deprecated and ignored beyond a consistency check — kept so an old client that
+    #: sends its own address still works, and one naming someone else is refused.
     signed_off_by: str | None = None
 
 
@@ -593,6 +615,13 @@ def create_assessment(
     user: User = Depends(require("compliance")),
 ) -> dict[str, Any]:
     agent = get_agent_or_404(session, slug)
+    signer = user.email or user.id
+    if payload.signed_off_by and payload.signed_off_by.strip().lower() != str(signer).lower():
+        raise HTTPException(
+            403,
+            "an assessment can only be signed off by the authenticated caller; "
+            f"'{payload.signed_off_by}' is not you",
+        )
     assessment = assess(
         session,
         agent,
@@ -602,7 +631,7 @@ def create_assessment(
         residual_risk=payload.residual_risk,
         answers=payload.answers,
         review_months=payload.review_months,
-        signed_off_by=payload.signed_off_by,
+        signed_off_by=signer if (payload.sign_off or payload.signed_off_by) else None,
     )
     chain.append(
         session,
@@ -611,12 +640,18 @@ def create_assessment(
         actor_id=user.email or user.id,
         subject_type="agent",
         subject_id=agent.id,
-        payload={"class": assessment.eu_ai_act_class, "residual_risk": assessment.residual_risk},
+        payload={
+            "class": assessment.eu_ai_act_class,
+            "residual_risk": assessment.residual_risk,
+            "signed_off_by": assessment.signed_off_by,
+        },
     )
     return {
         "id": assessment.id,
         "agent": slug,
         "eu_ai_act_class": assessment.eu_ai_act_class,
+        "assessor": assessment.assessor,
+        "signed_off_by": assessment.signed_off_by,
         "mitigations": assessment.mitigations_json,
         "next_review_at": _iso(assessment.next_review_at),
     }

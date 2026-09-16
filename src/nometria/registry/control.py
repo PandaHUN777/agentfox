@@ -22,7 +22,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..audit import chain
-from ..models import Agent, AgentControl, Finding, utcnow
+from ..findings import open_finding, raise_finding, resolve_finding
+from ..models import Agent, AgentControl, utcnow
 
 STATES = ("active", "quarantined", "killed")
 
@@ -94,17 +95,38 @@ def set_state(
     )
 
     # A stopped agent is a governance event a human should see, not just a log line.
-    if state in ("quarantined", "killed"):
-        session.add(
-            Finding(
+    # One finding per (agent, stop kind): stopping it again after a resume reopens the
+    # same finding as a recurrence, which is what an agent that keeps needing to be
+    # stopped is.
+    if state == "active":
+        # Resuming is the named person's decision that the reason for the stop is dealt
+        # with; the stop findings close under their name, not as an automated clear.
+        for stopped in ("quarantined", "killed"):
+            finding = open_finding(
+                session,
                 type="agent_stopped",
-                severity="critical" if state == "killed" else "high",
-                title=f"Agent '{agent.slug}' {state} by {actor}",
                 subject_type="agent",
                 subject_id=agent.id,
-                evidence_json={"from": previous, "to": state, "reason": reason, "actor": actor},
-                control_keys=["NOM-DSC-02", "NOM-IAM-03"],
+                fingerprint_parts=(stopped,),
             )
+            if finding is not None:
+                resolve_finding(
+                    session,
+                    finding,
+                    actor=actor,
+                    note=f"agent resumed from {previous}: {reason or 'no reason given'}",
+                )
+    if state in ("quarantined", "killed"):
+        raise_finding(
+            session,
+            type="agent_stopped",
+            severity="critical" if state == "killed" else "high",
+            title=f"Agent '{agent.slug}' {state} by {actor}",
+            subject_type="agent",
+            subject_id=agent.id,
+            evidence={"from": previous, "to": state, "reason": reason, "actor": actor},
+            control_keys=["NOM-DSC-02", "NOM-IAM-03"],
+            fingerprint_parts=(state,),
         )
     session.flush()
     return control

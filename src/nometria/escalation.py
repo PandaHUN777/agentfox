@@ -33,11 +33,11 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .findings import raise_finding
 from .models import (
     Agent,
     ConversationTurn,
     EscalationPolicy,
-    Finding,
     Handoff,
     utcnow,
 )
@@ -551,16 +551,16 @@ def raise_handoff(
 
     # F5.2 is its own failure: the hand-off happened *and* the human cannot act on it.
     if not completeness["complete"]:
-        session.add(
-            Finding(
-                type="incomplete_handoff",
-                severity="medium",
-                title=f"Hand-off missing context: {', '.join(completeness['missing'])}",
-                subject_type="agent",
-                subject_id=agent_id,
-                evidence_json={"session_id": session_id, **completeness},
-                control_keys=["NOM-RTG-10"],
-            )
+        raise_finding(
+            session,
+            type="incomplete_handoff",
+            severity="medium",
+            title=f"Hand-off missing context: {', '.join(completeness['missing'])}",
+            subject_type="agent",
+            subject_id=agent_id,
+            evidence={"session_id": session_id, **completeness},
+            control_keys=["NOM-RTG-10"],
+            fingerprint_parts=(session_id,),
         )
     session.flush()
     return handoff
@@ -584,21 +584,22 @@ def breached_handoffs(session: Session) -> list[Handoff]:
             continue
         handoff.status = "breached"
         breached.append(handoff)
-        session.add(
-            Finding(
-                type="handoff_sla_breach",
-                severity="high",
-                title=f"Hand-off unacknowledged past its {handoff.owner_role} SLA",
-                subject_type="agent",
-                subject_id=handoff.agent_id,
-                evidence_json={
-                    "handoff_id": handoff.id,
-                    "session_id": handoff.session_id,
-                    "due_at": due.isoformat(),
-                    "reason": handoff.reason,
-                },
-                control_keys=["NOM-RTG-10"],
-            )
+        raise_finding(
+            session,
+            type="handoff_sla_breach",
+            severity="high",
+            title=f"Hand-off unacknowledged past its {handoff.owner_role} SLA",
+            subject_type="agent",
+            subject_id=handoff.agent_id,
+            evidence={
+                "handoff_id": handoff.id,
+                "session_id": handoff.session_id,
+                "due_at": due.isoformat(),
+                "reason": handoff.reason,
+            },
+            control_keys=["NOM-RTG-10"],
+            fingerprint_parts=(handoff.id,),
+            once=True,
         )
     session.flush()
     return breached
@@ -659,19 +660,20 @@ def detect_missed_escalation(
             severity = (
                 "critical" if any(t.severity == "critical" for t in assessment.triggers) else "high"
             )
-            session.add(
-                Finding(
-                    type="missed_escalation",
-                    severity=severity,
-                    title=(
-                        f"Conversation met {len(assessment.triggers)} escalation condition(s) "
-                        f"from turn {record['first_qualifying_turn']} and never handed off"
-                    ),
-                    subject_type="agent",
-                    subject_id=agent_id,
-                    evidence_json=record,
-                    control_keys=["NOM-RTG-10"],
-                )
+            raise_finding(
+                session,
+                type="missed_escalation",
+                severity=severity,
+                title=(
+                    f"Conversation met {len(assessment.triggers)} escalation condition(s) "
+                    f"from turn {record['first_qualifying_turn']} and never handed off"
+                ),
+                subject_type="agent",
+                subject_id=agent_id,
+                evidence=record,
+                control_keys=["NOM-RTG-10"],
+                fingerprint_parts=(session_id,),
+                once=True,
             )
             # Retroactive hand-off: the point is that a real person is still waiting.
             # Recording the finding and leaving them waiting would be an audit artefact,
@@ -763,16 +765,19 @@ def detect_false_resolution(
             }
             out.append(record)
             if raise_findings:
-                session.add(
-                    Finding(
-                        type="false_resolution",
-                        severity="high",
-                        title="Agent claimed resolution the conversation contradicts",
-                        subject_type="agent",
-                        subject_id=turn.agent_id,
-                        evidence_json=record,
-                        control_keys=["NOM-RTG-10"],
-                    )
+                # One finding per contradicted claim. A re-scan over the same window
+                # sees the same turn again; that is the same event, not a new one.
+                raise_finding(
+                    session,
+                    type="false_resolution",
+                    severity="high",
+                    title="Agent claimed resolution the conversation contradicts",
+                    subject_type="agent",
+                    subject_id=turn.agent_id,
+                    evidence=record,
+                    control_keys=["NOM-RTG-10"],
+                    fingerprint_parts=(session_id, turn.turn_index),
+                    once=True,
                 )
     session.flush()
     return out

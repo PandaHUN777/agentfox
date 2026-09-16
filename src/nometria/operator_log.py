@@ -97,6 +97,23 @@ PRIVILEGED: tuple[PrivilegedAction, ...] = (
         "operator.credential.revoked",
         "ends an identity; the gap between issue and revoke is the exposure window",
     ),
+    PrivilegedAction(
+        "nometria.improvement.proposals.decide",
+        "operator.proposal.decided",
+        "approves or rejects a change to the governance configuration; for an org-level "
+        "loosening, one of the two named people who let a control be weakened",
+    ),
+    PrivilegedAction(
+        "nometria.improvement.proposals.apply_proposal",
+        "operator.proposal.applied",
+        "changes live configuration — possibly with nobody deciding, which is exactly "
+        "when the record of who (or what) did it matters most",
+    ),
+    PrivilegedAction(
+        "nometria.improvement.proposals.rollback_proposal",
+        "operator.proposal.rolled_back",
+        "undoes a change; reverting a tightening loosens a control again",
+    ),
 )
 
 #: Call expressions that count as recording. `record` is the front door; a direct

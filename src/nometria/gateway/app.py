@@ -45,6 +45,7 @@ from .routes import (
     onboarding,
     playground,
     policy,
+    proposals,
     provenance,
     registry,
     tuning,
@@ -245,6 +246,7 @@ def create_app() -> FastAPI:
     app.include_router(discovery.router)
     app.include_router(memory.router)
     app.include_router(messaging.router)
+    app.include_router(proposals.router)
     # Unauthenticated by design (see playground.py's module docstring) — the only
     # router in this app that never depends on `current_user`, and the one place
     # this process is not stateless (NFR-3, contradicted deliberately: see

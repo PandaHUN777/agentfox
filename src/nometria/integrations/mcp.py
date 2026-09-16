@@ -36,8 +36,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..enforcement import EnforcementResult, Enforcer
+from ..findings import raise_finding
 from ..guardrails import TaintTracker
-from ..models import Finding, McpToolSnapshot, Tool, Trace
+from ..models import McpToolSnapshot, Tool, Trace
 from ..registry.service import record_edge, scan_mcp_server, upsert_mcp_server, upsert_tool
 
 log = logging.getLogger(__name__)
@@ -236,21 +237,21 @@ class McpGovernor:
             description=str(descriptor.get("description", "")),
             mcp_server_id=self.server.id,
         )
-        self.session.add(
-            Finding(
-                type="undeclared_mcp_tool",
-                severity="high",
-                title=f"Agent '{self.agent_slug}' called unregistered MCP tool '{tool}'",
-                subject_type="mcp_server",
-                subject_id=self.server.id,
-                evidence_json={
-                    "agent": self.agent_slug,
-                    "tool": tool,
-                    "server": self.server_name,
-                    "key": key,
-                },
-                control_keys=["NOM-DSC-05", "NOM-IAM-02"],
-            )
+        raise_finding(
+            self.session,
+            type="undeclared_mcp_tool",
+            severity="high",
+            title=f"Agent '{self.agent_slug}' called unregistered MCP tool '{tool}'",
+            subject_type="mcp_server",
+            subject_id=self.server.id,
+            evidence={
+                "agent": self.agent_slug,
+                "tool": tool,
+                "server": self.server_name,
+                "key": key,
+            },
+            control_keys=["NOM-DSC-05", "NOM-IAM-02"],
+            fingerprint_parts=(key,),
         )
         self.session.flush()
         return True
@@ -397,16 +398,16 @@ class McpGovernor:
         return result
 
     def _drift_block(self, key: str, tool: str, drift: dict[str, Any]) -> EnforcementResult:
-        self.session.add(
-            Finding(
-                type="mcp_schema_drift",
-                severity="critical",
-                title=f"MCP tool '{tool}' changed after authorisation",
-                subject_type="mcp_server",
-                subject_id=self.server.id,
-                evidence_json={**drift, "agent": self.agent_slug, "server": self.server_name},
-                control_keys=["NOM-DSC-05"],
-            )
+        raise_finding(
+            self.session,
+            type="mcp_schema_drift",
+            severity="critical",
+            title=f"MCP tool '{tool}' changed after authorisation",
+            subject_type="mcp_server",
+            subject_id=self.server.id,
+            evidence={**drift, "agent": self.agent_slug, "server": self.server_name},
+            control_keys=["NOM-DSC-05"],
+            fingerprint_parts=(key,),
         )
         self.session.flush()
         return EnforcementResult(

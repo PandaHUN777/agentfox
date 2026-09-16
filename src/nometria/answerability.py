@@ -42,6 +42,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .findings import raise_finding as _raise_finding
 from .models import Agent, Finding, KnowledgeBoundary, utcnow
 
 log = logging.getLogger(__name__)
@@ -565,18 +566,19 @@ def detect_over_refusal(
         "excerpt": answer[:200],
     }
     if raise_finding:
-        session.add(
-            Finding(
-                type="over_refusal",
-                severity="medium",
-                title="Agent refused an answerable question",
-                subject_type="agent",
-                subject_id=agent_id,
-                evidence_json=record,
-                control_keys=["NOM-RTG-11"],
-            )
+        # One finding per (agent, question type): refusing answerable questions of a
+        # kind is one behaviour with a count, and the evidence keeps the latest case.
+        _raise_finding(
+            session,
+            type="over_refusal",
+            severity="medium",
+            title="Agent refused an answerable question",
+            subject_type="agent",
+            subject_id=agent_id,
+            evidence=record,
+            control_keys=["NOM-RTG-11"],
+            fingerprint_parts=(verdict.question_type,),
         )
-        session.flush()
     return record
 
 

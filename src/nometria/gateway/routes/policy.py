@@ -12,12 +12,13 @@ import datetime as dt
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ...audit import chain
 from ...models import Policy, PolicyBinding, PolicyCanary, PolicyVersion, User
+from ...policy.canary import evaluate_gate
 from ...policy import (
     LEVELS,
     MODES,
@@ -329,6 +330,9 @@ def _canary_json(session: Session, canary: PolicyCanary) -> dict[str, Any]:
         "stable_version": stable.version if stable else None,
         "candidate_version": candidate.version if candidate else None,
         "max_block_rate_delta": canary.max_block_rate_delta,
+        "max_block_rate_drop": canary.max_block_rate_drop,
+        "min_dwell_seconds": canary.min_dwell_seconds,
+        "last_advanced_at": _iso(canary.last_advanced_at),
         "min_sample": canary.min_sample,
         "started_by": canary.started_by,
         "started_at": canary.created_at.isoformat() if canary.created_at else None,
@@ -337,13 +341,28 @@ def _canary_json(session: Session, canary: PolicyCanary) -> dict[str, Any]:
     }
     if canary.status == "rolling":
         out["health"] = canary_health(session, canary)
+        gate = evaluate_gate(session, canary)
+        out["gate"] = {"action": gate.action, "reason": gate.reason}
     return out
+
+
+def _iso(value: dt.datetime | None) -> str | None:
+    if value is None:
+        return None
+    return (value.replace(tzinfo=dt.UTC) if value.tzinfo is None else value).isoformat()
 
 
 class CanaryStartIn(BaseModel):
     candidate_version: int | None = None
     steps: list[int] | None = None
-    max_block_rate_delta: float = 0.15
+    #: Roll back when the candidate blocks MORE than stable by over this.
+    max_block_rate_delta: float = Field(0.15, ge=0.0, le=1.0)
+    #: Roll back when the candidate blocks LESS than stable by over this (a loosening).
+    #: Defaults to settings.canary_max_block_rate_drop.
+    max_block_rate_drop: float | None = Field(None, ge=0.0, le=1.0)
+    #: Minimum seconds at each step before advancing. Defaults to
+    #: settings.canary_min_dwell_seconds.
+    min_dwell_seconds: int | None = Field(None, ge=0)
     min_sample: int = 20
 
 
@@ -363,6 +382,8 @@ def start_policy_canary(
             max_block_rate_delta=payload.max_block_rate_delta,
             min_sample=payload.min_sample,
             started_by=user.email,
+            max_block_rate_drop=payload.max_block_rate_drop,
+            min_dwell_seconds=payload.min_dwell_seconds,
         )
     except CanaryError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -378,6 +399,9 @@ def start_policy_canary(
             "stable_version_id": canary.stable_version_id,
             "candidate_version_id": canary.candidate_version_id,
             "steps": canary.steps,
+            "max_block_rate_delta": canary.max_block_rate_delta,
+            "max_block_rate_drop": canary.max_block_rate_drop,
+            "min_dwell_seconds": canary.min_dwell_seconds,
         },
     )
     return _canary_json(session, canary)
@@ -410,9 +434,12 @@ def advance_policy_canary(
 ) -> dict[str, Any]:
     """Check the candidate cohort's health and advance, hold, or auto-roll-back.
 
-    Safe to call repeatedly — a canary without enough traffic yet simply holds at
-    its current step. This is what makes rollback "automated": the decision is
-    computed from telemetry every time this is called, never a human judgement call.
+    Safe to call repeatedly — a canary without enough traffic yet, or still inside
+    its dwell time, simply holds at its current step. The gate is two-way: a
+    candidate that blocks more than stable *or less* than stable (a loosening) by
+    more than its threshold is rolled back. This is what makes rollback "automated":
+    the decision is computed from telemetry every time this is called, never a human
+    judgement call. The scheduled `canary.advance` job applies the same gate.
     """
     policy = session.scalar(select(Policy).where(Policy.key == key))
     if policy is None:
@@ -421,7 +448,9 @@ def advance_policy_canary(
     if canary is None:
         raise HTTPException(400, f"policy '{key}' has no canary rolling")
     before_status, before_percent = canary.status, canary.percent
-    canary = canary_rollout(session, canary.id)
+    now = dt.datetime.now(dt.UTC)
+    decision = evaluate_gate(session, canary, now)
+    canary = canary_rollout(session, canary.id, now)
     if canary.status != before_status or canary.percent != before_percent:
         chain.append(
             session,
@@ -432,9 +461,16 @@ def advance_policy_canary(
             actor_id=user.email or user.id,
             subject_type="policy",
             subject_id=key,
-            payload={"canary_id": canary.id, "status": canary.status, "percent": canary.percent},
+            payload={
+                "canary_id": canary.id,
+                "status": canary.status,
+                "percent": canary.percent,
+                "reason": canary.rollback_reason or decision.reason,
+            },
         )
-    return _canary_json(session, canary)
+    out = _canary_json(session, canary)
+    out["decision"] = {"action": decision.action, "reason": decision.reason}
+    return out
 
 
 @router.post("/{key}/canary/rollback")

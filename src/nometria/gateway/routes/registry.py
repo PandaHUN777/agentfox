@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ...audit import chain
+from ...findings import STATUSES as FINDING_STATUSES
 from ...identity import (
     assess_posture,
     check_capability,
@@ -529,6 +530,8 @@ def list_findings(
                 "agent_slug": _agent_slug_for_subject(session, f.subject_type, f.subject_id),
                 "controls": f.control_keys,
                 "evidence": f.evidence_json,
+                "occurrences": f.occurrences,
+                "last_seen_at": _iso(f.last_seen_at),
                 "created_at": _iso(f.created_at),
             }
             for f in session.scalars(query)
@@ -554,6 +557,8 @@ def get_finding(
         "agent_slug": _agent_slug_for_subject(session, finding.subject_type, finding.subject_id),
         "controls": finding.control_keys,
         "evidence": finding.evidence_json,
+        "occurrences": finding.occurrences,
+        "last_seen_at": _iso(finding.last_seen_at),
         "suppression_reason": finding.suppression_reason,
         "suppressed_by": finding.suppressed_by,
         "resolution_note": finding.resolution_note,
@@ -581,6 +586,13 @@ def patch_finding(
     finding = session.get(Finding, finding_id)
     if finding is None:
         raise HTTPException(404, "unknown finding")
+    if payload.status not in FINDING_STATUSES:
+        # The status is the queue. A free-text status is a finding that silently
+        # leaves every view filtering on open/suppressed/resolved — and it used to be
+        # written into the audit chain as an action name, too.
+        raise HTTPException(
+            400, f"status must be one of {', '.join(FINDING_STATUSES)}, got {payload.status!r}"
+        )
     if payload.status == "suppressed" and not payload.suppression_reason:
         # Suppression without a recorded justification is how a finding queue becomes
         # meaningless; the reason is the control, not the button.
@@ -597,6 +609,12 @@ def patch_finding(
         finding.resolved_at = utcnow()
         finding.resolution_note = payload.note
         finding.resolved_by = user.email
+    elif payload.status == "open":
+        # A reopened finding is not still resolved: leaving the old resolution on it
+        # would make the next reader believe the fix was recorded and still holds.
+        finding.resolved_at = None
+        finding.resolution_note = None
+        finding.resolved_by = None
     chain.append(
         session,
         f"finding.{payload.status}",

@@ -218,9 +218,11 @@ def test_feedback_takes_the_score_from_what_actually_fired(seeded, enforcer):
 def test_feedback_rejects_an_unknown_label_and_an_unknown_decision(seeded, enforcer):
     decision_id = _decision_with_detection(seeded, enforcer)
     with pytest.raises(ValueError):
-        record_feedback(seeded, decision_id=decision_id, label="nope")
+        record_feedback(seeded, decision_id=decision_id, label="nope", actor="dev@example.com")
     with pytest.raises(ValueError):
-        record_feedback(seeded, decision_id="dec_nonexistent", label="false_positive")
+        record_feedback(
+            seeded, decision_id="dec_nonexistent", label="false_positive", actor="dev@example.com"
+        )
 
 
 def _label(seeded, detector: str, label: str, score: float, entity: str = "PII_SSN") -> None:
@@ -316,7 +318,9 @@ def test_overlapping_scores_get_an_honest_refusal_not_a_number(seeded):
 
 def test_only_a_false_positive_can_be_suppressed(seeded, enforcer):
     decision_id = _decision_with_detection(seeded, enforcer)
-    feedback = record_feedback(seeded, decision_id=decision_id, label="true_positive")
+    feedback = record_feedback(
+        seeded, decision_id=decision_id, label="true_positive", actor="dev@example.com"
+    )
     with pytest.raises(ValueError):
         apply_suppression(seeded, feedback_id=feedback.id)
 
@@ -324,7 +328,9 @@ def test_only_a_false_positive_can_be_suppressed(seeded, enforcer):
 def test_a_suppression_is_scoped_to_the_reporting_agent_by_default(seeded, enforcer):
     """A pattern that is noise for one agent is usually signal for another."""
     decision_id = _decision_with_detection(seeded, enforcer)
-    feedback = record_feedback(seeded, decision_id=decision_id, label="false_positive")
+    feedback = record_feedback(
+        seeded, decision_id=decision_id, label="false_positive", actor="dev@example.com"
+    )
     suppression = apply_suppression(seeded, feedback_id=feedback.id, actor="sec@example.com")
     agent = seeded.query(Agent).filter_by(slug="support-triage").one()
     assert suppression.agent_id == agent.id
@@ -338,7 +344,9 @@ def test_a_suppression_must_expire(seeded, enforcer):
     """A permanent silent exception is indistinguishable from a detector that stopped
     working, and that is how guardrail programmes decay."""
     decision_id = _decision_with_detection(seeded, enforcer)
-    feedback = record_feedback(seeded, decision_id=decision_id, label="false_positive")
+    feedback = record_feedback(
+        seeded, decision_id=decision_id, label="false_positive", actor="dev@example.com"
+    )
     suppression = apply_suppression(seeded, feedback_id=feedback.id, ttl_days=1)
     assert suppression.expires_at is not None
     assert suppression.active
@@ -355,7 +363,11 @@ def test_an_active_suppression_removes_the_detection_and_leaves_a_record(seeded,
     documented, expiring exception an auditor can read."""
     decision_id = _decision_with_detection(seeded, enforcer, content=PII_TEXT)
     feedback = record_feedback(
-        seeded, decision_id=decision_id, label="false_positive", detector_key="pii.native"
+        seeded,
+        decision_id=decision_id,
+        label="false_positive",
+        detector_key="pii.native",
+        actor="dev@example.com",
     )
     suppression = apply_suppression(seeded, feedback_id=feedback.id)
 
@@ -394,7 +406,11 @@ def test_an_exact_match_suppression_does_not_silence_the_whole_class(seeded):
 def test_a_revoked_suppression_stops_applying(seeded, enforcer):
     decision_id = _decision_with_detection(seeded, enforcer)
     feedback = record_feedback(
-        seeded, decision_id=decision_id, label="false_positive", detector_key="pii.native"
+        seeded,
+        decision_id=decision_id,
+        label="false_positive",
+        detector_key="pii.native",
+        actor="dev@example.com",
     )
     suppression = apply_suppression(seeded, feedback_id=feedback.id)
     revoke_suppression(seeded, suppression.id)
@@ -406,7 +422,9 @@ def test_a_revoked_suppression_stops_applying(seeded, enforcer):
 
 def test_suppression_health_surfaces_dead_weight(seeded, enforcer):
     decision_id = _decision_with_detection(seeded, enforcer)
-    feedback = record_feedback(seeded, decision_id=decision_id, label="false_positive")
+    feedback = record_feedback(
+        seeded, decision_id=decision_id, label="false_positive", actor="dev@example.com"
+    )
     suppression = apply_suppression(seeded, feedback_id=feedback.id, ttl_days=3)
     health = suppression_health(seeded)
     assert suppression.id in health["never_hit"]

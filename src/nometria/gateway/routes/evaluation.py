@@ -11,6 +11,7 @@ import datetime as dt
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -510,13 +511,37 @@ def drift(
     session: Session = Depends(db),
     _user: User = Depends(current_user),
 ) -> dict[str, Any]:
-    report = compute_drift(session, agent, scorer)
+    """Read-only. Viewing drift used to persist a DriftWindow — and a Finding when
+    drifted — on every page load, so the number of drift findings measured how often
+    someone looked, not how often the agent drifted. Recording is `POST /eval/drift`
+    or the scheduled `drift.check` job."""
+    report = compute_drift(session, agent, scorer, persist=False)
     if report is None:
         return {
             "drifted": None,
             "note": "insufficient online samples in the current and baseline windows",
         }
     return report.to_json()
+
+
+class DriftIn(BaseModel):
+    agent: str
+    scorer: str = "groundedness"
+
+
+@router.post("/eval/drift")
+def record_drift(
+    payload: DriftIn, session: Session = Depends(db), _user: User = Depends(require("eval"))
+) -> dict[str, Any]:
+    """Compute drift and record it: a DriftWindow row, and a drift Finding when drifted."""
+    report = compute_drift(session, payload.agent, payload.scorer, persist=True)
+    if report is None:
+        return {
+            "drifted": None,
+            "recorded": False,
+            "note": "insufficient online samples in the current and baseline windows",
+        }
+    return {**report.to_json(), "recorded": True}
 
 
 @router.get("/eval/slos")
@@ -582,6 +607,14 @@ class CampaignIn(BaseModel):
     name: str = ""
     probes: list[str] | None = None
     runner: str = "native"
+    #: Mutation loop + deployment-targeted probes + posture delta (see run_campaign).
+    adaptive: bool = False
+    #: Attempts per blocked attack probe in adaptive mode.
+    budget: int = Field(3, ge=1, le=20)
+    #: Fixes the mutation search so a campaign is reproducible.
+    seed: int = 1337
+    #: Adaptive only: generate probes from this deployment's grants, tools and policies.
+    include_deployment_probes: bool = True
 
 
 def _run_redteam_sweep(session: Session, payload: dict[str, Any]) -> dict[str, Any]:
@@ -595,6 +628,10 @@ def _run_redteam_sweep(session: Session, payload: dict[str, Any]) -> dict[str, A
         name=payload.get("name", ""),
         runner=payload.get("runner", "native"),
         probes=payload.get("probes"),
+        adaptive=bool(payload.get("adaptive", False)),
+        budget=int(payload.get("budget", 3)),
+        seed=int(payload.get("seed", 1337)),
+        include_deployment_probes=bool(payload.get("include_deployment_probes", True)),
     )
     findings = list(
         session.scalars(select(RedTeamFinding).where(RedTeamFinding.campaign_id == campaign.id))
@@ -611,6 +648,7 @@ def _run_redteam_sweep(session: Session, payload: dict[str, Any]) -> dict[str, A
     return {
         "campaign_id": campaign.id,
         "status": campaign.status,
+        "headline": campaign.summary_json.get("headline"),
         "summary": campaign.summary_json,
         "findings": [
             {
@@ -644,19 +682,41 @@ def create_campaign(
             "name": payload.name,
             "runner": payload.runner,
             "probes": payload.probes,
+            "adaptive": payload.adaptive,
+            "budget": payload.budget,
+            "seed": payload.seed,
+            "include_deployment_probes": payload.include_deployment_probes,
             "requested_by": user.email,
         },
         org_id=session_org(session),
         requested_by=user.email,
     )
-    jobs_db.run_pending(session, org_id=job.org_id, limit=1)
+    # Run exactly this job — run_pending(limit=1) would pick the tenant's oldest
+    # eligible job, which need not be this one.
+    jobs_db.run_job(session, job)
     session.refresh(job)
     if job.status == "dead":
         raise HTTPException(502, f"red-team campaign failed: {job.last_error}")
+    if job.status != "done":
+        # The first attempt failed and the job is queued for retry with backoff.
+        # Saying so — not returning 201 with an empty campaign — is the whole point.
+        return JSONResponse(
+            status_code=202,
+            content={
+                "id": None,
+                "status": "queued_for_retry",
+                "job_id": job.id,
+                "attempts": job.attempts,
+                "max_attempts": job.max_attempts,
+                "last_error": job.last_error,
+                "retry_after": jobs_db.job_json(job)["available_at"],
+            },
+        )
     result = job.result_json
     return {
         "id": result.get("campaign_id"),
         "status": result.get("status"),
+        "headline": result.get("headline"),
         "summary": result.get("summary"),
         "findings": result.get("findings"),
         "job_id": job.id,

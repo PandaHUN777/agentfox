@@ -1,8 +1,10 @@
-"""Outbound webhooks for new findings.
+"""Outbound webhooks for the finding lifecycle.
 
 Every Finding committed at or above ``webhook_min_severity`` is POSTed to
 ``webhook_url`` as ``{"event": "finding.created", "finding": {...}, "org_id": ...,
-"sent_at": ...}``.
+"sent_at": ...}``. A committed change of status sends the same body with
+``finding.resolved``, ``finding.suppressed`` or ``finding.reopened`` — a queue a
+receiver can mirror has to say when something left it, not only when it arrived.
 
 Three properties matter more than the delivery itself:
 
@@ -51,11 +53,22 @@ from .models import Finding
 log = logging.getLogger(__name__)
 
 EVENT_FINDING_CREATED = "finding.created"
+EVENT_FINDING_RESOLVED = "finding.resolved"
+EVENT_FINDING_SUPPRESSED = "finding.suppressed"
+EVENT_FINDING_REOPENED = "finding.reopened"
+
+#: Status a finding moved *to* -> the event that announces it.
+_STATUS_EVENTS = {
+    "resolved": EVENT_FINDING_RESOLVED,
+    "suppressed": EVENT_FINDING_SUPPRESSED,
+    "open": EVENT_FINDING_REOPENED,
+}
 EVENT_TEST = "webhook.test"
 
 SEVERITY_RANK = {"low": 1, "medium": 2, "high": 3, "critical": 4}
 
-#: session.info key holding (finding, snapshot) pairs flushed in the current transaction.
+#: session.info key holding (finding, snapshot, event) triples flushed in the current
+#: transaction.
 _INFO_KEY = "nometria_webhook_findings"
 _QUEUE_MAX = 1000
 _RETRY_BACKOFF_SECONDS = 0.5
@@ -124,6 +137,13 @@ def _finding_payload(data: dict[str, Any]) -> dict[str, Any]:
         "subject_id": data.get("subject_id"),
         "controls": data.get("control_keys"),
         "evidence": data.get("evidence_json"),
+        "occurrences": data.get("occurrences"),
+        "last_seen_at": _iso(data.get("last_seen_at")),
+        "suppression_reason": data.get("suppression_reason"),
+        "suppressed_by": data.get("suppressed_by"),
+        "resolution_note": data.get("resolution_note"),
+        "resolved_by": data.get("resolved_by"),
+        "resolved_at": _iso(data.get("resolved_at")),
         "created_at": _iso(data.get("created_at")),
     }
 
@@ -132,14 +152,35 @@ def _after_flush(session: Session, _flush_context: Any) -> None:
     try:
         if _current_target() is None:
             return
-        new = [obj for obj in session.new if isinstance(obj, Finding)]
-        if not new:
+        events: list[tuple[Finding, str]] = [
+            (obj, EVENT_FINDING_CREATED) for obj in session.new if isinstance(obj, Finding)
+        ]
+        for obj in session.dirty:
+            if not isinstance(obj, Finding):
+                continue
+            # Attribute history is still pre-flush inside after_flush, so this is the
+            # change this flush wrote — not whatever the object says by commit time.
+            history = sa_inspect(obj).attrs.status.history
+            if not history.added:
+                continue
+            after = history.added[0]
+            if history.deleted:
+                if history.deleted[0] == after:
+                    continue
+            elif after == "open":
+                # The previous value was never loaded, so "reopened" cannot be told
+                # apart from a no-op write; resolved/suppressed are news either way.
+                continue
+            event_name = _STATUS_EVENTS.get(str(after))
+            if event_name:
+                events.append((obj, event_name))
+        if not events:
             return
         pending = session.info.setdefault(_INFO_KEY, [])
-        for finding in new:
+        for finding, event_name in events:
             # Snapshot now: with expire_on_commit=True the attributes would be gone
             # by after_commit, and loading them there would emit SQL.
-            pending.append((finding, dict(sa_inspect(finding).dict)))
+            pending.append((finding, dict(sa_inspect(finding).dict), event_name))
     except Exception:  # never break a flush over a webhook
         log.warning("finding webhook: could not collect flushed findings", exc_info=True)
 
@@ -153,7 +194,10 @@ def _after_commit(session: Session) -> None:
         if target is None:
             return
         threshold = SEVERITY_RANK[get_settings().webhook_min_severity]
-        for finding, snapshot in pending:
+        sent: set[tuple[int, str]] = set()
+        for finding, snapshot, event_name in pending:
+            if (id(finding), event_name) in sent:
+                continue
             state = sa_inspect(finding)
             # Rolled back inside a savepoint, deleted again, or detached by a close():
             # it is not in the database, so it is not news.
@@ -162,10 +206,17 @@ def _after_commit(session: Session) -> None:
             data = {**snapshot, **state.dict}  # latest in-memory values, no lazy load
             if SEVERITY_RANK.get(str(data.get("severity", "")).lower(), 0) < threshold:
                 continue
+            if event_name != EVENT_FINDING_CREATED and _STATUS_EVENTS.get(
+                str(data.get("status"))
+            ) != event_name:
+                # Changed again before commit (resolved, then reopened in the same
+                # transaction): only the status that was actually committed is news.
+                continue
+            sent.add((id(finding), event_name))
             _enqueue(
                 target,
                 {
-                    "event": EVENT_FINDING_CREATED,
+                    "event": event_name,
                     "finding": _finding_payload(data),
                     "org_id": data.get("org_id"),
                 },

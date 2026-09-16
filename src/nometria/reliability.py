@@ -27,6 +27,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from .findings import auto_resolve, raise_finding
 from .models import Budget, Finding, utcnow
 
 # ---------------------------------------------------------------------------
@@ -254,7 +255,16 @@ def check_budget(session: Session, scope_type: str, scope_id: str) -> BudgetVerd
     if budget is None:
         return BudgetVerdict()
 
-    _roll_window(budget)
+    if _roll_window(budget):
+        # The condition that raised the finding no longer holds: the counters that
+        # were over their caps have just been reset.
+        auto_resolve(
+            session,
+            type="budget_exhausted",
+            subject_type=scope_type,
+            subject_id=scope_id,
+            note=f"budget window ({budget.window}) rolled; usage counters reset",
+        )
     exceeded: list[str] = []
     if budget.max_calls is not None and budget.calls >= budget.max_calls:
         exceeded.append("calls")
@@ -317,24 +327,17 @@ def raise_budget_finding(
     """
     if not verdict.exceeded:
         return None
-    existing = session.scalar(
-        select(Finding).where(
-            Finding.type == "budget_exhausted",
-            Finding.subject_id == scope_id,
-            Finding.status == "open",
-        )
-    )
-    if existing is not None:
-        return existing
-    finding = Finding(
+    # One finding per exhausted scope, counted per refused request. It is closed when
+    # the window rolls (see `check_budget`), so the next breach reopens it as a
+    # recurrence instead of being hidden behind a finding from a window long gone.
+    finding, _created = raise_finding(
+        session,
         type="budget_exhausted",
         severity="high",
         title=f"Budget exhausted for {scope_type} '{scope_id}'",
         subject_type=scope_type,
         subject_id=scope_id,
-        evidence_json=verdict.to_json(),
+        evidence=verdict.to_json(),
         control_keys=["NOM-RTG-08"],
     )
-    session.add(finding)
-    session.flush()
     return finding

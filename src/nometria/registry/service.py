@@ -27,6 +27,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from ..findings import auto_resolve, raise_finding, resolve_finding
 from ..models import (
     Agent,
     Finding,
@@ -221,33 +222,32 @@ def observe_agent(
         session.add(agent)
         session.flush()
         is_new_shadow = True
-        session.add(
-            Finding(
-                type="shadow_agent",
-                severity="high",
-                title=f"Ungoverned agent '{slug}' observed in {environment}",
-                subject_type="agent",
-                subject_id=agent.id,
-                evidence_json={
+        raise_finding(
+            session,
+            type="shadow_agent",
+            severity="high",
+            title=f"Ungoverned agent '{slug}' observed in {environment}",
+            subject_type="agent",
+            subject_id=agent.id,
+            evidence={
+                "slug": slug,
+                "environment": environment,
+                "model": model,
+                "framework": framework,
+                "first_seen": utcnow().isoformat(),
+                # A finding you can act on in one click beats a finding you have
+                # to translate into a form.
+                "suggested_registration": {
                     "slug": slug,
+                    "name": slug,
                     "environment": environment,
-                    "model": model,
-                    "framework": framework,
-                    "first_seen": utcnow().isoformat(),
-                    # A finding you can act on in one click beats a finding you have
-                    # to translate into a form.
-                    "suggested_registration": {
-                        "slug": slug,
-                        "name": slug,
-                        "environment": environment,
-                        "owner_email": None,
-                        "purpose": "",
-                        "risk_tier": "limited",
-                        "declared_models": [model] if model else [],
-                    },
+                    "owner_email": None,
+                    "purpose": "",
+                    "risk_tier": "limited",
+                    "declared_models": [model] if model else [],
                 },
-                control_keys=["NOM-DSC-01", "NOM-DSC-02"],
-            )
+            },
+            control_keys=["NOM-DSC-01", "NOM-DSC-02"],
         )
 
     # Debounced, not unconditional: a single governed call can resolve the same
@@ -317,22 +317,28 @@ def detect_shadow_agents(session: Session, window_days: int = 30) -> list[dict[s
 def unowned_agents(session: Session) -> list[Finding]:
     """An unowned agent is a reportable compliance finding (P1-4, NOM-DSC-03)."""
     findings: list[Finding] = []
-    for agent in session.scalars(select(Agent).where(Agent.status != "retired")):
+    for agent in list(session.scalars(select(Agent).where(Agent.status != "retired"))):
         if agent.is_owned:
-            continue
-        findings.append(
-            Finding(
+            # The condition cleared: someone took ownership since the last scan.
+            auto_resolve(
+                session,
                 type="unowned_agent",
-                severity="medium",
-                title=f"Agent '{agent.slug}' has no accountable owner",
                 subject_type="agent",
                 subject_id=agent.id,
-                evidence_json={"slug": agent.slug, "environment": agent.environment},
-                control_keys=["NOM-DSC-03", "NOM-GOV-03"],
+                note=f"agent '{agent.slug}' now has an accountable owner",
             )
+            continue
+        finding, _ = raise_finding(
+            session,
+            type="unowned_agent",
+            severity="medium",
+            title=f"Agent '{agent.slug}' has no accountable owner",
+            subject_type="agent",
+            subject_id=agent.id,
+            evidence={"slug": agent.slug, "environment": agent.environment},
+            control_keys=["NOM-DSC-03", "NOM-GOV-03"],
         )
-    for finding in findings:
-        session.add(finding)
+        findings.append(finding)
     session.flush()
     return findings
 
@@ -531,25 +537,30 @@ def attest_registry(session: Session) -> list[Finding]:
         undeclared_models = observed_models - set(agent.declared_models or [])
         undeclared_tools = observed_tools - set(agent.declared_tools or [])
         if not undeclared_models and not undeclared_tools:
-            continue
-        findings.append(
-            Finding(
+            auto_resolve(
+                session,
                 type="registry_drift",
-                severity="medium",
-                title=f"Agent '{agent.slug}' uses models/tools it has not declared",
                 subject_type="agent",
                 subject_id=agent.id,
-                evidence_json={
-                    "undeclared_models": sorted(undeclared_models),
-                    "undeclared_tools": sorted(undeclared_tools),
-                    "declared_models": agent.declared_models,
-                    "declared_tools": agent.declared_tools,
-                },
-                control_keys=["NOM-DSC-01", "NOM-DSC-04"],
+                note=f"agent '{agent.slug}' now uses only declared models and tools",
             )
+            continue
+        finding, _ = raise_finding(
+            session,
+            type="registry_drift",
+            severity="medium",
+            title=f"Agent '{agent.slug}' uses models/tools it has not declared",
+            subject_type="agent",
+            subject_id=agent.id,
+            evidence={
+                "undeclared_models": sorted(undeclared_models),
+                "undeclared_tools": sorted(undeclared_tools),
+                "declared_models": agent.declared_models,
+                "declared_tools": agent.declared_tools,
+            },
+            control_keys=["NOM-DSC-01", "NOM-DSC-04"],
         )
-    for finding in findings:
-        session.add(finding)
+        findings.append(finding)
     session.flush()
     return findings
 
@@ -576,33 +587,58 @@ def assess_delegation(session: Session) -> list[Finding]:
     graph = delegation_graph(edges)
     findings: list[Finding] = []
     for cycle in graph.cycles:
-        findings.append(
-            Finding(
-                type="delegation_cycle",
-                severity="high",
-                title=f"Circular delegation: {' → '.join(cycle)}",
-                subject_type="agent",
-                subject_id=cycle[0],
-                evidence_json={"cycle": cycle},
-                control_keys=["NOM-DSC-04"],
-            )
+        finding, _ = raise_finding(
+            session,
+            type="delegation_cycle",
+            severity="high",
+            title=f"Circular delegation: {' → '.join(cycle)}",
+            subject_type="agent",
+            subject_id=cycle[0],
+            evidence={"cycle": cycle},
+            control_keys=["NOM-DSC-04"],
+            fingerprint_parts=tuple(cycle),
         )
+        findings.append(finding)
     if graph.over_depth:
-        findings.append(
-            Finding(
-                type="delegation_depth",
-                severity="medium",
-                title=f"Delegation chain depth {graph.max_depth} exceeds the configured limit",
-                subject_type="agent",
-                subject_id=None,
-                evidence_json={"max_depth": graph.max_depth},
-                control_keys=["NOM-DSC-04"],
-            )
+        finding, _ = raise_finding(
+            session,
+            type="delegation_depth",
+            severity="medium",
+            title=f"Delegation chain depth {graph.max_depth} exceeds the configured limit",
+            subject_type="agent",
+            subject_id=None,
+            evidence={"max_depth": graph.max_depth},
+            control_keys=["NOM-DSC-04"],
         )
-    for finding in findings:
-        session.add(finding)
+        findings.append(finding)
+    else:
+        auto_resolve(
+            session,
+            type="delegation_depth",
+            subject_type="agent",
+            subject_id=None,
+            note=f"delegation depth {graph.max_depth} is within the configured limit",
+        )
+    _resolve_absent(
+        session,
+        "delegation_cycle",
+        keep={f.id for f in findings},
+        note="the delegation cycle is no longer present in the observed graph",
+    )
     session.flush()
     return findings
+
+
+def _resolve_absent(session: Session, finding_type: str, *, keep: set[str], note: str) -> None:
+    """Close open findings of a scan-produced type that this scan did not raise again."""
+    for finding in list(
+        session.scalars(
+            select(Finding).where(Finding.type == finding_type, Finding.status == "open")
+        )
+    ):
+        if finding.id in keep or finding.fingerprint is None:
+            continue
+        resolve_finding(session, finding, actor="nometria.registry", note=note, automated=True)
 
 
 # ---------------------------------------------------------------------------
@@ -707,18 +743,41 @@ def scan_mcp_server(
             }
         )
 
+    raised: set[str] = set()
     for issue in issues:
-        session.add(
-            Finding(
-                type=issue["type"],
-                severity=issue["severity"],
-                title=f"MCP server '{server.name}': {issue['type'].replace('_', ' ')}",
-                subject_type="mcp_server",
-                subject_id=server.id,
-                evidence_json=issue,
-                control_keys=["NOM-DSC-05"],
+        finding, _ = raise_finding(
+            session,
+            type=issue["type"],
+            severity=issue["severity"],
+            title=f"MCP server '{server.name}': {issue['type'].replace('_', ' ')}",
+            subject_type="mcp_server",
+            subject_id=server.id,
+            evidence=issue,
+            control_keys=["NOM-DSC-05"],
+            fingerprint_parts=(issue.get("tool"),),
+        )
+        raised.add(finding.id)
+    # Hygiene issues this scan no longer shows are closed, so the queue reflects the
+    # server as it is now. Schema drift is excluded: it describes a change between two
+    # snapshots, and a later scan with no further change does not undo that change.
+    for finding in list(
+        session.scalars(
+            select(Finding).where(
+                Finding.subject_type == "mcp_server",
+                Finding.subject_id == server.id,
+                Finding.type.in_(("tool_poisoning", "unpinned_server")),
+                Finding.status == "open",
             )
         )
+    ):
+        if finding.id not in raised and finding.fingerprint is not None:
+            resolve_finding(
+                session,
+                finding,
+                actor="nometria.registry",
+                note=f"scan of '{server.name}' no longer shows {finding.type.replace('_', ' ')}",
+                automated=True,
+            )
     session.flush()
 
     return {

@@ -15,7 +15,7 @@ Base: `http://localhost:8080` (self-host default). All control-plane routes unde
 | **Session cookie** | `nometria_session` | Dashboard browser sessions | Holds an API token the dashboard forwards as `Bearer` |
 | **Development header** | `X-Nometria-User: <email>` | Local development and tests | Accepted only when `NOMETRIA_AUTH_MODE=development`, or `auto` with a dev/test/local environment. `nometria auth status` reports it |
 | **Service secret** | `X-Nometria-Service-Secret` | Dashboard OAuth provisioning | `POST /api/auth/github/provision` only |
-| **Cron secret** | `Authorization: <cron_secret>` | Scheduler | `POST /api/internal/jobs/run` only; refused if unset |
+| **Cron secret** | `Authorization: <cron_secret>` | Scheduler | `GET` or `POST /api/internal/jobs/run` only; `NOMETRIA_CRON_SECRET` or `CRON_SECRET`; 503 if neither is set |
 
 Keys and tokens are hashed at rest (`argon2id`), looked up by prefix, shown once at issuance, and carry `expires_at`. Credential rotation issues a new key (P2-1). Reads need any authenticated operator; writes need a role permitted for the route's family (§C.4).
 
@@ -99,7 +99,7 @@ from the code. Regenerate after changing any route:
 
 <!-- BEGIN GENERATED ROUTES: scripts/api_routes.py --write -->
 
-180 operations, generated from the running app's OpenAPI document. Request and response schemas: `GET /openapi.json` or the interactive `/docs`.
+188 operations, generated from the running app's OpenAPI document. Request and response schemas: `GET /openapi.json` or the interactive `/docs`.
 
 ### Inline enforcement (`/v1`)
 
@@ -219,7 +219,8 @@ from the code. Regenerate after changing any route:
 |---|---|---|
 | `GET` | `/api/eval/annotations/queue` | Eval results a human should look at: score within `band` of the scorer's |
 | `POST` | `/api/eval/baselines` | Create Baseline |
-| `GET` | `/api/eval/drift` | Drift |
+| `GET` | `/api/eval/drift` | Read-only. Viewing drift used to persist a DriftWindow — and a Finding when |
+| `POST` | `/api/eval/drift` | Compute drift and record it: a DriftWindow row, and a drift Finding when drifted. |
 | `POST` | `/api/eval/gate` | P4-1 — the CI entry point. Non-zero exit maps from ``passed: false``. |
 | `POST` | `/api/eval/online` | Run Online |
 | `POST` | `/api/eval/results/{result_id}/annotate` | Record a human's judgment on a borderline eval result. Requires a note — |
@@ -330,7 +331,8 @@ from the code. Regenerate after changing any route:
 | `POST` | `/api/integrations/github/scan` | Trigger Scan |
 | `GET` | `/api/integrations/github/scans/{scan_id}` | Get Scan |
 | `POST` | `/api/integrations/hosted-api/scan` | Scan Hosted Api |
-| `POST` | `/api/internal/jobs/run` | The cron backstop. `org_id=None` processes across every tenant with |
+| `GET` | `/api/internal/jobs/run` | The cron entry point. GET because that is what Vercel Cron sends; POST for |
+| `POST` | `/api/internal/jobs/run` | The cron entry point. GET because that is what Vercel Cron sends; POST for |
 | `GET` | `/api/jobs` | Includes dead-lettered jobs by default — that's the point (jobs.py's |
 | `GET` | `/api/jobs/{job_id}` | Get Job |
 | `POST` | `/api/jobs/{job_id}/retry` | Retry Job |
@@ -345,6 +347,17 @@ from the code. Regenerate after changing any route:
 | `GET` | `/api/playground/sessions/{session_id}/state` | Everything the live sidebar needs: recent traces (decisions + detector runs |
 | `POST` | `/api/playground/sessions/{session_id}/tool-call` | Try a tool call directly — Tiers C (parameter exploitation) and D (excessive |
 | `GET` | `/api/playground/sessions/{session_id}/trace/{trace_id}` | Trace Detail |
+
+### Other
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/proposals` | List change proposals, filtered by status, kind and scope. |
+| `GET` | `/api/proposals/{proposal_id}` | One proposal with its diff, evidence, proof and decisions. |
+| `POST` | `/api/proposals/{proposal_id}/apply` | Apply an approved proposal, or settle one whose canary has finished. |
+| `POST` | `/api/proposals/{proposal_id}/decide` | Approve or reject; an org-level loosening needs two different approvers. |
+| `POST` | `/api/proposals/{proposal_id}/rollback` | Undo an applied or canaried proposal through its applier. |
+| `POST` | `/api/proposals/{proposal_id}/verify` | Record whether an applied change worked; ``verified: false`` rolls it back. |
 
 <!-- END GENERATED ROUTES -->
 

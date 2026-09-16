@@ -28,6 +28,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -1518,6 +1519,13 @@ class Obligation(Base, TimestampMixin):
 # ---------------------------------------------------------------------------
 # Improvement loop (governed self-improvement, Phase 0)
 # ---------------------------------------------------------------------------
+#: Rows the one-open-proposal-per-problem index covers. Must list exactly
+#: ``improvement.contract.OPEN``; tests/test_proposals_integrity.py holds the two together.
+PROPOSAL_OPEN_FINGERPRINT = (
+    "fingerprint IS NOT NULL AND status IN ('proposed', 'proven', 'approved', 'canary', 'applied')"
+)
+
+
 class ChangeProposal(Base, TimestampMixin):
     """A proposed change to any piece of configuration, and everything that happened to it.
 
@@ -1532,7 +1540,19 @@ class ChangeProposal(Base, TimestampMixin):
     """
 
     __tablename__ = "change_proposals"
-    __table_args__ = (Index("ix_proposals_status_created", "status", "created_at"),)
+    __table_args__ = (
+        Index("ix_proposals_status_created", "status", "created_at"),
+        # One open proposal per problem per tenant, enforced by the database so two
+        # concurrent filings cannot both win. Closed proposals keep their fingerprint.
+        Index(
+            "ux_proposals_open_fingerprint",
+            "org_id",
+            "fingerprint",
+            unique=True,
+            sqlite_where=text(PROPOSAL_OPEN_FINGERPRINT),
+            postgresql_where=text(PROPOSAL_OPEN_FINGERPRINT),
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("chp"))
     kind: Mapped[str] = mapped_column(String(48), index=True)
