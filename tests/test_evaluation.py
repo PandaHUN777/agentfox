@@ -427,6 +427,21 @@ def test_campaign_blocks_injection_probes_when_enforcing(seeded):
     assert campaign.summary_json["attacks_succeeded"] == 0
 
 
+def test_campaigns_are_static_unless_adaptive_is_asked_for(seeded):
+    """Adaptive mode (`evaluation/adaptive.py`) is opt-in. This pins the default from
+    the Pillar-4 suite as well as from the adaptive suite, because the default is what
+    CI and `nometria redteam run` call and the cost of it flipping silently is a
+    campaign that mutates and retries where an operator expected a fixed list."""
+    campaign = run_campaign(seeded, "support-triage")
+    assert "adaptive" not in campaign.summary_json
+    assert "posture" not in campaign.summary_json
+
+    adaptive = run_campaign(seeded, "support-triage", adaptive=True, budget=2)
+    assert adaptive.summary_json["adaptive"]["budget"] == 2
+    # The honest claim travels with the result, not only with the docs.
+    assert "not adversarial robustness" in adaptive.summary_json["what_this_measures"]
+
+
 def test_campaign_breach_raises_a_finding(seeded):
     from nometria.models import Finding
 

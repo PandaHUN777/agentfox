@@ -52,7 +52,16 @@ _BIDI = {"‪", "‫", "‬", "‭", "‮", "⁦", "⁧", "⁨", "⁩"}
 #: Homoglyphs NFKC does not fold, because they are legitimately different letters. A
 #: Cyrillic "а" in an English sentence is not a typo, and folding it is the only way to
 #: see the sentence the model will see.
-_CONFUSABLES = {
+#:
+#: This table is a *convenience*, not the defence. Enumerating every lookalike is not
+#: winnable — Unicode has more of them than anyone will type into a dict, and an
+#: adaptive-attack run (``benchmarks/adaptive/``) measured a 55.3% solo bypass for the
+#: letters this table happened to omit against 4.0% for the ones it covered. What makes
+#: an unknown lookalike visible is ``_mixed_script_words`` below, which is structural
+#: and needs no table. The table earns its place by *folding* the common cases, so the
+#: lexical patterns still match rather than only an obfuscation signal firing; it is
+#: kept broad for that reason and relied on for nothing.
+_CONFUSABLE_LETTERS = {
     "а": "a",
     "е": "e",
     "о": "o",
@@ -83,6 +92,57 @@ _CONFUSABLES = {
     "ı": "i",
     "і": "i",
     "ӏ": "i",
+    # Lookalikes the adaptive benchmark's `char.homoglyph_unmapped` operator used, and
+    # their neighbours. Cross-script ones are also caught structurally; the Latin-block
+    # ones (ɡ, ɑ, ɪ, ...) are *not*, because they are genuinely Latin — for those the
+    # table is the only thing that sees them, which is why it is worth extending.
+    "ѕ": "s",
+    "ԁ": "d",
+    "ј": "j",
+    "ԝ": "w",
+    "ѵ": "v",
+    "ԛ": "q",
+    "ԍ": "g",
+    "һ": "h",
+    "ԑ": "e",
+    "ӡ": "3",
+    "ո": "n",
+    "օ": "o",
+    "ս": "u",
+    "ց": "g",
+    "ɡ": "g",
+    "ɑ": "a",
+    "ɩ": "i",
+    "ɪ": "i",
+    "ɴ": "n",
+    "ʀ": "r",
+    "ʟ": "l",
+    "ʏ": "y",
+    "ʜ": "h",
+    "ᴄ": "c",
+    "ᴏ": "o",
+    "ᴜ": "u",
+    "ᴠ": "v",
+    "ᴡ": "w",
+    "ν": "v",
+    "τ": "t",
+    "κ": "k",
+    "ε": "e",
+    "ι": "i",
+    "χ": "x",
+    "η": "n",
+    "γ": "y",
+    "ϲ": "c",
+    "ѡ": "w",
+    "џ": "u",
+}
+
+#: Typographic punctuation folded for the same reason — a curly apostrophe must not
+#: break a pattern written with a straight one. Kept *separate* from the letter table
+#: because folding it is not evidence of anything: ordinary CJK text quotes with “ ”,
+#: ordinary English em-dashes, and counting those as "homoglyphs" put 28 of the 339
+#: deliberately-benign NotInject prompts over the obfuscation threshold.
+_CONFUSABLE_PUNCT = {
     "‐": "-",
     "‑": "-",
     "‒": "-",
@@ -95,13 +155,57 @@ _CONFUSABLES = {
     "”": '"',
 }
 
+_CONFUSABLES = {**_CONFUSABLE_LETTERS, **_CONFUSABLE_PUNCT}
+
 #: Conservative leetspeak. Deliberately excludes 8→b and 6→g, which appear constantly
 #: in legitimate technical text ("8GB", "IPv6").
 _LEET = {"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t", "@": "a", "$": "s"}
 
-#: A run of single characters joined by one repeated separator. Requires four or more
-#: so that hyphenated words ("state-of-the-art", "opt-in") are untouched.
-_SEPARATED = re.compile(r"(?:[A-Za-z0-9][-._*·|/\\ ]){3,}[A-Za-z0-9]")
+#: Every ASCII punctuation or symbol character, plus the space and the Unicode dashes
+#: and middle dot. Deliberately a *complete* class rather than a curated one: the
+#: attacker picks the separator, so a list of "separators we know about" is a list of
+#: separators to avoid. ``I~g~n~o~r~e`` was the single most effective readable operator
+#: in the adaptive run (68.4% solo bypass) purely because ``~`` was not in the old
+#: class. What keeps this from over-firing is not the character set but the *shape*
+#: required below: single alphanumerics, one repeated separator, four or more letters.
+_SEP_CLASS = r"[!-/:-@\[-`{-~ ·‐-―]"
+
+#: A run of single characters joined by separators — ``I-g-n-o-r-e``. Requires four or
+#: more so that hyphenated words ("state-of-the-art", "opt-in") are untouched. The
+#: space is in the class so that a whole separated *phrase* is one run and short words
+#: inside it ("a-l-l") collapse too — but it is a word boundary, not a separator, and
+#: ``_collapse_separators`` preserves it. See that function.
+_SEPARATED = re.compile(r"(?:[A-Za-z0-9]" + _SEP_CLASS + r"){3,}[A-Za-z0-9]")
+
+#: A cheap necessary condition for a run worth collapsing: two single alphanumerics
+#: each followed by a *non-space* separator. Every run ``_collapse_separators`` will act
+#: on contains one, because it requires at least two real separators in a chunk — but
+#: unlike ``_SEPARATED`` it has no space in the class, so it fails at almost every
+#: position instead of matching at the end of every word and backtracking. On a 32 KB
+#: document it costs 0.3 ms against 0.7 ms for the full pattern, which matters because
+#: `_is_plain` runs on every piece of content the gateway sees (NFR-1, X-7).
+_SEPARATED_HINT = re.compile(r"[A-Za-z0-9][!-/:-@\[-`{-~][A-Za-z0-9][!-/:-@\[-`{-~]")
+
+#: The word-sized chunks inside a separated run, split on the whitespace that separates
+#: them. Each is validated on its own, so ``I-g-n-o-r-e a.l.l`` still collapses.
+_RUN_CHUNK = re.compile(r"\S+")
+
+#: Scripts written without spaces between words, so a run of letters is a *phrase*
+#: rather than a word and mixing Latin into it is ordinary ("Tシャツ", "iPhone用").
+#: Excluded from the mixed-script check entirely rather than weighted down: there is no
+#: word boundary to reason about, so the signal has no meaning there.
+_UNSEGMENTED_SCRIPTS = frozenset(
+    {"CJK", "HIRAGANA", "KATAKANA", "HANGUL", "THAI", "LAO", "KHMER", "MYANMAR", "TIBETAN"}
+)
+
+#: Greek-by-codepoint characters that are Latin-by-usage in scientific and engineering
+#: prose — "5μm", "10kΩ", "Δt". Narrow, closed, and about *legitimate* notation rather
+#: than about lookalikes, so it does not reintroduce the enumeration problem.
+_SCIENTIFIC_SYMBOLS = frozenset("μΩπΔΣ∆Åℓ")
+
+#: A maximal run of letters in any script — the closest thing to a "word" that works
+#: without a segmenter.
+_LETTER_RUN = re.compile(r"[^\W\d_]{2,}", re.UNICODE)
 
 #: Base64 candidates: long enough to carry a sentence, and correctly padded.
 _B64 = re.compile(r"\b[A-Za-z0-9+/]{16,}={0,2}")
@@ -165,7 +269,7 @@ class Normalized:
 
 #: Anything that could make normalisation change the text. Cheap to test, and false
 #: positives here only cost the slow path, never correctness.
-_NEEDS_WORK = re.compile(r"\s\s|[-._*·|/\\]\s*[A-Za-z0-9]\s*[-._*·|/\\]|%[0-9A-Fa-f]{2}|&#?\w+;")
+_NEEDS_WORK = re.compile(r"\s\s|%[0-9A-Fa-f]{2}|&#?\w+;")
 
 
 def _is_plain(text: str) -> bool:
@@ -175,6 +279,11 @@ def _is_plain(text: str) -> bool:
     if _NEEDS_WORK.search(text):
         return False
     if _LEET_CANDIDATE.search(text):
+        return False
+    # Separated runs. The old proxy lived in `_NEEDS_WORK` over a short separator
+    # class; now that the class is every punctuation character it gets its own cheap
+    # necessary condition, confirmed by the real pattern only when it fires.
+    if _SEPARATED_HINT.search(text) and _SEPARATED.search(text):
         return False
     return not _B64.search(text)
 
@@ -251,14 +360,28 @@ def _dominant_scripts(text: str) -> set[str]:
 
 
 def _fold_confusables(pairs: list[tuple[str, int]]) -> tuple[list[tuple[str, int]], int]:
-    """Fold lookalike characters, but never the script the text is actually written in."""
+    """Fold lookalike characters, but never the script the text is actually written in.
+
+    Returns the count of folded letters that were *inside a word*, which is the only
+    form of this that is evidence. Two things are deliberately not counted:
+
+    * punctuation — folding a curly quote or an en-dash is evidence of a word
+      processor, not of evasion, and counting it made 28 of NotInject's 339
+      deliberately-benign prompts score over the obfuscation threshold, every one of
+      them for quoting with “ ”;
+    * a lookalike standing on its own — NotInject also asks for "a logo with the letter
+      'ɴ'". A character being *discussed* is not a character being *smuggled*; the
+      attack is a substitution that changes a word, so a neighbouring letter is
+      required. This is the same within-word rule `_mixed_script_words` applies, for
+      the same reason.
+    """
     text = "".join(ch for ch, _ in pairs)
     if text.isascii():
         return pairs, 0
     protected = _dominant_scripts(text)
     out: list[tuple[str, int]] = []
     changed = 0
-    for ch, i in pairs:
+    for position, (ch, i) in enumerate(pairs):
         mapped = _CONFUSABLES.get(ch)
         if mapped is not None and ch.isalpha():
             try:
@@ -269,26 +392,137 @@ def _fold_confusables(pairs: list[tuple[str, int]]) -> tuple[list[tuple[str, int
                 out.append((ch, i))
                 continue
         if mapped is not None:
-            changed += 1
+            if ch in _CONFUSABLE_LETTERS and _has_letter_neighbour(pairs, position):
+                changed += 1
             out.append((mapped, i))
         else:
             out.append((ch, i))
     return out, changed
 
 
+def _has_letter_neighbour(pairs: list[tuple[str, int]], position: int) -> bool:
+    """Is the character at ``position`` part of a word, rather than standing alone?"""
+    before = pairs[position - 1][0] if position > 0 else ""
+    after = pairs[position + 1][0] if position + 1 < len(pairs) else ""
+    return before.isalpha() or after.isalpha()
+
+
+def _script_of(ch: str) -> str:
+    """The Unicode script family of one character, coarsely and without a dependency."""
+    try:
+        prefix = unicodedata.name(ch).split(" ")[0]
+    except ValueError:
+        return ""
+    return prefix
+
+
+def _mixed_script_words(text: str) -> int:
+    """Count words that are written in more than one script.
+
+    This is the answer to the table problem. A lookalike substitution is visible
+    *structurally* — "previouѕ" mixes Latin with one Cyrillic letter — and that is true
+    of every lookalike, including the ones no table lists. Nothing here needs to know
+    which character was substituted or what it was meant to be.
+
+    What it must not do is fire on ordinary multilingual text, so:
+
+    * a document written in one script is never mixed, by construction — this is a
+      *within-word* test, and Russian words are Russian all the way through;
+    * scripts written without spaces (CJK, Thai) are skipped entirely, because a letter
+      run there is a phrase and "iPhone用" is an ordinary Japanese phrase;
+    * combining marks and modifier letters are ignored, so decomposed accents and the
+      ʻokina do not count as a second script;
+    * a short closed list of scientific symbols (μ, Ω, Δ) is ignored, because "5μm" is
+      notation rather than obfuscation;
+    * and a word must be four letters or longer, below which the evidence is too thin.
+
+    It runs *after* confusable folding, so it reports only the residue — the lookalikes
+    the table did not know. A mapped homoglyph is already reported as one.
+    """
+    if text.isascii():
+        return 0
+    count = 0
+    for match in _LETTER_RUN.finditer(text):
+        word = match.group(0)
+        if word.isascii() or len(word) < 4:
+            continue
+        scripts: set[str] = set()
+        skip = False
+        for ch in word:
+            if ch in _SCIENTIFIC_SYMBOLS:
+                continue
+            category = unicodedata.category(ch)
+            if category in ("Mn", "Mc", "Me", "Lm"):
+                continue
+            script = _script_of(ch)
+            if script in _UNSEGMENTED_SCRIPTS:
+                skip = True
+                break
+            if script:
+                scripts.add(script)
+        if not skip and len(scripts) > 1:
+            count += 1
+    return count
+
+
 def _collapse_separators(pairs: list[tuple[str, int]]) -> tuple[list[tuple[str, int]], int]:
-    """Remove the separators inside ``I-g-n-o-r-e``, leaving the letters and origins."""
+    """Collapse ``I-g-n-o-r-e`` to a *word*, preserving the boundaries between words.
+
+    The earlier version dropped every non-alphanumeric character inside a run, and the
+    space was in the separator class, so a run was welded onto whatever followed it::
+
+        "I-g-n-o-r-e a-l-l p-r-e-v-i-o-u-s i-n-s-t-r-u-c-t-i-o-n-s now"
+            -> "Ignoreallpreviousinstructionsnow"
+
+    Every lexical pattern ends in ``s?\b``, which cannot match mid-word, so appending a
+    single word to a separated attack defeated the whole transform. The corpus case
+    passed only because its separated run happened to be the entire string. Measured in
+    ``benchmarks/adaptive/``: nothing fired at all on the ``input`` surface.
+
+    So the space is treated as what it is — a word boundary — and survives. Each
+    whitespace-delimited chunk of a run is then validated on its own:
+
+    * one repeated separator per chunk, because a machine applying an obfuscation uses
+      one character and ordinary punctuation-dense text ("a+b=c") does not;
+    * at least three alphanumerics in the chunk, so "e.g" is left alone;
+    * at least four *letters* across the whole run, so "1,2,3,4" is data;
+    * and, for a run that is a single lone token, at least five alphanumerics — because
+      a four-letter dotted token is an initialism ("N.A.S.A", "R.S.V.P") or a path
+      ("a/b/c/d") far more often than it is an obfuscated word. A run spanning two or
+      more separated words needs no such floor: a whole *phrase* written this way is
+      unambiguous, which is what lets "a-l-l" collapse inside one.
+    """
     text, offsets = _render(pairs)
-    spans = [m.span() for m in _SEPARATED.finditer(text)]
-    if not spans:
-        return pairs, 0
     drop: set[int] = set()
-    for start, end in spans:
-        for index in range(start, end):
-            if not text[index].isalnum():
-                drop.add(index)
+    runs = 0
+    for match in _SEPARATED.finditer(text):
+        start, end = match.span()
+        run = text[start:end]
+        if sum(1 for ch in run if ch.isalpha()) < 4:
+            continue
+        chunks = []
+        for chunk in _RUN_CHUNK.finditer(run):
+            body = chunk.group(0)
+            separators = {ch for ch in body if not ch.isalnum()}
+            if len(separators) != 1:
+                continue
+            if sum(1 for ch in body if ch.isalnum()) < 3:
+                continue
+            chunks.append(chunk)
+        if not chunks:
+            continue
+        if len(chunks) == 1 and sum(1 for ch in chunks[0].group(0) if ch.isalnum()) < 5:
+            continue
+        for chunk in chunks:
+            base = start + chunk.start()
+            for index, ch in enumerate(chunk.group(0), start=base):
+                if not ch.isalnum():
+                    drop.add(index)
+        runs += 1
+    if not drop:
+        return pairs, 0
     kept = [(ch, offsets[i]) for i, ch in enumerate(text) if i not in drop]
-    return kept, len(spans)
+    return kept, runs
 
 
 def _collapse_whitespace(pairs: list[tuple[str, int]]) -> tuple[list[tuple[str, int]], int]:
@@ -449,6 +683,13 @@ def normalize(text: str, *, aggressive: bool = True) -> Normalized:
         result.transforms.append("confusables")
         result.evasion.append({"kind": "homoglyphs", "count": confused})
 
+    # Structural obfuscation, checked on the folded text so that it reports only what
+    # the table did not already resolve. This is the signal that does not depend on
+    # knowing which lookalike was used — see `_mixed_script_words`.
+    mixed = _mixed_script_words("".join(ch for ch, _ in pairs))
+    if mixed:
+        result.evasion.append({"kind": "mixed_script", "words": mixed})
+
     pairs, separated = _collapse_separators(pairs)
     if separated:
         result.transforms.append("separators")
@@ -494,9 +735,15 @@ def evasion_score(result: Normalized) -> float:
     # attachment, a token, an image — and scoring them highly flagged a benign
     # attachment as an attack, which is the over-blocking that gets a guardrail
     # switched off.
+    # `mixed_script` carries the same weight as `homoglyphs` because it is the same
+    # evidence, seen structurally rather than through a table — a word that changes
+    # script halfway through is a substituted lookalike whether or not we can name it.
+    # It is reported only for the residue the table did not fold, so the two do not
+    # double-count the same character.
     weights = {
         "invisible_characters": 0.6,
         "homoglyphs": 0.6,
+        "mixed_script": 0.6,
         "character_separators": 0.5,
         "compatibility_characters": 0.2,
         "base64": 0.15,

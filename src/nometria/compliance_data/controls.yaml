@@ -546,6 +546,48 @@ controls:
       owasp-agentic: ["T4 Resource Overload"]
 
   # --- Pillar 4 · Evaluation & Reliability ------------------------------
+  - key: NOM-IAM-08
+    title: Inter-agent messages are authenticated and replay-protected
+    objective: >
+      Inter-agent messages are evaluated on their own surface (not folded into tool
+      results), signed and verified where the transport is ours, and rejected on replay;
+      unsigned traffic is reported, not silently trusted.
+    family: NOM-IAM
+    pillar: 17
+    implemented_by: [P17-1]
+    evidence_sources: [agent_message_log, agent_signing_keys, decisions]
+    status_rule:
+      kind: decision_coverage
+      surface: agent_message
+    mappings:
+      eu-ai-act: ["Art. 15"]
+      nist-ai-rmf: ["MANAGE 2.2"]
+      iso-42001: ["A.9"]
+      soc2: ["CC6.1", "CC6.3"]
+      owasp-agentic: ["T12 Agent Communication Poisoning", "T16 Insecure Inter-Agent Protocol Abuse"]
+
+  - key: NOM-RTG-13
+    title: Writes to agent memory are validated and carry provenance
+    objective: >
+      Writes into an agent's long-term memory are validated by the detector pipeline
+      before they commit and carry provenance/taint; unverified entries expire rather
+      than persisting indefinitely.
+    family: NOM-RTG
+    pillar: 14
+    implemented_by: [P14-7]
+    evidence_sources: [memory_entries, decisions]
+    status_rule:
+      kind: decision_coverage
+      surface: memory_write
+    mappings:
+      eu-ai-act: ["Art. 15"]
+      nist-ai-rmf: ["MEASURE 2.7", "MANAGE 2.2"]
+      iso-42001: ["A.6", "A.9"]
+      soc2: ["CC6.6", "CC6.7"]
+      owasp-llm: ["LLM04 Data & Model Poisoning"]
+      owasp-agentic: ["T1 Memory Poisoning"]
+      mitre-atlas: ["AML.T0020 Poison Training Data"]
+
   - key: NOM-EVL-01
     title: Changes are evaluated before release and regressions block deployment
     objective: >

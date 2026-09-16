@@ -40,9 +40,12 @@ past the checks.
 from __future__ import annotations
 
 import datetime as dt
+import logging
 from collections import deque
 from dataclasses import dataclass
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 # --- Fail modes ------------------------------------------------------------
 
@@ -425,3 +428,275 @@ def health(ledger: DegradationLedger, *, now: dt.datetime | None = None) -> dict
             "fail-open system reports success while checking nothing"
         ),
     }
+
+
+# --- Service-level degradation (gap 0.7) -----------------------------------
+#
+# Everything above this line is per *control*: one detector timed out, so this one
+# request went unchecked. That is the wrong granularity for the failure that actually
+# takes a deployment down. When the detector pipeline as a whole has nothing available
+# to run, when the policy engine's OPA sidecar is unreachable, when the database is
+# refusing connections, or when the configured model provider is gone, every request
+# is ungoverned — and `policy/store.py::get_engine` silently substituting the native
+# engine for an unreachable OPA is exactly the invisible-fail-open this module's
+# docstring refuses to accept. The probes below name those four dependencies, run the
+# declared `FailPolicy` against them, and put the answer somewhere an operator can
+# read it.
+
+#: The dependencies a `/v1/*` request needs before it can be governed at all.
+DETECTOR_PIPELINE = "detector_pipeline"
+POLICY_ENGINE = "policy_engine"
+DATABASE = "database"
+MODEL_PROVIDER = "model_provider"
+
+SERVICES = (DETECTOR_PIPELINE, POLICY_ENGINE, DATABASE, MODEL_PROVIDER)
+
+
+def service_policy(service: str, *, fail_mode: str | None = None) -> FailPolicy:
+    """The `FailPolicy` for one service, from `NOMETRIA_FAIL_MODE`.
+
+    The open/closed decision is the operator's declared `fail_mode` and nothing else —
+    but it is run through `FailPolicy`'s constructor rather than applied directly, so
+    the `NEVER_OPEN` rule keeps enforcing itself. If a service is ever named after a
+    control whose failure mode is a disclosure, `UnsafeFailMode` fires here and it
+    fails closed regardless of what the setting says, which is the whole point of
+    encoding that rule in the constructor instead of at each call site.
+    """
+    from .config import get_settings
+
+    try:
+        mode = (fail_mode or get_settings().fail_mode or CLOSED).strip().lower()
+    except Exception:  # settings unreadable is itself a degradation; assume the worst
+        mode = CLOSED
+    try:
+        return FailPolicy(service, mode)
+    except (UnsafeFailMode, ValueError):
+        return FailPolicy(service, CLOSED)
+
+
+#: Process-level, for the same reason `DegradationLedger` exists at all: the question
+#: "has this been open too long?" is asked on the request path, and answering it from
+#: the audit chain would put a database round-trip inside the thing that is already
+#: failing. Lazily built so a test's settings changes are picked up, exactly like
+#: `_ADMISSION` above.
+_LEDGER: DegradationLedger | None = None
+
+
+def get_degradation_ledger() -> DegradationLedger:
+    global _LEDGER
+    if _LEDGER is None:
+        _LEDGER = DegradationLedger()
+    return _LEDGER
+
+
+def reset_degradation_ledger() -> None:
+    """Test-only: drop the ledger so one test's recorded outage does not bleed into
+    the next. Mirrors `reset_admission_controller`."""
+    global _LEDGER, _PROBE_CACHE
+    _LEDGER = None
+    _PROBE_CACHE = {}
+
+
+# --- Probes ----------------------------------------------------------------
+#
+# Each returns an error string when the dependency is unavailable, or "" when it is
+# fine. Each is individually wrapped by `probe_services`: a probe that throws is
+# itself evidence the dependency is unwell, never a 500 for the caller.
+
+
+def _probe_detector_pipeline() -> str:
+    """Not "a detector failed" — that is already handled per-detector. This is the
+    pipeline having nothing at all it can run, so every request goes unchecked."""
+    from .config import get_settings
+    from .guardrails import available_detectors
+
+    enabled = set(get_settings().enabled_detectors)
+    if not enabled:
+        return "no detectors are enabled"
+    live = set(available_detectors())
+    if not (enabled & live):
+        return (
+            f"none of the {len(enabled)} enabled detectors is available "
+            f"({', '.join(sorted(enabled))}) — the pipeline has nothing to run"
+        )
+    return ""
+
+
+def _probe_policy_engine() -> str:
+    """A remote OPA that is unreachable is the dangerous case.
+
+    `policy/store.py::get_engine` already falls back to the native engine so the
+    customer's agent keeps working — correct, and completely silent. The fallback is
+    a different engine evaluating the request than the one the deployment declared,
+    which is a governance event, not an ops detail.
+    """
+    from .config import get_settings
+
+    settings = get_settings()
+    if settings.policy_engine != "opa":
+        return ""
+    from .policy.opa import OpaPolicyEngine
+
+    if not OpaPolicyEngine().available():
+        return (
+            f"OPA at {settings.opa_url} is unreachable; policy is being evaluated by "
+            "the native engine instead of the one this deployment declared"
+        )
+    return ""
+
+
+def _probe_database() -> str:
+    """Beyond the request's own session — the request's session proves only that one
+    checked-out connection is alive, which is the one case that never needed proving.
+    """
+    from sqlalchemy import text
+
+    from .db import session_scope
+
+    with session_scope() as probe:
+        probe.execute(text("SELECT 1"))
+    return ""
+
+
+def _probe_model_provider() -> str:
+    from .config import get_settings
+    from .providers import available_providers
+
+    configured = get_settings().default_provider
+    if configured not in available_providers():
+        return f"the configured model provider '{configured}' reports unavailable"
+    return ""
+
+
+_PROBES = {
+    DETECTOR_PIPELINE: _probe_detector_pipeline,
+    POLICY_ENGINE: _probe_policy_engine,
+    DATABASE: _probe_database,
+    MODEL_PROVIDER: _probe_model_provider,
+}
+
+#: service -> (checked_at, error). A probe costs a database round-trip and, with a
+#: remote OPA, an HTTP call; paying that per request would make this module the
+#: latency problem it exists to prevent.
+_PROBE_CACHE: dict[str, tuple[dt.datetime, str]] = {}
+
+
+def probe_services(*, now: dt.datetime | None = None, force: bool = False) -> dict[str, str]:
+    """Which dependencies are currently unhealthy, as ``{service: error}``.
+
+    Results are cached for `service_probe_interval_seconds`; `force` skips the cache
+    for the status endpoints, where an operator asking "is it up *now*" should not be
+    told what was true five seconds ago.
+    """
+    from .config import get_settings
+
+    now = now or dt.datetime.now(dt.UTC)
+    try:
+        ttl = dt.timedelta(seconds=float(get_settings().service_probe_interval_seconds))
+    except Exception:
+        ttl = dt.timedelta(seconds=5)
+
+    errors: dict[str, str] = {}
+    for service, probe in _PROBES.items():
+        cached = _PROBE_CACHE.get(service)
+        if not force and cached is not None and now - cached[0] < ttl:
+            error = cached[1]
+        else:
+            try:
+                error = probe() or ""
+            except Exception as exc:
+                # A probe that throws is evidence about the dependency, not a bug to
+                # propagate: an unreachable database raises here rather than returning.
+                error = f"{type(exc).__name__}: {exc}"
+            _PROBE_CACHE[service] = (now, error)
+        if error:
+            errors[service] = error
+    return errors
+
+
+def check_services(
+    *, now: dt.datetime | None = None, force: bool = False
+) -> list[Degradation]:
+    """Probe every dependency, record what is down, and return the verdicts.
+
+    Never raises. A ledger that can break a request is worse than no ledger: the whole
+    argument for allowing fail-open is that it is *recorded*, and a recorder that takes
+    the request down with it has turned a degradation into an outage.
+    """
+    events: list[Degradation] = []
+    try:
+        now = now or dt.datetime.now(dt.UTC)
+        ledger = get_degradation_ledger()
+        errors = probe_services(now=now, force=force)
+        for service in SERVICES:
+            error = errors.get(service)
+            if not error:
+                ledger.clear(service)  # recovered: the clock restarts
+                continue
+            events.append(
+                service_fallback(
+                    service, error, policy=service_policy(service), ledger=ledger, now=now
+                )
+            )
+    except Exception:  # pragma: no cover - the ledger must never break a request
+        log.warning("service degradation check failed; request proceeds", exc_info=True)
+        return []
+    return events
+
+
+def observe_governed_request(now: dt.datetime | None = None) -> None:
+    """Count a request against the ledger's denominator. Never raises."""
+    try:
+        get_degradation_ledger().observe_request(now)
+    except Exception:  # pragma: no cover
+        log.warning("could not count request against the degradation ledger", exc_info=True)
+
+
+def service_health(*, now: dt.datetime | None = None, probe: bool = True) -> dict[str, Any]:
+    """The operator surface for gap 0.7 — what is currently not being checked.
+
+    Carries `fail_mode` because "degraded" means something different under each: open
+    means those requests are being served unchecked, closed means they are being
+    refused, and a status view that does not say which is not telling an operator what
+    is happening to their traffic.
+    """
+    from .config import get_settings
+
+    try:
+        ledger = get_degradation_ledger()
+        # Deliberately read-only: this probes and reports, and never calls
+        # `service_fallback`. An earlier version recorded what it found, which meant
+        # that opening the dashboard pushed a fail-open control closer to its
+        # `max_open_fraction` budget — a status view that changes the system by being
+        # read, which is the failure this module's own docstring objects to.
+        errors = probe_services(now=now, force=True) if probe else {}
+        status = health(ledger, now=now)
+        try:
+            mode = get_settings().fail_mode
+        except Exception:
+            mode = "unknown"
+        return {
+            **status,
+            # Down *now*, from a fresh probe.
+            "healthy": bool(status.get("healthy")) and not errors,
+            "fail_mode": mode,
+            "services": sorted(SERVICES),
+            "unavailable": {
+                service: {
+                    "error": error,
+                    "policy": service_policy(service).on_unavailable,
+                }
+                for service, error in sorted(errors.items())
+            },
+            # What the request path actually recorded — the ungoverned requests that
+            # can be gone back over after the incident, which is the entire reason
+            # fail-open is allowed at all.
+            "recorded": {
+                service: events[-1].to_json()
+                for service in SERVICES
+                if (events := ledger.history(service))
+            },
+        }
+    except Exception:  # pragma: no cover - a status view must not 500
+        log.warning("could not build service health", exc_info=True)
+        return {"healthy": None, "degraded_controls": {}, "error": "health unavailable"}

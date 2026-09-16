@@ -12,6 +12,7 @@ a human-readable reason. Never block without an auditable reason (X-4).
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 from typing import Annotated, Any
 
@@ -21,10 +22,14 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ...agent_loop import LoopBudget, Step, govern_loop
 from ...audit.otel import ingest_otlp
-from ...enforcement import Enforcer
+from ...config import get_settings
+from ...enforcement import EnforcementResult, Enforcer
 from ...registry.service import detect_shadow_agents
 from ..deps import agent_credential, db
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(tags=["inline"])
 
@@ -139,6 +144,225 @@ def _headers(result) -> dict[str, str]:
         "X-Nometria-Mode": result.mode,
         "X-Nometria-Latency-Ms": f"{result.latency_ms:.2f}",
     }
+
+
+# ---------------------------------------------------------------------------
+# Loop governance across the proxy's tool loop (gap 0.4)
+# ---------------------------------------------------------------------------
+#
+# `agent_loop.py` was already called from `enforcement.py::_budget_state`, but only to
+# score the *one* decision in front of it: a caller had to thread its own step history
+# in through `/v1/guard/tool_call`'s `prior_steps`. The drop-in proxy — the surface
+# this product's whole X-1 pitch is built on — forwarded `tools` and `tool_calls`
+# straight through and governed nothing across turns. An agent alternating A-B-A-B
+# forever through `/v1/chat/completions` was invisible, because every individual
+# request looked perfectly reasonable.
+#
+# Nothing extra is needed from the client to fix that: both proxied protocols carry
+# the entire prior loop in the request body, because that is how a tool-calling client
+# works. The run can therefore be reconstructed from the body alone — no server-side
+# per-session state to go stale, to be lost when this stateless process is replaced
+# (NFR-3), or to leak between tenants.
+
+
+def _tool_steps(messages: list[dict[str, Any]]) -> list[Step]:
+    """Rebuild the tool-calling run from the conversation the client sent.
+
+    Handles both wire shapes: OpenAI's `assistant.tool_calls` answered by a
+    `role="tool"` message keyed on `tool_call_id`, and Anthropic's `tool_use` content
+    blocks answered by `tool_result` blocks keyed on `tool_use_id`. Anything that is
+    not a recognisable tool call is ignored rather than guessed at — a malformed body
+    must not manufacture a loop that is not there.
+    """
+    calls: list[tuple[str, str, dict[str, Any]]] = []
+    observations: dict[str, Any] = {}
+
+    for message in messages:
+        if not isinstance(message, dict):
+            continue
+        content = message.get("content")
+
+        for call in message.get("tool_calls") or []:
+            if not isinstance(call, dict):
+                continue
+            function = call.get("function") if isinstance(call.get("function"), dict) else {}
+            raw = function.get("arguments", call.get("arguments"))
+            if isinstance(raw, str):
+                try:
+                    arguments = json.loads(raw)
+                except Exception:
+                    # Unparseable arguments still identify the call; keeping the raw
+                    # string means two identical bad calls still fingerprint alike.
+                    arguments = {"_raw": raw}
+            else:
+                arguments = raw
+            calls.append(
+                (
+                    str(call.get("id") or f"call_{len(calls)}"),
+                    str(function.get("name") or call.get("name") or ""),
+                    arguments if isinstance(arguments, dict) else {"_value": arguments},
+                )
+            )
+
+        if str(message.get("role") or "") == "tool" and message.get("tool_call_id"):
+            observations[str(message["tool_call_id"])] = content
+
+        if isinstance(content, list):
+            for block in content:
+                if not isinstance(block, dict):
+                    continue
+                if block.get("type") == "tool_use":
+                    payload = block.get("input")
+                    calls.append(
+                        (
+                            str(block.get("id") or f"call_{len(calls)}"),
+                            str(block.get("name") or ""),
+                            payload if isinstance(payload, dict) else {"_value": payload},
+                        )
+                    )
+                elif block.get("type") == "tool_result" and block.get("tool_use_id"):
+                    observations[str(block["tool_use_id"])] = block.get("content")
+
+    return [
+        Step(tool=tool, arguments=arguments, observation=observations.get(call_id))
+        for call_id, tool, arguments in calls
+        if tool
+    ]
+
+
+def _loop_budget() -> LoopBudget:
+    """The deployment's declared `NOMETRIA_LOOP_*` budgets — the same ones
+    `enforcement.py::_budget_state` reads, so the proxy and the direct guard endpoint
+    cannot disagree about what a runaway loop is."""
+    settings = get_settings()
+    return LoopBudget(
+        max_steps=settings.loop_max_steps,
+        max_repeats=settings.loop_max_repeats,
+        max_cycle_length=settings.loop_max_cycle_length,
+        max_steps_without_progress=settings.loop_max_steps_without_progress,
+    )
+
+
+def _record_loop_stop(
+    session: Session, *, agent_slug: str | None, session_id: str, verdict, steps: list[Step]
+) -> str | None:
+    """Trace the refusal and raise a finding. Returns the trace id, or None.
+
+    Never raises: a refusal that fails to record is still a correct refusal, and
+    turning it into a 500 would replace a governed stop with an outage.
+    """
+    trace_id = None
+    try:
+        from ...audit.trace import start_trace
+        from ...models import Agent, Finding
+
+        agent = (
+            session.scalar(select(Agent).where(Agent.slug == agent_slug)) if agent_slug else None
+        )
+        trace = start_trace(
+            session,
+            agent_id=agent.id if agent else None,
+            agent_slug=agent_slug,
+            session_id=session_id,
+        )
+        trace_id = trace.id
+        session.add(
+            Finding(
+                type="agent_loop_stopped",
+                severity="medium",
+                title=f"Runaway tool loop stopped for '{agent_slug or 'unregistered agent'}'"[:300],
+                subject_type="agent",
+                subject_id=(agent_slug or session_id)[:120],
+                evidence_json={
+                    "decision": verdict.decision,
+                    "reason": verdict.reason,
+                    "step": verdict.step,
+                    "evidence": verdict.evidence,
+                    "session_id": session_id,
+                    "steps_seen": len(steps),
+                    "tools": [s.tool for s in steps],
+                    "trace_id": trace_id,
+                },
+                control_keys=["NOM-RTG-08"],
+            )
+        )
+        session.flush()
+    except Exception:  # pragma: no cover - recording must not break the refusal
+        log.warning("could not record a stopped agent loop", exc_info=True)
+    return trace_id
+
+
+def _govern_tool_loop(
+    session: Session,
+    *,
+    agent_slug: str | None,
+    session_id: str | None,
+    messages: list[dict[str, Any]],
+) -> JSONResponse | None:
+    """A refusal when the client's tool loop has stopped getting anywhere, else None.
+
+    Gated on the session header the route already reads. Without one there is no
+    correlation key to attribute the run to, and guessing would mean one tenant's
+    traffic could stop another's — so a client that supplies no session is left
+    exactly as it was. Same for a request carrying no tool calls at all: the
+    overwhelmingly common single-turn chat request must be untouched by this.
+    """
+    if not session_id:
+        return None
+    try:
+        steps = _tool_steps(messages)
+        if not steps:
+            return None
+        verdict = govern_loop(steps, budget=_loop_budget())
+        if not verdict.stopped:
+            return None
+    except Exception:  # pragma: no cover - loop scoring must not break the call
+        log.warning("loop governance failed; request proceeds", exc_info=True)
+        return None
+
+    trace_id = _record_loop_stop(
+        session, agent_slug=agent_slug, session_id=session_id, verdict=verdict, steps=steps
+    )
+    budget = _loop_budget()
+    result = EnforcementResult(
+        verdict="block",
+        effective_verdict="block",
+        mode="enforce",
+        trace_id=trace_id,
+        reason=verdict.reason,
+        # `loop.runaway` is the rule id the shipped tool-containment policy already
+        # uses for exactly this condition (controls NOM-RTG-08), so an operator reading
+        # a proxy refusal and one from `/v1/guard/tool_call` sees one vocabulary.
+        rules_fired=[
+            {
+                "rule_id": "loop.runaway",
+                "effect": "block",
+                "reason": verdict.reason,
+                "severity": "medium",
+                "controls": ["NOM-RTG-08"],
+                "evidence": {
+                    "decision": verdict.decision,
+                    "step": verdict.step,
+                    **verdict.evidence,
+                },
+            }
+        ],
+        explanation={
+            "control": "agent loop governance (PL-4, gap 0.4)",
+            "decision": verdict.decision,
+            "stopped_at_step": verdict.step,
+            "steps_seen": len(steps),
+            "tools": [s.tool for s in steps],
+            "session_id": session_id,
+            "budget": {
+                "max_steps": budget.max_steps,
+                "max_repeats": budget.max_repeats,
+                "max_cycle_length": budget.max_cycle_length,
+                "max_steps_without_progress": budget.max_steps_without_progress,
+            },
+        },
+    )
+    return _blocked_response(result)
 
 
 # ---------------------------------------------------------------------------
@@ -287,6 +511,17 @@ async def chat_completions(
     enforcer = Enforcer(session)
     evidence = _evidence_from_body(session, body)
 
+    # Ahead of the stream branch so a streaming client is governed identically — a
+    # runaway loop that escapes by setting `"stream": true` is not governed.
+    refusal = _govern_tool_loop(
+        session,
+        agent_slug=x_nometria_agent,
+        session_id=x_nometria_session,
+        messages=body.get("messages", []),
+    )
+    if refusal is not None:
+        return refusal
+
     if body.get("stream"):
         # PL-1: honour the caller's protocol. Previously this flag was silently
         # ignored and a non-streaming body returned, which breaks every streaming
@@ -373,6 +608,16 @@ async def messages(
 
     enforcer = Enforcer(session)
     evidence = _evidence_from_body(session, body)
+
+    refusal = _govern_tool_loop(
+        session,
+        agent_slug=x_nometria_agent,
+        session_id=x_nometria_session,
+        messages=payload,
+    )
+    if refusal is not None:
+        return refusal
+
     if body.get("stream"):
         events = enforcer.run_completion_stream(
             agent_slug=x_nometria_agent,

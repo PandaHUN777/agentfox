@@ -22,11 +22,13 @@ from sqlalchemy import select
 from nometria.integrity import (
     assess_integrity,
     check_arithmetic,
+    detect_date_mismatch,
     detect_entity_confusion,
     detect_period_mismatch,
     detect_timezone_ambiguity,
     detect_unit_mismatch,
     detect_unmatched_records,
+    number_readings,
 )
 from nometria.models import Agent, Finding, SourceRecord, utcnow
 from nometria.provenance import (
@@ -628,3 +630,389 @@ def test_checks_do_not_run_on_the_input_surface(seeded, enforcer, agent):
         agent=agent, identity=None, content="The limit is 900 [b].", surface="input"
     )
     assert "provenance" not in result.taint
+
+
+# ---------------------------------------------------------------------------
+# F7 × F9.3 — localisation parity
+#
+# `benchmarks/multilingual/` scored the checkers above on matched pairs: the same
+# logical content twice, once English-formatted and once localised. 13 of 19 pairs
+# diverged — 12 checks went silent on the localised member, and one accused correct
+# content of an arithmetic error it did not contain.
+#
+# Every test below asserts the *pair*, not the localised member alone. A localisation
+# fix that quietly changes the English verdict has broken the thing it was fixing, and
+# a test that only looks at the German side would not notice. These checks run on
+# every live output, so the English verdict is the expensive one.
+# ---------------------------------------------------------------------------
+
+
+def _kinds(issues: list[dict]) -> list[str]:
+    return sorted({i["kind"] for i in issues if "kind" in i})
+
+
+def assert_same_verdict(english: list[dict], localised: list[dict], expected: list[str]) -> None:
+    """Both spellings of one claim must reach one verdict — and the right one."""
+    assert _kinds(english) == expected, f"English side: {_kinds(english)} != {expected}"
+    assert _kinds(localised) == expected, f"localised side: {_kinds(localised)} != {expected}"
+
+
+# --- number format ---------------------------------------------------------
+
+
+def test_a_wrong_sum_is_caught_whichever_way_the_separators_go():
+    """1234.56 + 1000.00 is 2234.56 in every locale on earth. Stripping commas turned
+    the German spelling into the pair (1.234, 56) and the error vanished."""
+    assert_same_verdict(
+        check_arithmetic("The total is 1,234.56 + 1,000.00 = 3,500.00"),
+        check_arithmetic("Die Summe ist 1.234,56 + 1.000,00 = 3.500,00"),
+        ["arithmetic_error"],
+    )
+
+
+def test_a_correct_sum_written_with_a_decimal_comma_is_not_accused():
+    """The damaging half. `2,5 + 2,5 = 5` is correct, and the old parser read it as
+    25 + 25 and reported "is 50, not 5" — a fabricated error on valid content, in the
+    five languages that write decimals this way."""
+    assert_same_verdict(check_arithmetic("2.5 + 2.5 = 5"), check_arithmetic("2,5 + 2,5 = 5"), [])
+
+
+def test_a_correct_sum_with_dotted_thousands_is_not_accused():
+    assert_same_verdict(
+        check_arithmetic("The total is 1,234.56 + 1,000.00 = 2,234.56"),
+        check_arithmetic("Die Summe ist 1.234,56 + 1.000,00 = 2.234,56"),
+        [],
+    )
+
+
+def test_non_latin_numerals_still_pass():
+    """Arabic-Indic and Devanagari digits worked before this change and must keep
+    working: `\\d` and `float` are both Unicode-aware, and the separator rewrite must
+    not quietly re-introduce an ASCII assumption."""
+    assert_same_verdict(check_arithmetic("5 + 3 = 9"), check_arithmetic("٥ + ٣ = ٩"), [
+        "arithmetic_error"
+    ])
+    assert_same_verdict(check_arithmetic("5 + 3 = 9"), check_arithmetic("५ + ३ = ९"), [
+        "arithmetic_error"
+    ])
+
+
+def test_a_french_space_thousands_separator_is_read_as_one_number():
+    assert number_readings("5 000,00") == [5000.0]
+    assert number_readings("5 000,00") == [5000.0]
+
+
+def test_a_separator_ambiguous_literal_keeps_both_readings():
+    """`1,234` is 1234 to an English writer and 1.234 to a German one, and nothing in
+    the string settles it. Both survive; neither is picked."""
+    assert sorted(number_readings("1,234")) == [1.234, 1234.0]
+    assert sorted(number_readings("5.000")) == [5.0, 5000.0]
+    assert number_readings("1,234", locale="en") == [1234.0]
+    assert number_readings("1,234", locale="de") == [1.234]
+
+
+def test_an_unambiguous_literal_has_exactly_one_reading():
+    assert number_readings("2,5") == [2.5]
+    assert number_readings("1.234,56") == [1234.56]
+    assert number_readings("1,234.56") == [1234.56]
+    assert number_readings("1234.56") == [1234.56]
+
+
+def test_an_unknown_locale_tag_is_treated_as_no_locale_at_all():
+    """A caller who passes "xx" has told us nothing. Defaulting them to English would
+    be the same guess this module exists to refuse."""
+    assert sorted(number_readings("1,234", locale="xx")) == [1.234, 1234.0]
+
+
+# --- ambiguity is reported, not resolved -----------------------------------
+
+
+def test_arithmetic_whose_verdict_depends_on_the_locale_is_reported_as_ambiguous():
+    """`1,234 + 2 = 1,236` is correct read as English and wrong read as German. There
+    is no honest verdict without a locale, so the dependence is what gets reported."""
+    issues = check_arithmetic("1,234 + 2 = 1,236")
+    assert _kinds(issues) == ["number_format_ambiguity"]
+    assert "no locale was declared" in issues[0]["reason"]
+
+
+def test_a_declared_locale_resolves_the_ambiguity_in_both_directions():
+    assert check_arithmetic("1,234 + 2 = 1,236", locale="en") == []
+    assert _kinds(check_arithmetic("1,234 + 2 = 1,236", locale="de")) == ["arithmetic_error"]
+
+
+def test_arithmetic_that_is_wrong_under_every_reading_is_still_an_error():
+    """Ambiguity is not a way out. Both readings of this are wrong, so the fact that
+    there are two of them changes nothing."""
+    assert _kinds(check_arithmetic("1,234 + 1,000 = 9,999")) == ["arithmetic_error"]
+
+
+def test_arithmetic_that_is_right_under_every_reading_is_silent():
+    """Scaling every operand by 1000 preserves a sum, so the conventions agree here
+    and there is nothing to report — no ambiguity finding either."""
+    assert check_arithmetic("1,200 + 1,300 = 2,500") == []
+
+
+# --- aggregation vocabulary ------------------------------------------------
+
+
+def test_a_wrong_total_is_caught_in_german_and_french():
+    """`total ... is` gated this check. `Gesamtsumme ... beträgt` and `total est de`
+    are the same claim, and the check simply did not run on them."""
+    components = [1000.0, 1000.0]
+    assert_same_verdict(
+        check_arithmetic("The total is $5,000.00", components=components),
+        check_arithmetic("Die Gesamtsumme beträgt 5.000,00 €", components=components),
+        ["aggregation_error"],
+    )
+    assert_same_verdict(
+        check_arithmetic("The total is $5,000.00", components=components),
+        check_arithmetic("Le total est de 5 000,00 €", components=components),
+        ["aggregation_error"],
+    )
+
+
+def test_a_correct_total_is_not_accused_in_either_language():
+    components = [1000.0, 1000.0]
+    assert_same_verdict(
+        check_arithmetic("The total is $2,000.00", components=components),
+        check_arithmetic("Die Gesamtsumme beträgt 2.000,00 €", components=components),
+        [],
+    )
+
+
+def test_the_aggregation_keyword_no_longer_matches_inside_another_word():
+    """A pre-existing hole the rewrite closes: unbounded `sum` matched inside
+    "assume", so any sentence assuming a number was checked as a stated total."""
+    assert check_arithmetic("Assume the limit is 500", components=[1.0]) == []
+
+
+# --- period vocabulary -----------------------------------------------------
+
+
+def test_the_wrong_quarter_is_caught_in_german_and_french():
+    assert_same_verdict(
+        detect_period_mismatch("What was revenue in Q1 2024?", "Revenue in Q3 2024 was 5m."),
+        detect_period_mismatch(
+            "Wie hoch war der Umsatz im 1. Quartal 2024?",
+            "Im 3. Quartal 2024 betrug der Umsatz 5 Mio.",
+        ),
+        ["quarter_mismatch"],
+    )
+    assert_same_verdict(
+        detect_period_mismatch("What was revenue in Q1 2024?", "Revenue in Q3 2024 was 5m."),
+        detect_period_mismatch(
+            "Quel était le chiffre d'affaires au T1 2024 ?",
+            "Au T3 2024, le chiffre d'affaires était de 5 M.",
+        ),
+        ["quarter_mismatch"],
+    )
+
+
+def test_the_same_quarter_is_fine_in_german_and_french():
+    assert (
+        detect_period_mismatch(
+            "Wie hoch war der Umsatz im 1. Quartal 2024?", "Im 1. Quartal 2024: 5 Mio."
+        )
+        == []
+    )
+    assert detect_period_mismatch("au T1 2024 ?", "Au 1er trimestre 2024, 5 M.") == []
+
+
+def test_fiscal_against_calendar_is_caught_in_german():
+    """The expensive one, and the one most likely to be written in German: GJ against
+    Kalenderjahr is FY against CY, and both parties say 2024."""
+    assert_same_verdict(
+        detect_period_mismatch("What was FY2024 revenue?", "Calendar year 2024 revenue was 5m."),
+        detect_period_mismatch(
+            "Wie hoch war der Umsatz im GJ 2024?",
+            "Im Kalenderjahr 2024 betrug der Umsatz 5 Mio.",
+        ),
+        ["fiscal_calendar_mismatch"],
+    )
+
+
+def test_a_bare_t1_in_english_prose_is_not_a_quarter():
+    """`T1` earns a quarter reading only next to a four-digit year. In English prose it
+    is a tax form, a vertebra or a circuit far more often than it is a trimestre."""
+    assert detect_period_mismatch("Q1 numbers please", "The T1 form and the T3 form differ") == []
+
+
+# --- deadline vocabulary and time format -----------------------------------
+
+
+def test_a_bare_deadline_time_is_ambiguous_in_german_and_french():
+    assert_same_verdict(
+        detect_timezone_ambiguity("The deadline is 17:00."),
+        detect_timezone_ambiguity("Die Frist ist 17:00 Uhr."),
+        ["timezone_ambiguity"],
+    )
+    assert_same_verdict(
+        detect_timezone_ambiguity("The deadline is 17:00."),
+        detect_timezone_ambiguity("La date limite est 17:00."),
+        ["timezone_ambiguity"],
+    )
+
+
+def test_the_german_dotted_clock_format_is_a_time():
+    """Two independent failures were stacked in the German deadline case: the word
+    `Frist` and the format `17.00 Uhr`. This isolates the second by keeping the
+    English word "deadline"."""
+    assert_same_verdict(
+        detect_timezone_ambiguity("The deadline is 17:00."),
+        detect_timezone_ambiguity("Die deadline ist 17.00 Uhr."),
+        ["timezone_ambiguity"],
+    )
+    assert detect_timezone_ambiguity("La date limite est 17h00.") == [
+        detect_timezone_ambiguity("The deadline is 17:00.")[0]
+    ]
+
+
+def test_a_bare_dotted_number_is_not_a_time():
+    """`17.00 Uhr` is a time; `17.00` is a price. Without the marker this check would
+    fire on every English sentence that mentions money near the word "due"."""
+    assert detect_timezone_ambiguity("The amount due is 17.00") == []
+
+
+def test_a_stated_timezone_still_silences_the_check_in_german():
+    assert detect_timezone_ambiguity("Die Frist ist 17:00 Uhr MEZ.") == []
+
+
+def test_german_ist_is_not_an_indian_timezone():
+    """Matching timezone abbreviations case-insensitively makes German "ist" and
+    French "est" into IST and EST, which silences this check on any sentence using the
+    verb "to be" — the exact languages the fix was for."""
+    assert detect_timezone_ambiguity("Die Frist ist 17:00 Uhr.")
+    assert detect_timezone_ambiguity("La date limite est 17:00.")
+
+
+# --- scale vocabulary ------------------------------------------------------
+
+
+def test_thousands_read_as_millions_is_caught_in_german_and_french():
+    assert_same_verdict(
+        detect_unit_mismatch("Revenue was 5 million USD.", "Revenue was 5 thousand USD."),
+        detect_unit_mismatch("Der Umsatz betrug 5 Mio. EUR.", "Der Umsatz betrug 5 Tsd. EUR."),
+        ["scale_mismatch"],
+    )
+    assert_same_verdict(
+        detect_unit_mismatch("Revenue was 5 billion EUR.", "Revenue was 5 million EUR."),
+        detect_unit_mismatch("Le CA était de 5 Mds EUR.", "Le CA était de 5 M EUR."),
+        ["scale_mismatch"],
+    )
+
+
+def test_matching_scales_are_fine_in_german():
+    assert detect_unit_mismatch("Der Umsatz betrug 5 Mio. EUR.", "Umsatz: 5 Mio. EUR") == []
+
+
+# --- entity case folding ---------------------------------------------------
+
+
+def test_an_entity_with_a_sharp_s_matches_its_upper_cased_mention():
+    """German upper-cases ß to SS, so `Weiß AG` never matched `WEISS AG` under
+    `.lower()` — the entity check switched itself off on the German company names it
+    exists to protect. `.casefold()` is the string method that handles this."""
+    assert_same_verdict(
+        detect_entity_confusion(
+            "Report on WEISS AG", "Figures for Mueller GmbH", ["Weiss AG", "Mueller GmbH"]
+        ),
+        detect_entity_confusion(
+            "Bericht über WEISS AG", "Zahlen für Müller GmbH", ["Weiß AG", "Müller GmbH"]
+        ),
+        ["entity_confusion"],
+    )
+
+
+def test_the_right_entity_is_still_not_flagged_when_spelled_with_a_sharp_s():
+    assert (
+        detect_entity_confusion(
+            "Bericht über WEISS AG", "Zahlen für Weiß AG", ["Weiß AG", "Müller GmbH"]
+        )
+        == []
+    )
+
+
+# --- numeric dates ---------------------------------------------------------
+
+
+def test_a_transposed_date_pair_is_reported_as_ambiguous_with_no_locale():
+    """`03/04/2026` against `04.03.2026` is either one date in two conventions or a
+    day/month transposition. The strings do not say which, so neither does the check."""
+    issues = detect_date_mismatch("", "The hearing is on 03/04/2026.", "Hearing: 04.03.2026")
+    assert _kinds(issues) == ["date_format_ambiguity"]
+
+
+def test_a_declared_locale_turns_the_ambiguity_into_a_verdict():
+    issues = detect_date_mismatch(
+        "", "The hearing is on 03/04/2026.", "Hearing: 04.03.2026", locale="de"
+    )
+    assert _kinds(issues) == ["date_mismatch"]
+
+
+def test_a_date_written_the_same_way_twice_is_not_a_finding():
+    assert detect_date_mismatch("", "Due 03/04/2026.", "Due 03/04/2026.") == []
+
+
+def test_unrelated_dates_are_not_a_finding():
+    """Only a transposed pair is checked. Comparing every date in an answer against
+    every date in its source would fire on most documents ever written."""
+    assert detect_date_mismatch("", "Filed 05/09/2026.", "Hearing 03/04/2026") == []
+
+
+def test_a_date_that_resolves_itself_needs_no_locale():
+    """A component above 12 cannot be a month, so `13/04` and `04/13` are the same day
+    and there is nothing to report — no ambiguity finding either."""
+    assert detect_date_mismatch("", "Due 13/04/2026.", "Due 04/13/2026") == []
+
+
+def test_dates_are_not_compared_when_there_is_nothing_to_compare_them_to():
+    assert detect_date_mismatch("", "The hearing is on 03/04/2026.", "") == []
+
+
+# --- the English verdict is the expensive one ------------------------------
+
+
+def test_english_content_identical_to_its_own_source_stays_clean():
+    """The precision regression test. These checks run on every live output, so a
+    localisation fix that starts flagging correct English content is worse than the
+    bug it fixes. Content that *is* its own source cannot disagree with anything.
+
+    `benchmarks/multilingual/` runs this same shape over 4,138 committed English
+    texts, including 1,885 paragraphs of English court judgment dense with dates,
+    amounts and deadlines; the rate is unchanged by this work."""
+    for text in (
+        "Revenue in Q1 2024 was $1,234.56, up 5 million from FY2023.",
+        "The total is 1,234.56 + 1,000.00 = 2,234.56, due by 17:00 UTC on 03/04/2026.",
+        "We shipped 1,200 units in 2024 500 of which were returned.",
+        "The T1 form is due before the deadline of 5:00 pm EST.",
+    ):
+        assert assess_integrity(question=text, answer=text, context=text).clean, text
+
+
+def test_the_assessment_still_collects_every_family():
+    assessment = assess_integrity(
+        question="what were FY2024 orders for Acme Corp?",
+        answer="In calendar year 2024, Acme Holdings had 5 + 3 = 9 orders, matched to ORD-99999.",
+        records=[{"id": "ORD-11111"}],
+        entities=["Acme Corp", "Acme Holdings"],
+    )
+    assert {"fiscal_calendar_mismatch", "entity_confusion", "arithmetic_error"} <= set(
+        assessment.kinds
+    )
+
+
+def test_the_localised_assessment_collects_the_same_families():
+    """The same content, localised, through the single entry point the enforcement
+    path actually calls."""
+    assessment = assess_integrity(
+        question="Wie viele Aufträge hatte die Weiß AG im GJ 2024?",
+        answer=(
+            "Im Kalenderjahr 2024 hatte die Müller GmbH 5 + 3 = 9 Aufträge, "
+            "zugeordnet zu ORD-99999."
+        ),
+        records=[{"id": "ORD-11111"}],
+        entities=["Weiß AG", "Müller GmbH"],
+    )
+    assert {"fiscal_calendar_mismatch", "entity_confusion", "arithmetic_error"} <= set(
+        assessment.kinds
+    )

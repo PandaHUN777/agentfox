@@ -248,13 +248,31 @@ _EXTRA_LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
 
 
 # --- 1. Lexical signals ----------------------------------------------------
+#: What an override is an override *of*. One list, shared by the "ignore" and
+#: "disregard" patterns, because the failure it fixes was the two lists drifting: neither
+#: had `restrictions` or `constraints`, so "Ignore prior restrictions" and "Disregard
+#: your constraints" were silent misses — and those are two of the four attacker
+#: payloads in ``benchmarks/containment/``, meaning the repo's own canonical attack text
+#: contained misses nothing was measuring (``benchmarks/adaptive/``, finding 3).
+#:
+#: The precision anchor is *not* this list. It is the qualifier in front of it —
+#: previous / prior / above / earlier / your — which is what separates "ignore prior
+#: rules" from "ignore the rules in column B". So the object list can be generous;
+#: widening the qualifier could not be.
+_OVERRIDE_OBJECT = (
+    r"(?:instruction|prompt|rule|direction|message|restriction|constraint|guideline|"
+    r"limitation|limit|polic(?:y|ie)|guardrail|safeguard|safety\s+rule|directive|filter|"
+    r"boundar(?:y|ie)|protocol|training)"
+)
+
 # (pattern, entity, base_score). Scores are calibrated so that a single weak
 # signal never blocks on its own; two independent signals do.
 _LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
     (
         re.compile(
             r"\bignore\s*(?:all\s*)?(?:the\s*)?(?:previous|prior|above|earlier|your)\s*"
-            r"(?:instruction|prompt|rule|direction|message)s?\b",
+            + _OVERRIDE_OBJECT
+            + r"s?\b",
             re.I,
         ),
         "INJECTION.INSTRUCTION_OVERRIDE",
@@ -281,7 +299,8 @@ _LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
     (
         re.compile(
             r"\bdisregard\s*(?:all\s*)?(?:previous|prior|the\s*above|your)\s*"
-            r"(?:instruction|rule|guideline|training)s?\b",
+            + _OVERRIDE_OBJECT
+            + r"s?\b",
             re.I,
         ),
         "INJECTION.INSTRUCTION_OVERRIDE",

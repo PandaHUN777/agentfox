@@ -727,6 +727,55 @@ def _is_sql_argument(key: str, value: Any) -> bool:
     )
 
 
+#: Nested structures are walked, but not without limit: a tool call is not a document, and
+#: an unbounded walk is a latency and memory problem inside a 300ms budget.
+_MAX_ARGUMENT_DEPTH = 6
+_MAX_ARGUMENT_LEAVES = 256
+
+
+def walk_arguments(
+    arguments: Any, _prefix: str = "", _depth: int = 0, _budget: list[int] | None = None
+) -> Any:
+    """Yield ``(leaf_key, path, value)`` for every scalar in a tool call, nested included.
+
+    Taint tracking already flattens nested arguments (`guardrails/taint.py::_flatten`), so a
+    value buried at `params.sql` carried its provenance correctly — but action assurance
+    only ever looked at the top level. The result was a blind spot exactly where a real
+    integration puts things: `{"sql": "DELETE FROM customers"}` was blocked, while
+    `{"params": {"sql": "DELETE FROM customers"}}` was not analysed at all. Found by the
+    adaptive red-team engine's `argument_shape.nested` operator, which flipped a verdict
+    from block to allow by doing nothing but re-nesting the same payload.
+
+    The leaf key is yielded alongside the full path because every heuristic here keys off
+    the *field name* (`query`, `cmd`, `url`), which is the leaf, while the path is what a
+    reader needs to locate the value in the original call.
+    """
+    budget = _budget if _budget is not None else [_MAX_ARGUMENT_LEAVES]
+    if _depth > _MAX_ARGUMENT_DEPTH or budget[0] <= 0:
+        return
+    if isinstance(arguments, dict):
+        for key, value in arguments.items():
+            path = f"{_prefix}.{key}" if _prefix else str(key)
+            if isinstance(value, (dict, list)):
+                yield from walk_arguments(value, path, _depth + 1, budget)
+            else:
+                budget[0] -= 1
+                if budget[0] < 0:
+                    return
+                yield str(key), path, value
+    elif isinstance(arguments, list):
+        leaf = _prefix.rsplit(".", 1)[-1] if _prefix else ""
+        for index, value in enumerate(arguments):
+            path = f"{_prefix}[{index}]"
+            if isinstance(value, (dict, list)):
+                yield from walk_arguments(value, path, _depth + 1, budget)
+            else:
+                budget[0] -= 1
+                if budget[0] < 0:
+                    return
+                yield leaf, path, value
+
+
 def find_sql_argument(arguments: dict[str, Any]) -> str | None:
     """The first argument that looks like a SQL statement, or None.
 
@@ -734,7 +783,7 @@ def find_sql_argument(arguments: dict[str, Any]) -> str | None:
     drift — a caller wanting the raw statement (P18's `analyse_access`) rather than
     an `ActionAnalysis` uses this instead of duplicating the key/verb heuristics.
     """
-    for key, value in (arguments or {}).items():
+    for key, _path, value in walk_arguments(arguments):
         if _is_sql_argument(key, value):
             return value
     return None
@@ -745,7 +794,7 @@ def analyse_arguments(
 ) -> list[ActionAnalysis]:
     """Find and analyse every executable artefact in a tool call's arguments."""
     out: list[ActionAnalysis] = []
-    for key, value in (arguments or {}).items():
+    for key, _path, value in walk_arguments(arguments):
         lowered = str(key).lower()
         if isinstance(value, str) and value.strip():
             if _is_sql_argument(key, value):

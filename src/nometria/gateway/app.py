@@ -18,7 +18,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import __version__
-from ..availability import get_admission_controller
+from ..availability import (
+    check_services,
+    get_admission_controller,
+    observe_governed_request,
+    service_health,
+)
 from ..compliance.catalog import load_catalog
 from ..config import get_settings
 from ..db import init_db
@@ -131,6 +136,65 @@ def create_app() -> FastAPI:
     )
 
     @app.middleware("http")
+    async def degradation_gate(request: Request, call_next):
+        """Gap 0.7 — fail-open/closed per *service*, and never silently.
+
+        `fail_mode` was only ever consulted per detector: one detector timed out, so
+        this one request went unchecked. That is the wrong granularity for the failure
+        that actually matters. When the detector pipeline as a whole has nothing to
+        run, the policy engine's OPA sidecar is unreachable (`policy/store.py` quietly
+        substitutes the native engine), the database is refusing connections, or the
+        configured model provider is gone, *every* request is ungoverned — and the
+        deployment reports 200s throughout, which is precisely the indistinguishable-
+        from-working failure `availability.py`'s docstring refuses to accept.
+
+        So: probe the dependencies, run the operator's declared `FailPolicy`, and put
+        the answer where it can be seen. Fail-closed refuses here rather than admitting
+        an ungoverned request; fail-open serves it but records it and stamps the
+        response, and converts to closed once the degradation outlasts its budget.
+        Scoped to ``/v1/*`` for the same reason as the admission gate below: ``/api/*``
+        is the operator control plane, and an operator diagnosing an outage must not be
+        locked out by the outage.
+        """
+        if not request.url.path.startswith("/v1/"):
+            return await call_next(request)
+
+        # Counted before the verdict so the ledger's denominator includes the healthy
+        # traffic — five degraded requests out of five is an outage, five out of fifty
+        # thousand is a blip, and a fraction over failures alone cannot tell them apart.
+        observe_governed_request()
+        events = check_services()
+        blocking = [e for e in events if e.verdict == "block"]
+        if blocking:
+            event = blocking[0]
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "error": {
+                        "type": "nometria_service_degraded",
+                        "message": event.reason,
+                        "service": event.control,
+                        "detail": event.error,
+                        "escalated": event.escalated,
+                        "fail_mode": get_settings().fail_mode,
+                        "degraded_services": sorted({e.control for e in blocking}),
+                    }
+                },
+                headers={
+                    "Retry-After": "5",
+                    "X-Nometria-Degraded": ",".join(sorted({e.control for e in blocking})),
+                },
+            )
+
+        response = await call_next(request)
+        if events:
+            # The request was served without a dependency the governance layer needed.
+            # A caller that gets a 200 back deserves to know that much without going
+            # and reading someone else's logs.
+            response.headers["X-Nometria-Degraded"] = ",".join(sorted({e.control for e in events}))
+        return response
+
+    @app.middleware("http")
     async def admission_gate(request: Request, call_next):
         """P15-6 — shed load before it reaches governance, never after.
 
@@ -187,9 +251,27 @@ def create_app() -> FastAPI:
     # playground_sessions.py's own note on why that's an accepted trade-off here).
     app.include_router(playground.router)
 
-    @app.get("/api/health", tags=["platform"])
+    # `summary` pinned so the docstring below does not rewrite this route's label in
+    # the generated Appendix C table (scripts/api_routes.py) — the explanation belongs
+    # in the description, and the public summary of this route has not changed.
+    @app.get("/api/health", tags=["platform"], summary="Health")
     def health() -> dict[str, Any]:
-        return {"status": "ok", "version": __version__}
+        """Liveness, plus what is currently not being checked (gap 0.7).
+
+        `status` stays "ok" for a process that is up and serving — that is what every
+        liveness probe already pointed at this route means by it, and changing it would
+        start restarting healthy containers. What a fail-open deployment needs *on top*
+        is `governance_healthy`: a fail-open system reports success while checking
+        nothing, so a 200 here is exactly the signal that cannot tell a working control
+        from an absent one.
+        """
+        degradation = service_health()
+        return {
+            "status": "ok",
+            "version": __version__,
+            "governance_healthy": degradation.get("healthy"),
+            "degradation": degradation,
+        }
 
     @app.get("/api/version", tags=["platform"])
     def version() -> dict[str, Any]:
@@ -365,6 +447,12 @@ def create_app() -> FastAPI:
             "circuit_breakers": BREAKER.snapshot(),
             "budgets": budgets,
             "fallback_chain": get_settings().fallback_chain,
+            # Gap 0.7: the per-service degradation ledger, alongside the per-provider
+            # breaker it complements. `fail_mode` travels with it because "degraded"
+            # means something different under each — open means those requests were
+            # served unchecked, closed means they were refused.
+            "fail_mode": get_settings().fail_mode,
+            "degradation": service_health(),
         }
 
     @app.get("/metrics", tags=["platform"], response_class=PlainTextResponse)

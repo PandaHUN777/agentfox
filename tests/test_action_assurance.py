@@ -473,3 +473,63 @@ def test_a_dry_run_computes_the_verdict_without_refusing(seeded, enforcer, db_ag
     assert result.taint["dry_run"] is True
     assert "sql.destructive_ddl" in {r["rule_id"] for r in result.rules_fired}
     assert result.effective_verdict == "block", "the counterfactual is still recorded"
+
+
+# ---------------------------------------------------------------------------
+# Nested arguments (found by the adaptive red-team engine, 2026-09-16)
+# ---------------------------------------------------------------------------
+#
+# Taint tracking always flattened nested arguments, so a value at `params.sql` carried
+# its provenance correctly — but action assurance only ever read the top level. Re-nesting
+# the identical payload flipped a verdict from block to allow, which is the whole claim
+# this module exists to make.
+
+
+def test_a_destructive_statement_nested_one_level_is_still_analysed():
+    from nometria.guardrails.actions import analyse_arguments
+
+    flat = analyse_arguments({"sql": "DELETE FROM customers"})
+    nested = analyse_arguments({"params": {"sql": "DELETE FROM customers"}})
+    assert len(nested) == len(flat) == 1
+    assert nested[0].operation == flat[0].operation
+    assert {r.code for r in nested[0].risks} == {r.code for r in flat[0].risks}
+
+
+def test_a_destructive_statement_inside_a_list_is_analysed():
+    from nometria.guardrails.actions import analyse_arguments
+
+    analyses = analyse_arguments({"batch": [{"query": "DELETE FROM orders"}]})
+    assert analyses and "sql.unbounded_mutation" in {r.code for r in analyses[0].risks}
+
+
+def test_a_wildcard_scope_value_nested_in_an_object_is_caught():
+    from nometria.guardrails.actions import analyse_arguments
+
+    analyses = analyse_arguments({"filter": {"order_id": "*"}})
+    assert analyses and "scope.wildcard_value" in {r.code for r in analyses[0].risks}
+
+
+def test_the_sql_finder_walks_nested_arguments_too():
+    """P18's access analysis shares this finder; the two must not drift."""
+    from nometria.guardrails.actions import find_sql_argument
+
+    assert find_sql_argument({"params": {"query": "DROP TABLE x"}}) == "DROP TABLE x"
+
+
+def test_ordinary_nested_arguments_stay_silent():
+    from nometria.guardrails.actions import analyse_arguments
+
+    assert analyse_arguments({"customer": {"name": "Ada", "city": "Cambridge"}}) == []
+
+
+def test_the_walk_is_bounded_in_depth_and_width():
+    """A tool call is not a document: an unbounded walk is a latency problem."""
+    from nometria.guardrails.actions import analyse_arguments
+
+    deep: dict = {"sql": "DELETE FROM customers"}
+    for _ in range(12):
+        deep = {"wrap": deep}
+    assert analyse_arguments(deep) == []
+
+    wide = {f"k{i}": "*" for i in range(600)}
+    assert len(analyse_arguments(wide)) <= 256
