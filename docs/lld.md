@@ -351,7 +351,7 @@ Subcommand groups (`app.add_typer`, plus `_register_*` calls from their own modu
 
 ## 12. Database migrations — `migrations/versions/`
 
-25 Alembic revisions (dated 2026-08-18 through 2026-09-02, i.e. spanning this project's own
+26 Alembic revisions (dated 2026-08-18 through 2026-09-04; head `b3f8e29a71c4`, the deferred job queue, i.e. spanning this project's own
 build timeline). Rough evolution order: baseline schema → tracing/observability links →
 policy hierarchy/agent controls → guardrail feedback/suppressions → per-tenant audit chain →
 escalation policy handoffs → source records → business rules → knowledge boundary →
@@ -427,7 +427,7 @@ Three files only, no Kubernetes manifests anywhere in the repo.
 
 - [docs/hld.md](hld.md) — architecture shape, principles, integration surfaces
 - [docs/appendix-a-oss-register.md](appendix-a-oss-register.md) — full OSS licence/health register
-- [docs/appendix-b-control-catalog.md](appendix-b-control-catalog.md) — 41 controls × 7 frameworks
+- [docs/appendix-b-control-catalog.md](appendix-b-control-catalog.md) — 43 controls × 7 frameworks
 - [docs/appendix-c-api-spec.md](appendix-c-api-spec.md) — full API specification
 - [docs/appendix-d-data-model.md](appendix-d-data-model.md) — full data model
 - [docs/appendix-e-threat-model.md](appendix-e-threat-model.md) — full threat model

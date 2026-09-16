@@ -18,12 +18,22 @@ That's the thesis this product is built on, and it shows up directly in what we 
 
 ## 3. What makes Nometria different (the USPs)
 
-Seven things, each real, tested, and — as far as our own competitive research could find — not offered together by any single competitor:
+**The one that matters most, and the one we now measure directly.** Every published result on
+adversarial robustness — most recently [*The Attacker Moves Second*](https://arxiv.org/abs/2510.09023),
+over 90% attack success against twelve defences — says a determined attacker eventually gets past
+content detection. We agree, and we publish our own adaptive-attack success rate (§4.0). What we claim
+instead is that the *blast radius is bounded when that happens*, and we measure it by deleting the
+detection layer entirely: **8/8 attack scenarios contained with zero detector signal**, and **42/42
+attacker calls that act contained across AgentDojo's 617 ground-truth calls, with 552/552 legitimate
+calls still allowed**. No competitor surveyed publishes a detector-disabled containment number at all.
+
+The seven capabilities below are how that holds up, each real, tested, and — as far as our own
+competitive research could find — not offered together by any single competitor:
 
 1. **Argument-provenance taint tracking.** Every tool-call argument carries where its value actually came from — a user, a retrieved document, another tool's output — and capability checks can be conditioned on that provenance, not just the argument's face value. The closest public competitor claim (Zenity's "intent-based detection examines the full execution path") doesn't go this granular. This is what lets containment hold **after** a content-detector fails — the tool call itself is still checked against what its arguments are actually made of.
 2. **A tamper-evident audit chain with a standalone, stdlib-only verifier.** No competitor we found ships a hash-chained audit log an auditor can verify themselves, offline, without trusting our software to tell the truth about itself. Mutation, deletion, reorder, and checkpoint forgery are all independently detectable — a 60-second live demo for a regulated buyer.
 3. **Control status computed from telemetry, not attested.** Most of the AI-governance category (per Gartner's own MQ commentary) collects self-reported attestations. Ours computes control status from what actually happened — a broken audit chain forces the audit control to `failing`, automatically, not on a schedule someone remembers to run.
-4. **Declared gaps per framework, published rather than hidden.** Every one of 41 controls across 7 compliance frameworks ships with an explicit list of what it does *not* cover. This is unusual, and disproportionately credible in an audit conversation.
+4. **Declared gaps per framework, published rather than hidden.** Every one of 43 controls across 7 compliance frameworks ships with an explicit list of what it does *not* cover. This is unusual, and disproportionately credible in an audit conversation.
 5. **Policy simulation before enforcement.** New policy versions replay against real recorded traffic and report what would newly break, before anyone turns enforcement on.
 6. **Self-host by default, zero required egress.** The main SaaS governance platforms (Zenity, Credo AI, OneTrust) are SaaS-only. For a regulated buyer that can't send its traffic to a third party, this is a structural, not incremental, difference.
 7. **Governing correctness as part of governance, not as a separate eval product.** Silent-failure detection (a 6-signal ensemble that discriminates "confidently wrong" from "correctly abstained") lives in the same enforcement path as the security controls, not bolted on from a separate observability tool.
@@ -34,13 +44,56 @@ Section 6 has the fuller competitive-landscape breakdown; the full audit is in [
 
 Each entry below follows the same shape: what the capability does and why it's there, how we know it works, and how it differs from what competitors offer.
 
+### 4.0 Containment when detection fails — the number we lead with
+
+**What it does.** Capability grants, argument-provenance taint ceilings, declared tool impact tiers,
+deterministic blast-radius analysis and the kill switch all decide whether an *action* may proceed
+without reading the content at all. They are therefore unaffected by a detector miss, which is the
+condition every adversarial-robustness paper says to expect.
+
+**Benchmarked, twice, with detection switched off entirely.**
+[`benchmarks/containment/`](../benchmarks/containment/README.md) runs eight structurally different attack
+scenarios with `NOMETRIA_ENABLED_DETECTORS=[]` — a total bypass, verified per scenario by re-probing the
+payload and recording zero entities: **8/8 contained, 4/4 legitimate controls still allowed**.
+[`benchmarks/agentdojo_e2e/`](../benchmarks/agentdojo_e2e/README.md) replays
+[AgentDojo](https://github.com/ethz-spylab/agentdojo)'s own hand-authored ground truth — 65 calls a
+compromised agent makes, 552 a correctly-behaving one makes — through the real `guard_tool_call` path:
+**42/42 attacker calls that act contained, 552/552 legitimate calls allowed**, with results *identical*
+whether detectors are on or off.
+
+**The honest limits, which belong next to the number.** Attacker calls that only *read* are contained
+20/23: a compromised agent asked to read something it legitimately may read is indistinguishable from
+one doing its job, and the harm in that shape arrives at the exfiltration step, which is contained.
+Containment is also exactly as good as the declarations behind it — impact tiers, grants, constraints,
+triggers and scopes are operator-declared, and an irreversible tool recorded as `read` is one a tainted
+argument can reach. `nometria doctor` now grades that readiness directly.
+
 ### 4.1 Prompt-injection & content-safety detection
 
 **What it does.** A three-layer detector — fast regex heuristics, a fine-tuned classifier ensemble, and local embedding-similarity matching against a curated attack corpus — screens every input, output, tool argument, tool result, and retrieved chunk for injection/jailbreak attempts.
 
-**Benchmarked — yes, most extensively of anything in this document.** Primary dataset [`deepset/prompt-injections`](https://huggingface.co/datasets/deepset/prompt-injections) (662 examples): held-out recall went from **0% → 66.7%** across four rounds of measured changes, at **100% precision held throughout** — zero false positives at every step. Generalization confirmed against four further independent, license-clean datasets the detectors were never tuned against (5,345 examples total: [`spml`](https://huggingface.co/datasets/reshabhs/SPML_Chatbot_Prompt_Injection), [`yanismiraoui`](https://huggingface.co/datasets/yanismiraoui/prompt_injections), [`notinject`](https://huggingface.co/datasets/leolee99/NotInject), [`trustairlab`](https://huggingface.co/datasets/TrustAIRLab/in-the-wild-jailbreak-prompts)): recall of 98.0–98.6% on two of them, with the honest cost disclosed on the other two (see below). Full methodology and every round: [`benchmarks/REPORT.md`](../benchmarks/REPORT.md).
+**Benchmarked — yes, most extensively of anything in this document.** Primary dataset [`deepset/prompt-injections`](https://huggingface.co/datasets/deepset/prompt-injections) (662 examples): held-out recall went from **0% → 66.7%** across four rounds of measured changes, at **100% precision held throughout** — zero false positives at every step. Generalization measured against four further independent, license-clean datasets the detectors were never tuned against — **with the opt-in classifier ensemble, which is not the shipped default** (5,345 examples total: [`spml`](https://huggingface.co/datasets/reshabhs/SPML_Chatbot_Prompt_Injection), [`yanismiraoui`](https://huggingface.co/datasets/yanismiraoui/prompt_injections), [`notinject`](https://huggingface.co/datasets/leolee99/NotInject), [`trustairlab`](https://huggingface.co/datasets/TrustAIRLab/in-the-wild-jailbreak-prompts)): recall of 85.6% and 98.6% on two of them through the real pipeline (re-measured 2026-09-16), with the honest cost disclosed on the other two (see below). Full methodology and every round: [`benchmarks/REPORT.md`](../benchmarks/REPORT.md).
 
 **Real insight this surfaced, reported honestly:** the classifier model swap that roughly doubled primary-benchmark recall (`protectai/deberta` → `leolee99/PIGuard`) also cut a dangerous over-defense problem by more than two-thirds — the old model flagged 42.2% of a dedicated benign-but-trigger-word-laden stress-test dataset as attacks; PIGuard alone cut that to 11.5%. But adding a secondary-model ensemble backstop to recover generalization recall on `spml`/`yanismiraoui` gave most of that over-defense fix back (false-positive rate rose to 41.3% on the same stress test). We shipped this as a disclosed, opt-out-able trade-off (`prompt_injection_classifier_secondary_model`), not a hidden cost — a deployment chooses which failure mode it fears more.
+
+**Measured against an attacker who adapts, and published.**
+[`benchmarks/adaptive/`](../benchmarks/adaptive/README.md) implements the protocol from *The Attacker
+Moves Second*: the attacker calls our real detector path, reads back the verdict and the entity list, and
+steers its next mutation from that feedback. Against the attacks our stack currently stops, using only
+human-readable mutations, attack success reaches **73% at a 50-attempt budget** (100% with encoding
+operators included). Building it found three real detector defects, all since fixed — separator
+collapsing that welded words together, unknown obfuscation producing no signal at all, and two missing
+override objects that left two of our own canonical attack payloads undetected. The fixes cost the
+attacker attempts rather than stopping the attack: success at a 5-attempt budget roughly halved
+(63.2% → 36.8%), while at 50 attempts it barely moved. They also cut benign false positives on the
+NotInject over-defense set from **8.6% to 0.3%**, and revealed that a meaningful share of our prior
+obfuscation "detections" were curly apostrophes and em-dashes rather than attacks — a trade we
+publish rather than hide, because topline recall on two generalization datasets fell when that
+spurious signal was removed. We report this because
+it is true, because the paper's stronger attacker classes — gradient, reinforcement-learning and human
+red-teaming — are *not* implemented here so the real figure should be assumed higher, and because it is
+the correct context for §4.0: of those bypasses that named a concrete harmful action, **28/28 were still
+contained at the action**. Treat detection as a cost imposed on an attacker, not as a defence.
 
 **Vendor context, not our score:** [Lakera's PINT benchmark](https://github.com/lakeraai/pint-benchmark) reports named-vendor numbers (Lakera Guard 95.2%, AWS Bedrock Guardrails 89.2%, Azure Prompt Shield 89.1%) but its dataset was never public and the repo is now archived — we can't reproduce a PINT score, so we don't claim one. Not directly comparable to our own numbers (different dataset, self-reported); cited only so a reader has market context.
 

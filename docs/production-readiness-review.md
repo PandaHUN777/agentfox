@@ -30,7 +30,9 @@ legal review, org process), it's marked as such rather than guessed at.
 
 These were not in gap-analysis.md's register as of 2026-08-29.
 
-### 1.1 🔴 `deploy/Dockerfile` builds against paths that don't exist in the repo
+### 1.1 ✅ (was 🔴) `deploy/Dockerfile` builds against paths that don't exist in the repo
+
+> **Resolved in `6863b8b`** — the Dockerfile's `COPY` paths now exist, and CI's `docker-smoke` job builds the `deps` stage on every push.
 
 ```dockerfile
 COPY compliance ./compliance
@@ -51,7 +53,9 @@ whether anything downstream in the image expects a top-level `/app/compliance` p
 choosing), then add a CI job that actually builds this image so this class of drift can't
 recur silently.** Effort: S.
 
-### 1.2 🔴 The Vercel-vendored wheel is currently stale, not just historically incident-prone
+### 1.2 ✅ (was 🔴) The Vercel-vendored wheel is currently stale, not just historically incident-prone
+
+> **Resolved in `6863b8b`** — a pre-commit hook rebuilds both vendored wheels when `src/nometria/` changes, and CI's `vendored-wheel-freshness` job fails pushes that skip it.
 
 Gap-analysis.md and the LLD both note the wheel-drift *pattern* (three recent commits —
 `2cfe048`, `551c220`, `00a4d4f` — show a real production incident from exactly this).
@@ -86,7 +90,9 @@ will have to re-discover the same in-progress state. **Action: finish and commit
 change, then re-run `scripts/coverage.py --write` so `docs/status.md`'s PL-4 entry reflects
 it.** Effort: S (appears nearly complete already).
 
-### 1.4 🟡 `jobs.py` remains genuinely, verifiably stub-only
+### 1.4 ✅ (was 🟡) `jobs.py` remains genuinely, verifiably stub-only
+
+> **Resolved in `56767b0`** — the deferred job queue (PL-5) is wired into evidence export and red-team campaigns, with a migration and a cron-driven runner.
 
 Re-checked directly (`grep` for any import of `jobs` outside `jobs.py` itself and its test
 file): zero matches. This is the one item from gap-analysis.md's stub-only list that shows
@@ -231,9 +237,9 @@ Ranked by severity, effort noted:
 
 | # | Finding | Severity | Effort |
 |---|---|---|---|
-| 1.1 | `deploy/Dockerfile` COPY paths don't exist — primary deployment path may not build | 🔴 | S |
-| 1.2 | Vercel-vendored wheel is currently stale (19+ modules changed since) | 🔴 | S (automate) |
-| 1.4 | `jobs.py` still fully stub-only | 🟡 | M |
+| 1.1 | `deploy/Dockerfile` COPY paths don't exist — primary deployment path may not build | ✅ fixed in `6863b8b` | S |
+| 1.2 | Vercel-vendored wheel is currently stale (19+ modules changed since) | ✅ automated in `6863b8b` | S (automate) |
+| 1.4 | `jobs.py` still fully stub-only | ✅ fixed in `56767b0` | M |
 | 1.7 | Zero frontend test coverage despite a recent structural refactor | 🟡 | M |
 | 1.8 | Docs disagreed on DRAFT-mapping evidence-package behavior — settled against code (chip-labeled, not excluded) and fixed in README.md/traceability.md | ✅ fixed | S |
 | 3 | Admission control / budget enforcement is per-process, undermines the "scales out" claim if not scoped honestly | 🟡 | L / doc-only |

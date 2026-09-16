@@ -69,7 +69,9 @@ are [§6.3](PRD.md#63-out-of-scope-for-mvp-v01).
 | **P5-1** Full execution-path trace | ✅ | `audit/trace.py::start_trace, add_span, full_trace` | NOM-AUD-01 | `test_enforcement_and_api.py::test_clean_request_allowed_and_traced` |
 | **P5-2** Tamper-evident audit log | ✅ | `audit/chain.py::append, verify, verify_range` | NOM-AUD-02 | `test_audit_and_evidence.py::test_detects_mutation/deletion/insertion/reordering`, `::test_forged_checkpoint_detected` |
 | **P5-3** Auditor-ready evidence export | ✅ | `audit/evidence.py::build` + shipped `verify_chain.py` | NOM-AUD-03 | `::test_evidence_package_contents`, `::test_shipped_verifier_runs_standalone` |
-| **P5-4** SIEM / OTel integration | ✅ | `audit/siem.py::export, to_cef, to_leef, to_otlp` | NOM-AUD-04 | `test_enforcement_and_api.py::test_siem_export_formats` |
+| **P3-4a** Control-flow integrity — untrusted content may fill values, never choose the action | ✅ | `control_flow.py`; `enforcement.py::_control_flow_checks` on the `tool_args` surface | NOM-RTG-04, NOM-IAM-03 | `test_control_flow.py`, `test_control_flow_sycophancy_wiring.py` |
+| **F9.2** Sycophancy — a false premise adopted rather than corrected | ✅ | `sycophancy.py`; `enforcement.py::_sycophancy_checks` on the `output` surface | NOM-RTG-12 | `test_sycophancy.py`, `test_control_flow_sycophancy_wiring.py` |
+| **P5-4** SIEM / OTel integration, finding webhooks | ✅ | `audit/siem.py::export, to_cef, to_leef, to_otlp`; `webhooks.py` (signed `finding.created` POSTs after commit, egress-gated) | NOM-AUD-04 | `test_enforcement_and_api.py::test_siem_export_formats`; `test_webhooks.py` |
 | **P5-5** Retention, redaction, legal hold | ✅ redaction + policy + hold; no deletion daemon | `audit/chain.py::redact_payload`, `models.py::RetentionPolicy/LegalHold` | NOM-AUD-05 | `test_audit_and_evidence.py::test_payload_redacted_at_capture`; `test_guardrails.py::test_sample_is_redacted_at_capture` |
 | **P5-6** Trace search & replay | ✅ | `audit/trace.py::search_traces`, `policy/simulate.py` | NOM-AUD-01 | `test_enforcement_and_api.py::test_policy_simulation_reports_a_diff` |
 | **P5-7** Provenance & chain-of-custody | ✅ | `audit/evidence.py` manifest + `evidence.exported` audit entry | NOM-AUD-03 | `::test_manifest_digests_match_files`, `::test_exporting_evidence_is_itself_audited` |
@@ -79,7 +81,7 @@ are [§6.3](PRD.md#63-out-of-scope-for-mvp-v01).
 | FR | Status | Implementation | Control | Test |
 |---|---|---|---|---|
 | **P6-1** Policy-as-code engine | ✅ native + OPA | `policy/model.py`, `policy/engine.py`, `policy/opa.py`, `policy/store.py` | NOM-GOV-01 | `test_policy_and_identity.py::test_strongest_effect_wins`, `::test_policy_versions_are_immutable`, `::test_rego_compilation_produces_a_module` |
-| **P6-2** Control catalog & framework mapping | ✅ 41 controls × 7 frameworks | `compliance/controls.yaml`, `compliance/catalog.py` | NOM-GOV-02 | `test_registry_and_compliance.py::test_catalog_syncs_all_controls`, `::test_review_status_survives_resync` |
+| **P6-2** Control catalog & framework mapping | ✅ 43 controls × 7 frameworks | `compliance_data/controls.yaml`, `compliance/catalog.py`; `nometria compliance validate` | NOM-GOV-02 | `test_registry_and_compliance.py::test_catalog_syncs_all_controls`, `::test_review_status_survives_resync` |
 | **P6-3** Risk register & assessment | ✅ | `compliance/risk.py::classify, assess, register` | NOM-GOV-03 | `::test_classification_proposes_high_risk_for_hiring_agent`, `::test_ungated_irreversible_tool_raises_the_proposal` |
 | **P6-4** Continuous compliance monitoring | ✅ | `compliance/status.py` — nine rule kinds | NOM-GOV-04 | `::test_status_is_computed_not_attested`, `::test_broken_chain_makes_the_audit_control_fail_hard` |
 | **P6-5** Obligation calendar | ✅ | `compliance/obligations.yaml`, `compliance/risk.py::obligation_calendar` | NOM-GOV-05 | `::test_obligation_calendar_scopes_agents` |
@@ -96,6 +98,7 @@ are [§6.3](PRD.md#63-out-of-scope-for-mvp-v01).
 | **X-3** Offline-first | ✅ | `providers/echo.py`, every adapter's `available()` | whole suite runs with no key and no weights |
 | **X-4** Deterministic decisions | ✅ | `policy/engine.py`, `Decision.policy_version_ids` | `test_policy_and_identity.py::test_determinism`; `test_enforcement_and_api.py::test_decision_records_every_policy_version_in_force` |
 | **X-5** Everything through the API | ✅ | `dashboard/lib/api.ts` — no DB access from the UI process | dashboard renders solely from `/api` |
+| **X-6** Agent-native operation (harness + MCP) | ✅ | `harness/` (skills, commands, subagents, safety hook), `mcp_server.py` + `cli/mcp_cli.py` (`nometria mcp serve`, 24 read-only tools, stdlib JSON-RPC) | `test_mcp_server.py`; `test_harness.py` (harness ↔ live CLI drift, hook decisions) |
 
 ## Non-functional
 

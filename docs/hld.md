@@ -284,16 +284,15 @@ compliance and self-host-vs-SaaS competitive claims are actually built for.
 re-exports the gateway app; dependencies install from a **git-committed prebuilt wheel**
 (`api/vendor/nometria-0.1.0-py3-none-any.whl`) because Vercel's Root Directory for this
 function is `api/`, so a relative import against `../src` doesn't ship. **This is an
-architecturally significant risk, not a packaging footnote**: the wheel must be manually
-rebuilt and committed after every change to `src/nometria` that the hosted path should
-reflect, and — verified directly against the filesystem on 2026-09-04 — it is currently
-stale (the wheel is dated 2026-08-28; `enforcement.py`, `autoguard.py`,
-`context_integrity.py`, `models.py`, `answerability.py`, `entitlement.py` and others under
-`src/nometria/` have all changed since). Recent commit history (`551c220 revert(demo):
-restore last known-good vendored wheel — production DB migration gap`, `00a4d4f fix
-(autoguard): write the missing llm-span...`, `2cfe048 rebuild(demo): ship the autoguard
-llm-span fix...`) shows this has already caused one real incident. This surfaces again as a
-Tier-0 finding in [production-readiness-review.md](production-readiness-review.md).
+architecturally significant risk, not a packaging footnote**: the wheel must be rebuilt
+and committed after every change to `src/nometria` that the hosted path should reflect.
+It went stale once (dated 2026-08-28 while `enforcement.py`, `autoguard.py` and others
+had changed), and history shows it caused a real incident (`551c220 revert(demo): restore
+last known-good vendored wheel — production DB migration gap`). Since commit `6863b8b` the
+risk is controlled rather than open: a pre-commit hook (`scripts/rebuild_vendored_wheels.py`)
+rebuilds both vendored wheels whenever `src/nometria/` changes, and CI's
+`vendored-wheel-freshness` job fails any push that changes `src/nometria/` without them.
+The original finding is recorded in [production-readiness-review.md](production-readiness-review.md) §1.2.
 
 A related consequence: because the serverless deployment cannot run `alembic upgrade head`
 through normal channels (the deployed wheel doesn't bundle `migrations/`), `gateway/app.py`

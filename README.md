@@ -1,8 +1,10 @@
 # Nometria Control Plane
 
-**Agent-native, vendor-neutral governance, security and compliance for AI agents in production.**
+**Your agent cannot take an action it was never entitled to take — even when the model is fooled.**
 
-See every agent, control what it can do, prove it works, and demonstrate compliance — across every model, framework and cloud.
+Agent-native, vendor-neutral governance, security and compliance for AI agents in production: see every
+agent, bound what it can do, prove it works, and demonstrate compliance — across every model, framework
+and cloud.
 
 ---
 
@@ -31,10 +33,13 @@ import nometria
 nometria.auto()
 ```
 
-Every model call in the process is now traced, evaluated against policy and written to
-a tamper-evident audit log. **Nothing else in your codebase changes, and nothing is
-blocked** — `auto()` starts in observe mode, because a library that begins refusing
-production traffic because someone added an import is indefensible.
+Every model call in the process — OpenAI, Anthropic, LiteLLM or LangChain, sync or async,
+streamed or not — is now traced, evaluated against policy and written to a tamper-evident
+audit log. **Nothing else in your codebase changes, and no model call is blocked**: `auto()`
+follows each policy's own mode, and the `baseline` policy that governs model traffic starts
+in observe, because a library that begins refusing production traffic because someone added
+an import is indefensible. (`init` tells you which packs enforce from day one:
+`tool-containment` does, for tool calls with untrusted arguments.)
 
 ```bash
 nometria findings      # what it found
@@ -42,7 +47,8 @@ nometria doctor        # is the runtime configured the way you think it is?
 ```
 
 When the findings look right, `nometria policy enforce baseline` is the one step that
-starts blocking. Everything before it is safe to run without reading further.
+starts blocking — `auto()` picks it up with no code change. Everything before it is safe to
+run without reading further. `auto(mode="observe")` pins a process to never raising.
 
 > **Status: MVP v0.3 — Tranches 0 and 1 delivered, Tranche 2 in progress.** Live
 > coverage, computed by probe rather than asserted: **[docs/status.md](docs/status.md)**.
@@ -79,31 +85,102 @@ This isn't a bundle of open-source scanners with a UI on top. Roughly 20% of the
 | 5 | Audit & Traceability | *Show me what happened* | **OpenTelemetry** + ours |
 | 6 | Policy & Compliance | *Prove we meet the rules* | ours — essentially no OSS exists here |
 
+## What we claim, and what we don't
+
+**We do not claim adversarial robustness, and we don't believe anyone can.** [*The Attacker Moves
+Second*](https://arxiv.org/abs/2510.09023) (Nasr, Carlini, Schulhoff et al., 2025) reports **over 90%
+attack success against twelve published defences** once the attacker is allowed to adapt. Our detectors
+are no exception, and we measure it against ourselves: an
+[adaptive search-based attacker](benchmarks/adaptive/README.md) that reads our verdict and tries again
+gets **73% of the attacks we catch through within 50 attempts**, using only mutations a model can still
+read. Our held-out injection recall is **66.7%**, published in full rather than rounded up, along with
+the over-defense cost it carries. Building that benchmark found three real bugs in our own detectors,
+now fixed: benign false positives on the standard over-defense set fell from **8.6% to 0.3%**, and it
+turned out some prior "detections" were nothing but curly apostrophes.
+
+**What we do claim is that the blast radius is bounded when detection fails.** That claim is measured
+two ways, both with **every detector switched off** — a total bypass, not a simulated miss:
+
+| Evidence | Result |
+|---|---|
+| [Containment under total detector bypass](benchmarks/containment/README.md) | **8/8 attacks contained with zero detector signal**; 4/4 legitimate calls still allowed |
+| [AgentDojo replayed end to end](benchmarks/agentdojo_e2e/README.md), 617 ground-truth calls | **42/42 attacker calls that act, contained**; **552/552 legitimate calls allowed**; identical with detectors disabled |
+
+In both, detection contributed nothing. Capability grants, argument provenance and declared impact tiers
+did the work — which is the whole design. Read the honest limits in each: AgentDojo's read-only attack
+calls are contained 20/23, and containment is exactly as good as the declarations behind it.
+
 ## Benchmarks — real numbers, reproducible by anyone
 
-We don't ask you to trust a vendor claim. Every number below has a public, licensed dataset and a script in this repo that reproduces it:
+We don't ask you to trust a vendor claim. Every number below has a public, licensed dataset or a
+committed fixture, and a script in this repo that reproduces it:
 
 ```bash
-uv run python benchmarks/run_prompt_injection_benchmark.py     # primary + generalization datasets
-uv run python benchmarks/run_generalization_benchmark.py
-uv run python benchmarks/agent_security/tier_a_multiturn.py    # + tier_b/c/d — vs. a real llm-guard install
+uv run python benchmarks/containment/run_containment_benchmark.py        # what survives a total detector bypass
+uv run python benchmarks/agentdojo_e2e/run_agentdojo_e2e.py              # benign utility + attack containment at scale
 uv run python benchmarks/action_safety/run_action_safety_benchmark.py    # + agentdojo/payloadbox
-uv run python benchmarks/pii/run_presidio_research_benchmark.py          # + gretel_multilingual/tab
 uv run python benchmarks/entitlement/run_privacylens_benchmark.py
+uv run python benchmarks/agent_security/tier_a_multiturn.py              # + tier_b/c/d — vs. a real llm-guard install
 uv run python benchmarks/redteam/run_redteam_benchmark.py
+uv run python benchmarks/run_prompt_injection_benchmark.py               # detection: our weakest layer, measured anyway
+uv run python benchmarks/run_generalization_benchmark.py
+uv run python benchmarks/pii/run_presidio_research_benchmark.py          # + gretel_multilingual/tab
 ```
 
-**Only results clearing 65% on both precision and recall are headlined below** — a weaker number is disclosed in the linked methodology doc, never omitted or rounded up.
+**Before quoting any of these, read [how to read our numbers](docs/evidence-standards.md)** — what each
+kind of evidence establishes, and the limits that apply first.
 
-- **Prompt-injection detection**, held-out split of `deepset/prompt-injections`: **0% → 66.7% recall, 100% precision held throughout**, across four rounds of measured, disclosed changes — including a two-model ensemble classifier we tuned ourselves (`leolee99/PIGuard` + a `protectai/deberta` backstop, threshold anchored to llm-guard's own published default, not swept against our own data).
-- **Generalized across four independent datasets** (5,345 examples total) the detectors were never tuned against: 98.0–98.6% recall on two of them, with the real over-defense cost on the other two disclosed rather than hidden.
-- **Agent-runtime security, four tiers vs. a real, independently-installed `llm-guard`**: multi-turn payload splitting (2/2 vs. llm-guard's false triggers on isolated fragments), indirect injection via tool output (100% recall / 66.7% precision vs. llm-guard's 90%/81.8%), tool-parameter exploitation and privilege escalation (10/10 and 6/6 — axes llm-guard structurally cannot participate in, since it scans text, not tool-call structure or capability grants).
-- **Destructive-action / blast-radius analysis**: **100% accuracy, precision and recall** on `gretelai/synthetic_text_to_sql`'s held-out split (real + adversarial unbounded/tautology DML/DDL), ground-truthed against an independent SQL parser. The generic scope backstop (catches SQLi fragments and wildcard values in *unnamed* arguments) scores **89.3% recall / 100% precision** against payload-box's SQLi payload list after two rounds of directed fixes — recall started at 36.1%, and the benign-control false-positive rate started at 17.6% before the same two rounds.
-- **PII detection**, real ECHR case law (127 judgments, [TAB dataset](https://github.com/NorskRegnesentral/text-anonymization-benchmark)): **83.6% precision / 86.9% recall** at full detector policy. A synthetic short-sentence dataset reaches **65.2%/75.6%** at the same policy. (The *shipped default* policy trades recall on noisy categories for precision and doesn't clear this bar by design — full numbers, not filtered, in the linked methodology.)
-- **Entitlement / purpose-limitation enforcement**: **100% recall / 0% false positives** across 493 real [PrivacyLens](https://github.com/SALT-NLP/PrivacyLens) over-sharing scenarios — a mechanically-constructed test on real scenario content, not a labeled-dataset score; see the linked methodology for exactly what that does and doesn't establish.
-- **Automated red-teaming** — 22 built-in adversarial probes (OWASP LLM Top 10 / MITRE ATLAS mapped) against every real seed agent's actual capability grants and policy bindings, `enforce` mode: **100% recall / 100% precision** on two of three agents, 95% precision on the third for a disclosed, non-bug reason (a stricter EU AI Act Art. 14 policy correctly requiring human sign-off regardless of provenance). New probe kinds reach capability, action-assurance and taint/composition checks a content-only probe structurally couldn't — see the methodology for the real bugs and a policy-threshold gap found and fixed while proving that.
+**Only results clearing 65% on both precision and recall are headlined below** — a weaker number is
+disclosed in the linked methodology doc, never omitted or rounded up.
 
-Full methodology and every round: **[the benchmarking white paper](docs/benchmarking-whitepaper.md)**. Raw methodology: [benchmarks/REPORT.md](benchmarks/REPORT.md), [benchmarks/agent_security/README.md](benchmarks/agent_security/README.md), [benchmarks/action_safety/README.md](benchmarks/action_safety/README.md), [benchmarks/pii/README.md](benchmarks/pii/README.md), [benchmarks/entitlement/README.md](benchmarks/entitlement/README.md), [benchmarks/redteam/README.md](benchmarks/redteam/README.md), or the full index at [benchmarks/README.md](benchmarks/README.md).
+- **Containment when detection fails** — see the table above. This is the number we lead with, because it
+  is the one that still holds on the day the model is successfully fooled.
+- **Destructive-action / blast-radius analysis**: **100% accuracy, precision and recall** on
+  `gretelai/synthetic_text_to_sql`'s held-out split (real + adversarial unbounded/tautology DML/DDL),
+  ground-truthed against an independent SQL parser. The generic scope backstop (catches SQLi fragments and
+  wildcard values in *unnamed* arguments) scores **89.3% recall / 100% precision** against payload-box's
+  SQLi payload list after two rounds of directed fixes — recall started at 36.1%, and the benign-control
+  false-positive rate started at 17.6% before the same two rounds.
+- **Entitlement / purpose-limitation enforcement**: **100% recall / 0% false positives** across 493 real
+  [PrivacyLens](https://github.com/SALT-NLP/PrivacyLens) over-sharing scenarios — a mechanically-constructed
+  test on real scenario content, not a labeled-dataset score; see the linked methodology for exactly what
+  that does and doesn't establish.
+- **Agent-runtime security, four tiers vs. a real, independently-installed `llm-guard`**: multi-turn payload
+  splitting (2/2 vs. llm-guard's false triggers on isolated fragments), indirect injection via tool output
+  (100% recall / 66.7% precision vs. llm-guard's 90%/81.8%), tool-parameter exploitation and privilege
+  escalation (10/10 and 6/6 — axes llm-guard structurally cannot participate in, since it scans text, not
+  tool-call structure or capability grants).
+- **Automated red-teaming** — built-in adversarial probes (OWASP LLM Top 10 / MITRE ATLAS mapped) fired at
+  every real seed agent's actual capability grants and policy bindings, `enforce` mode: **100% recall /
+  100% precision** on two of three agents, 95% precision on the third for a disclosed, non-bug reason (a
+  stricter EU AI Act Art. 14 policy correctly requiring human sign-off regardless of provenance). This is
+  configuration regression testing — it tells you whether *this deployment* got weaker, and it is not a
+  robustness certificate.
+- **Prompt-injection detection — our weakest layer, measured and published anyway.** Held-out split of
+  `deepset/prompt-injections`: **0% → 66.7% recall, 100% precision held throughout**, across four rounds of
+  measured, disclosed changes, including a two-model ensemble we tuned ourselves. Across four
+  further independent datasets (5,345 examples) the detectors were never tuned against, the **opt-in
+  classifier ensemble** reaches 85.6% and 98.6% recall on two of them through the real pipeline and its
+  timeouts (re-measured 2026-09-16). It is **not the shipped default**: the default stack scores far lower on
+  those same two datasets, and on long prompts the ensemble mostly times out. Treat all of this as a speed
+  bump that raises attacker cost, not as a defence — which is why the containment numbers above are the ones
+  we lead with.
+- **PII detection**, real ECHR case law (127 judgments,
+  [TAB dataset](https://github.com/NorskRegnesentral/text-anonymization-benchmark)): **83.6% precision /
+  86.9% recall** at full detector policy. A synthetic short-sentence dataset reaches **65.2%/75.6%** at the
+  same policy. (The *shipped default* policy trades recall on noisy categories for precision and doesn't
+  clear this bar by design — full numbers, not filtered, in the linked methodology.)
+
+Full methodology and every round: **[the benchmarking white paper](docs/benchmarking-whitepaper.md)**. Raw
+methodology: [benchmarks/containment/README.md](benchmarks/containment/README.md),
+[benchmarks/agentdojo_e2e/README.md](benchmarks/agentdojo_e2e/README.md),
+[benchmarks/REPORT.md](benchmarks/REPORT.md),
+[benchmarks/agent_security/README.md](benchmarks/agent_security/README.md),
+[benchmarks/action_safety/README.md](benchmarks/action_safety/README.md),
+[benchmarks/pii/README.md](benchmarks/pii/README.md),
+[benchmarks/entitlement/README.md](benchmarks/entitlement/README.md),
+[benchmarks/redteam/README.md](benchmarks/redteam/README.md), or the full index at
+[benchmarks/README.md](benchmarks/README.md).
 
 ## Quick start (development)
 
@@ -180,6 +257,27 @@ nometria compliance status --framework eu-ai-act
 nometria scan mcp --server internal-tools
 ```
 
+## Agent harness — drive the whole product from Claude Code or any coding agent
+
+[`harness/`](harness/) packages this product as skills, slash commands, subagents, an MCP
+server and safety hooks, so "get my support agent governed" or "get me ready for the audit"
+works without learning every command first. Install it as a Claude Code plugin:
+
+```bash
+claude plugin marketplace add architsharm/guardrails
+claude plugin install nometria@nometria
+```
+
+Other agents (Codex, Cursor, Gemini CLI) can read [`harness/AGENTS.md`](harness/AGENTS.md).
+Anything that would start blocking traffic or stop an agent asks for confirmation first.
+How the harness keeps its markdown in sync with the code: [`harness/STRUCTURE.md`](harness/STRUCTURE.md).
+
+**Why this matters more than it sounds.** The standard advice for agent security is "hire someone who
+understands this deeply". That does not scale to twenty product teams, and most organisations will never hire
+that person. The harness is that expertise encoded: the order of operations, the safety gates, the questions
+worth asking, and the evidence to collect — available to whoever is actually shipping the agent. It also runs
+an MCP server, so any MCP client gets the same read-only analysis tools.
+
 ## LangGraph integration (the primary adoption path)
 
 ```python
@@ -206,14 +304,16 @@ Escalation maps to LangGraph's own `interrupt()` — one pause mechanism, not tw
 | [Competitor analysis](docs/competitor-analysis.md) | Market landscape, our niche, what to highlight, where competitors win |
 | **[Implementation status](docs/status.md)** | **Computed coverage — regenerate with `python scripts/coverage.py --write`** |
 | **[Benchmarking white paper](docs/benchmarking-whitepaper.md)** | The product, capability by capability — what it does, how we know it works, and how it differs from the market |
-| **[Failure-mode analysis](docs/failure-modes.md)** | **How deployed agents actually fail** — 50 modes, 7 families, grounded in 10k+ catalogued incidents; 40/50 now covered |
+| **[Failure-mode analysis](docs/failure-modes.md)** | **How deployed agents actually fail** — 57 modes in 8 families plus 5 found by an independent audit, grounded in 10k+ catalogued incidents; 54 of 57 covered outright, 2 partial ([computed](docs/status.md)) |
 | [Gap analysis](docs/gap-analysis.md) | Enterprise readiness & competitive position — audited, severity-ranked, re-verified 2026-08-29 |
+| **[Responding to the critique](docs/responding-to-the-critique.md)** | **What the strongest public criticism of this category gets right, what it gets wrong, and what we changed because of it** |
 | [Appendix A](docs/appendix-a-oss-register.md) | OSS dependency register — licence, health, verdict, our exposure |
-| [Appendix B](docs/appendix-b-control-catalog.md) | 41 controls mapped to EU AI Act, NIST AI RMF, ISO 42001, SOC 2, OWASP LLM & Agentic, MITRE ATLAS |
+| [Appendix B](docs/appendix-b-control-catalog.md) | 43 controls mapped to EU AI Act, NIST AI RMF, ISO 42001, SOC 2, OWASP LLM & Agentic, MITRE ATLAS |
 | [Appendix C](docs/appendix-c-api-spec.md) | API specification |
 | [Appendix D](docs/appendix-d-data-model.md) | Data model |
 | [Appendix E](docs/appendix-e-threat-model.md) | Threat model — threats to the customer's agents, and to us |
 | [Traceability](docs/traceability.md) | Every requirement → the module that implements it |
+| [Agent harness](harness/README.md) | Skills, commands, subagents, MCP server and safety hooks for driving the product from a coding agent |
 | [docs/research/](docs/research/) | Raw research inputs (practitioner CVs, market analysis) the PRD synthesizes — not living documentation, kept for provenance |
 
 ## Honest limits

@@ -11,6 +11,10 @@ Two further corrections on top of that re-audit, done independently and cross-ch
 
 **Update, 2026-08-30:** F3.8 (composed privilege escalation) moved from ✗ to ✅. `guardrails/composition.py` (P9-11) reused the taint tracker's existing `TaintMark.propagated_from` provenance (P3-4, already recorded which tool produced a value — it just wasn't being compared against tool scope) to detect a lower-impact tool's output silently feeding a higher-impact tool's argument. Wired into `enforcement.py::evaluate()` on the live `guard_tool_call` path and exercised end-to-end (not `◐-unwired`) by `tests/test_composition.py`, including a negative control. F3 is now fully covered (10/10); F3.8 was the last open mode in the family the audit called its "fastest-growing (+62%)."
 
+**Update, 2026-09-16 — F6/F8 wired, and two newly-covered modes.** The `◐-unwired` pattern is closed: `Enforcer.evaluate()` now calls `_commitment_checks()` (F6.1–F6.4, output surface) and `_context_checks()` (F8.1, F8.2, F8.5, F8.6, F8.7 on the `retrieved`, `tool_result` and `memory_write` surfaces), folding their findings into the same `evidence_issues` → `Finding` → `Decision` → audit-chain record the F2/F7 checks already use, so verdicts, `rules_fired` and the audit trail behave identically — exercised end-to-end through the real path by `tests/test_f6_f8_wiring.py` (37 tests: each detector, a negative control for each, and proof the default verdict is still `allow`), at a measured cost of +0.17ms on a typical response against the 300ms budget, bounded at ~16ms by a 32KB scan cap. Findings are recorded and surfaced but never block on their own: blocking is reachable only by writing a policy rule against the existing `action_risk` condition (`when: {surface: [output], action_risk: "commitment.*"}`), which is the observe-first stance holding rather than a gap. Two modes stay ◐ by design, not by omission: **F6.5** (`fairness_probe` is an aggregate over a decision population with a 30-observation floor — a single request cannot exhibit disparate impact, so it belongs to the compliance/eval path) and **F8.4** (`assemble_context` repairs as well as reports and needs the retriever's ranked chunks and real token budget, so it is exposed as `Enforcer.assemble_context` for that caller rather than simulated inside `evaluate()`). F8.3 (stale index) is unaffected and remains the one mode with no implementation at all.
+
+Shipped in the same cycle: **F9.4 (crescendo) moves ✗ → ✅** (`trajectory.py`, 10/13 caught with zero control false positives — see its benchmark), **F9.2 (sycophancy) moves ✗ → ✅** (`sycophancy.py`, wired on the output surface, gated on a caller-supplied grounded record), and a mode no version of this taxonomy listed — **control-flow integrity** (`control_flow.py`), which catches an injected *step* rather than a poisoned *value*: a tool call whose every argument is legitimately user-sourced, but whose existence traces to untrusted content the agent read. Both are recorded-not-blocking by default and blockable with one policy rule against `action_risk`, the same channel F6/F8 use.
+
 ---
 
 ## The finding that reframes the roadmap
@@ -232,6 +236,8 @@ The pillars built earlier (taint containment, audit chain, policy engine, comput
 
 ### F9.2 — Sycophancy: agrees with a false premise
 
+**Status: ✅ built and live (2026-09-16)** — `sycophancy.py`, called from `Enforcer.evaluate()` on the output surface. It fires only when the caller supplies a grounded record that contradicts the user's asserted premise and the answer neither corrects it nor drops the wrong value; with no grounded record it is silent, which is what keeps opinions out of it. `tests/test_sycophancy.py` and `tests/test_control_flow_sycophancy_wiring.py`.
+
 The user asserts something false ("As you know, the deadline is Friday" — it's Tuesday); the model builds its answer on the user's version rather than correcting it. Reasoning fine-tuning is documented to make this *worse*, not better (AbstentionBench), so this isn't a problem model upgrades will quietly fix.
 
 **Detection design**, reusing infrastructure that already exists and is already live:
@@ -243,6 +249,8 @@ The user asserts something false ("As you know, the deadline is Friday" — it's
 
 ### F9.3 — Answer quality degrades in non-English
 
+**Status: ◐ partially closed (2026-09-16)** — the deterministic half is done, exactly as the design below proposed: `integrity.py`'s arithmetic, aggregation, period, deadline, scale, currency and entity checks now read localised number and date formats, taking parity on matched pairs from **6/19 to 19/19** with an English false-positive rate of 0.097% across 4,138 texts ([`benchmarks/multilingual/`](../benchmarks/multilingual/README.md)). Ambiguous dates are reported, never guessed. **Still open:** the answerability/abstention path is English-only (English 2/3, every other language 1/3), and benign non-English text is flagged by the injection detectors more often than English.
+
 Correct in English, subtly wrong in German — and nothing currently measures this at all; detectors are multilingual for *injection* (4/4 languages caught) but nothing checks whether **answer quality** holds up per language.
 
 **Detection design — reframe as a parity problem, not a quality-grading problem:**
@@ -252,6 +260,8 @@ Correct in English, subtly wrong in German — and nothing currently measures th
 3. This turns "is quality worse in German" (hard, subjective) into "do the same deterministic checks fire more often in German because a parser is English-only" (tractable, and each divergence points at a specific parser to fix).
 
 ### F9.4 — Gradual multi-turn manipulation (crescendo)
+
+**Status: ✅ built and live (2026-09-16)** — `trajectory.py`'s `CRESCENDO.TRAJECTORY_DRIFT`, wired into `Enforcer.check_conversation_window` exactly as the design below specifies: a rolling window over sub-threshold detector activations, topic drift and reframing markers, firing on the *slope* rather than any single turn. Measured in [`benchmarks/crescendo/`](../benchmarks/crescendo/README.md): **10/13 crescendo conversations caught, all before the final turn (median turn 3), with 0/9 benign controls flagged** — against 0/13 before. The three misses are gradual topic drift with no reframing language, which is the honest residual. Adds ~3.8ms per governed turn. Observe-first, blockable with one policy rule on the `action_risk` channel.
 
 Each individual turn is innocuous; the trajectory across turns is not. Every injection detector scores one message at a time, so a crescendo attack never crosses a per-message threshold.
 
@@ -281,7 +291,7 @@ Megabytes of filler before the real instruction, diluting or displacing the syst
 
 Highest-leverage items first — note how many of these are wiring, not invention:
 
-1. **Wire F6 and F8 into the live pipeline.** Eleven fully-built, fully-tested detectors (`commitments.py`, `register.py`, `context_integrity.py`) sit unused because nothing calls them from `enforcement.py`, `guardrails/pipeline.py`, or an automatic gateway route. This is the single highest-leverage remaining item in the entire taxonomy — no new detection logic for eleven of seventeen open modes, just routing existing, correct calls onto the request path. F8 in particular currently protects nothing on a normal chat/completion request, despite being reachable via a separate opt-in endpoint.
+1. ~~**Wire F6 and F8 into the live pipeline.**~~ **Done, 2026-09-16** — see the update at the top of this document. Nine of the eleven detectors are now called from `Enforcer.evaluate()`; F6.5 and F8.4 stay deliberately unwired for reasons stated there, and that judgement should be re-read rather than reversed by default.
 2. **F7.7 — cross-turn self-contradiction**, and **F8.3 — stale index.** Both are real, scoped, moderate-effort builds — a claim-history store with a contradiction check for F7.7, an `index_freshness` check reusing F2.2's `freshness_breach` shape for F8.3 — not XL efforts.
 3. **F9.1–F9.5** — five modes an independent, execution-verified audit found that no version of this taxonomy or the PRD ever listed. F9.1–F9.4 map onto existing, already-wired interfaces (the F2/F6 extraction pipeline, `assess_provenance`, the P13/`autoguard.py` trajectory primitive). F9.5 explicitly depends on wiring F8 first — build it in the same change, not before.
 4. **Firm up the remaining partials** (F4.7 named legal-hold class, F5.4 real quality-trend detection, F7.6 verified date-shift vs. ambiguity-only, F8.1/F8.2's damage-marker dependency) — each is a bounded extension of an already-built and already-wired mechanism.
