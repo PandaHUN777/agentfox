@@ -741,3 +741,43 @@ doesn't get taken at face value just because it's favorable.
   benchmark suite (multi-turn injection, indirect injection, tool-parameter
   exploitation, excessive agency), including a real `llm-guard` comparison and
   its own `README.md`.
+
+---
+
+## Round 7 — re-measured after the detector fixes (2026-09-16)
+
+[`../adaptive/`](adaptive/README.md) found three real defects in the injection detector and they were
+fixed: separator collapsing that welded words together, unknown obfuscation producing no signal at all,
+and two missing override objects. Everything below is the generalization benchmark re-run against the
+fixed detector, same datasets, same script, **at the shipped 40ms per-detector timeout**.
+
+| Config | Dataset | Recall | Precision | Examples degraded |
+|---|---|---|---|---|
+| `heuristic` (shipped default) | spml | 9.6% | 100% | 0% |
+| `heuristic` | yanismiraoui | 0.6% | 100% | 0% |
+| `heuristic` | trustairlab | 18.1% | 70.0% | 0.4% |
+| `heuristic_classifier` | spml | **85.6%** | 92.6% | 7.4% |
+| `heuristic_classifier` | yanismiraoui | **98.6%** | 100% | 0% |
+| `heuristic_classifier` | trustairlab | 17.9% | 69.5% | **99.9%** |
+| `heuristic_classifier_similarity` | all four | falls back to heuristic | — | **100%** |
+
+**What this does and does not say.**
+
+1. **The detector fixes had no measurable effect on the classifier configuration.** The 98.0% SPML
+   figure from round 6 was never a pipeline number — it came from calling the classifier directly, with
+   no timeout. The like-for-like pipeline figure moved from **87.2% (round 6) to 85.6% (round 7)**, and the
+   share of timed-out classifier calls varies between runs (6.4% and 7.4% on two consecutive runs of the
+   same code), which moves recall by about a point. Anything smaller than that is noise, and this is
+   smaller than that. An earlier draft of this section credited the drop to the typography fix; that was
+   wrong, and is corrected here rather than quietly replaced.
+2. **The shipped default stack scores in single digits on these two datasets.** Not new, and not hidden:
+   these are phrase-list datasets the lexical heuristic was never going to catch, which is the entire reason
+   the classifier ensemble exists as an opt-in. The detector fixes lowered the default stack's topline here
+   (SPML 26.0% to 9.6%) by removing obfuscation "detections" that were typography; see
+   [`adaptive/`](adaptive/README.md).
+3. **Short prompts run within budget; long prompts do not.** Warm, the classifier costs about 43ms per
+   short prompt, and it completed on 21 of 21 calls through the real `Enforcer` path with shipped settings.
+   On `trustairlab`'s long prompts (mean 2,156 characters) it times out on 99.9% of calls, and the
+   similarity detector times out on 100% of everything. A **cold** process that never calls `warm_all()`
+   times out on every call until the model loads — the gateway warms at startup, but an in-process
+   `nometria.auto()` user who enables the classifier does not get that for free.
