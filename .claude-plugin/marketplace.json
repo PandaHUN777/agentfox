@@ -1,0 +1,15 @@
+{
+  "name": "nometria",
+  "description": "Nometria control plane \u2014 agent governance, guardrails, audit and compliance for AI agents in production.",
+  "owner": {
+    "name": "Archit Sharma"
+  },
+  "plugins": [
+    {
+      "name": "nometria",
+      "source": "./harness",
+      "description": "Agent harness for the Nometria control plane (skills, commands, subagents, safety hooks).",
+      "version": "0.1.0"
+    }
+  ]
+}
