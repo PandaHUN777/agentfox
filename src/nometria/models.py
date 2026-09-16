@@ -247,6 +247,12 @@ class Finding(Base, TimestampMixin):
     # pair makes resolving carry the same accountability suppressing already does.
     resolution_note: Mapped[str | None] = mapped_column(Text)
     resolved_by: Mapped[str | None] = mapped_column(String(120))
+    #: Identity of the underlying problem, stable across occurrences, so a recurring
+    #: condition is one finding with a count rather than a new row on every request.
+    #: Nullable: findings raised before fingerprints existed simply have none.
+    fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
+    occurrences: Mapped[int] = mapped_column(Integer, default=1)
+    last_seen_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 # ---------------------------------------------------------------------------
@@ -771,7 +777,13 @@ class GuardrailFeedback(Base, TimestampMixin):
     """
 
     __tablename__ = "guardrail_feedback"
-    __table_args__ = (Index("ix_feedback_detector", "detector_key", "label"),)
+    # One label per decision per person is enforced in application code rather than as
+    # a unique constraint, because a deployed table may already hold duplicates and a
+    # constraint would make the migration fail on exactly the data it exists to clean.
+    __table_args__ = (
+        Index("ix_feedback_detector", "detector_key", "label"),
+        Index("ix_feedback_decision_actor", "decision_id", "actor"),
+    )
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("gfb"))
     decision_id: Mapped[str | None] = mapped_column(String(40), index=True)
@@ -1237,6 +1249,12 @@ class Job(Base, TimestampMixin):
     requested_by: Mapped[str] = mapped_column(String(120), default="")
     enqueued_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     finished_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    #: Backoff: a retried job is not eligible again until this time.
+    available_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    #: When the current attempt began, so a job stuck in `running` can be recovered.
+    started_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    #: The recurring schedule that enqueued this job, if any.
+    schedule_id: Mapped[str | None] = mapped_column(String(40), index=True)
 
 
 class EvidencePackage(Base, TimestampMixin):
@@ -1362,6 +1380,14 @@ class PolicyCanary(Base, TimestampMixin):
     started_by: Mapped[str | None] = mapped_column(String(120))
     rollback_reason: Mapped[str] = mapped_column(Text, default="")
     completed_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    #: The other half of the gate. A candidate that blocks *less* than stable by more
+    #: than this is rolled back too: a quietly loosened control is the failure an
+    #: automated change must never be able to ship.
+    max_block_rate_drop: Mapped[float] = mapped_column(Float, default=0.15)
+    #: Minimum time at each step before advancing, so a burst of calls cannot ramp a
+    #: canary to 100% before real traffic has had a chance to disagree with it.
+    min_dwell_seconds: Mapped[int] = mapped_column(Integer, default=0)
+    last_advanced_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Decision(Base, TimestampMixin):
@@ -1487,6 +1513,77 @@ class Obligation(Base, TimestampMixin):
     effective_date: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True))
     applies_when_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     status: Mapped[str] = mapped_column(String(24), default="upcoming")
+
+
+# ---------------------------------------------------------------------------
+# Improvement loop (governed self-improvement, Phase 0)
+# ---------------------------------------------------------------------------
+class ChangeProposal(Base, TimestampMixin):
+    """A proposed change to any piece of configuration, and everything that happened to it.
+
+    The improvement loop never edits configuration directly. It files one of these,
+    attaches the evidence that motivated it and the proof that it is safe, and the
+    change then moves through a lifecycle a person can read: proposed, proven,
+    approved, canary, applied, verified — or rejected, rolled back, superseded.
+
+    ``direction`` is load-bearing. A change that loosens a control can never be applied
+    by automation, whatever autonomy its class has earned; that rule lives in
+    ``improvement.contract`` and is enforced where proposals are applied.
+    """
+
+    __tablename__ = "change_proposals"
+    __table_args__ = (Index("ix_proposals_status_created", "status", "created_at"),)
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("chp"))
+    kind: Mapped[str] = mapped_column(String(48), index=True)
+    #: Which loop produced it, e.g. "tuning.threshold", "grants.unused".
+    source: Mapped[str] = mapped_column(String(64), default="")
+    target_type: Mapped[str] = mapped_column(String(32), default="")
+    target_ref: Mapped[str] = mapped_column(String(200), default="")
+    scope_level: Mapped[str] = mapped_column(String(16), default="org")
+    scope_id: Mapped[str] = mapped_column(String(200), default="*")
+    title: Mapped[str] = mapped_column(String(300), default="")
+    rationale: Mapped[str] = mapped_column(Text, default="")
+    direction: Mapped[str] = mapped_column(String(16), default="neutral")
+    autonomy_level: Mapped[str] = mapped_column(String(4), default="L1")
+    status: Mapped[str] = mapped_column(String(24), default="proposed", index=True)
+    #: Identity of the problem being fixed, so the same issue is one open proposal.
+    fingerprint: Mapped[str | None] = mapped_column(String(64), index=True)
+    diff_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    evidence_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    proof_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    expected_effect_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    related_finding_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
+    proposed_by: Mapped[str] = mapped_column(String(120), default="")
+    decided_by: Mapped[str | None] = mapped_column(String(120))
+    #: The second person on a two-person decision (any loosening at org level).
+    second_approver: Mapped[str | None] = mapped_column(String(120))
+    decided_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_note: Mapped[str] = mapped_column(Text, default="")
+    applied_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    verified_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    rolled_back_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    outcome_note: Mapped[str] = mapped_column(Text, default="")
+
+
+class JobSchedule(Base, TimestampMixin):
+    """Recurring work, per tenant. The cron drains queues; this is what fills them.
+
+    Before this table the platform had a daily cron that only ever drained jobs someone
+    had already enqueued, so nothing periodic — posture campaigns, drift checks, canary
+    advancement, suppression hygiene — could run unattended at all.
+    """
+
+    __tablename__ = "job_schedules"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=lambda: ids.new_id("jsc"))
+    kind: Mapped[str] = mapped_column(String(64), index=True)
+    payload_json: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
+    interval_seconds: Mapped[int] = mapped_column(Integer, default=86400)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_enqueued_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
+    next_due_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), index=True)
+    created_by: Mapped[str] = mapped_column(String(120), default="")
 
 
 __all__ = [n for n in dir() if n[0].isupper()]

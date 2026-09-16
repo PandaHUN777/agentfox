@@ -157,6 +157,27 @@ class Settings(BaseSettings):
 
     # --- Outbound finding webhooks ----------------------------------------
     # Every newly committed Finding at or above `webhook_min_severity` is POSTed
+
+    # --- Improvement loop (governed self-improvement, Phase 0) -----------------
+    #: Identity every automated change is recorded under on the audit chain.
+    improvement_actor_id: str = "nometria-improver"
+    #: Kill switch for the improver. While true, no automated change is applied at any
+    #: autonomy level; proposals are still filed so nothing is lost.
+    improvement_frozen: bool = False
+    #: Rate limit on automated applies per tenant per day, so a faulty class of change
+    #: cannot apply dozens of edits before anyone looks.
+    improvement_max_auto_changes_per_day: int = 20
+    #: A change class whose rollback rate exceeds this drops an autonomy level.
+    improvement_rollback_budget: float = 0.05
+    #: Two-way canary gate defaults.
+    canary_min_dwell_seconds: int = 3600
+    canary_max_block_rate_drop: float = 0.15
+    #: Recurring work. The cron drains the queue; schedules fill it.
+    scheduler_enabled: bool = True
+    #: A job `running` for longer than this is treated as crashed and recovered.
+    job_stuck_after_seconds: int = 900
+    #: Base for exponential backoff between attempts.
+    job_backoff_base_seconds: int = 60
     # to `webhook_url` (see webhooks.py). Still gated by `allow_egress` above: a
     # configured URL with egress off sends nothing. With `webhook_secret` set,
     # each request carries `X-Nometria-Signature: sha256=<hmac of the raw body>`.
