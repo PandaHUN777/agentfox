@@ -55,6 +55,8 @@ Settings are cached per process, so restart after changing them.
 | `NOMETRIA_LOOP_MAX_STEPS` / `_MAX_REPEATS` / `_MAX_CYCLE_LENGTH` / `_MAX_STEPS_WITHOUT_PROGRESS` | 25 / 2 / 4 / 5 |
 | `NOMETRIA_SERVICE_PROBE_INTERVAL_SECONDS` | 5.0 — how often the degradation gate probes dependencies; status endpoints always probe fresh |
 | `NOMETRIA_DATA_ACCESS_STRICTNESS` | `standard` (escalate) \| `strict` (block) |
+| `NOMETRIA_EMBEDDING_SIMILARITY_ATTACK_THRESHOLD` / `_BENIGN_MARGIN` | 0.6 / 0.05 — `injection.similarity` cut-offs |
+| `NOMETRIA_PROMPT_INJECTION_CLASSIFIER_SECONDARY_THRESHOLD` | 0.92 — the backstop classifier's bar (llm-guard's default for that model) |
 | `NOMETRIA_POLICY_ENGINE` / `OPA_URL` | `native` / `http://localhost:8181` |
 
 ## Providers and integrations

@@ -157,6 +157,25 @@ class Settings(BaseSettings):
 
     # --- Outbound finding webhooks ----------------------------------------
     # Every newly committed Finding at or above `webhook_min_severity` is POSTed
+    # to `webhook_url` (see webhooks.py). Still gated by `allow_egress` above: a
+    # configured URL with egress off sends nothing. With `webhook_secret` set,
+    # each request carries `X-Nometria-Signature: sha256=<hmac of the raw body>`.
+    webhook_url: str | None = None
+    webhook_secret: str | None = None
+    webhook_timeout_seconds: float = 3.0
+    webhook_min_severity: str = "high"  # critical | high | medium | low
+
+    # --- Detector cut-offs that used to be hard-coded -------------------------
+    #: A cut-off nothing can change without a code edit is a cut-off the improvement loop
+    #: cannot tune and an operator cannot adjust. Read once when detectors register, like
+    #: every other setting, so a change needs a restart.
+    #: Cosine similarity to the nearest known attack before `injection.similarity` fires.
+    embedding_similarity_attack_threshold: float = 0.6
+    #: How far above the nearest benign anchor that similarity must sit.
+    embedding_similarity_benign_margin: float = 0.05
+    #: The backstop classifier's bar. 0.92 is llm-guard's own default for this exact model,
+    #: chosen there because it over-triggers at lower bars (see adapters/classifiers.py).
+    prompt_injection_classifier_secondary_threshold: float = 0.92
 
     # --- Improvement loop (governed self-improvement, Phase 0) -----------------
     #: Identity every automated change is recorded under on the audit chain.
@@ -178,13 +197,6 @@ class Settings(BaseSettings):
     job_stuck_after_seconds: int = 900
     #: Base for exponential backoff between attempts.
     job_backoff_base_seconds: int = 60
-    # to `webhook_url` (see webhooks.py). Still gated by `allow_egress` above: a
-    # configured URL with egress off sends nothing. With `webhook_secret` set,
-    # each request carries `X-Nometria-Signature: sha256=<hmac of the raw body>`.
-    webhook_url: str | None = None
-    webhook_secret: str | None = None
-    webhook_timeout_seconds: float = 3.0
-    webhook_min_severity: str = "high"  # critical | high | medium | low
 
     @field_validator("webhook_min_severity")
     @classmethod

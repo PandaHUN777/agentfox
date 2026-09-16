@@ -191,6 +191,7 @@ class PromptInjectionClassifierDetector(_TransformersClassifier):
             if secondary_model_id is _UNSET
             else secondary_model_id
         )
+        self.secondary_threshold = settings.prompt_injection_classifier_secondary_threshold
 
     @functools.cached_property
     def _secondary_pipeline(self):  # pragma: no cover - requires optional dependency

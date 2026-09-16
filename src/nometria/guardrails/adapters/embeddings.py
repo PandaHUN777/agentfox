@@ -57,12 +57,20 @@ class EmbeddingSimilarityDetector(BaseDetector):
         self,
         model_id: str | None = None,
         *,
-        attack_threshold: float = 0.6,
-        benign_margin: float = 0.05,
+        attack_threshold: float | None = None,
+        benign_margin: float | None = None,
     ) -> None:
-        self.model_id = model_id or get_settings().embedding_similarity_model
-        self.attack_threshold = attack_threshold
-        self.benign_margin = benign_margin
+        settings = get_settings()
+        self.model_id = model_id or settings.embedding_similarity_model
+        # Explicit arguments still win (tests, benchmarks); otherwise the configured cut-off.
+        self.attack_threshold = (
+            settings.embedding_similarity_attack_threshold
+            if attack_threshold is None
+            else attack_threshold
+        )
+        self.benign_margin = (
+            settings.embedding_similarity_benign_margin if benign_margin is None else benign_margin
+        )
 
     def available(self) -> bool:
         try:
