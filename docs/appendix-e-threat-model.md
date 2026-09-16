@@ -94,12 +94,31 @@ Taxonomy anchors: OWASP LLM Top 10 (2025), OWASP Agentic Threats T1–T15, MITRE
 
 We can read every prompt and output the customer's agents produce. Controls: RBAC with an `auditor` role that cannot mutate; every access to traces and evidence writes its own `AuditEntry` (§C.5 — who looked at the evidence is audit-relevant); no support back-channel into customer data in self-host; the customer holds the signing key.
 
+### E.2.5 The improvement loop is itself an attack surface
+
+A loop that learns from labels and traffic, and changes configuration, is an agent with write access to
+our own guardrails. It is governed as one: every change is a `ChangeProposal`, proven before it is staged,
+attributable on the audit chain under `actor_type="automation"`, reversible, and rate-limited. The rules
+below live in `improvement/contract.py` and are tested exhaustively, because their failure would turn a
+governance product into one that quietly rewrites itself.
+
+| Threat | Vector | Control | Residual risk |
+|---|---|---|---|
+| **Label poisoning** — flood false-positive labels to justify raising a cut-off or suppressing a detector | Guardrail feedback, eval annotations | Every label audited; actor taken from authentication; one label per decision per person; auditors cannot label; proposals require distinct labellers and are proven by replay and held-out recall before staging | A colluding group of real, authorised labellers. Mitigated by the direction rule: the change they could induce loosens detection, and a loosening is never automatic |
+| **Traffic shaping** — make a grant look used, or drift a baseline slowly enough to pass | Crafted production traffic | Automation only ever tightens; robust statistics over hold-out windows; proposals carry their evidence window for review | A slow, patient attacker shifting what "normal" means over months |
+| **Insider laundering** — a deliberate loosening dressed as an automated proposal | A privileged operator | `may_apply_automatically` refuses every loosening at every autonomy level; an org-level loosening needs two distinct named approvers; the diff and its evidence are on the chain | Two colluding approvers. The same residual as any two-person control |
+| **Goodhart's law** — the loop optimises the benchmark it is scored against | The loop's own proof step | Held-out campaigns with fresh seeds; the loop never tunes against its own gate. Observed in practice: obfuscation "detections" that were curly apostrophes | A proof set that drifts from real attacks over time |
+| **A runaway improver** — a faulty change class applies many edits before anyone looks | A bug in a proposal generator | Daily per-tenant cap on automated applies; a rollback-rate budget that demotes the class; `improvement_frozen` kill switch; canary staging with a two-way health gate | Damage within one day's cap before the budget trips |
+| **A quietly loosened control ships through canary** | A candidate that blocks *less* | The canary gate rolls back in both directions, with a minimum dwell time per step | A loosening too small to cross `max_block_rate_drop` |
+| **Privacy leak through learned artefacts** | Raw conversation text, span attributes and approval arguments copied into a learned corpus | Redaction before anything is learned; learned artefacts carry provenance so deletion cascades; learning jobs bind to one tenant and never run in `system_scope` | Retention enforcement is not yet implemented for source tables (declared gap) |
+| **Approval fatigue** — people approve without reading | Proposal volume | Dedupe by fingerprint; rank by impact; cap open proposals per owner; measure time-to-decision | Fatigue that looks like diligence |
+
 ---
 
 ## E.3 Assumptions & out of scope
 
 **Assumed:** the customer's network/host security, their IdP, their model provider's own security, and the sandbox isolating tool execution (§2.3 — E2B/Modal/Daytona's job, not ours).
 
-**Explicitly out of scope:** training-time attacks and model supply chain (ATLAS training techniques, LLM04 in its training sense); vector-store security (LLM08 beyond symptom detection); T11 Unexpected RCE (sandbox concern); T14/T15 human-directed social attacks; non-text modalities in MVP (§6.3).
+**Explicitly out of scope:** training-time attacks on *models* and model supply chain (ATLAS training techniques, LLM04 in its training sense) — Nometria does not train a model. Learning from labels and traffic to change *configuration* is in scope, and is covered in §E.2.5; vector-store security (LLM08 beyond symptom detection); T11 Unexpected RCE (sandbox concern); T14/T15 human-directed social attacks; non-text modalities in MVP (§6.3).
 
 **Stated because a compliance product must:** none of the above is a claim of completeness. Appendix B §B.4 carries the framework gap list, and this section is its threat-side counterpart.

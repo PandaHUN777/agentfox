@@ -55,6 +55,7 @@ Fixtures live in `tests/conftest.py`: `session`, `seeded`, `enforcer`, `client`,
 | fixed a known issue | delete its entry in `harness/reference/known-issues.md` |
 | a requirement's implementation | `docs/traceability.md` |
 | added a doc anywhere | `harness/reference/docs-map.md` |
+| a benchmark number that a doc quotes | `benchmarks/claims.yaml`; `scripts/claims.py --check` fails CI if a quote drifts from its result |
 
 Then run:
 

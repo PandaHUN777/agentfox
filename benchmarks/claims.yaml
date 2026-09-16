@@ -1,0 +1,113 @@
+# Every headline number we publish, bound to the result file it came from.
+#
+# `scripts/claims.py --check` renders each claim from its source and fails if any document
+# quoting it no longer says exactly that. Two published numbers were corrected by hand in a
+# single week (an SPML recall figure and an adaptive attack-success rate) before this existed.
+#
+# render:
+#   fraction      the source value is "n/d" (anything after it, like " (100.0%)", is ignored)
+#   sum_fraction  n = numerator, d = numerator + remainder
+#   percent       the source value is a 0..1 fraction; `decimals` sets rounding
+# Templates may use {n}, {d} and {pct}. Matching ignores markdown emphasis and line wraps.
+
+claims:
+  - id: containment.attacks_contained_with_detectors_off
+    source: benchmarks/containment/results/containment_results.json
+    path: [headline, detectors_off_attacks_contained]
+    render: fraction
+    quoted_in:
+      - {file: README.md, text: "{n}/{d} attacks contained with zero detector signal"}
+      - {file: benchmarks/README.md, text: "{n}/{d} attacks contained with zero detector signal"}
+      - {file: docs/benchmarking-whitepaper.md, text: "{n}/{d} attack scenarios contained with zero detector signal"}
+      - {file: docs/PRD.md, text: "{n} of {d} attack scenarios are still contained"}
+      - {file: docs/responding-to-the-critique.md, text: "{n} of {d} attack scenarios were still contained"}
+
+  - id: containment.legitimate_calls_allowed_with_detectors_off
+    source: benchmarks/containment/results/containment_results.json
+    path: [headline, detectors_off_controls_allowed]
+    render: fraction
+    quoted_in:
+      - {file: README.md, text: "{n}/{d} legitimate calls still allowed"}
+      - {file: benchmarks/README.md, text: "{n}/{d} legitimate controls still allowed"}
+      - {file: docs/responding-to-the-critique.md, text: "{n} of {d} legitimate calls were still allowed"}
+
+  - id: agentdojo.benign_utility
+    source: benchmarks/agentdojo_e2e/results/agentdojo_e2e_results.json
+    path: [detectors_off, benign_utility_allowed]
+    render: fraction
+    quoted_in:
+      - {file: README.md, text: "{n}/{d} legitimate calls allowed"}
+      - {file: benchmarks/README.md, text: "benign utility ({n}/{d})"}
+      - {file: docs/benchmarking-whitepaper.md, text: "{n}/{d} legitimate calls"}
+      - {file: docs/PRD.md, text: "{n} of {d} legitimate calls are allowed"}
+      - {file: docs/responding-to-the-critique.md, text: "{n} of {d} legitimate calls were allowed"}
+
+  - id: agentdojo.acting_attack_calls_contained
+    source: benchmarks/agentdojo_e2e/results/agentdojo_e2e_results.json
+    path: [detectors_off, attack_acting_calls_contained]
+    render: fraction
+    quoted_in:
+      - {file: README.md, text: "{n}/{d} attacker calls that act, contained"}
+      - {file: benchmarks/README.md, text: "acting attack calls contained ({n}/{d})"}
+      - {file: docs/benchmarking-whitepaper.md, text: "{n}/{d} attacker calls that act contained"}
+      - {file: docs/PRD.md, text: "{n} of {d} attacker calls that act"}
+      - {file: docs/responding-to-the-critique.md, text: "{n} of {d} attacker calls that act were contained"}
+
+  - id: agentdojo.read_only_attack_calls_contained
+    source: benchmarks/agentdojo_e2e/results/agentdojo_e2e_results.json
+    path: [detectors_off, attack_read_only_calls_contained]
+    render: fraction
+    quoted_in:
+      - {file: README.md, text: "read-only attack calls are contained {n}/{d}"}
+      - {file: benchmarks/README.md, text: "read-only attack calls contained {n}/{d}"}
+      - {file: docs/benchmarking-whitepaper.md, text: "only read are contained {n}/{d}"}
+
+  - id: adaptive.readable_attack_success_at_50
+    source: benchmarks/adaptive/results/adaptive_summary.json
+    path: [asr, "indirect_retrieved/readable_only", "asr@50"]
+    render: percent
+    decimals: 0
+    quoted_in:
+      - {file: README.md, text: "{pct}% of the attacks we catch through within 50 attempts"}
+      - {file: benchmarks/README.md, text: "{pct}% attack success at 50 attempts"}
+      - {file: docs/benchmarking-whitepaper.md, text: "{pct}% at a 50-attempt budget"}
+      - {file: docs/PRD.md, text: "{pct}% at 50 attempts"}
+      - {file: docs/responding-to-the-critique.md, text: "{pct}% at 50 attempts"}
+
+  - id: adaptive.bypasses_contained_at_the_action
+    source: benchmarks/adaptive/results/adaptive_summary.json
+    path: [containment_pairing, headline]
+    render: fraction
+    quoted_in:
+      - {file: benchmarks/README.md, text: "{n}/{d} of those bypasses still contained"}
+
+  - id: crescendo.trajectory_detection
+    source: benchmarks/crescendo/results/crescendo_results.json
+    path: [headline, trajectory_detection]
+    render: fraction
+    quoted_in:
+      - {file: benchmarks/README.md, text: "{n}/{d} detected"}
+
+  - id: crescendo.control_false_positives
+    source: benchmarks/crescendo/results/crescendo_results.json
+    path: [headline, control_false_positives_trajectory]
+    render: fraction
+    quoted_in:
+      - {file: benchmarks/README.md, text: "control false positives still {n}/{d}"}
+
+  - id: multilingual.integrity_parity
+    source: benchmarks/multilingual/results/multilingual_parity.json
+    render: sum_fraction
+    numerator: [integrity_parity, parity_held]
+    remainder: [integrity_parity, parity_broken]
+    quoted_in:
+      - {file: benchmarks/README.md, text: "{n}/{d} matched pairs"}
+
+  - id: generalization.classifier_spml_recall
+    source: benchmarks/results_generalization/summary.json
+    path: [configs, heuristic_classifier, spml, recall]
+    render: percent
+    decimals: 1
+    quoted_in:
+      - {file: README.md, text: "reaches {pct}% and"}
+      - {file: docs/benchmarking-whitepaper.md, text: "recall of {pct}% and"}

@@ -1,0 +1,39 @@
+name: Nightly evidence
+
+# The flywheel's first loop: re-measure what we publish, every night, and fail loudly when a
+# published claim no longer matches a fresh measurement or the coverage map overstates the
+# product. Only offline, deterministic benchmarks run here; the model-backed ones need
+# weights and are run by hand.
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Install (matches CI)
+        run: uv sync --extra pii --extra otel --extra postgres --extra sql --extra dev
+      - name: Containment under total detector bypass
+        run: uv run python benchmarks/containment/run_containment_benchmark.py
+      - name: AgentDojo end to end
+        run: uv run python benchmarks/agentdojo_e2e/run_agentdojo_e2e.py
+      - name: Crescendo trajectory
+        run: uv run python benchmarks/crescendo/run_crescendo_benchmark.py
+      - name: Published claims still match fresh measurements
+        run: uv run python scripts/claims.py --check
+      - name: Coverage map does not overstate the product
+        run: uv run python scripts/probe/run.py
+      - name: Keep the fresh results for comparison
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-evidence
+          path: |
+            benchmarks/containment/results/
+            benchmarks/agentdojo_e2e/results/
+            benchmarks/crescendo/results/
