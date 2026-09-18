@@ -32,6 +32,11 @@ services:
         value: production
       - key: PORT
         value: "3000"
+      # Next's standalone server binds to $HOSTNAME, and Render sets that to the pod
+      # name — so the app listens on a name its own proxy cannot reach and every
+      # request 502s while the logs claim a clean start. Bind to all interfaces.
+      - key: HOSTNAME
+        value: 0.0.0.0
       # The control plane this UI drives. No trailing slash.
       - key: NOMETRIA_API_URL
         value: https://guardrails-api.vercel.app
