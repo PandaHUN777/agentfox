@@ -17,7 +17,9 @@ services:
   - type: web
     name: nometria-dashboard
     runtime: docker
-    plan: starter
+    # Free so the first deploy needs no card. A free service sleeps when idle, so a
+    # cold visitor waits ~30s: move to `starter` before any launch traffic.
+    plan: free
     region: oregon
     dockerfilePath: ./deploy/Dockerfile.dashboard
     dockerContext: ./dashboard
