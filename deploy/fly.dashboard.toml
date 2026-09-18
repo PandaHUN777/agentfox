@@ -1,0 +1,40 @@
+# Fly.io alternative to deploy/render.yaml — same single web service, same image.
+#
+#   fly launch --no-deploy --copy-config --config deploy/fly.dashboard.toml
+#   fly secrets set GITHUB_CLIENT_ID=... GITHUB_CLIENT_SECRET=... \
+#                   NOMETRIA_SERVICE_AUTH_SECRET=...
+#   fly deploy --config deploy/fly.dashboard.toml --dockerfile deploy/Dockerfile.dashboard
+#
+# The Dockerfile expects the build context to be ./dashboard, so run the deploy
+# from the repo root with `--build-context` support, or from ./dashboard with the
+# Dockerfile path adjusted. Runbook: deploy/README-dashboard.md
+app = "nometria-dashboard"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile.dashboard"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+  NOMETRIA_API_URL = "https://guardrails-api.vercel.app"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    # The only page that renders without a session cookie.
+    path = "/login"
+
+[[vm]]
+  memory = "512mb"
+  cpu_kind = "shared"
+  cpus = 1

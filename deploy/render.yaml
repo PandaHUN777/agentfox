@@ -1,0 +1,44 @@
+# Render blueprint for the control-plane UI.
+#
+# The UI is a pure client of the API (principle X-5), so this deploys one web
+# service and no database: the API on Vercel already owns the Neon connection, and
+# nothing here talks to Postgres. Point NOMETRIA_API_URL at that API.
+#
+# Secrets are `sync: false` on purpose — Render prompts for them once at create
+# time and stores them itself, so no key is ever committed here.
+#
+#   Render → New → Blueprint → pick this repo → it reads deploy/render.yaml
+#
+# After the first deploy, set the GitHub OAuth app's callback URL to
+# https://<your-render-host>/api/auth/github/callback, and set the API's
+# NOMETRIA_PLAYGROUND_CORS_ORIGIN to https://<your-render-host>.
+# Full runbook: deploy/README-dashboard.md
+services:
+  - type: web
+    name: nometria-dashboard
+    runtime: docker
+    plan: starter
+    region: oregon
+    dockerfilePath: ./deploy/Dockerfile.dashboard
+    dockerContext: ./dashboard
+    # /login is the one page that renders without a session cookie, so it is the
+    # only honest health check: "/" redirects, and every other path 307s to /login.
+    healthCheckPath: /login
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      # The control plane this UI drives. No trailing slash.
+      - key: NOMETRIA_API_URL
+        value: https://guardrails-api.vercel.app
+      # Sign-in. From the GitHub OAuth app.
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false
+      # Must be byte-identical to the API's NOMETRIA_SERVICE_AUTH_SECRET: it is what
+      # authenticates the one privileged call that provisions a new account.
+      - key: NOMETRIA_SERVICE_AUTH_SECRET
+        sync: false

@@ -1,0 +1,9 @@
+# The image builds from source: everything below is either rebuilt inside the
+# image or would silently ship a developer's local state into production.
+node_modules
+.next
+.vercel
+npm-debug.log*
+tsconfig.tsbuildinfo
+.env
+.env.*
