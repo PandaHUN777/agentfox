@@ -8,6 +8,15 @@ What a visitor gets once this is up: sign in with GitHub, which creates their ow
 organisation, stores their GitHub grant, lists their repositories, scans one for
 ungoverned agent code, and issues them an API token their agents authenticate with.
 
+> **Status, 2026-09-18.** The UI is already live on Vercel at
+> `https://guardrails-dashboard-eight.vercel.app`, with GitHub sign-in, the repo list and
+> the repo scan all working, and the playground fixed (see step 4 — the origin was not
+> allowed, so every visitor saw "Failed to fetch"). A second copy now runs on Render at
+> `https://nometria-dashboard.onrender.com` as a backup; its sign-in returns 503 until the
+> three secrets below are set on it, and its callback URL is added to the OAuth app.
+> **Still outstanding: the Neon catch-up migration in step 1b.** Findings returns a 500 in
+> production until it runs.
+
 ## 1. Secrets the two deployments must share
 
 Two values must be byte-identical on the API (Vercel) and the UI (Render or Fly),
@@ -54,8 +63,11 @@ code, which expects tables and columns that only a migration creates: `change_pr
 findings. Until Neon is migrated, any request that records a finding or lists proposals
 fails, and sign-in is not the thing that will look broken.
 
-Run it from a checkout, against the Neon URL that the API already uses (copy it from the
-Vercel project's environment, and keep it out of shell history):
+The database is at revision `b3f8e29a71c4`, one behind. Note that `change_proposals` and
+`job_schedules` already exist, created by `init_db()`'s create_all, so a plain
+`alembic upgrade head` fails on CREATE TABLE. Use `deploy/neon-catchup-d5e2a9c14f03.sql`,
+which is idempotent, in the Neon SQL editor (Vercel → Storage → guardrails-db → Query,
+read-only off). Or, from a checkout against the Neon URL:
 
 ```bash
 NOMETRIA_DATABASE_URL='<neon url>' uv run alembic upgrade head
@@ -73,7 +85,9 @@ NOMETRIA_DATABASE_URL='<neon url>' uv run alembic current
 2. Render prompts for the three secret values marked `sync: false`. Paste them there,
    never into a file in the repository.
 3. First build takes a few minutes. It builds `deploy/Dockerfile.dashboard` with
-   `./dashboard` as the build context.
+   `./dashboard` as the build context. The blueprint sets `HOSTNAME=0.0.0.0`: without it
+   Next binds to the pod name Render injects, and every request 502s while the logs show a
+   clean start.
 4. Note the hostname it gives you, for example `nometria-dashboard.onrender.com`.
 
 The starter plan matters here: on the free plan the service sleeps, and a cold start
