@@ -2,8 +2,8 @@
 title: Detectors, verdicts and findings
 layer: reference
 audience: agents triaging results
-source_of_truth: src/nometria/guardrails/, src/nometria/enforcement.py, src/nometria/models.py (Finding)
-verified_against: commit 6863b8b, 2026-09-15
+source_of_truth: src/nometria/guardrails/, src/nometria/enforcement.py, src/nometria/models.py (Finding), src/nometria/findings.py
+verified_against: branch claude/improvement-loop-phase0, 2026-09-20
 ---
 
 # Detectors, verdicts, findings
@@ -53,7 +53,20 @@ closed without it), taint tracking, composed privilege escalation, loop and budg
 ## Findings (the queue `nometria findings` reads)
 
 Persisted in `models.Finding`: `id, type, severity (critical|high|medium|low), status
-(open|suppressed|resolved), title, subject_type, subject_id, evidence_json, control_keys`.
+(open|suppressed|resolved), title, subject_type, subject_id, evidence_json, control_keys,
+fingerprint, occurrences, last_seen_at`.
+
+**One row per problem, not per detection.** A finding is identified by a `fingerprint` over
+its type, subject and identifying parts. The same problem happening again increments
+`occurrences` on the open or suppressed finding, refreshes the evidence (keeping the
+first-seen evidence) and `last_seen_at`, and ratchets severity up; it never adds a row. A
+milder recurrence never downgrades a finding someone is triaging. A problem that recurs
+after being resolved reopens the same finding, keeps what the previous resolution said, and
+writes a `finding.recurred` entry to the audit chain, so `occurrences` counts the whole
+history. Findings raised before fingerprints existed have none, and count 1.
+
+`nometria findings --json` does not include the count. `GET /api/findings`, `GET
+/api/findings/{id}` and the `nometria_finding_occurrences` MCP tool do.
 
 | Type | Meaning | First move |
 |---|---|---|

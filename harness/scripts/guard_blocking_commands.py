@@ -34,6 +34,21 @@ CLI_RULES: list[tuple[re.Pattern[str], str]] = [
         "demotes a policy to OBSERVE — traffic it was blocking will be let through.",
     ),
     (r"agents\s+(?:kill|quarantine)" + _END, "stops a production agent (kill switch)."),
+    (
+        r"proposals\s+apply" + _END,
+        "applies a proposed change to live governance configuration (directly, or to a "
+        "canary cohort).",
+    ),
+    (
+        r"proposals\s+rollback" + _END,
+        "undoes an applied change, which loosens a control if the change tightened one.",
+    ),
+    (
+        # Plain `verify` only records the outcome; `--failed` rolls the change back, so it
+        # is the same blocking action under a different name.
+        r"proposals\s+verify\b[^|;&]*--failed" + _END,
+        "records a failed verification and rolls the applied change back.",
+    ),
     (r"agents\s+resume" + _END, "restarts a stopped agent."),
     (
         r"demo" + _END,
@@ -63,10 +78,10 @@ CLI_RULES = [(re.compile(_PREFIX + pat), why) for pat, why in CLI_RULES]  # type
 
 CURL_RULE = (
     re.compile(
-        r"^(?:\w+=\S*\s+)*curl\b.*(?:/api/policies/[^/\s]+/mode|/api/agents/[^/\s]+/(?:kill|quarantine|resume)|/api/approvals/[^/\s]+/(?:approve|deny))"
+        r"^(?:\w+=\S*\s+)*curl\b.*(?:/api/policies/[^/\s]+/mode|/api/agents/[^/\s]+/(?:kill|quarantine|resume)|/api/approvals/[^/\s]+/(?:approve|deny)|/api/proposals/[^/\s]+/(?:apply|rollback|verify))"
     ),
     "calls a control-plane endpoint that changes enforcement, stops an agent, "
-    "or decides an approval.",
+    "decides an approval, or applies or undoes a change proposal.",
 )
 
 _SPLIT = re.compile(r"\s*(?:&&|\|\||;|\||\n|\$\(|`|\()\s*")

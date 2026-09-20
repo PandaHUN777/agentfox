@@ -19,6 +19,7 @@ Collect, using `nometria` (or `uv run nometria` in a source checkout):
 5. `audit verify`
 6. `compliance frameworks`, `compliance status`, `compliance risk`, `compliance obligations`
 7. `guardrails check --json`, `sources list --json`
+8. `proposals list --json`
 
 Write the report with these sections:
 
@@ -26,6 +27,9 @@ Write the report with these sections:
 - **Coverage:** registered vs shadow agents, and ungoverned surfaces.
 - **Enforcement posture:** which policies block, which only observe, and fail modes.
 - **Integrity:** the audit chain result.
+- **Changes in flight:** proposals waiting on a decision, anything applied but not
+  verified, and any change that loosens a control. Say who applied each one, a named
+  person or the automation actor.
 - **Top risks:** at most 5. Each gets evidence and the skill that fixes it.
 - **Framework posture:** marked *DRAFT — UNVERIFIED / NOT LEGAL ADVICE*.
 - **What this review could not see.**

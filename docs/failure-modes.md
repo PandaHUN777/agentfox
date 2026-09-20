@@ -48,7 +48,7 @@ The rest of this document is the failure taxonomy we should actually be governin
 
 ---
 
-## The taxonomy — 9 failure families, 57 catalogued modes + 5 newly discovered
+## The taxonomy — 8 failure families (F1–F8) plus 5 audit-found modes (F9), 57 in total
 
 Legend: ✅ covered and live on the request path · ◐ partial, real but narrower than the claim · ◐-unwired real logic, individually tested, but never imported/called from the live enforcement path · ✗ absent (all verified against the codebase, 2026-08-29, by test citation, code citation, or import-graph check).
 
@@ -213,7 +213,9 @@ A recurring pattern across F1, F2 and F7 is that the agent has no access to ente
 | F8 Context & retrieval integrity | 7 | 0 | 0 | 6 | 1 | feeds F1/F2/F7 |
 | **Total** | **57** | **41** | **3** | **11** | **2** | |
 
-**41 of 57 modes are covered live, as of 2026-08-30** (was 1 of 50 on 2026-08-18, before F8 existed in this taxonomy; 40 of 57 as of 2026-08-29, before F3.8 was built). Two modes are genuinely absent — F7.7 (cross-turn self-contradiction) and F8.3 (stale index) — real, scoped gaps worth building next, not oversights. Four are honest partials (F4.7 MNPI/legal-hold class untested by name, F5.4 turn-depth proxy rather than true quality-trend detection, F7.6 timezone ambiguity rather than verified date-shift detection). **Eleven — all of F6 except F6.6, and all of F8 except F8.3 — are the `◐-unwired` pattern:** real, individually-tested modules that nothing in the live request path ever calls. That's the highest-leverage remaining fix in this whole document: for eleven of the seventeen non-fully-covered modes, the detection logic already exists and is already correct.
+**41 of 57 modes were covered live when this table was last counted by hand, on 2026-08-30.** The current figure is computed, not hand-counted: [docs/status.md](status.md) reports 54 of 57 outright and 2 partial. Where the two disagree, the computed one is right and this table is behind.
+
+The rest of this section is the 2026-08-30 snapshot (was 1 of 50 on 2026-08-18, before F8 existed in this taxonomy; 40 of 57 as of 2026-08-29, before F3.8 was built). Two modes are genuinely absent — F7.7 (cross-turn self-contradiction) and F8.3 (stale index) — real, scoped gaps worth building next, not oversights. Four are honest partials (F4.7 MNPI/legal-hold class untested by name, F5.4 turn-depth proxy rather than true quality-trend detection, F7.6 timezone ambiguity rather than verified date-shift detection). **Eleven — all of F6 except F6.6, and all of F8 except F8.3 — are the `◐-unwired` pattern:** real, individually-tested modules that nothing in the live request path ever calls. That's the highest-leverage remaining fix in this whole document: for eleven of the seventeen non-fully-covered modes, the detection logic already exists and is already correct.
 
 The pillars built earlier (taint containment, audit chain, policy engine, computed control status) turned out to be genuine substrate — F1–F5 and most of F7 were built as detectors, policy conditions, and scorers inside that same architecture, which is why coverage moved this far this fast. The `◐-unwired` pattern in F6 and F8 is the same lesson from the other direction: building the detector was not the hard part; the last step — one import and one call site — kept getting skipped.
 

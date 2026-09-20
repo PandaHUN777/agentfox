@@ -83,6 +83,9 @@ nometria evidence export --agent <slug> --since-days 90 --requested-by "<user's 
 ```
 
 - Repeat `--agent` or `--control` to scope the export. Leave them out for everything.
+- For a fixed audit period, give the dates instead of a window:
+  `nometria evidence export --from 2026-01-01 --to 2026-03-31`. An end date given as
+  `YYYY-MM-DD` covers that whole day.
 - The zip lands in `NOMETRIA_EVIDENCE_DIR` (default `var/evidence/`). Tell the user the path.
 
 ## 5. Prove the package stands on its own

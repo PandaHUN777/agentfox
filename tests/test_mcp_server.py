@@ -149,6 +149,7 @@ def test_no_tool_reaches_a_state_changing_command(tmp_path):
         "nometria_guardrails_test": {"key": "k", "values": ["1"]},
         "nometria_boundary_check": {"agent": "a", "question": "q"},
         "nometria_check_repo": {"path": str(tmp_path)},
+        "nometria_proposals_show": {"proposal_id": "chp_1"},
     }
     for tool in TOOLS.values():
         if tool.argv is None:
@@ -220,6 +221,115 @@ def test_analyse_action_flags_unbounded_delete():
 def test_unknown_agent_is_a_genuine_failure():
     result = _call("nometria_boundary_check", {"agent": "no-such-agent", "question": "hi?"})
     assert result["isError"] is True and "unknown agent" in _text(result)
+
+
+# --- improvement loop: readable, never decidable -----------------------------------
+
+
+def _file_a_proposal() -> str:
+    from nometria.db import session_scope
+    from nometria.improvement.proposals import file_proposal
+
+    with session_scope() as session:
+        proposal = file_proposal(
+            session,
+            kind="suppression.revoke",
+            source="hygiene",
+            target_type="suppression",
+            target_ref="sup_1",
+            scope_level="org",
+            scope_id="*",
+            title="revoke a stale suppression",
+            rationale="the reason it was suppressed no longer holds",
+            direction="tightens",
+            autonomy_level="L2",
+            diff={"suppression_id": "sup_1"},
+            evidence={"labelled_false_positives": 4},
+        )
+        return proposal.id
+
+
+def test_proposals_list_and_show_read_the_inbox():
+    proposal_id = _file_a_proposal()
+
+    listed = _call("nometria_proposals_list", {"status": "proposed"})
+    assert listed["isError"] is False
+    rows = listed["structuredContent"]["data"]["proposals"]
+    assert [row["id"] for row in rows] == [proposal_id]
+    assert rows[0]["direction"] == "tightens" and rows[0]["status"] == "proposed"
+
+    shown = _call("nometria_proposals_show", {"proposal_id": proposal_id})
+    assert shown["isError"] is False
+    body = shown["structuredContent"]["data"]
+    assert body["diff"] == {"suppression_id": "sup_1"}
+    assert body["evidence"] == {"labelled_false_positives": 4}
+    assert body["decided_by"] is None  # reading a proposal decides nothing
+
+
+def test_unknown_proposal_is_a_genuine_failure():
+    result = _call("nometria_proposals_show", {"proposal_id": "chp_nope"})
+    assert result["isError"] is True and "unknown proposal" in _text(result)
+
+
+def test_no_proposal_tool_can_decide_apply_or_roll_back():
+    from nometria.cli.main import proposals_app
+
+    exposed = {
+        tool.argv({"proposal_id": "chp_1"}, Path("/tmp"))[:2][1]
+        for name, tool in TOOLS.items()
+        if name.startswith("nometria_proposals_")
+    }
+    assert exposed == {"list", "show"}
+    # the lifecycle commands exist; they are simply not reachable from here
+    assert {"approve", "reject", "apply", "rollback", "from-labels"} <= {
+        command.name for command in proposals_app.registered_commands
+    }
+
+
+def test_finding_occurrences_ranks_recurring_problems():
+    from nometria.db import session_scope
+    from nometria.findings import raise_finding
+
+    with session_scope() as session:
+        for _ in range(3):
+            raise_finding(
+                session,
+                type="guardrail_detection",
+                severity="high",
+                title="PII in output",
+                subject_id="support-triage",
+                fingerprint_parts=("pii", "support-triage"),
+                evidence={"entity": "EMAIL"},
+            )
+        raise_finding(
+            session,
+            type="drift",
+            severity="low",
+            title="score drift",
+            subject_id="analytics",
+            fingerprint_parts=("drift", "analytics"),
+        )
+
+    result = _call("nometria_finding_occurrences", {})
+    assert result["isError"] is False
+    findings = result["structuredContent"]["findings"]
+    assert [f["occurrences"] for f in findings] == [3, 1]  # most-recurrent first
+    assert findings[0]["fingerprint"] and "evidence" not in findings[0]
+
+    recurring = _call("nometria_finding_occurrences", {"min_occurrences": 2})
+    assert recurring["structuredContent"]["count"] == 1
+
+    one = _call("nometria_finding_occurrences", {"finding_id": findings[0]["id"]})
+    detail = one["structuredContent"]["finding"]
+    assert detail["occurrences"] == 3 and detail["evidence"]["entity"] == "EMAIL"
+
+    filtered = _call("nometria_finding_occurrences", {"type": "drift"})
+    assert [f["title"] for f in filtered["structuredContent"]["findings"]] == ["score drift"]
+
+
+def test_unknown_finding_is_a_genuine_failure():
+    result = _call("nometria_finding_occurrences", {"finding_id": "fnd_nope"})
+    assert result["isError"] is True and "unknown finding" in _text(result)
 
 
 # --- in-process guard -------------------------------------------------------------

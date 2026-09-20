@@ -30,6 +30,7 @@ reference files only when a skill points you there. The layout is explained in
 | attack their own agent before someone else does | [skills/red-team](skills/red-team/SKILL.md) |
 | prepare for an audit, export evidence, check framework posture | [skills/audit-evidence](skills/audit-evidence/SKILL.md) |
 | respond to an agent misbehaving right now | [skills/incident-response](skills/incident-response/SKILL.md) |
+| review what the improvement loop wants to change, and decide it | [skills/operate-improvement-loop](skills/operate-improvement-loop/SKILL.md) |
 | run it as a service: serve, deploy, harden auth, upgrade | [skills/operate-deployment](skills/operate-deployment/SKILL.md) |
 | change the Nometria codebase itself | [skills/develop-nometria](skills/develop-nometria/SKILL.md) |
 
@@ -58,7 +59,11 @@ doc to open.
    that we do not claim adversarial robustness and nobody should.
 7. **Code wins.** If a doc and the code disagree, trust the code and check
    [reference/known-issues.md](reference/known-issues.md) before assuming a bug is yours.
-8. **Prefer the `nometria_*` MCP tools for reading and analysis** when they're available;
+8. **An automated change is still a change.** Everything the improvement loop wants to do
+   is filed as a proposal. Applying or rolling one back is **BLK**, and a change that
+   loosens a control is never applied automatically, whatever the evidence says.
+   `NOMETRIA_IMPROVEMENT_FROZEN=true` stops automated applies without losing proposals.
+9. **Prefer the `nometria_*` MCP tools for reading and analysis** when they're available;
    they return structured results. Otherwise prefer `--json` where it exists, or the HTTP API
    when a server is running. State changes always go through the CLI.
 

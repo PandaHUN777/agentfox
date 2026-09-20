@@ -210,8 +210,8 @@ def framework_coverage(
         "caveat": (
             "Mappings are informed engineering drafts produced from the framework "
             "texts. They are not legal advice and have not been reviewed by "
-            "compliance counsel or a certification body. Draft mappings are excluded "
-            "from evidence packages."
+            "compliance counsel or a certification body. Draft mappings do ship in "
+            "evidence packages, labelled DRAFT — UNVERIFIED / NOT LEGAL ADVICE."
         ),
     }
 

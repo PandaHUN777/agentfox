@@ -476,6 +476,9 @@ def findings_cmd(
                 "title": f.title,
                 "subject": f"{f.subject_type}:{f.subject_id}",
                 "at": f.created_at.isoformat(),
+                "occurrences": f.occurrences,
+                "fingerprint": f.fingerprint,
+                "last_seen_at": f.last_seen_at.isoformat() if f.last_seen_at else None,
             }
             for f in session.scalars(stmt)
         ]

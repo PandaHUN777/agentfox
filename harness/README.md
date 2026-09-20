@@ -48,12 +48,14 @@ pip install "git+https://github.com/architsharm/guardrails.git"
 | `/nometria:redteam <agent>` | Adversarial probes, results explained, fixes proposed |
 | `/nometria:evidence [agent]` | Verify the audit chain and export an auditor-ready package |
 | `/nometria:contain <agent> [reason]` | Incident response: quarantine (with confirmation), blast radius, evidence |
+| `/nometria:proposals [id or status]` | Review what the improvement loop wants to change; applying anything needs your say-so |
 | `/nometria:harness-check` | Check the harness against the live CLI and repo (for maintainers) |
 
-**MCP server.** The plugin also starts `nometria mcp serve`, which gives any MCP client 24
-read-only tools: posture, findings, policy validate and simulate, guard a piece of text,
-analyse a SQL/shell/HTTP action, audit verify, compliance status, guardrail tests and more.
-Other MCP clients can run it directly:
+**MCP server.** The plugin also starts `nometria mcp serve`, which gives any MCP client 27
+read-only tools: posture, findings and how often each one has recurred, the improvement
+loop's change proposals, policy validate and simulate, guard a piece of text, analyse a
+SQL/shell/HTTP action, audit verify, compliance status, guardrail tests and more. Nothing
+there decides, applies or rolls back a change. Other MCP clients can run it directly:
 
 ```bash
 nometria mcp serve
@@ -67,7 +69,7 @@ Subagents (the model delegates to them, or you ask for one by name):
 
 The **safety hook** turns every command that changes what gets blocked into a permission
 prompt with a plain-language reason. That covers `policy enforce`, `agents kill`, `demo`,
-`--mode enforce` and `--submit`.
+`proposals apply`, `proposals rollback`, `--mode enforce` and `--submit`.
 
 ## How it's organised
 

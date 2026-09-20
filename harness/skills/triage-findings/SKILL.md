@@ -20,8 +20,11 @@ usually means nothing has been governed yet; `nometria doctor` confirms it.
 ## 2. Group before you judge
 
 Group by `type`, then by `subject_id` (the agent, server or tool). Twenty
-`guardrail_detection` findings on one agent are one problem, not twenty. Order the groups
-by:
+`guardrail_detection` findings on one agent are one problem, not twenty. The same
+underlying problem recurring is already one row with an `occurrences` count rather than a
+new finding each time, so read that count before calling something rare. The
+`nometria_finding_occurrences` MCP tool ranks findings by it; the `findings` CLI does not
+show it. Order the groups by:
 
 1. **critical/high on a production agent**
 2. **anything that means "something ran that nobody owns"**: `shadow_agent`,
@@ -78,3 +81,6 @@ Hand off to the skill that owns the fix:
 - Answerability, sources, escalation or entitlement → **declare-agent-controls**.
 - Shadow agents → **onboard-codebase** for that service.
 - An active incident → **incident-response**.
+- Enough labelled false positives that a detector's cut-off should move →
+  **operate-improvement-loop** (`proposals from-labels` files it; raising a cut-off
+  loosens a rule, so a person decides it).

@@ -3,7 +3,7 @@ title: Docs map — which repo markdown an agent should read, for what
 layer: reference
 audience: agents (routing), maintainers (classification)
 source_of_truth: this file classifies docs; it never restates them
-verified_against: commit 6863b8b, 2026-09-15
+verified_against: branch claude/improvement-loop-phase0, 2026-09-20
 ---
 
 # Docs map
@@ -56,6 +56,7 @@ Quote coverage numbers only from these, and only after regenerating.
 | `benchmarks/REPORT.md`, `benchmarks/*/README.md` (one per benchmark area) | running or changing that benchmark |
 | `benchmarks/data/README.md`, `benchmarks/data_generalization/README.md`, `docs/dataset-sourcing.md` | dataset provenance and licensing |
 | `demo/redteam-live/README.md`, `demo/redteam-live-lang/README.md` | running or deploying the live demos |
+| `deploy/README-dashboard.md` | deploying the hosted dashboard (Render/Fly/Vercel), its shared secrets and the Neon migration state |
 | `docs/audit-tracker-pmlanguage.md`, `docs/audit-tracker-designreview.md` | dashboard copy/UX work (open backlogs) |
 
 ## Class E — human-only: do not load into agent context
@@ -81,4 +82,5 @@ Everything under `harness/` is agent-facing by design and follows `harness/STRUC
 | Where is requirement P9-11 implemented? | `docs/traceability.md` | `docs/lld.md` |
 | Is failure mode F3.8 covered? | `docs/status.md` (regenerate first) | `docs/failure-modes.md` |
 | Which framework clause does control NOM-RTG-04 map to? | `src/nometria/compliance_data/controls.yaml` | Appendix B |
+| What does the loop want to change, and who may decide it? | `harness/skills/operate-improvement-loop/SKILL.md` | `src/nometria/improvement/contract.py` |
 | Why did the tool do something surprising? | `harness/reference/known-issues.md` | source |

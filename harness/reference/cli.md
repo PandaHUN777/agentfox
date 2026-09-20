@@ -3,7 +3,7 @@ title: nometria CLI reference
 layer: reference
 audience: agents (and humans who want the dense version)
 source_of_truth: src/nometria/cli/ — the code wins if this file disagrees
-verified_against: commit 6863b8b, 2026-09-15 (checked by harness/scripts/check_harness.py)
+verified_against: branch claude/improvement-loop-phase0, 2026-09-20 (checked by harness/scripts/check_harness.py)
 ---
 
 # `nometria` CLI reference
@@ -91,7 +91,7 @@ The default `echo` provider is offline. Real providers need `NOMETRIA_ALLOW_EGRE
 |---|---|---|
 | `audit verify [--start N] [--end N]` | R\* | **Exit 1 if the chain is broken** — the output names the first bad entry. |
 | `audit checkpoint` | W | Signed checkpoint over the chain head. |
-| `evidence export [--agent SLUG]... [--since-days 30] [--control KEY]... [--requested-by cli]` | W, F | Zip in `NOMETRIA_EVIDENCE_DIR` (default `var/evidence/`) with a bundled `verify_chain.py`. |
+| `evidence export [--agent SLUG]... [--from DATE] [--to DATE] [--since-days 30] [--control KEY]... [--requested-by cli]` | W, F | Zip in `NOMETRIA_EVIDENCE_DIR` (default `var/evidence/`) with a bundled `verify_chain.py`. `--from`/`--to` take `YYYY-MM-DD` or a full ISO-8601 timestamp; a bare end date covers that whole day, so `--to 2026-08-17` includes the 17th. Without a range, `--since-days` applies; with only one end given, `--since-days` fills the other. A backwards range or an unparseable date is refused. |
 | `compliance review-packet --framework KEY [--out PATH]` | R\* | Everything a qualified reviewer needs to sign off one framework, as markdown. |
 | `compliance review CONTROL --framework KEY --reviewer NAME [--reference REF]` | W | Records a named human's sign-off; moves mappings out of DRAFT. Exit 1 if nothing matched. |
 | `compliance validate` | R, offline | Catalog consistency: unique keys, known frameworks and rule kinds, obligations parse. Exit 1 on problems. |
@@ -160,12 +160,13 @@ or superseded. A change that loosens a control is never applied automatically.
 | `proposals approve ID --actor --note` · `proposals reject ID --actor --note` | W | An org-level loosening needs two different approvers. |
 | `proposals apply ID [--actor] [--automated]` | **BLK** | Changes live configuration, directly or through a canary. `--automated` runs every automation check and refuses loosening changes. |
 | `proposals rollback ID --actor --reason` | **BLK** | Undoing a tightening loosens a control, so only a person can do it. |
+| `proposals verify ID --actor --note [--failed]` | W (**BLK** with `--failed`) | Did the applied change do what it promised? `--failed` records the failure and rolls it back, except where that rollback would loosen a control, which stays for a person. |
 
 ## `mcp` — MCP server for agents
 
 | Command | Effect | Notes |
 |---|---|---|
-| `mcp serve` | FG (stdio) | MCP server over stdin/stdout for Claude Code, Cursor and other clients. 24 read-only tools; nothing that changes enforcement. |
+| `mcp serve` | FG (stdio) | MCP server over stdin/stdout for Claude Code, Cursor and other clients. 27 read-only tools; nothing that changes enforcement. |
 | `mcp tools` | R | Lists the tools with one-line descriptions. |
 
 ## `auth`, `db` — operating a deployment

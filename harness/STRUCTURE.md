@@ -17,7 +17,7 @@ harness/
 ├── README.md                     for humans: what this is, how to install it, how to use it
 ├── STRUCTURE.md                  this file: the contract every harness file follows
 ├── .claude-plugin/plugin.json    Claude Code plugin manifest (repo root holds marketplace.json → ./harness)
-├── .mcp.json                 L3  MCP server: `nometria mcp serve`, 24 read-only tools for any MCP client
+├── .mcp.json                 L3  MCP server: `nometria mcp serve`, 27 read-only tools for any MCP client
 ├── reference/                L1  FACTS — dense, agent-optimised, verified against code
 │   ├── cli.md                    every command, flag, side effect, exit code
 │   ├── config.md                 every NOMETRIA_* variable and extra
@@ -85,9 +85,10 @@ place that explains the fallbacks.
 | `agents/*.md` | `name`, `description`, `tools` (least privilege) |
 
 **The MCP server is read-only by construction.** It exposes analysis and inspection tools
-only (`src/nometria/mcp_server.py`). Anything that changes enforcement, stops an agent or
-sends data goes through the CLI, where the hook asks first. Adding a state-changing MCP tool
-would bypass that gate, so don't.
+only (`src/nometria/mcp_server.py`). Anything that changes enforcement, stops an agent,
+decides or applies a change proposal, or sends data goes through the CLI, where the hook
+asks first. Adding a state-changing MCP tool would bypass that gate, so don't. When you add
+or remove a tool, update the count in `README.md`, `reference/cli.md` and this file.
 
 ## Keeping it honest
 

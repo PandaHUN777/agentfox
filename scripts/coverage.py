@@ -55,7 +55,7 @@ class Probe:
 class Mode:
     """One catalogued failure mode and the marker that proves it is addressed.
 
-    The 50 modes in `failure-modes.md` are the honest scorecard: pillars are how we
+    The modes in `failure-modes.md` are the honest scorecard: pillars are how we
     organise the build, families are what actually goes wrong in production. A pillar
     can be "built" while the failure it exists to prevent is still uncovered, which is
     why this table is computed separately rather than derived from the pillar rows.
@@ -791,7 +791,7 @@ in [traceability.md](traceability.md).
 Pillars are how the build is organised; **families are what actually goes wrong in
 production**. A pillar can read "built" while the failure it exists to prevent is still
 uncovered, so this table is computed independently rather than derived from the rows
-above. The 50 modes come from [failure-modes.md](failure-modes.md).
+above. The modes come from [failure-modes.md](failure-modes.md).
 
 | Family | Modes | Covered | Partial | Score | Not yet covered |
 |---|---|---|---|---|---|

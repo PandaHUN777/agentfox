@@ -114,7 +114,7 @@ Stated plainly, because earlier drafts of this document overstated it.
 
 ### 1.5 What we have built, honestly
 
-75.4k lines, **1,617 passing tests**, offline-capable, **80% weighted coverage of 41
+81.8k lines, **1,756 passing tests**, offline-capable, **80% weighted coverage of 41
 tracked capabilities**, **96% of the catalogued failure modes** (54 of 57 outright), and
 **92% weighted coverage of an independent 114-scenario taxonomy** built from the
 architecture of a request rather than from our own failure catalogue — 103 of those

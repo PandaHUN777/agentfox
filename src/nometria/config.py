@@ -153,7 +153,22 @@ class Settings(BaseSettings):
     # (`gateway/routes/playground.py`) when the dashboard and gateway are not
     # same-origin in the deployed environment. Additive to the hardcoded
     # localhost origins in `gateway/app.py`, never a replacement for them.
+    #
+    # Comma-separated, because one API can front several hosts: a primary dashboard and
+    # a standby on another provider, or a custom domain during a move. While this took a
+    # single origin, the standby's playground failed in the browser with "Failed to
+    # fetch" while curl against the same API looked perfectly healthy.
     playground_cors_origin: str | None = None
+
+    @property
+    def playground_cors_origins(self) -> list[str]:
+        """Each configured origin, trimmed, in order, with blanks and duplicates dropped."""
+        out: list[str] = []
+        for raw in (self.playground_cors_origin or "").split(","):
+            origin = raw.strip().rstrip("/")
+            if origin and origin not in out:
+                out.append(origin)
+        return out
 
     # --- Outbound finding webhooks ----------------------------------------
     # Every newly committed Finding at or above `webhook_min_severity` is POSTed

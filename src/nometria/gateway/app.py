@@ -118,8 +118,7 @@ def create_app() -> FastAPI:
     # origin is additive here via NOMETRIA_PLAYGROUND_CORS_ORIGIN rather than
     # widening this list's intent for every other route.
     cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000"]
-    if get_settings().playground_cors_origin:
-        cors_origins.append(get_settings().playground_cors_origin)
+    cors_origins.extend(get_settings().playground_cors_origins)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=cors_origins,

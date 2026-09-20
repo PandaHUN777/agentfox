@@ -6,10 +6,11 @@ is deliberately not a dependency. The product has to stay installable offline wi
 new core requirements, and stdio framing is small enough to own.
 
 This exposes the observe half of the product: inventory, findings, posture, policy
-validation and simulation, static analysis, and a dry-run content check. Nothing here
-changes enforcement or stops an agent (no policy enforce/observe, agents
-kill/quarantine/resume, seed, demo, db downgrade, auth issue/revoke, or --submit). An
-assistant that can read everything and change nothing is safe to hand to any client.
+validation and simulation, static analysis, a dry-run content check, and the improvement
+loop's proposal inbox. Nothing here changes enforcement or stops an agent (no policy
+enforce/observe, agents kill/quarantine/resume, seed, demo, db downgrade, auth
+issue/revoke, --submit, and no proposal decide/apply/rollback). An assistant that can read
+everything and change nothing is safe to hand to any client.
 
 Every CLI-backed tool runs the real `nometria` CLI in a subprocess, so an answer here is
 exactly what an operator would see in a terminal. argv is built only from validated,
@@ -33,6 +34,7 @@ from typing import Any, TextIO
 
 from . import __version__
 from .compliance.catalog import FRAMEWORK_TITLES
+from .improvement.contract import SCOPE_LEVELS, STATUSES
 
 log = logging.getLogger("nometria.mcp")
 
@@ -43,8 +45,9 @@ INSTRUCTIONS = (
     "inventory, findings, policy, audit and compliance posture, and analyse text, actions "
     "and candidate policies. None of them changes what is enforced. State-changing "
     "actions (enforcing policy, killing or quarantining agents, issuing tokens, seeding, "
-    "submitting scans) are deliberately not exposed. Ask a human operator to run those "
-    "with the nometria CLI. Start with nometria_doctor."
+    "submitting scans, and deciding, applying or rolling back a change proposal) are "
+    "deliberately not exposed. Ask a human operator to run those with the nometria CLI. "
+    "Start with nometria_doctor."
 )
 CLI_TIMEOUT_SECONDS = 120
 MAX_OUTPUT_CHARS = 100_000
@@ -197,7 +200,67 @@ def _check(key: str, value: Any, schema: dict[str, Any]) -> None:
             _check(f"{key}[{i}]", item, schema["items"])
 
 
-# --- in-process tool --------------------------------------------------------------
+# --- in-process tools -------------------------------------------------------------
+
+
+def _iso(value: Any) -> str | None:
+    return value.isoformat() if value is not None else None
+
+
+def _finding_row(finding: Any, *, detail: bool) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "id": finding.id,
+        "type": finding.type,
+        "severity": finding.severity,
+        "status": finding.status,
+        "title": finding.title,
+        "subject": f"{finding.subject_type}:{finding.subject_id}",
+        # One row per underlying problem: a recurrence counts here instead of adding a row.
+        "occurrences": finding.occurrences or 1,
+        "fingerprint": finding.fingerprint,
+        "first_seen": _iso(finding.created_at),
+        "last_seen": _iso(finding.last_seen_at or finding.created_at),
+    }
+    if detail:
+        row.update(
+            {
+                "controls": finding.control_keys,
+                "evidence": finding.evidence_json,
+                "suppression_reason": finding.suppression_reason,
+                "suppressed_by": finding.suppressed_by,
+                "resolution_note": finding.resolution_note,
+                "resolved_by": finding.resolved_by,
+                "resolved_at": _iso(finding.resolved_at),
+            }
+        )
+    return row
+
+
+def _finding_occurrences(args: dict[str, Any]) -> dict[str, Any]:
+    """Findings ranked by how often the same problem came back, or one finding in full."""
+    from sqlalchemy import select
+
+    from .db import session_scope
+    from .models import Finding
+
+    finding_id = args.get("finding_id")
+    status = args.get("status") or "open"
+    with contextlib.redirect_stdout(sys.stderr), session_scope() as session:
+        if finding_id is not None:
+            finding = session.get(Finding, finding_id)
+            if finding is None:
+                raise ToolError(f"unknown finding: {finding_id}")
+            return {"finding": _finding_row(finding, detail=True)}
+        stmt = select(Finding).where(Finding.status == status)
+        if args.get("type") is not None:
+            stmt = stmt.where(Finding.type == args["type"])
+        if args.get("min_occurrences") is not None:
+            stmt = stmt.where(Finding.occurrences >= args["min_occurrences"])
+        stmt = stmt.order_by(Finding.occurrences.desc(), Finding.created_at.desc()).limit(
+            args.get("limit") or 20
+        )
+        rows = [_finding_row(f, detail=False) for f in session.scalars(stmt)]
+    return {"status": status, "count": len(rows), "findings": rows}
 
 
 def _guard_text(args: dict[str, Any]) -> dict[str, Any]:
@@ -256,6 +319,25 @@ TOOLS: dict[str, Tool] = {
                 *_opts(a, severity="--severity", limit="--limit"),
             ],
             json_output=True,
+        ),
+        Tool(
+            "nometria_finding_occurrences",
+            "Finding recurrence",
+            "Findings ranked by how many times the same underlying problem has recurred, with "
+            "the fingerprint that identifies it and when it was first and last seen. Pass "
+            "`finding_id` to get one finding in full, including its evidence. Use this to tell "
+            "a one-off apart from something that keeps coming back.",
+            {
+                "finding_id": _slug("One finding id; returns that finding in full."),
+                "status": _string(
+                    "Only findings in this state (default open).",
+                    enum=["open", "suppressed", "resolved"],
+                ),
+                "type": _slug("Only findings of this type, e.g. guardrail_detection."),
+                "min_occurrences": _integer("Only findings seen at least this often.", 1, 10_000),
+                "limit": _integer("Maximum findings to return (default 20).", 1, 200),
+            },
+            run=_finding_occurrences,
         ),
         Tool(
             "nometria_agents",
@@ -339,6 +421,38 @@ TOOLS: dict[str, Tool] = {
             "exit_code 1 means critical or high findings, which would fail a CI build.",
             argv=lambda a, s: ["policy", "lint"],
             exit_meanings={1: "critical or high lint findings; would fail CI"},
+        ),
+        Tool(
+            "nometria_proposals_list",
+            "Change proposals",
+            "Lists the improvement loop's proposed changes to governance configuration as JSON, "
+            "newest first: status, kind, direction (tightens, loosens or neutral), autonomy "
+            "level, scope and title. Use this to answer 'what does the loop want to change, and "
+            "what is waiting on a person?'.",
+            {
+                "status": _string("Only proposals in this state.", enum=list(STATUSES)),
+                "kind": _slug("Only this change kind, e.g. policy.rule_min_score."),
+                "scope": _string("Only this scope level.", enum=list(SCOPE_LEVELS)),
+            },
+            argv=lambda a, s: [
+                "proposals",
+                "list",
+                "--json",
+                *_opts(a, status="--status", kind="--kind", scope="--scope"),
+            ],
+            json_output=True,
+        ),
+        Tool(
+            "nometria_proposals_show",
+            "One change proposal",
+            "Returns one proposal in full as JSON: the diff it would make, the evidence that "
+            "prompted it, the proof attached to it, the expected effect, and every decision "
+            "taken on it. Read this before recommending a decision. A loosening change always "
+            "needs a person, whatever the evidence says.",
+            {"proposal_id": _slug("Proposal id, e.g. chp_… (from nometria_proposals_list).")},
+            ("proposal_id",),
+            argv=lambda a, s: ["proposals", "show", "--json", "--", a["proposal_id"]],
+            json_output=True,
         ),
         Tool(
             "nometria_check_repo",

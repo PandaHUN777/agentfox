@@ -8,20 +8,39 @@ and cloud.
 
 ---
 
-## Try it — zero install, nothing leaves your machine
+## Try it
+
+### Hosted playground: public, no account, works right now
+
+**<https://guardrails-dashboard-eight.vercel.app/playground>**
+
+Nothing to install and no sign-up. Every visitor gets a throwaway sandbox running the same
+enforcement code the product runs in production. Send an injection and watch the baseline policy
+flag it while the call still goes through, because the sandbox starts in **observe** mode; flip the
+same sandbox to **enforce** and watch the identical call blocked. A tamper-evident audit chain on
+the page records every decision and reports its own verification state as you go.
+
+### Local quickscan: zero install, nothing leaves your machine
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/architsharm/guardrails/main/scripts/quickscan.sh | bash
 ```
 
-This is the lowest-friction way to see whether this is worth your time: no account, no clone, no config. It installs into a throwaway virtualenv (removed on exit), scans the current directory for agent code, checks what's actually running via local AI-tool session transcripts, and runs a handful of known-adversarial prompts through the real detector pipeline right in your terminal — so "we catch prompt injection" is something you watch happen, not something we said. Nothing talks to anything but PyPI/GitHub (to fetch the package) and your local filesystem.
+No account, no clone, no config. It installs into a throwaway virtualenv (removed on exit), scans the current directory for agent code, checks what's actually running via local AI-tool session transcripts, and runs a handful of known-adversarial prompts through the real detector pipeline right in your terminal — so "we catch prompt injection" is something you watch happen, not something we said. Nothing talks to anything but PyPI/GitHub (to fetch the package) and your local filesystem.
+
+> **Repository access.** This repository is private today. The `curl` command above, the
+> `pip install git+https://…` below, and `claude plugin marketplace add architsharm/guardrails`
+> therefore return 404 for anyone who is not a collaborator on it. Whether to make the repository
+> public is an open decision, not a promise with a date. Until it is made, the hosted playground is
+> the path that needs no access, and every command in this README works from a clone or with a
+> collaborator invite.
 
 ---
 
 ## Real usage — thirty seconds
 
 ```bash
-pip install git+https://github.com/architsharm/guardrails.git   # not on PyPI yet
+pip install git+https://github.com/architsharm/guardrails.git   # private repo, not on PyPI
 nometria init          # database, controls, baseline policy — offline, idempotent
 nometria check         # scan this repo: what talks to a model, and what is ungoverned
 ```
@@ -226,16 +245,23 @@ commit made with `--no-verify`.
 
 ## What the demo shows
 
-`nometria demo` walks the request path in [docs/PRD.md §7.3](docs/PRD.md#73-request-path) and prints each step:
+`nometria demo` walks the request path in [docs/PRD.md §7.3](docs/PRD.md#73-request-path) and prints thirteen steps:
 
-1. An agent makes a normal call → **allowed**, traced.
-2. A retrieved document carries an **indirect prompt injection** → detected, tainted, blocked.
-3. The injected instruction tries to reach `payments.transfer` with a **tainted argument** → contained by policy even though the payload got through, because a high-impact tool cannot take untrusted arguments unapproved.
-4. An **unregistered agent** appears at the gateway → shadow-agent finding raised.
-5. A **PII leak** in an outbound response → redacted.
-6. An eval suite runs with **silent-failure scorers** → a plausible-but-ungrounded answer is caught and the CI gate fails.
-7. The **audit chain is verified**, then tampered with, then verified again → the break is located.
-8. An **auditor evidence package** is exported with a manifest and chain-of-custody.
+1. An agent makes a normal call → **allowed**, traced, audited.
+2. A retrieved document carries an **indirect prompt injection** → detected and tainted. The baseline policy ships in observe mode, so the call is not blocked; the run records what it would have done.
+3. The injected instruction tries to reach `payments.transfer` with a **tainted argument** → contained even though the payload got through: the call is suspended pending human approval, and a call above the capability's argument constraint is blocked outright.
+4. An **unregistered agent** appears at the gateway → shadow-agent finding raised, plus a discovery sweep for unowned agents and identity posture.
+5. **PII in an outbound response**, graded: contact details redacted, national identifiers and card numbers blocked.
+6. An eval suite runs with **silent-failure scorers** → a plausible-but-ungrounded answer is caught and the CI gate exits 1.
+7. A **red-team campaign** fires probes at the deployed configuration and reports how many got through.
+8. The **baseline policy is promoted to enforce**, and the same injection from step 2 is now blocked.
+9. The **execution path** for one trace: guardrail, model and guardrail spans, decisions, detector runs, taint marks, and an agent's blast radius.
+10. The **audit chain is verified**, then an entry is altered directly in the database, then verified again → the break is located by sequence number.
+11. **Control status is computed from telemetry** rather than attested, per framework.
+12. An **auditor evidence package** is exported with a manifest, an embedded chain verification and a stdlib-only `verify_chain.py`.
+13. The **open findings** the run produced.
+
+The demo promotes the baseline policy to enforce in step 8 and restores it to observe when it finishes.
 
 ## CLI
 
@@ -245,17 +271,23 @@ nometria seed                     # demo agents, policies, controls, obligations
 nometria serve                    # gateway + control-plane API
 nometria demo                     # end-to-end walkthrough
 nometria agents list
-nometria eval gate --suite support-quality --baseline main   # CI regression gate (exit 1 on regression)
-nometria policy simulate --policy payments --file candidate.yaml
+nometria eval gate support-quality                  # CI regression gate (exit 1 on regression)
+nometria policy simulate --file candidate.yaml      # replay recorded traffic against a candidate
 nometria audit verify
 nometria evidence export --agent support-triage --from 2026-08-01 --to 2026-08-17
-nometria redteam run --agent support-triage
+nometria redteam run support-triage
 nometria agents quarantine support-triage --reason "investigating"   # PL-3 kill switch
 nometria agents resume support-triage
 nometria db upgrade                                                  # PL-2 migrations
 nometria compliance status --framework eu-ai-act
-nometria scan mcp --server internal-tools
+nometria scan mcp internal-tools --seed-fixture     # --seed-fixture is the demo tool list;
+                                                    # point --file at a real tools/list response
 ```
+
+`eval gate` takes the suite as an argument and compares against the suite's latest recorded
+baseline; pass `--baseline <run-id>` to pin a specific run. `evidence export` accepts
+`--from`/`--to` as `YYYY-MM-DD` or full ISO-8601, and falls back to `--since-days` (default 30)
+when neither is given.
 
 ## Agent harness — drive the whole product from Claude Code or any coding agent
 
@@ -267,6 +299,9 @@ works without learning every command first. Install it as a Claude Code plugin:
 claude plugin marketplace add architsharm/guardrails
 claude plugin install nometria@nometria
 ```
+
+These two commands need the repository to be readable; see the repository-access note at the top.
+From a clone, point the marketplace at the checkout instead: `claude plugin marketplace add .`
 
 Other agents (Codex, Cursor, Gemini CLI) can read [`harness/AGENTS.md`](harness/AGENTS.md).
 Anything that would start blocking traffic or stop an agent asks for confirmation first.
@@ -320,7 +355,8 @@ Escalation maps to LangGraph's own `interrupt()` — one pause mechanism, not tw
 
 - **Compliance mappings are DRAFT.** Produced from framework texts by engineers, not reviewed by compliance counsel. The product badges them as such: draft mappings ship in evidence packages chip-labeled `DRAFT — UNVERIFIED / NOT LEGAL ADVICE` rather than being excluded. See [Appendix B §B.6](docs/appendix-b-control-catalog.md#b6-mapping-review-gate).
 - **Coverage gaps are declared, not hidden.** Appendix B §B.4 lists what each framework mapping does *not* cover; Appendix E §E.3 does the same for threats.
-- **This is an MVP.** Single-org multi-tenancy enforced at the session (not yet a managed multi-region offering), no live IdP/SSO, no scheduled red-team campaigns, text modalities only. Full non-goals list: [docs/PRD.md §10.3](docs/PRD.md#103-non-goals).
+- **This is an MVP.** Single-org multi-tenancy enforced at the session (not yet a managed multi-region offering), no live IdP/SSO, text modalities only. Full non-goals list: [docs/PRD.md §10.3](docs/PRD.md#103-non-goals).
+- **Scheduled red-teaming is off by default.** A weekly adaptive posture campaign (`redteam.posture` in `scheduler.py`, run by `job_handlers.py`) ships as a default schedule but is created disabled, so a tenant opts in per deployment. It reports a posture delta against the last comparable campaign, not a pass rate, and it is configuration regression testing rather than a robustness certificate.
 
 ## Licence
 

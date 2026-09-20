@@ -63,6 +63,12 @@ def _decision(command: str) -> str:
         "nometria auth issue a@b.c",
         "nometria check . --json --submit",
         "curl -X POST localhost:8080/api/policies/baseline/mode -d '{}'",
+        # An automated change is still a change: applying or undoing a proposal moves
+        # live enforcement, so it asks like every other blocking command.
+        "nometria proposals apply chp_01h2",
+        "nometria proposals rollback chp_01h2 --actor a@b.c --reason 'made it worse'",
+        "curl -X POST localhost:8080/api/proposals/chp_01h2/apply",
+        "nometria proposals verify chp_01h2 --actor a@b.c --note worse --failed",
     ],
 )
 def test_blocking_commands_require_confirmation(command):
@@ -75,6 +81,9 @@ def test_blocking_commands_require_confirmation(command):
         "nometria findings --json",
         "nometria policy list",
         "nometria policy simulate -f p.yaml",
+        "nometria proposals list --status proposed",
+        "nometria proposals show chp_01h2",
+        "nometria proposals verify chp_01h2 --actor a@b.c --note held",
         "nometria check . --fail",
         "nometria escalation set --agent a --mode observe",
         "nometria demo-notes.md",

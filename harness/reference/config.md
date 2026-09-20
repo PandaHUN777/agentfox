@@ -42,6 +42,7 @@ Settings are cached per process, so restart after changing them.
 | `NOMETRIA_SERVICE_AUTH_SECRET` | `dev-insecure-service-secret` | Dashboard OAuth callback. **Must be changed in production.** |
 | `NOMETRIA_TOKEN_ENCRYPTION_KEY` | unset | Fernet key for stored GitHub tokens; that feature fails closed without it. |
 | `NOMETRIA_CRON_SECRET` (or `CRON_SECRET`) | unset | Required for `/api/internal/jobs/run`, which accepts GET (Vercel Cron) or POST. Returns 503 if unset. |
+| `NOMETRIA_PLAYGROUND_CORS_ORIGIN` | unset | Comma-separated origins allowed to call the public playground from a browser, additive to localhost. List every host that serves the page: a missing origin shows as "Failed to fetch" in the browser while curl looks healthy. |
 
 ## Budgets and reliability
 

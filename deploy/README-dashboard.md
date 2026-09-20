@@ -8,14 +8,15 @@ What a visitor gets once this is up: sign in with GitHub, which creates their ow
 organisation, stores their GitHub grant, lists their repositories, scans one for
 ungoverned agent code, and issues them an API token their agents authenticate with.
 
-> **Status, 2026-09-18.** The UI is already live on Vercel at
+> **Status, 2026-09-20.** The UI is already live on Vercel at
 > `https://guardrails-dashboard-eight.vercel.app`, with GitHub sign-in, the repo list and
 > the repo scan all working, and the playground fixed (see step 4 — the origin was not
 > allowed, so every visitor saw "Failed to fetch"). A second copy now runs on Render at
 > `https://nometria-dashboard.onrender.com` as a backup; its sign-in returns 503 until the
 > three secrets below are set on it, and its callback URL is added to the OAuth app.
-> **Still outstanding: the Neon catch-up migration in step 1b.** Findings returns a 500 in
-> production until it runs.
+> The Neon migration in step 1b has been run: the database is at revision `d5e2a9c14f03`
+> and the Findings page works again. `scripts/deploy_smoke.py` checks all of this against a
+> live deployment in one command.
 
 ## 1. Secrets the two deployments must share
 
@@ -116,7 +117,16 @@ to allow that origin:
 vercel env add NOMETRIA_PLAYGROUND_CORS_ORIGIN production
 ```
 
-Set it to `https://<your-host>`, with no trailing slash, then redeploy the API.
+The value is comma-separated, so list every host that serves the playground, with no
+trailing slashes, then redeploy the API:
+
+```
+https://guardrails-dashboard-eight.vercel.app,https://nometria-dashboard.onrender.com
+```
+
+Appending matters. While this setting took a single origin, adding the standby silently
+disabled the primary's playground, and the only symptom was "Failed to fetch" in the
+browser while curl against the API looked healthy.
 
 ## 5. Verify the whole path
 
