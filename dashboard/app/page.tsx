@@ -2,9 +2,22 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { api, apiErrorProps, SESSION_COOKIE } from "@/lib/api";
 import { ApiDown, Severity, Stat, StatLink, findingTypeInfo, ts } from "@/components/ui";
-import { PublicHeader, PublicFooter } from "./how-it-works/_public";
+import { PublicHeader, PublicFooter, CATEGORY, REPO } from "./how-it-works/_public";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * layout.tsx titles every page "Nometria Control Plane", which was a fourth name for
+ * the product in the first viewport alongside the strapline, the landing body line
+ * and the API root's own description. A page-level export overrides the layout's
+ * static title for this route only, so "/" now carries the same category name the
+ * body uses. layout.tsx is owned by a concurrent change and is not touched.
+ */
+export const metadata = {
+  title: `Nometria: ${CATEGORY}`,
+  description:
+    "Nometria checks every tool call an agent makes against what that agent was granted, and refuses the ones outside it, even after a prompt injection has convinced the model.",
+};
 
 /**
  * Nobody opens a governance dashboard to ask "what do we have" — they open it to ask
@@ -243,6 +256,28 @@ function P({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * One question a buyer actually asked, and its answer. Each of these was a gap a
+ * cold reader hit on the live site, and every fact inside one is checked against a
+ * named file in the repository rather than asserted here.
+ */
+function Q({ q, children }: { q: string; children: React.ReactNode }) {
+  return (
+    <div className="panel body" style={{ marginBottom: 12 }}>
+      <strong style={{ display: "block", fontSize: 13.5, marginBottom: 7 }}>{q}</strong>
+      <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.6 }}>{children}</div>
+    </div>
+  );
+}
+
+const QUL = {
+  margin: "8px 0 0",
+  paddingLeft: 18,
+  fontSize: 13,
+  lineHeight: 1.6,
+  color: "var(--muted)",
+};
+
 /** Pill links: height:auto so a two-line label on a 375px screen wraps instead
  *  of overflowing the row, and textDecoration inline so the global a:hover
  *  underline does not fire on something shaped like a button. */
@@ -266,6 +301,38 @@ const PILL = {
 function Proof() {
   return (
     <div className="lp-proof">
+      {/* The grant, shown before the refusal.
+       *
+       * This box used to open with a blocked call and the machine code
+       * `capability.denied`, and asked the reader to take the refusal on trust. The
+       * list below is the whole explanation, and having it here retires the need to
+       * define "capability grant", "containment", "ceiling" or "impact tier" before
+       * the reader understands the product.
+       *
+       * Verified against src/nometria/seed.py: CAPABILITIES["support-triage"] holds
+       * exactly kb.search, crm.lookup and tickets.*, and payments.transfer is granted
+       * to a different seed agent, payments-ops. If that seed changes, change this. */}
+      <div className="lp-proof-row">
+        <span className="lp-proof-label">What this agent is allowed to call</span>
+        <code>
+          support-triage &rarr;{" "}
+          <span style={{ color: "var(--ok)" }}>kb.search, crm.lookup, tickets.*</span>
+        </code>
+        <p style={{ marginTop: 8 }}>
+          Three entries, and <code>payments.transfer</code> is not one of them.{" "}
+          <code>tickets.*</code> means every tool whose name starts with{" "}
+          <code>tickets.</code>, so this agent can open and update tickets but cannot
+          move money, because nobody ever granted it that.
+        </p>
+        <small>
+          support-triage is a demo agent that ships in this repository&rsquo;s seed data,
+          not an agent from a real incident. Its grants are in{" "}
+          <a href={`${REPO}/blob/main/src/nometria/seed.py`} target="_blank" rel="noreferrer">
+            src/nometria/seed.py
+          </a>
+          , and you can read them before you believe anything below.
+        </small>
+      </div>
       <div className="lp-proof-row">
         <span className="lp-proof-label">The call an injection asks for</span>
         <code>
@@ -282,6 +349,11 @@ function Proof() {
           <code>capability.denied</code>
         </div>
         <p>No capability grants this agent the requested tool and action (default deny).</p>
+        <p style={{ color: "var(--muted)", fontSize: 13 }}>
+          In plain words: <code>payments.transfer</code> is not in the list of three
+          above, so the call never runs. Anything not on an agent&rsquo;s list is refused
+          by default, which is what <code>capability.denied</code> means.
+        </p>
         <small>
           59ms. No model was asked, and no detector read any text. The refusal comes from
           what the agent was granted, so it holds whether or not anything recognised the
@@ -328,17 +400,24 @@ function Landing() {
       <PublicHeader />
 
       <section>
+        {/* The old headline was "Your agent cannot take an action it was never
+            entitled to take, even when the model has been fooled": three negations in
+            seventeen words, a subject that is the reader's agent rather than this
+            product, and no mention of the tool call, which is the actual unit of
+            protection and the thing the box below shows. This one names the product,
+            the unit and the mechanism in that order. */}
         <h1
           style={{
-            fontSize: "clamp(26px, 5.4vw, 38px)",
-            lineHeight: 1.16,
-            letterSpacing: "-0.025em",
+            fontSize: "clamp(24px, 4.6vw, 33px)",
+            lineHeight: 1.2,
+            letterSpacing: "-0.022em",
             margin: 0,
-            maxWidth: "24ch",
+            maxWidth: "30ch",
           }}
         >
-          Your agent cannot take an action it was never entitled to take, even when
-          the model has been fooled.
+          Nometria checks every tool call your agent makes against what that agent was
+          granted, and refuses the ones outside it, even after a prompt injection has
+          convinced the model.
         </h1>
         <p
           style={{
@@ -349,11 +428,27 @@ function Landing() {
             margin: "16px 0 0",
           }}
         >
-          Nometria is a control plane for AI agents in production. It keeps a register
-          of every agent you run, decides what each one is allowed to do, checks the
-          action before a tool runs, and writes every decision to a record you can
-          verify. It works across OpenAI, Anthropic, LiteLLM and LangChain, and it is
-          not tied to one model vendor or cloud.
+          Nometria is a {CATEGORY}. It keeps a register of every agent you run, records
+          what each one is allowed to do, checks the action before a tool runs, and
+          writes every decision to a record you can verify. It works across OpenAI,
+          Anthropic, LiteLLM and LangChain, and it is not tied to one model vendor or
+          cloud.
+        </p>
+        {/* The dependency used to sit eight hundred words below the headline, which
+            left a hostile reader free to quote the headline as an absolute guarantee
+            against a caveat they had not reached yet. It belongs next to the claim. */}
+        <p
+          style={{
+            fontSize: 14,
+            lineHeight: 1.6,
+            color: "var(--muted)",
+            maxWidth: "64ch",
+            margin: "12px 0 0",
+          }}
+        >
+          That sentence rests on one thing, so it is here rather than further down: you
+          tell Nometria what each tool does, and it believes you. A tool recorded as
+          read-only that is not read-only is not covered by any of this.
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 22 }}>
           <Link href="/playground" className="btn-primary" style={PILL}>
@@ -385,10 +480,21 @@ function Landing() {
           starts in observe mode: the first thing you get is a picture of what your
           agents are doing, not a refusal.
         </P>
+        {/* The old version of this was "One exception, stated up front. The
+            tool-containment pack enforces from the first day, for tool calls whose
+            arguments came from untrusted content." Three terms a first-time reader has
+            no definition for (the pack, enforcing, untrusted content) in two sentences,
+            and the auditors both marked it as the first place they gave up. */}
         <P>
-          One exception, stated up front. The tool-containment pack enforces from the
-          first day, for tool calls whose arguments came from untrusted content. That
-          is the part below.
+          There is one exception, and it is switched on from the first day. A small set
+          of rules called the tool-containment pack does refuse calls, in one situation
+          only: the agent is about to call a tool that can do real damage, such as
+          moving money, deleting something or sending an email, and a value it wants to
+          pass to that tool did not come from the person using the agent. It came from
+          content nobody vouches for, such as a web page, a document that was retrieved
+          to answer the question, or the output of another tool. Those calls are refused
+          or sent to a human to decide. Everything else is recorded and allowed until
+          you change it.
         </P>
       </Sec>
 
@@ -464,7 +570,10 @@ function Landing() {
           attacks were still contained and 4 of 4 legitimate calls still went through.
           Replaying AgentDojo end to end over 617 ground-truth calls: 42 of 42 attacker
           calls that act were contained, and 552 of 552 legitimate calls were allowed,
-          identical with detectors disabled.{" "}
+          identical with detectors disabled. The denominator that figure comes out of is
+          65 attacker calls, of which 62 were contained. The three that got through are
+          all read-only, which is the weaker half of that result and is named call by
+          call on the benchmark page.{" "}
           <Link href="/benchmark">The method and the limits of each →</Link>
         </div>
         <div className="note-panel">
@@ -521,6 +630,193 @@ function Landing() {
             </div>
           </div>
         </div>
+      </Sec>
+
+      {/* Six questions two cold readers asked in this order and the site answered
+          nowhere. The reassuring answers mostly existed already and were buried in
+          README.md, docs/ and module docstrings; each block names where it came
+          from so the claim can be checked rather than believed. */}
+      <Sec title="Questions people ask before they install anything" id="questions">
+        <Q q="What am I deploying, and does my traffic leave my network?">
+          There are three shapes and you pick one.
+          <ul style={QUL}>
+            <li>
+              <strong style={{ color: "var(--text)" }}>One line in a Python entry
+              point.</strong>{" "}
+              <code>import nometria; nometria.auto()</code> wraps the OpenAI,
+              Anthropic, LiteLLM and LangChain clients already running in that
+              process. Nothing else in your code changes.
+            </li>
+            <li>
+              <strong style={{ color: "var(--text)" }}>An HTTP call from any
+              language.</strong>{" "}
+              Run the control plane and ask it about one tool call by posting to{" "}
+              <code>/v1/guard/tool_call</code>. Your application does not have to be
+              Python, or contain any Nometria code at all.
+            </li>
+            <li>
+              <strong style={{ color: "var(--text)" }}>The gateway in front of your
+              traffic.</strong>{" "}
+              Point an existing OpenAI or Anthropic client&rsquo;s base URL at the
+              gateway. It speaks the API your code already calls, so your calls flow
+              through it without being rewritten.
+            </li>
+          </ul>
+          <p style={{ margin: "10px 0 0" }}>
+            All three are software you run. On the three things people ask about
+            specifically:
+          </p>
+          <ul style={QUL}>
+            <li>
+              Scanning a repository for agents is <strong>static</strong>. It walks
+              your source with a parser and never imports it, never executes it, and
+              makes no network call. That is deliberate rather than incidental: a
+              scanner that imports the codebase it is pointed at runs arbitrary code
+              from a repository the operator may not trust.
+            </li>
+            <li>
+              Onboarding a hosted API reads <strong>only that API&rsquo;s OpenAPI
+              document</strong>. No operation on the live API is ever called.
+            </li>
+            <li>
+              A local install is <strong>offline-capable</strong>. The default install
+              downloads no model weights and needs no API key, and the demo and the
+              quickstart run with no network egress at all. Nometria adds no
+              destination of its own: if you configure a real model provider, the
+              model call goes to that provider exactly as it did before.
+            </li>
+          </ul>
+          <p style={{ margin: "10px 0 0", fontSize: 12.5, color: "var(--faint)" }}>
+            The two scanner guarantees are the stated contract of{" "}
+            <code>discovery.py</code> and <code>discovery_openapi.py</code>; the
+            offline claim is the packaging rule in <code>pyproject.toml</code>.
+          </p>
+        </Q>
+
+        <Q q="What does it cost, and under what licence?">
+          Apache-2.0, with the full text in{" "}
+          <a href={`${REPO}/blob/main/LICENSE`} target="_blank" rel="noreferrer">
+            LICENSE
+          </a>
+          . It is free, and there is nothing to buy: all of the source is in{" "}
+          <a href={REPO} target="_blank" rel="noreferrer">
+            the repository
+          </a>
+          , there is no licence key, and nothing here is gated behind a paid tier.
+          Third-party notices for everything it wraps are in{" "}
+          <code>THIRD_PARTY_NOTICES.md</code>.
+        </Q>
+
+        <Q q="What does it sit next to? It is not a web application firewall and not an API gateway.">
+          A web application firewall reads HTTP traffic at the edge and looks for
+          attacks inside requests. An API gateway routes, authenticates and rate-limits
+          those requests. Neither one knows which agent made a call, what that agent
+          was granted, or where the value in an argument came from. Nometria works one
+          layer in, on the agent&rsquo;s own actions, and it does not replace either.
+          <p style={{ margin: "10px 0 0" }}>
+            It also does not replace the open-source pieces it uses. Policy evaluation
+            runs on <strong>OPA and Rego</strong>, PII detection on{" "}
+            <strong>Presidio</strong>, SQL parsing on <strong>sqlglot</strong> and
+            tracing on <strong>OpenTelemetry</strong>, each behind an adapter you can
+            swap out. What is built here is the layer above them: tracking where a tool
+            argument came from, working out the blast radius of a generated SQL
+            statement, carrying the end user&rsquo;s own entitlements through retrieval
+            and tool calls, and the tamper-evident audit chain with its independent
+            verifier.
+          </p>
+        </Q>
+
+        <Q q="What are the maturity limits?">
+          This is MVP v0.3, and the limits are specific.
+          <ul style={QUL}>
+            <li>
+              <strong style={{ color: "var(--text)" }}>No single sign-on.</strong> There
+              is no live identity-provider integration yet.
+            </li>
+            <li>
+              <strong style={{ color: "var(--text)" }}>One organisation.</strong>{" "}
+              Multi-tenancy is enforced at the session for a single organisation. This
+              is not a managed multi-region offering.
+            </li>
+            <li>
+              <strong style={{ color: "var(--text)" }}>Text only.</strong> No images,
+              audio or video.
+            </li>
+            <li>
+              <strong style={{ color: "var(--text)" }}>Scheduled red-teaming ships
+              disabled</strong>, so a deployment has to opt into it.
+            </li>
+          </ul>
+          <p style={{ margin: "10px 0 0", fontSize: 12.5, color: "var(--faint)" }}>
+            Live coverage is computed by probe rather than asserted, and the full
+            non-goals list is in the repository.
+          </p>
+        </Q>
+
+        <Q q="What happens on escalate?">
+          Escalate means the call does not run and a person decides.
+          <ul style={QUL}>
+            <li>
+              <strong style={{ color: "var(--text)" }}>The tool is not called.</strong>{" "}
+              The caller gets an approval id back instead of a result.
+            </li>
+            <li>
+              <strong style={{ color: "var(--text)" }}>A named role sees it.</strong> The
+              request lands on the Approvals screen for whoever holds the approver role,
+              which defaults to security. It can also be decided from the command line,
+              or polled over the API.
+            </li>
+            <li>
+              <strong style={{ color: "var(--text)" }}>The agent waits.</strong> Under
+              LangGraph that pause is LangGraph&rsquo;s own <code>interrupt()</code>, so
+              there is one pause mechanism in the graph rather than two.
+            </li>
+            <li>
+              <strong style={{ color: "var(--text)" }}>It expires, and expiry
+              denies.</strong> Every request carries a clock, and the default action when
+              it runs out is deny. An approval nobody answers ends in a refusal rather
+              than going through.
+            </li>
+          </ul>
+        </Q>
+
+        <Q q="What happens if the control plane is slow or down?">
+          You declare, per service, whether it fails open or fails closed. The shipped
+          default is open. Neither answer is allowed to be silent, because a control
+          that fails open quietly looks exactly like a control that is working: the same
+          traffic flows and the same dashboards stay green.
+          <ul style={QUL}>
+            <li>
+              <strong style={{ color: "var(--text)" }}>Fail closed</strong> refuses the
+              request with a 503 rather than admitting one that nobody checked.
+            </li>
+            <li>
+              <strong style={{ color: "var(--text)" }}>Fail open</strong> serves the
+              request, but writes a degradation record for it, stamps the response with
+              a header naming the control that was down, and converts to closed once the
+              degradation outlasts its declared budget. A control that has been open for
+              an hour is an absent control, not a degraded one.
+            </li>
+            <li>
+              <strong style={{ color: "var(--text)" }}>Four controls can never be set to
+              fail open at all</strong>: tenant isolation, entitlement filtering, data
+              access scope and the audit chain. Their failure mode is a disclosure
+              rather than an outage, so the setting is refused when it is constructed
+              rather than warned about at runtime.
+            </li>
+            <li>
+              <strong style={{ color: "var(--text)" }}>Your own screens stay up.</strong>{" "}
+              The gate covers the traffic path only. An operator diagnosing an outage is
+              not locked out of the dashboard by that same outage.
+            </li>
+            <li>
+              <strong style={{ color: "var(--text)" }}>The honest limit.</strong> The
+              fail-open budget and the rate limit are counted per process, so a
+              deployment running several workers gets that budget multiplied by the
+              number of workers.
+            </li>
+          </ul>
+        </Q>
       </Sec>
 
       <Sec title="What this is not">

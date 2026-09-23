@@ -111,7 +111,7 @@ A bypass is not harm. For every bypass whose seed names an obvious harmful actio
 
 So the two-sided headline this repo wants:
 
-> **Search-based adaptive attack defeats our content detectors on 73% of the attacks they currently catch, within 50 attempts, using only readable mutations — down from 79% before this round's fixes, against a set of attacks that is now 20% larger because the fixes also closed three detection misses. In all 38 of those cases where the attack named a harmful action, the action was still contained.**
+> **Search-based adaptive attack defeats our content detectors on 73% of the attacks they currently catch, within 50 attempts, using only readable mutations — down from 75% before this round's fixes, against a set of attacks that is now 20% larger because the fixes also closed three detection misses. In all 38 of those cases where the attack named a harmful action, the action was still contained.**
 
 ## What this benchmark does not show
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { PublicHeader, PublicFooter } from "./_public";
+import { PublicHeader, PublicFooter, CATEGORY, REPO } from "./_public";
+import { DraftCaveat } from "@/components/ui";
 
 /**
  * Public explainer for someone who has never seen this product, reached from the
@@ -70,18 +71,21 @@ export default function HowItWorks() {
       <div className="bm-doc">
         <h1>How it works</h1>
         <p className="lede">
-          Nometria sits on the path between your agent and everything it can act on.
-          This page walks one call through it, then says what each of the six areas of
-          the product is for and what you would actually do in each one.
+          Nometria is a {CATEGORY}. It sits on the path between your agent and
+          everything it can act on. This page walks one call through it, then says what
+          each of the six areas of the product is for and what you would actually do in
+          each one.
         </p>
 
         <h2>The path one call takes</h2>
         <p>
-          You get on this path in one of two ways: a line in your entry point that
-          wraps the model clients already in the process, or by pointing an agent at
-          the gateway, which speaks the same API your agent already calls. Either way
-          the sequence below is the same, and it runs for tool calls and retrieval
-          steps as well as model calls.
+          You get on this path in one of three ways. A line in your Python entry point
+          that wraps the model clients already running in that process. An HTTP call
+          from any language, asking about a single tool call, with no Nometria code in
+          your application at all. Or the gateway in front of your traffic, which
+          speaks the same API your agent already calls, so you point a base URL at it
+          and change nothing else. Whichever you pick, the sequence below is the same,
+          and it runs for tool calls and retrieval steps as well as model calls.
         </p>
         <ol>
           <Step title="A call arrives, and we work out who is behind it">
@@ -197,6 +201,19 @@ export default function HowItWorks() {
           into a spreadsheet. Where a mapping does not cover something, the coverage
           table says so rather than leaving a gap unmarked.
         </Area>
+        {/* Every compliance screen inside the product carries this warning, and the
+            public page carried none of it, which made the marketing page less honest
+            than the product it was selling. Rendered through the same component the
+            signed-in screens use, so the public wording cannot drift from the
+            in-product wording. */}
+        <div style={{ margin: "-4px 0 12px" }}>
+          <DraftCaveat />
+        </div>
+        <p style={{ fontSize: 13, color: "var(--muted)", marginTop: -4 }}>
+          That warning is not reserved for this page. It is on every compliance screen
+          inside the product, and the draft mappings are shipped inside evidence
+          packages carrying the same chip rather than being quietly left out.
+        </p>
 
         <h2>What this does not do</h2>
         <ul>
@@ -217,11 +234,26 @@ export default function HowItWorks() {
           </li>
           <li>
             It does not block anything you have not asked it to block. The policy that
-            governs model traffic ships in observe mode. The tool-containment pack is
-            the one exception, and it enforces on tool calls whose arguments came from
-            untrusted content.
+            governs model traffic ships in observe mode, which means it records what it
+            would have done and lets the call through. There is one exception, switched
+            on from the first day: a small set of rules called the tool-containment pack
+            does refuse calls, in one situation only. The agent is about to call a tool
+            that can do real damage, such as moving money, deleting something or sending
+            an email, and a value it wants to pass to that tool did not come from the
+            person using the agent. It came from content nobody vouches for, such as a
+            web page, a retrieved document, or the output of another tool. Those calls
+            are refused or sent to a human to decide.
           </li>
         </ul>
+        <div className="note-panel">
+          <strong>What all of this rests on.</strong> Grants, impact tiers, ceilings and
+          downstream triggers are declared by whoever operates the agent, and the checks
+          above believe those declarations. A tool recorded as read-only that is not
+          read-only is not covered by any of this.{" "}
+          <a href={REPO} target="_blank" rel="noreferrer">
+            The source, the licence and the limits are all in the repository.
+          </a>
+        </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 28 }}>
           <Link

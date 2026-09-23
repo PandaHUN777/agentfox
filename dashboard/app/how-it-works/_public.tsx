@@ -18,6 +18,26 @@ import { Wordmark } from "@/components/Logo";
  * selector rule in every state.
  */
 
+/**
+ * One category name, used verbatim everywhere these two public pages describe what
+ * the product is.
+ *
+ * Before this there were four in the first viewport: the browser tab said "Nometria
+ * Control Plane", the strapline said "Governance, security and evidence for AI agents
+ * in production", the landing body said "a control plane for AI agents in production"
+ * and the API root said "Governance, security and compliance for AI agents". A reader
+ * who does not already know the product cannot tell whether those are four things or
+ * one. The wording is the shortened form of the canonical description in
+ * pyproject.toml. Exported so page.tsx and how-it-works/page.tsx use the string rather
+ * than retyping it, which is how the drift happened in the first place.
+ */
+export const CATEGORY = "governance and security control plane for AI agents in production";
+/** Sentence-initial form, for the strapline and anywhere it starts a line. */
+export const CATEGORY_CAP = "Governance and security control plane for AI agents in production";
+
+/** The repository is about to be public, and the pages cite it constantly. */
+export const REPO = "https://github.com/architsharm/guardrails";
+
 const LINKS: [string, string][] = [
   ["How it works", "/how-it-works"],
   ["Playground", "/playground"],
@@ -32,7 +52,7 @@ export function PublicHeader({ current }: { current?: string }) {
           <Wordmark />
         </Link>
         <p className="sub" style={{ margin: "4px 0 0" }}>
-          Governance, security and evidence for AI agents in production
+          {CATEGORY_CAP}
         </p>
       </div>
       <nav
@@ -64,6 +84,18 @@ export function PublicHeader({ current }: { current?: string }) {
   );
 }
 
+/**
+ * Both public pages kept citing "the repository" without ever linking it, and a
+ * reader could not find the licence, the source, a version, or any route for
+ * reporting a security problem. Everything below is checked against a file in the
+ * repository: the licence against LICENSE (Apache-2.0), the version against the
+ * status line in README.md ("Status: MVP v0.3"), the reporting route against
+ * SECURITY.md, and the single-maintainer line against `git shortlog`, which has one
+ * author. No email address, company or team is named here, because none exists to
+ * name: SECURITY.md routes a report through GitHub's private advisories instead.
+ */
+const FOOT_LINK = { color: "var(--muted)" };
+
 export function PublicFooter() {
   return (
     <footer
@@ -71,27 +103,69 @@ export function PublicFooter() {
         marginTop: 48,
         paddingTop: 18,
         borderTop: "1px solid var(--hairline)",
-        display: "flex",
-        flexWrap: "wrap",
-        gap: 16,
-        alignItems: "center",
         fontSize: 12.5,
         color: "var(--muted)",
+        lineHeight: 1.6,
       }}
     >
-      <Wordmark size={16} />
-      <Link href="/how-it-works" style={{ color: "var(--muted)" }}>
-        How it works
-      </Link>
-      <Link href="/playground" style={{ color: "var(--muted)" }}>
-        Playground
-      </Link>
-      <Link href="/benchmark" style={{ color: "var(--muted)" }}>
-        Benchmarks
-      </Link>
-      <Link href="/login" style={{ color: "var(--muted)" }}>
-        Sign in
-      </Link>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 16,
+          alignItems: "center",
+        }}
+      >
+        <Wordmark size={16} />
+        <Link href="/how-it-works" style={FOOT_LINK}>
+          How it works
+        </Link>
+        <Link href="/playground" style={FOOT_LINK}>
+          Playground
+        </Link>
+        <Link href="/benchmark" style={FOOT_LINK}>
+          Benchmarks
+        </Link>
+        <Link href="/login" style={FOOT_LINK}>
+          Sign in
+        </Link>
+        <a href={REPO} style={FOOT_LINK} target="_blank" rel="noreferrer">
+          Source on GitHub
+        </a>
+        <a href={`${REPO}/blob/main/LICENSE`} style={FOOT_LINK} target="_blank" rel="noreferrer">
+          Apache-2.0
+        </a>
+        <a href={`${REPO}/blob/main/SECURITY.md`} style={FOOT_LINK} target="_blank" rel="noreferrer">
+          Report a vulnerability
+        </a>
+      </div>
+      <div style={{ marginTop: 12, maxWidth: "76ch", color: "var(--faint)" }}>
+        <p style={{ margin: "0 0 6px" }}>
+          Nometria, MVP v0.3. Licensed{" "}
+          <a href={`${REPO}/blob/main/LICENSE`} target="_blank" rel="noreferrer">
+            Apache-2.0
+          </a>
+          , free to run, with the full licence text and all of the source in{" "}
+          <a href={REPO} target="_blank" rel="noreferrer">
+            the repository
+          </a>
+          .
+        </p>
+        <p style={{ margin: "0 0 6px" }}>
+          Maintained in the open by one developer. There is no company behind it and no
+          support contract, which is why{" "}
+          <a href={`${REPO}/blob/main/SECURITY.md`} target="_blank" rel="noreferrer">
+            SECURITY.md
+          </a>{" "}
+          asks for patience on a fix timeline. Report a security problem through
+          GitHub&rsquo;s private advisories rather than a public issue, as that file
+          explains.
+        </p>
+        <p style={{ margin: 0 }}>
+          This is an MVP. There is no single sign-on, a workspace is a single
+          organisation, and it handles text only.
+        </p>
+      </div>
     </footer>
   );
 }

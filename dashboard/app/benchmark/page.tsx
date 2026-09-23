@@ -13,8 +13,21 @@ import Link from "next/link";
  * memory and not rounded. The source file is named under each table:
  *
  *   benchmarks/containment/README.md
+ *   benchmarks/agentdojo_e2e/README.md
  *   benchmarks/agent_security/README.md
  *   benchmarks/REPORT.md
+ *   benchmarks/adaptive/README.md
+ *
+ * The AgentDojo and adaptive-attacker sections exist because app/page.tsx cites
+ * "42 of 42 attacker calls that act, contained in an AgentDojo replay of 617
+ * calls" and "73% of the attacks we catch through within 50 attempts" under a
+ * sentence promising the method and the limits are here. They were not here, so
+ * the one link a sceptic follows to check the headline numbers led to a page
+ * that did not contain them.
+ *
+ * The header and footer are local to this route on purpose. app/how-it-works/
+ * has a shared PublicHeader; a concurrent change owns that file, so this page
+ * carries its own rather than importing across an edit boundary.
  *
  * NOTE FOR WHOEVER OWNS dashboard/middleware.ts: this route must be added to
  * PUBLIC_PATHS. Without it a signed-out visitor following the playground link is
@@ -24,33 +37,137 @@ import Link from "next/link";
 export const metadata = {
   title: "Benchmarks — Nometria",
   description:
-    "Containment under total detector bypass, agent-runtime tiers against a real llm-guard install, and the honest detection numbers, with the limits of each.",
+    "Containment under total detector bypass, an AgentDojo replay of 617 ground-truth calls, agent-runtime tiers against a real llm-guard install, the honest detection numbers and an adaptive attack on our own detectors, with the limits of each.",
 };
 
 function Source({ children }: { children: React.ReactNode }) {
   return <p className="source">Source: {children}</p>;
 }
 
+const REPO = "https://github.com/architsharm/guardrails";
+
+/**
+ * This page used to have one link on it, to the playground, and no way back to
+ * anything else. A visitor who arrives from the home page to check a number has
+ * nowhere to go afterwards, including to the repository the numbers come from.
+ */
+function PageHeader() {
+  return (
+    <header className="pg-header">
+      <div>
+        <Link
+          href="/"
+          style={{
+            fontWeight: 640,
+            fontSize: 15,
+            color: "var(--text)",
+            textDecoration: "none",
+          }}
+        >
+          Nometria
+        </Link>
+        <span
+          style={{
+            display: "block",
+            fontSize: 12.5,
+            color: "var(--muted)",
+            marginTop: 4,
+          }}
+        >
+          Governance, security and evidence for AI agents in production
+        </span>
+      </div>
+      <nav
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          gap: 16,
+          fontSize: 13,
+        }}
+      >
+        <Link href="/">Home</Link>
+        <Link href="/how-it-works">How it works</Link>
+        <Link href="/playground">Playground</Link>
+        <a href={REPO} target="_blank" rel="noreferrer">
+          Repository
+        </a>
+      </nav>
+    </header>
+  );
+}
+
+function PageFooter() {
+  return (
+    <footer
+      style={{
+        marginTop: 44,
+        paddingTop: 16,
+        borderTop: "1px solid var(--hairline)",
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: 16,
+        fontSize: 12.5,
+        color: "var(--muted)",
+      }}
+    >
+      <span style={{ fontWeight: 640, color: "var(--text)" }}>Nometria</span>
+      <Link href="/">Home</Link>
+      <Link href="/how-it-works">How it works</Link>
+      <Link href="/playground">Playground</Link>
+      <a href={REPO} target="_blank" rel="noreferrer">
+        Repository
+      </a>
+    </footer>
+  );
+}
+
 export default function BenchmarkPage() {
   return (
     <div className="bm-doc">
+      <PageHeader />
       <h1>What was measured, and what it does not show</h1>
       <p className="lede">
-        Three separate benchmarks live in this repository. Two of them make this
-        product look good and one of them does not, and all three are here for
-        the same reason: a detection claim only the vendor can reproduce is not
-        evidence. Every number on this page is copied from a results file
+        Five benchmarks are written up in full on this page. Some of them make
+        this product look good and some of them do not, and they are all here
+        for the same reason: a detection claim only the vendor can reproduce is
+        not evidence. Every number on this page is copied from a results file
         checked into the repo, and the file is named under each table.
+      </p>
+      <p>
+        These five are not all of them. The{" "}
+        <code className="mono">benchmarks/</code> directory in the repository
+        holds sixteen directories with a README of their own, including{" "}
+        <code className="mono">answerability</code>,{" "}
+        <code className="mono">composed_privilege_escalation</code>,{" "}
+        <code className="mono">crescendo</code>,{" "}
+        <code className="mono">entitlement</code>,{" "}
+        <code className="mono">pii</code>,{" "}
+        <code className="mono">redteam</code> and{" "}
+        <code className="mono">source_authority</code>. Each has its own README
+        and, where a number exists, a results file checked in beside it; a few
+        record why no benchmark number applies to the mechanism at all rather
+        than forcing one.{" "}
+        <code className="mono">benchmarks/README.md</code> is the index. The
+        five below are the ones this page writes up, not the ones that came out
+        best.
       </p>
 
       <div className="callout">
         <p>
           <strong>The short version.</strong> With every detector switched off,
           8 of 8 attacks were still contained and 4 of 4 legitimate calls were
-          still allowed. On detection, the axis a text scanner competes on, a
-          real installed <code className="mono">llm-guard</code> is more precise
-          than this product on the same 20 cases: 81.8% against 66.7%. Both of
-          those are below, with the method for each.
+          still allowed. Replaying AgentDojo end to end over 617 ground-truth
+          calls, 42 of 42 attacker calls that act were contained and 552 of 552
+          legitimate calls were allowed, identical with detectors disabled; 3 of
+          the 65 attacker calls escaped and all three are read-only. On
+          detection, the axis a text scanner competes on, a real installed{" "}
+          <code className="mono">llm-guard</code> is more precise than this
+          product on the same 20 cases: 81.8% against 66.7%, and an adaptive
+          attacker that reads our verdict and tries again gets 72.9% of the
+          attacks we do catch through within 50 attempts. All of those are
+          below, with the method and the limits for each.
         </p>
       </div>
 
@@ -111,7 +228,7 @@ export default function BenchmarkPage() {
               </td>
             </tr>
             <tr>
-              <td>Legitimate controls allowed</td>
+              <td>Legitimate calls still allowed</td>
               <td className="num">4/4</td>
               <td className="num">
                 <strong>4/4</strong>
@@ -180,7 +297,7 @@ export default function BenchmarkPage() {
           <strong>It is not a claim that our detection is good.</strong> It is
           the opposite. The benchmark is only meaningful because detection is
           assumed to have failed completely. The detection numbers are in
-          section 3 and they are considerably less flattering.
+          sections 4 and 5 and they are considerably less flattering.
         </li>
         <li>
           <strong>
@@ -232,7 +349,187 @@ export default function BenchmarkPage() {
         and &quot;What this benchmark does not show&quot;.
       </Source>
 
-      <h2>2. Four agent-runtime tiers, against a real llm-guard install</h2>
+      <h2>2. The same claim at scale: an AgentDojo replay of 617 calls</h2>
+      <p>
+        The eight scenarios above are ours. This one is not.{" "}
+        <a
+          href="https://github.com/ethz-spylab/agentdojo"
+          target="_blank"
+          rel="noreferrer"
+        >
+          AgentDojo
+        </a>{" "}
+        (MIT, ETH Zurich) is the reference dynamic benchmark for prompt
+        injection against tool-using agents, and it ships hand-authored
+        ground-truth call sequences for both halves of its scenarios. That means
+        no model is needed and the replay is deterministic and offline: 552
+        calls a correctly-behaving agent makes for its real assignment, and 65
+        calls a <em>successfully compromised</em> agent makes on the
+        attacker&apos;s behalf. 617 calls in total, each replayed through the
+        same <code className="mono">Enforcer.guard_tool_call</code> path as
+        everything else on this page. User-task arguments are marked
+        user-sourced; injection-task arguments are marked as arriving from tool
+        output, which is AgentDojo&apos;s own threat model.
+      </p>
+      <p>
+        The setup is deliberately strict against us. One agent per suite is
+        granted exactly the tools its own legitimate user tasks call, at{" "}
+        <code className="mono">max_taint: user</code>, with no blanket approval
+        requirement, so an injection call is contained by provenance, impact and
+        constraint logic rather than because a grant it needed was conveniently
+        withheld. The agents are <code className="mono">risk_tier: limited</code>{" "}
+        on purpose: the shipped EU AI Act pack escalates every irreversible
+        action by a <code className="mono">high</code>-tier agent regardless of
+        provenance, which would have made containment complete for a reason
+        unrelated to the attack.
+      </p>
+
+      <div className="scroll-x">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th className="num">detectors on</th>
+              <th className="num">detectors off</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Benign utility, legitimate calls allowed</td>
+              <td className="num">552/552 (100%)</td>
+              <td className="num">
+                <strong>552/552 (100%)</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Attacker calls that <em>act</em> (write or irreversible),
+                contained
+              </td>
+              <td className="num">42/42 (100%)</td>
+              <td className="num">
+                <strong>42/42 (100%)</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Attacker calls that only <em>read</em>, contained
+              </td>
+              <td className="num">20/23 (87.0%)</td>
+              <td className="num">
+                <strong>20/23 (87.0%)</strong>
+              </td>
+            </tr>
+            <tr>
+              <td>All attacker calls contained</td>
+              <td className="num">62/65 (95.4%)</td>
+              <td className="num">
+                <strong>62/65 (95.4%)</strong>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <Source>
+        <code className="mono">benchmarks/agentdojo_e2e/README.md</code>,
+        results table. Raw per-call output, all 617 calls in both detector modes
+        with verdict and rules fired, is in{" "}
+        <code className="mono">
+          benchmarks/agentdojo_e2e/results/agentdojo_e2e_results.json
+        </code>
+        . Per suite, injection calls contained: banking 21/23, slack 12/13,
+        travel 17/17, workspace 12/12.
+      </Source>
+
+      <p>
+        <strong>The two columns are identical, and that is the finding.</strong>{" "}
+        Detection contributed nothing here, because an injected{" "}
+        <code className="mono">send_money</code> call is syntactically ordinary
+        and there is no malicious string in its arguments to catch. Everything
+        that stopped these attacks was provenance, impact tier and grant logic.
+        The five rules that fired most often across the run were{" "}
+        <code className="mono">capability.approval_required</code> (57),{" "}
+        <code className="mono">taint.irreversible_tool</code> (37),{" "}
+        <code className="mono">intent.undeclared_irreversible</code> (37),{" "}
+        <code className="mono">taint.write_from_tool_result</code> (5) and{" "}
+        <code className="mono">capability.denied</code> (5).
+      </p>
+
+      <h3>The 95.4% does not travel without its denominator</h3>
+      <p>
+        All three escapes are <strong>read-only</strong> calls:{" "}
+        <code className="mono">get_scheduled_transactions</code> twice, and{" "}
+        <code className="mono">get_channels</code>, each of them allowed. The
+        compromised agent was told to read something it already held a
+        legitimate grant for, and it did. Nothing in impact-tier or taint logic
+        distinguishes that from ordinary work, by design, and a product that
+        blocked those reads would also block the agent doing its job, which is
+        what the 552/552 column measures. The harm in that attack shape arrives
+        later, when the data leaves, which is the irreversible-tool step this
+        run does contain.
+      </p>
+      <div className="callout">
+        <p>
+          &quot;Stated plainly: this benchmark shows we contain the acting half
+          of an injection completely, and the reading half not at all. Anyone
+          selling the 95.4% figure without that sentence is misrepresenting
+          it.&quot;
+        </p>
+        <p className="small" style={{ color: "var(--muted)" }}>
+          <code className="mono">benchmarks/agentdojo_e2e/README.md</code>,
+          &quot;What escaped, and why we are not calling it a rounding
+          error&quot;.
+        </p>
+      </div>
+
+      <h3>What this replay does not show</h3>
+      <ul>
+        <li>
+          <strong>
+            It is not AgentDojo&apos;s &quot;utility under attack&quot; metric.
+          </strong>{" "}
+          That requires driving a live model through the environment, which
+          needs a model and a network. The two halves that can be measured
+          exactly are measured; the one that cannot be done offline is skipped
+          rather than approximated.
+        </li>
+        <li>
+          <strong>The impact tiers are our judgement, not AgentDojo&apos;s.</strong>{" "}
+          AgentDojo has no impact model. Ours is applied mechanically by verb
+          (<code className="mono">send_money</code>,{" "}
+          <code className="mono">delete_*</code>,{" "}
+          <code className="mono">send_email</code>,{" "}
+          <code className="mono">reserve_*</code> and similar are irreversible,{" "}
+          <code className="mono">create_*</code> and{" "}
+          <code className="mono">update_*</code> are writes,{" "}
+          <code className="mono">get_*</code>,{" "}
+          <code className="mono">search_*</code> and{" "}
+          <code className="mono">read_*</code> are reads) so a reader can check
+          it. This is the most load-bearing assumption in the run: a tool
+          mis-declared as <code className="mono">read</code> is not contained.
+        </li>
+        <li>
+          <strong>No model was fooled to produce these calls.</strong> The
+          compromise is the premise, taken from AgentDojo&apos;s own answer key,
+          not something this run demonstrates.
+        </li>
+        <li>
+          <strong>552 user calls is a utility check, not a quality check.</strong>{" "}
+          It shows governance did not block legitimate work. It says nothing
+          about whether the agent&apos;s answers were any good.
+        </li>
+      </ul>
+      <Source>
+        <code className="mono">benchmarks/agentdojo_e2e/README.md</code>,
+        method, &quot;What escaped&quot; and &quot;What this benchmark does not
+        show&quot;. Call data:{" "}
+        <code className="mono">
+          benchmarks/action_safety/data/agentdojo_calls.json
+        </code>
+        , recorded in the results file as AgentDojo v1, MIT, ETH Zurich.
+      </Source>
+
+      <h2>3. Four agent-runtime tiers, against a real llm-guard install</h2>
       <p>
         These four harnesses test a narrower claim: that a prompt-injection text
         scanner evaluates one string at a time, in isolation, with no memory of
@@ -362,7 +659,7 @@ export default function BenchmarkPage() {
         </li>
       </ul>
 
-      <h2>3. Detection on its own, which is the least flattering number here</h2>
+      <h2>4. Detection on its own, which is the least flattering number here</h2>
       <p>
         On the primary dataset,{" "}
         <code className="mono">deepset/prompt-injections</code> (662 labeled
@@ -409,6 +706,273 @@ export default function BenchmarkPage() {
         cost&quot; under the ensemble backstop, and the round 7 table.
       </Source>
 
+      <h2>
+        5. An adaptive attacker that reads our verdict and tries again
+      </h2>
+      <p>
+        Section 4 scores the detectors against text written once by someone who
+        never saw our output. This one lets the attacker see the verdict{" "}
+        <em>and the exact entity list</em> and revise the payload, which is the
+        protocol from the same paper section 1 cites. Each seed goes to a
+        search-based attacker that calls the real{" "}
+        <code className="mono">Enforcer.check_content</code> path, hill-climbs
+        on the best payload so far, and picks its next mutation from a library
+        of 33 composable operators using that feedback. Success is the strict
+        reading: an <code className="mono">allow</code> effective verdict with
+        zero entities raised. The budget is 50 attempts per search.
+      </p>
+      <p>
+        Seeds the stack already misses are thrown away before the search
+        starts, because counting them would inflate this number for free. Of 81
+        candidates, 33 already reach <code className="mono">allow</code> with
+        zero entities on the retrieved surface and 34 on direct input, leaving{" "}
+        <strong>48</strong> and <strong>47</strong> seeds respectively: attacks
+        the shipped stack currently stops. That is the denominator below, and it
+        is why attempt 1 is 0% by construction. The two move sets are scored
+        separately, because base64, hex, rot13 and fragment reassembly evade a
+        text detector by removing the instruction from the text, while a
+        paraphrase or another language leaves it plainly readable.{" "}
+        <strong>Readable only is the number to quote.</strong>
+      </p>
+
+      <div className="scroll-x">
+        <table>
+          <thead>
+            <tr>
+              <th>Configuration</th>
+              <th className="num">@1</th>
+              <th className="num">@5</th>
+              <th className="num">@10</th>
+              <th className="num">@25</th>
+              <th className="num">@50</th>
+              <th className="num">median attempts</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["indirect_retrieved / all operators (48)", "0.0%", "56.2%", "89.6%", "100.0%", "100.0%", "4"],
+              ["indirect_retrieved / readable only (48)", "0.0%", "25.0%", "39.6%", "62.5%", "72.9%", "9"],
+              ["direct_input / all operators (47)", "0.0%", "72.3%", "93.6%", "100.0%", "100.0%", "4"],
+              ["direct_input / readable only (47)", "0.0%", "31.9%", "46.8%", "72.3%", "74.5%", "6"],
+            ].map(([config, a1, a5, a10, a25, a50, med]) => (
+              <tr key={config}>
+                <td className="mono small">{config}</td>
+                <td className="num">{a1}</td>
+                <td className="num">{a5}</td>
+                <td className="num">{a10}</td>
+                <td className="num">{a25}</td>
+                <td className="num">
+                  <strong>{a50}</strong>
+                </td>
+                <td className="num">{med}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <Source>
+        <code className="mono">benchmarks/adaptive/README.md</code>, ASR curve
+        table, which is the <code className="mono">asr</code> block of{" "}
+        <code className="mono">
+          benchmarks/adaptive/results/adaptive_summary.json
+        </code>
+        .
+      </Source>
+
+      <p>
+        Read that as: a quarter of the attacks our detectors stop are through
+        within five adapted attempts, and roughly three in four are through
+        within fifty, using only mutations that leave the instruction plainly
+        readable. With the full move set every single seed falls, on both
+        surfaces, within 25 attempts.{" "}
+        <strong>
+          The 73% figure quoted on the home page is the 72.9% cell in that
+          table
+        </strong>
+        : the retrieved surface, readable operators only, 50 attempts. The
+        paper&apos;s &gt;90% result is not something we are an exception to;
+        with the full move set we exceed it against ourselves.
+      </p>
+      <p>
+        165 of the 190 searches ended in a bypass. Each one was re-run on the
+        persisting enforcement path, because the search itself runs with{" "}
+        <code className="mono">persist=False</code> for speed, and{" "}
+        <strong>165 of 165 reproduced</strong>.
+      </p>
+
+      <h3>What the bypasses did once they were through</h3>
+      <p>
+        A bypass is not harm. For every bypass whose seed names an obvious
+        harmful action, the payload that actually beat the detectors is carried
+        into <code className="mono">Enforcer.guard_tool_call</code>, the same
+        call section 1 makes, with the same shipped seed fixture and policy
+        packs.
+      </p>
+      <div className="scroll-x">
+        <table>
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th className="num">Bypasses</th>
+              <th>Action verdict</th>
+              <th>Stopped by</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ["exfiltration via email.send (support-triage)", "18", "block", "capability.denied, taint.irreversible_tool"],
+              ["destructive SQL via tickets.update", "8", "block", "sql.unbounded_mutation, cascade.reaches_destructive"],
+              ["transfer via payments.transfer (payments-ops)", "12", "escalate", "taint.irreversible_tool, eu.art14.human_oversight"],
+            ].map(([action, n, verdict, by]) => (
+              <tr key={action}>
+                <td className="mono small">{action}</td>
+                <td className="num">{n}</td>
+                <td>{verdict}</td>
+                <td className="mono small">{by}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p>
+        <strong>38 of 38 contained.</strong> A further 38 bypasses came from
+        seeds that name no specific action (&quot;you are now DAN&quot;, a
+        system-prompt leak) and were excluded rather than assigned an invented
+        one.
+      </p>
+      <Source>
+        <code className="mono">benchmarks/adaptive/README.md</code>,
+        the section pairing each bypass with containment, which is the{" "}
+        <code className="mono">containment_pairing</code> and{" "}
+        <code className="mono">pairings</code> blocks of{" "}
+        <code className="mono">results/adaptive_summary.json</code>.
+      </Source>
+
+      <h3>What this adaptive result does not show</h3>
+      <ul>
+        <li>
+          <strong>It is search-based only.</strong> The paper&apos;s taxonomy
+          also covers gradient-based attacks, RL-based attacks and human
+          red-teaming, and found those strongest. None are implemented here, so
+          the real-world rate should be assumed higher than this. It is a lower
+          bound from the cheapest attacker class, not a worst case.
+        </li>
+        <li>
+          <strong>A bypass is not a working attack.</strong> Success means the
+          detector said <code className="mono">allow</code> and raised nothing.
+          It does not mean a model would then obey the payload. No model is in
+          the loop at all, so &quot;the instruction is still readable&quot; is
+          an argument rather than a measurement.
+        </li>
+        <li>
+          <strong>It measures the default stack only.</strong> The five
+          detectors enabled in the run are{" "}
+          <code className="mono">injection.heuristic</code>,{" "}
+          <code className="mono">pii.native</code>,{" "}
+          <code className="mono">secrets.native</code>,{" "}
+          <code className="mono">safety.lexicon</code> and{" "}
+          <code className="mono">schema.json</code>. The opt-in classifier
+          ensemble that produces the 66.7% held-out recall in section 4 is not
+          running, because it needs a model download and this benchmark is
+          offline by contract. This number is not evidence about how much harder
+          that ensemble would be to beat.
+        </li>
+        <li>
+          <strong>48 seeds is a small set and a biased one.</strong> It is
+          specifically the subset our detectors catch, so it answers &quot;how
+          robust is what we do catch&quot;, not &quot;how safe is the product
+          against this corpus&quot;. The second question is what section 4 and
+          section 1 are for.
+        </li>
+        <li>
+          <strong>
+            The containment column is invariant to the payload, by design.
+          </strong>{" "}
+          The action path never reads the attacker&apos;s text. So 38/38 is not
+          evidence that containment resists these particular bypasses, it is
+          evidence that containment does not depend on the bypass at all. Its
+          limits are the declaration limits listed in section 1.
+        </li>
+      </ul>
+      <Source>
+        <code className="mono">benchmarks/adaptive/README.md</code>, method and
+        &quot;What this benchmark does not show&quot;.
+      </Source>
+
+      <h2>What the runs record, and what they do not</h2>
+      <p>
+        A sceptic asked what was held constant, and the answer for several of
+        those things is &quot;nothing was, and it is not recorded&quot;. That is
+        written out here rather than implied away.
+      </p>
+      <p>
+        <strong>What the result files do record.</strong> The adaptive run
+        records its random seed (<code className="mono">20251009</code>), the
+        50-attempt cap, 190 searches, 5,593 attempts, 29.2 seconds of wall
+        clock, the five enabled detectors by name, and the fact that it makes no
+        model calls and no network calls. The AgentDojo run records the source
+        of its call data and the verdict and rules fired for each of the 617
+        calls in both detector modes. The containment run records a verdict and
+        the rules that fired for each of its scenarios. The Tier B comparison
+        records the raw confusion matrix for both systems, 10 true positives, 5
+        false positives, 5 true negatives and 0 false negatives for this product
+        against 9, 2, 8 and 1 for llm-guard, along with a count of 0 examples
+        degraded by a detector timeout on either side.
+      </p>
+      <ul>
+        <li>
+          <strong>No run date.</strong> None of these result files carries a
+          timestamp. The only date on this page is 2026-09-16, which is when the
+          three detector fixes landed and the containment entity count and the
+          generalization table were re-measured. The date each of the other runs
+          was produced is not recorded anywhere, so this page does not state
+          one.
+        </li>
+        <li>
+          <strong>No llm-guard version.</strong> The Tier B result records only
+          that llm-guard was installed in a separate interpreter and that its{" "}
+          <code className="mono">PromptInjection</code> scanner was really
+          called. Neither the llm-guard version nor the model it loads is
+          written down, and the 81.8% and 90.0% figures would move with either.
+          The only version fact recorded is the conflict that forces the
+          separate interpreter, llm-guard&apos;s pin of{" "}
+          <code className="mono">transformers==4.51.3</code>.
+        </li>
+        <li>
+          <strong>No hardware.</strong> No CPU, memory or machine description
+          appears in any of these files. That is not cosmetic here: detectors
+          run under the shipped 40ms per-detector timeout, and a detector that
+          times out is scored as raising nothing. The adaptive run recorded 9
+          such degraded attempts out of 5,593, 0.16%, touching 5 searches, on
+          whatever machine produced it. A slower machine would record more, and
+          would move cells in the direction that flatters the attacker.
+        </li>
+        <li>
+          <strong>One run each, so no variance.</strong> Every figure on this
+          page is a single run. None is a mean, none has an error bar, and no
+          repeat-run spread was measured. The adaptive README is the only file
+          that says anything about stability, and what it says is that re-running
+          can move a cell by a couple of points because of those timeouts.
+        </li>
+      </ul>
+      <Source>
+        <code className="mono">benchmarks/adaptive/results/adaptive_summary.json</code>{" "}
+        (<code className="mono">config</code>,{" "}
+        <code className="mono">reproducibility</code>,{" "}
+        <code className="mono">bypass_verification</code>),{" "}
+        <code className="mono">
+          benchmarks/agentdojo_e2e/results/agentdojo_e2e_results.json
+        </code>
+        ,{" "}
+        <code className="mono">
+          benchmarks/agent_security/results/tier_b_results.json
+        </code>
+        , and the 2026-09-16 re-measurement notes in{" "}
+        <code className="mono">benchmarks/containment/README.md</code> and{" "}
+        <code className="mono">benchmarks/REPORT.md</code> round 7. The absences
+        listed above are absences in those same files.
+      </Source>
+
       <h2>How to reproduce any of this</h2>
       <p>
         Each benchmark is a self-contained script with its own throwaway SQLite
@@ -416,8 +980,10 @@ export default function BenchmarkPage() {
       </p>
       <pre className="hero-code">
         uv run python benchmarks/containment/run_containment_benchmark.py{"\n"}
+        uv run python benchmarks/agentdojo_e2e/run_agentdojo_e2e.py{"\n"}
         uv run python benchmarks/agent_security/tier_b_indirect_injection.py{"\n"}
-        uv run python benchmarks/run_prompt_injection_benchmark.py
+        uv run python benchmarks/run_prompt_injection_benchmark.py{"\n"}
+        uv run python benchmarks/adaptive/run_adaptive_benchmark.py
       </pre>
       <p>
         The <code className="mono">llm-guard</code> comparisons need{" "}
@@ -432,8 +998,13 @@ export default function BenchmarkPage() {
       </p>
 
       <p style={{ marginTop: 30 }}>
-        <Link href="/playground">Back to the playground</Link>
+        The AgentDojo replay and the adaptive run are offline and need no model,
+        no network and no API key. Every one of them writes the results file
+        named above, so a number that does not match is a bug report rather than
+        a disagreement.
       </p>
+
+      <PageFooter />
     </div>
   );
 }

@@ -1175,6 +1175,31 @@ select.input-select, input.input-text, textarea.input-text {
   border-radius: var(--r-2);
 }
 
+/* Form controls carried no colour of their own, so in dark mode every input,
+   select and textarea rendered as the browser default: a stark white box with
+   black text on a near-black page. Most visible on the public playground, where
+   the retrieved-document box and the argument editor are the things a visitor is
+   invited to type into. Tokens only, so both themes follow the palette. */
+input, select, textarea {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  font: inherit;
+  padding: 7px 9px;
+}
+input::placeholder, textarea::placeholder { color: var(--faint); }
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+input[type="checkbox"], input[type="radio"] {
+  accent-color: var(--accent);
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
 /* --- Responsive: the sidebar collapses to a horizontal, scrollable bar on
    phone widths rather than staying a fixed 224px column that eats half the
    screen — this app had no responsive handling at all before. ------------- */
@@ -1312,6 +1337,16 @@ select.input-select, input.input-text, textarea.input-text {
 .pg-turn.user { align-self: flex-end; background: var(--text); color: var(--bg); }
 .pg-turn.agent { align-self: flex-start; background: var(--panel-2); border: 1px solid var(--hairline); }
 .pg-turn .pg-turn-meta { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+/* The scripted reply is a fixture that obeys the attack on purpose. Said above
+   the words themselves, not only in the page header, so a screenshot of one
+   reply still carries it. */
+.pg-turn .pg-turn-label {
+  font-size: 10.5px; letter-spacing: 0.02em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 5px;
+}
+/* In observe mode the flagged state is the finding and the applied verdict is
+   the footnote, so the emphasis sits on what the policy would have done. */
+.pg-turn .pg-would { color: var(--text); font-weight: 620; font-size: 12px; }
 
 .pg-composer { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--hairline); }
 .pg-composer textarea { flex: 1; resize: none; }
@@ -1322,10 +1357,38 @@ select.input-select, input.input-text, textarea.input-text {
 
 .pg-mode-toggle { display: flex; align-items: center; gap: 8px; padding: 12px 16px; }
 .pg-mode-toggle .tag { cursor: default; }
+/* The mode panel carries two paragraphs now: what the switch moves, and the
+   pack it does not move. Without this they ran together into one block. */
+.pg-mode-note p { margin: 0 0 8px; }
+.pg-mode-note p:last-child { margin-bottom: 0; }
+.pg-mode-note strong { color: var(--text); }
+
+/* What the four impact tiers in the tool dropdown mean. A paragraph in a form
+   grid, so it gets prose leading rather than the grid's label rhythm. */
+.pg-legend { margin: 0; line-height: 1.55; }
+.pg-legend .mono { font-size: 11.5px; }
 
 .pg-trace { padding: 10px 16px; border-top: 1px solid var(--hairline); font-size: 12.5px; }
 .pg-trace:first-child { border-top: none; }
 .pg-trace-rule { margin-top: 4px; }
+
+/* A detector run now states whether it matched and with what score, not only
+   that it executed. Five short facts, wrapping rather than overflowing in the
+   narrow sidebar column and on a phone. */
+.pg-detector-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* The masked excerpt the detector matched on. Arbitrary visitor text, so it has
+   to be allowed to break anywhere rather than push the column wider. */
+.pg-sample {
+  margin-top: 3px; font-size: 11px; line-height: 1.5;
+  overflow-wrap: anywhere; word-break: break-word;
+}
+/* The audit chain's head digest: 24 hex characters, same treatment. */
+.pg-digest { margin-top: 6px; font-size: 11px; overflow-wrap: anywhere; }
+/* The chain and control-posture panels are stacked sentences now rather than a
+   single line each, so they need leading between them to read as sentences. */
+.pg-shell .panel .body.small > div + div { margin-top: 6px; }
+.pg-shell .panel .body.small { line-height: 1.55; }
+.pg-cta-note { max-width: 520px; margin: 14px auto 0; }
 
 .pg-callout { border: 1px solid var(--hairline); background: var(--panel-2); border-radius: var(--r-3); padding: 16px 18px; margin-top: 18px; }
 .pg-callout h3 { margin: 0 0 8px; font-size: 14px; }
