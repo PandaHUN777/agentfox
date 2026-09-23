@@ -38,7 +38,7 @@ export function ExpandableTraceRow({ trace, agents }: { trace: any; agents: any[
   return (
     <>
       <tr onClick={toggle} style={{ cursor: "pointer" }} className={open ? "row-expanded" : undefined}>
-        <td className="mono small">
+        <td className="mono small" style={{ whiteSpace: "nowrap" }}>
           <button
             type="button"
             onClick={(e) => {
@@ -70,7 +70,11 @@ export function ExpandableTraceRow({ trace, agents }: { trace: any; agents: any[
         <td><Verdict value={trace.verdict} /></td>
         <td className="small muted">{trace.environment}</td>
         <td className="small muted">{trace.model || "—"}</td>
-        <td className="small wrap muted" style={{ maxWidth: 300 }}>{trace.intent || "—"}</td>
+        {/* A ceiling without a floor let this column be starved to 73px on the live
+            page, which turned a one-line intent into a 250px-tall row. */}
+        <td className="small wrap muted" style={{ minWidth: "20ch", maxWidth: 300 }}>
+          {trace.intent || "—"}
+        </td>
         <td className="small muted">{ts(trace.started_at)}</td>
       </tr>
       {open && (
