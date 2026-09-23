@@ -513,9 +513,14 @@ def test_a_sandbox_cannot_read_the_deployments_own_agents(client):
 
 
 def test_a_sandbox_tenant_cannot_be_authenticated_into(client):
-    """A sandbox seeds fixture users with the same addresses as the demo org's. The
-    development identity header must still resolve to an operator, never into a
-    visitor's sandbox."""
+    """The development identity header resolves to an operator, never into a visitor's
+    sandbox, and a sandbox's fixture users carry addresses of their own.
+
+    Two defences, and the test pins both. A sandbox seeds its users under a namespaced
+    address, so nothing it writes can collide with a real user or with another sandbox
+    even on a deployment still carrying the old global unique index on email. On top of
+    that, `auth.authenticate` refuses to resolve a header into a sandbox tenant at all.
+    """
     sid = _create(client)
     resp = client.get("/api/agents", headers={"X-Nometria-User": "admin@example.com"})
     assert resp.status_code == 200
@@ -528,8 +533,10 @@ def test_a_sandbox_tenant_cannot_be_authenticated_into(client):
 
     with session_scope() as session:
         bind_session(session, sid)
-        sandbox_admin = session.scalar(select(User).where(User.email == "admin@example.com"))
-    assert sandbox_admin is not None, "the sandbox really does hold a same-email user"
+        emails = {u.email for u in session.scalars(select(User))}
+    assert emails, "the sandbox seeds its own users"
+    assert "admin@example.com" not in emails, "a sandbox never writes a bare fixture address"
+    assert any(e.startswith(f"admin+{sid}@") for e in emails), emails
 
 
 # ---------------------------------------------------------------------------
@@ -608,3 +615,54 @@ def test_an_agent_credential_from_a_sandbox_is_useless_on_the_inline_api(client)
 
     with session_scope() as session:
         assert resolve_agent(session, raw) is None
+
+
+# ---------------------------------------------------------------------------
+# Deploying ahead of the migration
+# ---------------------------------------------------------------------------
+
+
+def test_sandboxes_are_created_on_a_database_that_has_not_run_the_migration(tmp_path, monkeypatch):
+    """A deployment gets the new code before someone runs c4a71e8b2d16, every time.
+
+    That window used to break the public demo: a sandbox seeds its own world, and on the
+    old schema every fixture address collided with the real users on the globally unique
+    index. Sandbox users now carry a namespaced address, so the window is survivable and
+    the migration is an improvement rather than a prerequisite.
+    """
+    import sqlalchemy as sa
+
+    from nometria.config import get_settings, reset_settings_cache
+    from nometria.db import current_revision, init_db, reset_engine, upgrade_db
+    from nometria.gateway import playground_sessions
+    from nometria.models import Agent
+    from nometria.tenancy import bind_session
+
+    url = f"sqlite:///{tmp_path / 'pre-migration.db'}"
+    monkeypatch.setenv("NOMETRIA_DATABASE_URL", url)
+    reset_settings_cache()
+    reset_engine()
+    try:
+        upgrade_db("d5e2a9c14f03")  # the revision before playground sandboxes existed
+        assert current_revision() == "d5e2a9c14f03"
+        engine = sa.create_engine(url)
+        with engine.connect() as conn:
+            indexes = conn.execute(sa.text("PRAGMA index_list('users')")).fetchall()
+        assert any(row[1] == "ix_users_email" and row[2] == 1 for row in indexes), (
+            "this test is only meaningful while users.email is still globally unique"
+        )
+        init_db(stamp=False)  # what a deployment's startup does: add missing tables only
+
+        store = playground_sessions.PlaygroundStore()
+        first, second = store.create(), store.create()
+        assert first.id != second.id
+
+        from nometria.db import session_scope
+
+        with session_scope() as session:
+            bind_session(session, first.id)
+            assert list(session.scalars(sa.select(Agent))), "the sandbox seeded a world"
+    finally:
+        reset_settings_cache()
+        reset_engine()
+        get_settings()

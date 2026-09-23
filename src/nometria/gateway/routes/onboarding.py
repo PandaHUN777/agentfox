@@ -91,13 +91,6 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
 
     steps = [
         {
-            "id": "install",
-            "title": "Install and initialise",
-            "done": agents > 0,
-            "command": "pip install git+https://github.com/architsharm/guardrails.git && nometria init",
-            "detail": "Database, controls and the baseline policy pack, offline and idempotent.",
-        },
-        {
             "id": "connect",
             "title": "Connect a repo, point at a hosted API, or instrument it — whichever fits",
             "done": connections > 0 or hosted_api_scans > 0,
@@ -113,10 +106,24 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "id": "instrument",
             "title": "Govern your agent",
             "done": traces > 0,
-            "command": "import nometria; nometria.auto()",
+            "command": "POST /v1/guard/input  (or: import nometria; nometria.auto())",
             "detail": (
-                "One line in your entry point. Every model call is traced, evaluated and "
-                "audited — and nothing is blocked, because auto() starts in observe mode."
+                "From any language, call the guard endpoints with a token from the API "
+                "tokens tab: your agent keeps making its own model calls and asks this "
+                "service for a verdict. In Python you can instead add one line in your "
+                "entry point. Either way nothing is blocked to begin with, because "
+                "policies start in observe mode."
+            ),
+        },
+        {
+            "id": "install",
+            "title": "Run it yourself, if you want it in your own infrastructure",
+            "done": agents > 0,
+            "command": "pip install nometria && nometria init",
+            "detail": (
+                "Optional. Everything above works from this browser and from any language "
+                "over HTTP, so nothing here blocks you. The package is not published yet, so "
+                "installing it needs access to the repository; ask if you want it."
             ),
         },
         {

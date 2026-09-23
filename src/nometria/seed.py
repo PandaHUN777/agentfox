@@ -279,7 +279,17 @@ def register_scripts() -> None:
         script(case["prompt"].lower(), case["scripted"])
 
 
-def seed(session: Session, *, with_policies: bool = True) -> dict[str, Any]:
+def _namespaced_email(email: str, namespace: str | None) -> str:
+    """``a@b.com`` plus ``ns`` becomes ``a+ns@b.com``; without a namespace, unchanged."""
+    if not namespace:
+        return email
+    local, _, domain = email.partition("@")
+    return f"{local}+{namespace}@{domain}"
+
+
+def seed(
+    session: Session, *, with_policies: bool = True, email_namespace: str | None = None
+) -> dict[str, Any]:
     summary: dict[str, Any] = {}
 
     # --- Pillar 6 content -------------------------------------------
@@ -300,6 +310,11 @@ def seed(session: Session, *, with_policies: bool = True) -> dict[str, Any]:
         ("aisha@example.com", "Aisha (Auditor)", "auditor"),
         ("admin@example.com", "Admin", "owner"),
     ]:
+        # A throwaway world (the public playground seeds one per sandbox) needs
+        # addresses that cannot collide with another world's, because a deployment
+        # that has not yet run migration c4a71e8b2d16 still holds the old global
+        # unique index on users.email. Sub-addressing keeps the fixture readable.
+        email = _namespaced_email(email, email_namespace)
         if session.scalar(select(User).where(User.email == email)) is None:
             session.add(User(email=email, name=name, role=role))
     session.flush()

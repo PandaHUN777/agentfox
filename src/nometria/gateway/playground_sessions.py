@@ -248,12 +248,12 @@ class PlaygroundStore:
                 # Seeded inside the same transaction and the same tenant binding, so a
                 # sandbox is never visible half-built: either the whole world is there
                 # or no row is.
-                seed_world(session)
+                seed_world(session, email_namespace=session_id)
         except (IntegrityError, OperationalError, ProgrammingError) as exc:
             log.error("playground: could not create a sandbox", exc_info=True)
             raise PlaygroundUnavailable(
                 "The playground could not create a sandbox. If this deployment has not "
-                "run migration c4a71e8b2d16, run it: it adds playground_sandboxes and "
+                "run migration c4a71e8b2d16, run it: it adds playground_sandboxes, and "
                 "makes users.email unique per tenant instead of globally."
             ) from exc
         except SQLAlchemyError as exc:  # pragma: no cover - unexpected driver failure
