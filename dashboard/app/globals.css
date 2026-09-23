@@ -1377,3 +1377,32 @@ select.input-select, input.input-text, textarea.input-text {
 .bm-doc .lede { font-size: 15px; line-height: 1.55; color: var(--text); }
 .bm-doc .callout { border: 1px solid var(--hairline); border-left: 3px solid var(--accent); background: var(--panel); border-radius: var(--r-3); padding: 14px 18px; margin: 18px 0; }
 .bm-doc .callout p:last-child { margin-bottom: 0; }
+
+
+/* --- Public landing: proof before prose ------------------------------------
+   The page argued its case in paragraphs and showed nothing. These two blocks
+   carry the actual verdict the product returns and the published counts, so a
+   visitor who reads nothing still sees the product work. */
+.lp-proof {
+  border: 1px solid var(--hairline); border-radius: 12px; background: var(--elevated);
+  overflow: hidden; margin-top: 26px;
+}
+.lp-proof-row { padding: 14px 16px; }
+.lp-proof-row + .lp-proof-row { border-top: 1px solid var(--hairline); }
+.lp-proof-label {
+  display: block; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--faint); margin-bottom: 7px;
+}
+.lp-proof code { font-family: var(--mono); font-size: 12.5px; line-height: 1.7; }
+.lp-proof .lp-args { color: var(--text-2); }
+.lp-proof-verdict { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 8px; }
+.lp-proof p { margin: 0 0 8px; font-size: 13.5px; color: var(--text); }
+.lp-proof small { color: var(--faint); font-size: 12px; line-height: 1.6; display: block; }
+
+.lp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 26px; }
+.lp-stat { border: 1px solid var(--hairline); border-radius: 10px; padding: 12px 14px; background: var(--elevated); }
+.lp-stat b { display: block; font-size: 21px; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.lp-stat span { display: block; font-size: 12px; line-height: 1.5; color: var(--faint); margin-top: 4px; }
+@media (max-width: 560px) {
+  .lp-proof code { font-size: 11.5px; }
+}

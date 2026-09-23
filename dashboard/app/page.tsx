@@ -255,6 +255,73 @@ const PILL = {
   textDecoration: "none",
 };
 
+/**
+ * A real refusal, not a mockup.
+ *
+ * This is the response the hosted playground returns today for a support agent asking
+ * to move money: the call is refused because the agent holds no grant for that tool,
+ * with no model consulted and no detector reading any text. Reproduce it yourself
+ * against the public sandbox, which is why the page says so underneath.
+ */
+function Proof() {
+  return (
+    <div className="lp-proof">
+      <div className="lp-proof-row">
+        <span className="lp-proof-label">The call an injection asks for</span>
+        <code>
+          support-triage &rarr; payments.transfer{" "}
+          <span className="lp-args">
+            {`{ "amount": 5000, "currency": "USD", "to": "acct_attacker_991" }`}
+          </span>
+        </code>
+      </div>
+      <div className="lp-proof-row">
+        <span className="lp-proof-label">What came back</span>
+        <div className="lp-proof-verdict">
+          <span className="tag bad">block</span>
+          <code>capability.denied</code>
+        </div>
+        <p>No capability grants this agent the requested tool and action (default deny).</p>
+        <small>
+          59ms. No model was asked, and no detector read any text. The refusal comes from
+          what the agent was granted, so it holds whether or not anything recognised the
+          attack. Run it yourself in the playground, or against the public API.
+        </small>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Four published counts, including the one that makes the product look worse. The
+ * detection figure is here on purpose: a page that only shows its wins is the thing a
+ * sceptical reader discounts entirely.
+ */
+function Stats() {
+  const stats: [string, string][] = [
+    ["8 of 8", "attacks contained with every detector switched off"],
+    ["4 of 4", "legitimate calls still allowed in that same run"],
+    ["42 of 42", "attacker calls that act, contained in an AgentDojo replay of 617 calls"],
+    ["66.7%", "held-out injection recall, published rather than rounded up"],
+  ];
+  return (
+    <>
+      <div className="lp-stats">
+        {stats.map(([n, label]) => (
+          <div className="lp-stat" key={label}>
+            <b>{n}</b>
+            <span>{label}</span>
+          </div>
+        ))}
+      </div>
+      <p style={{ fontSize: 12.5, color: "var(--faint)", margin: "10px 0 0" }}>
+        Every figure comes from a result file in the repository, with the method and the
+        limits on <Link href="/benchmark">the benchmark page</Link>.
+      </p>
+    </>
+  );
+}
+
 function Landing() {
   return (
     <div className="pg-shell">
@@ -299,6 +366,9 @@ function Landing() {
             How it works
           </Link>
         </div>
+
+        <Proof />
+        <Stats />
       </section>
 
       <Sec title="What this is">
