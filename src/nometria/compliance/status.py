@@ -58,11 +58,11 @@ _TABLE_HINTS: dict[str, str] = {
     "source_records": "Tier a source on the Sources page.",
     "knowledge_boundaries": "Declare what an agent may answer, from that agent's page.",
     "handoffs": "Raise or detect a hand-off on the Escalation page.",
-    "retention_policies": "Set one with `nometria retention set`.",
+    "retention_policies": "Seeded worlds carry one. There is no command or screen to add another yet, so this stays open on a fresh tenant.",
     "redteam_campaigns": "Run a red-team campaign on the Evaluation page.",
     "eval_runs": "Create and run an eval suite on the Evaluation page.",
-    "budgets": "Set one with `nometria budget set`.",
-    "slos": "Declare one with `nometria slo set`.",
+    "budgets": "Seeded worlds carry one. There is no command or screen to add another yet, so this stays open on a fresh tenant.",
+    "slos": "Declare a reliability objective on the Evaluation page.",
     "mcp_tool_snapshots": "Connect an MCP server on the Connect page.",
 }
 

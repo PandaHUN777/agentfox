@@ -32,10 +32,13 @@ export default function Glossary() {
     <>
       <h1>Glossary</h1>
       <p className="sub">
-        The coding schemes used across Policies, Guardrails, Compliance and Board view,
-        decoded once instead of assumed. Every individual control still shows its own
-        plain-language objective where it appears — this page is for the naming
-        conventions themselves, not a restatement of every control.
+        Every word and code this interface actually shows you, decoded once instead of
+        assumed: the concepts first, then the coding schemes used across Policies,
+        Guardrails, Compliance and Board view. Every individual control still shows its
+        own plain-language objective where it appears, so this page is for the
+        vocabulary itself rather than a restatement of every control. For what each <em>area</em> of the
+        product is for, that is{" "}
+        <a href="/start?tab=map">What&rsquo;s in here</a> on the Start here page.
       </p>
 
       <h2>Concepts</h2>
@@ -103,6 +106,89 @@ export default function Glossary() {
               </td>
             </tr>
             <tr>
+              <td className="mono small">Observe / enforce</td>
+              <td className="small">
+                The two modes a policy can be in. In{" "}
+                <span className="mono">observe</span> it records what it would have
+                done and blocks nothing; in <span className="mono">enforce</span> the
+                blocking is real. Everything content-based starts in observe on
+                purpose, so check the mode column on{" "}
+                <a href="/policies">Policies</a> before assuming a rule is stopping
+                anything.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono small">Effective verdict</td>
+              <td className="small">
+                What the policy <em>would</em> have done, recorded whatever mode it is
+                in. On a trace in observe mode the verdict reads{" "}
+                <span className="mono">allow</span> because nothing was stopped, while
+                the effective verdict reads <span className="mono">block</span> because
+                that is what enforcing would have produced. It is how you tell what
+                enforcing would cost you before you turn it on.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono small">Canary</td>
+              <td className="small">
+                A policy change put live for a slice of traffic rather than all of it,
+                with a health gate watching. The gate rolls the change back if the
+                candidate blocks much more than the current policy, and also if it
+                blocks much less, because a change that suddenly stops catching things
+                is as suspect as one that over-blocks.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono small">Proposal</td>
+              <td className="small">
+                One change to governance configuration, filed with its diff, the
+                evidence behind it and every decision taken on it, instead of being
+                applied. A change that loosens a control is never applied
+                automatically, and a loosening at org level needs two different
+                approvers. There is no screen for proposals; they are read and decided
+                with <span className="mono">nometria proposals</span> or{" "}
+                <span className="mono">/api/proposals</span>, described on the{" "}
+                <a href="/policies">Policies page</a>.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono small">Capability grant</td>
+              <td className="small">
+                A declaration that one agent may call one tool, with limits on the
+                argument values, a ceiling on how untrusted the arguments may be,
+                optionally a required human approval, and an expiry. Default deny: an
+                agent with no grant for a tool cannot call it. Made with{" "}
+                <span className="mono">nometria capability grant</span>, explained on
+                the <a href="/agents">Agents page</a>.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono small">Obligation</td>
+              <td className="small">
+                A dated duty a regulation puts on you, such as a filing or a review
+                that has to happen by a particular date, tracked against the agents it
+                applies to. Listed on the{" "}
+                <a href="/compliance?tab=obligations">Obligations tab</a>. A date in
+                the calendar is a reminder, not proof the duty was met.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono small">Fingerprint / occurrences</td>
+              <td className="small">
+                A finding&rsquo;s <strong>fingerprint</strong> is computed from its
+                type, its subject and the parts that identify the problem, so the same
+                problem happening again is the same row.{" "}
+                <strong>Occurrences</strong> counts how many times it has happened.
+                A recurrence refreshes the evidence and can raise the severity, never
+                lower it, and a problem that comes back after being resolved reopens
+                the same finding rather than starting a new one. It is why one row on{" "}
+                <a href="/findings">Findings</a> can stand for something that happened
+                two hundred times. The count itself is on{" "}
+                <span className="mono">GET /api/findings</span> and is not shown in
+                these pages yet.
+              </td>
+            </tr>
+            <tr>
               <td className="mono small">Access Control</td>
               <td className="small">
                 Whether an agent's answer contains only what the specific person asking
@@ -129,7 +215,11 @@ export default function Glossary() {
                 the model and still not get the action executed. It holds only as far
                 as the declarations go — a tool declared{" "}
                 <span className="mono">read</span> that actually deletes records is
-                not contained by it. See <a href="/policies">Policies</a>.
+                not contained by it. It has two halves: the{" "}
+                <strong>capability grant</strong> that decides whether this agent may
+                call this tool at all, and the <strong>impact tier</strong> declared on
+                the tool that says how much damage it could do. See{" "}
+                <a href="/policies">Policies</a> and <a href="/agents">Agents</a>.
               </td>
             </tr>
             <tr>

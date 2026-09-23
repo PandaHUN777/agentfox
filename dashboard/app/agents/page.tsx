@@ -268,6 +268,100 @@ export default async function Agents({
           </div>
         </details>
       )}
+
+      <CapabilityGrants />
+    </>
+  );
+}
+
+/**
+ * Half of containment ships working, is used on every governed tool call, and has
+ * no screen anywhere in the dashboard. A reader of this page can see which tools an
+ * agent *uses* and has no way to learn that what it is *allowed* to use is a
+ * separate, declared thing they can narrow.
+ */
+function CapabilityGrants() {
+  return (
+    <>
+      <h2>What an agent is allowed to do</h2>
+      <p className="sub" style={{ marginTop: -8 }}>
+        The table above shows the tools an agent has been seen calling. What it is{" "}
+        <em>permitted</em> to call is a separate declaration, called a capability
+        grant. Grants are made from the command line today. There is no screen for
+        them.
+      </p>
+      <div className="note-panel" style={{ marginTop: 0 }}>
+        <p style={{ marginTop: 0 }}>
+          A grant says this agent may call this tool, and on what terms: which actions,
+          limits on the values in the arguments, a ceiling on how untrusted the
+          arguments are allowed to be, whether the call needs a human approval first,
+          and a date the grant expires. Least privilege here is{" "}
+          <strong>default deny</strong>: an agent with no grant for a tool cannot call
+          it at all.
+        </p>
+        <p>
+          This is the half of containment that decides whether an action runs. The
+          other half is the <Link href="/glossary">impact tier</Link> declared on the
+          tool itself, which is how much damage that tool can do. Together they are
+          the reason a prompt injection can succeed at convincing the model and still
+          not get the action executed. A comparison the policy engine cannot actually
+          evaluate is refused when the grant is written, so a grant never reads as
+          narrower than it is.
+        </p>
+        <p style={{ marginBottom: 0 }}>
+          It contains only what has been declared. A tool declared{" "}
+          <span className="mono">read</span> that in fact deletes records is not
+          contained by any of this, and a grant is not evidence that the tool behaves
+          as described.
+        </p>
+      </div>
+      <div className="panel scroll-x" style={{ marginTop: 14 }}>
+        <table>
+          <thead>
+            <tr><th>to do this</th><th>command</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="small">Let an agent call a tool</td>
+              <td className="mono small">nometria capability grant AGENT TOOL</td>
+            </tr>
+            <tr>
+              <td className="small">Cap what the arguments may say</td>
+              <td className="mono small">--limit amount:lte=500 --action refund,lookup</td>
+            </tr>
+            <tr>
+              <td className="small">
+                Refuse the call when the arguments came from something untrusted
+              </td>
+              <td className="mono small">--max-taint user</td>
+            </tr>
+            <tr>
+              <td className="small">Send the call to a human first</td>
+              <td className="mono small">--requires-approval</td>
+            </tr>
+            <tr>
+              <td className="small">Make the grant expire on its own</td>
+              <td className="mono small">--expires-in-days 30</td>
+            </tr>
+            <tr>
+              <td className="small">See what an agent currently holds</td>
+              <td className="mono small">nometria capability list AGENT</td>
+            </tr>
+            <tr>
+              <td className="small">Take one back</td>
+              <td className="mono small">nometria capability revoke CAPABILITY_ID</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="small muted" style={{ marginTop: 10, maxWidth: "78ch" }}>
+        Granting a capability writes a <span className="mono">capability.granted</span>{" "}
+        entry on the audit chain, so the grant itself is evidence you can produce later
+        on the <Link href="/compliance?tab=evidence">Compliance page</Link>. A call
+        that a grant sent for sign-off arrives in{" "}
+        <Link href="/approvals">Approvals</Link>. Over HTTP the same thing is{" "}
+        <span className="mono">POST /api/identities/{"{id}"}/capabilities</span>.
+      </p>
     </>
   );
 }

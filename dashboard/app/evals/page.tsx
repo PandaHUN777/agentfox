@@ -118,7 +118,11 @@ export default async function Evals({
       <div className="panel">
         {(slos.slos || []).length === 0 ? (
           <div className="body muted small">
-            No SLOs declared yet — declare one below.
+            No reliability objectives declared yet. One is a target you commit to for a
+            single agent and a single scorer, such as 95% of sampled answers staying
+            grounded, measured weekly. Declare one below and this table starts showing
+            how much room is left before you breach it; without one, a falling score is
+            something you notice rather than something that is tracked.
           </div>
         ) : (
           <table>
@@ -311,6 +315,23 @@ export default async function Evals({
       </div>
 
       <h2>Red-team posture</h2>
+      <p className="sub" style={{ marginTop: -8 }}>
+        A campaign runs the built-in attack probes against one agent, using that
+        agent&rsquo;s real grants and policy bindings rather than a mock, and reports
+        how many got through. Run one before you promote a policy to enforce, and
+        again after, so the number means something.
+      </p>
+      <p className="small muted" style={{ maxWidth: "78ch", marginTop: -6 }}>
+        What it proves is narrow. A high score says the probes in this library did not
+        get through; it is not a statement that the agent is safe, because an attack
+        nobody wrote a probe for scores exactly the same as one that was stopped. The
+        probes on offer are listed on the <Link href="/policies">Policies page</Link>.
+        From the command line,{" "}
+        <code className="mono">nometria redteam run &lt;agent&gt; --adaptive</code>{" "}
+        mutates a probe that was blocked and retries it, and reports the change in
+        posture against the last comparable campaign instead of a pass rate. It exits
+        zero whatever it finds, so read the output rather than the exit code.
+      </p>
       <form action="/api/redteam/campaigns" method="POST" className="row" style={{ gap: 8, marginBottom: 10, alignItems: "center" }}>
         <select
           name="agent"
@@ -332,7 +353,9 @@ export default async function Evals({
       <div className="panel">
         {campaigns.campaigns.length === 0 ? (
           <div className="body muted small">
-            No campaigns yet — pick an agent above and run one.
+            No campaigns yet. Pick an agent above and run one; it takes the built-in
+            probe library and needs no test cases of your own, so it is usually the
+            first real number you can get out of this page.
           </div>
         ) : (
           <table>
@@ -382,6 +405,61 @@ export default async function Evals({
           </tbody>
         </table>
       </div>
+
+      <EvalGate />
+    </>
+  );
+}
+
+/**
+ * The one thing on this page that stops a bad change reaching production is the
+ * CI gate, and it is the one thing with no presence here at all — a reader would
+ * conclude evaluation is something you remember to do by hand.
+ */
+function EvalGate() {
+  return (
+    <>
+      <h2>Failing a build on a regression</h2>
+      <p className="sub" style={{ marginTop: -8 }}>
+        Runs happen when someone remembers. The gate is the same suite run from your
+        build, compared against a baseline, exiting non-zero when the score drops, so a
+        pull request fails instead of a person noticing later. It is a command, not a
+        screen.
+      </p>
+      <div className="panel scroll-x">
+        <table>
+          <thead>
+            <tr><th>step</th><th>command</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="small">Record the run you want to be judged against</td>
+              <td className="mono small">nometria eval baseline RUN_ID --label main</td>
+            </tr>
+            <tr>
+              <td className="small">Gate a build on it</td>
+              <td className="mono small">nometria eval gate SUITE --baseline RUN_ID</td>
+            </tr>
+            <tr>
+              <td className="small">Or gate on an absolute floor instead</td>
+              <td className="mono small">nometria eval gate SUITE --min-pass-rate 0.9</td>
+            </tr>
+            <tr>
+              <td className="small">Write results your CI already knows how to read</td>
+              <td className="mono small">--junit results.xml --sarif results.sarif</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="small muted" style={{ marginTop: 10, maxWidth: "78ch" }}>
+        The gate exits 1 on a regression, which is what fails the build. It takes a
+        suite, not an agent. The default model provider is{" "}
+        <span className="mono">echo</span>, which is offline and answers with a fixed
+        stub, so a gate left on the default tells you the pipeline runs and nothing
+        about a real model. The same gate is available over HTTP as{" "}
+        <span className="mono">POST /api/eval/gate</span>. A passing gate says this
+        suite did not get worse; it says nothing about the cases nobody wrote.
+      </p>
     </>
   );
 }

@@ -128,8 +128,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // /benchmark is public and is linked from the playground, so a signed-out visitor
   // reaches it. Wrapping it in the app chrome would hand them a sidebar whose every
   // row bounces to sign-in.
+  //
+  // The same reasoning covers the two pages added for signed-out visitors:
+  // /how-it-works is public explanation and carries its own header, and "/" is the
+  // public landing page *only when there is no session*. A signed-in user asking for
+  // "/" still gets Overview inside the full app chrome, exactly as before, which is
+  // why the root check is the one entry here that depends on `signedIn`.
+  const isPublicHome = pathname === "/" && !signedIn;
   const isChromelessPage =
-    isLoginPage || pathname.startsWith("/playground") || pathname.startsWith("/benchmark");
+    isLoginPage ||
+    isPublicHome ||
+    pathname.startsWith("/how-it-works") ||
+    pathname.startsWith("/playground") ||
+    pathname.startsWith("/benchmark");
 
   let me: any = null;
   let attention: any = null;

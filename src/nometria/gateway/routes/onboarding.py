@@ -122,8 +122,9 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "command": "pip install nometria && nometria init",
             "detail": (
                 "Optional. Everything above works from this browser and from any language "
-                "over HTTP, so nothing here blocks you. The package is not published yet, so "
-                "installing it needs access to the repository; ask if you want it."
+                "over HTTP, so nothing here blocks you. Install it when you want the "
+                "command line, the Python one-liner, or the whole control plane in your "
+                "own infrastructure."
             ),
         },
         {

@@ -87,6 +87,14 @@ export default async function AgentDetail({
       </h1>
       {a.name && <p className="mono small muted" style={{ marginTop: -8 }}>{a.slug}</p>}
 
+      <p className="sub">
+        One agent, gathered in one place: who owns it, what it has been observed
+        doing, the tools it can reach and how much damage each of those could do, the
+        rules currently in force over it, and what it has been told not to answer.
+        Come here when you need to decide whether this agent is safe to leave running
+        as it is.
+      </p>
+
       {review_error && <div className="error">{review_error}</div>}
       {review_notice && <div className="note-panel">{review_notice}</div>}
 

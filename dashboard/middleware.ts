@@ -20,7 +20,17 @@ import { SESSION_COOKIE } from "@/lib/api";
 // /benchmark is public for the same reason: it is the page the playground's
 // "read the full benchmark" link points at, so it is read by people who have no
 // account yet. It is a static page with no session and no API call.
-const PUBLIC_PATHS = ["/login", "/api/auth", "/playground", "/benchmark"];
+//
+// "/" and "/how-it-works" are public because the root URL is where an audience
+// arriving from a link lands, and redirecting them to /login put a sign-in wall in
+// front of a product with nothing anywhere saying what it is. "/" is not a page
+// that is public *instead of* the app: app/page.tsx renders the landing page when
+// there is no session cookie and the unchanged Overview when there is one, so a
+// signed-in user sees no difference. The entry here only stops the redirect.
+//
+// Note the match below is `=== p` or `startsWith(p + "/")`, so the "/" entry matches
+// the root path exactly and never the whole site: no path begins with "//".
+const PUBLIC_PATHS = ["/", "/how-it-works", "/login", "/api/auth", "/playground", "/benchmark"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

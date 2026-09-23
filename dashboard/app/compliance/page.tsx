@@ -154,6 +154,13 @@ export default async function Compliance({
               </div>
             )}
           </h2>
+          <p className="small muted" style={{ marginTop: -6, marginBottom: 14, maxWidth: "78ch" }}>
+            Every control this product can check, and whether your own telemetry says it
+            is holding. Work the red and amber rows: the rationale column says what the
+            telemetry actually found, which is usually enough to tell whether the fix is
+            a configuration change or more traffic. Grey is not a bad score, it means no
+            assessment has been made yet.
+          </p>
           <div className="panel scroll-x">
             <table>
               <thead>
@@ -190,6 +197,13 @@ export default async function Compliance({
       {tab === "frameworks" && (
         <>
           <h2>Frameworks</h2>
+          <p className="small muted" style={{ marginTop: -6, marginBottom: 14, maxWidth: "78ch" }}>
+            The same control set seen through each framework you may be asked about, and
+            how much of that framework it covers. Open one to review its mappings: a
+            mapping is a claim that a control satisfies a particular clause, and it stays
+            marked draft until a named person confirms it. Reviewing them here is what
+            turns a computed guess into something an auditor can use.
+          </p>
           <div className="panel scroll-x">
             <table>
               <thead>
@@ -240,6 +254,13 @@ export default async function Compliance({
       {tab === "obligations" && (
         <>
           <h2>Regulatory obligations</h2>
+          <p className="small muted" style={{ marginTop: -6, marginBottom: 14, maxWidth: "78ch" }}>
+            Dated duties that regulations put on you, each matched against the agents it
+            would apply to, so a date arriving is not the first you hear of it. Use it to
+            see what is coming and how much of your inventory it touches. A row here is a
+            calendar entry, not a record that the duty was met, and none of it is legal
+            advice.
+          </p>
           <div className="panel scroll-x">
             <table>
               <thead>
@@ -407,10 +428,28 @@ export default async function Compliance({
             </form>
           </div>
 
+          <p className="small muted" style={{ maxWidth: "78ch", marginTop: -8, marginBottom: 20 }}>
+            <strong>What a package does and does not settle.</strong> It shows what this
+            deployment recorded over the period you chose, and the bundled script lets
+            the recipient confirm none of it has been altered since, without taking this
+            product&rsquo;s word for it. It does not show anything that was never
+            recorded, it does not establish that the controls in scope were the right
+            controls, and a draft framework mapping inside it is a starting point for a
+            reviewer, not a legal conclusion. The same package can be built without the
+            dashboard:{" "}
+            <code className="mono">nometria evidence export --since-days 30</code>, or{" "}
+            <span className="mono">POST /api/evidence</span>.
+          </p>
+
           {evidencePackages.packages.length === 0 ? (
             <div className="hero empty">
               <div className="hero-title">No evidence packages built yet</div>
-              <p>Build one above — it takes a few seconds and nothing is deleted by building another.</p>
+              <p>
+                Build one above. It gathers what this deployment already recorded for
+                the period you pick, so on a fresh instance with no traffic yet the
+                package comes out empty and is labelled as such. Nothing is deleted by
+                building another.
+              </p>
             </div>
           ) : (
             <div className="panel scroll-x">
@@ -473,7 +512,11 @@ export default async function Compliance({
             <div className="head"><span>Retention policies</span></div>
             {retention.policies.length === 0 ? (
               <div className="body small muted">
-                No retention policies configured for this deployment yet.
+                No retention policies configured for this deployment, which means
+                nothing is being purged or redacted on a schedule. This table is
+                read-only and there is no way to add one from the dashboard; ask
+                whoever operates this deployment to put the schedule in place. A legal
+                hold, below, works regardless of whether a schedule exists.
               </div>
             ) : (
               <table>

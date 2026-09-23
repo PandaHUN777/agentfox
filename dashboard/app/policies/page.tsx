@@ -23,8 +23,12 @@ export default async function Policies({
       <h1>Policies</h1>
       <p className="sub">
         The rules an agent has to follow, and how well the checks behind them are
-        actually working. Rule and control codes are decoded on the{" "}
-        <Link href="/glossary">Glossary</Link> page.
+        actually working. A detector decides whether something is there; a policy
+        decides what happens about it, which is why a policy can be watching
+        (<span className="mono">observe</span>) or actually stopping things
+        (<span className="mono">enforce</span>). Read what is in force below, and check
+        the mode column before assuming anything is being blocked. Rule and control
+        codes are decoded on the <Link href="/glossary">Glossary</Link> page.
       </p>
 
       {review_error && <div className="error">{review_error}</div>}
@@ -275,6 +279,97 @@ async function RulesTab({ agent }: { agent?: string }) {
             {n}{ok ? "" : " (not installed)"}
           </span>
         ))}
+      </p>
+
+      <ChangeProposals />
+    </>
+  );
+}
+
+/**
+ * The improvement loop has a full API and a `nometria proposals` command group and
+ * no screen at all, so a dashboard user has no way to learn it exists, let alone
+ * that there may be proposals waiting on their decision. Until there is a page for
+ * it, saying so plainly here is better than the current silence.
+ */
+function ChangeProposals() {
+  return (
+    <>
+      <h2>Change proposals</h2>
+      <p className="sub" style={{ marginTop: -8 }}>
+        This product proposes changes to its own configuration rather than making
+        them. Reading and deciding proposals is on the command line and the HTTP API
+        today. There is no screen for it.
+      </p>
+      <div className="note-panel" style={{ marginTop: 0 }}>
+        <p style={{ marginTop: 0 }}>
+          A <strong>proposal</strong> is one change someone or something wants to make
+          to a policy, a rule threshold or another piece of governance configuration.
+          It carries the diff, the evidence that prompted it, and the trail of every
+          decision taken on it. It moves from proposed to proven, approved, canary,
+          applied and verified, or it ends rejected, rolled back or superseded.
+        </p>
+        <p>
+          Each proposal is labelled by <strong>direction</strong>: whether it tightens
+          a control, loosens one, or does neither. The direction is computed from the
+          diff against the live configuration, not taken from whoever filed it.{" "}
+          <strong>A loosening change is never applied automatically.</strong> A
+          loosening at org level needs two different approvers, and undoing a
+          tightening counts as a loosening, so only a person can do that too.
+        </p>
+        <p style={{ marginBottom: 0 }}>
+          Approving a proposal is not evidence that it worked.{" "}
+          <span className="mono">proposals verify</span> is the separate step that
+          records whether the applied change did what it promised, and a verification
+          marked failed rolls the change back unless rolling back would itself loosen a
+          control.
+        </p>
+      </div>
+      <div className="panel scroll-x" style={{ marginTop: 14 }}>
+        <table>
+          <thead>
+            <tr><th>to do this</th><th>command</th><th>over HTTP</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="small">See what is waiting</td>
+              <td className="mono small">nometria proposals list --status proposed</td>
+              <td className="mono small muted">GET /api/proposals?status=</td>
+            </tr>
+            <tr>
+              <td className="small">Read one in full</td>
+              <td className="mono small">nometria proposals show ID</td>
+              <td className="mono small muted">GET /api/proposals/{"{id}"}</td>
+            </tr>
+            <tr>
+              <td className="small">Decide on one</td>
+              <td className="mono small">nometria proposals approve ID --actor you --note &quot;...&quot;</td>
+              <td className="mono small muted">POST /api/proposals/{"{id}"}/decide</td>
+            </tr>
+            <tr>
+              <td className="small">Put it into effect</td>
+              <td className="mono small">nometria proposals apply ID</td>
+              <td className="mono small muted">POST /api/proposals/{"{id}"}/apply</td>
+            </tr>
+            <tr>
+              <td className="small">Undo it</td>
+              <td className="mono small">nometria proposals rollback ID --reason &quot;...&quot;</td>
+              <td className="mono small muted">POST /api/proposals/{"{id}"}/rollback</td>
+            </tr>
+            <tr>
+              <td className="small">Record whether it worked</td>
+              <td className="mono small">nometria proposals verify ID --actor you</td>
+              <td className="mono small muted">POST /api/proposals/{"{id}"}/verify</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="small muted" style={{ marginTop: 10, maxWidth: "78ch" }}>
+        Apply, rollback and verify need the <span className="mono">policy_production</span>{" "}
+        permission. The actor is taken from whoever is authenticated, not from a
+        field you fill in. One source of proposals is the{" "}
+        <Link href="/policies?tab=guardrails">Guardrail tuning tab</Link>: false
+        positives labelled there become proposed rule changes.
       </p>
     </>
   );
@@ -596,6 +691,19 @@ async function GuardrailTuningTab({ agent }: { agent?: string }) {
         ) : (
           <Empty>No suppressions. Every detection is currently acted on.</Empty>
         )}
+      </div>
+
+      <div className="note-panel">
+        <strong>A false positive can become a proposed rule change, not just a
+        suppression.</strong>{" "}
+        <span className="mono">nometria proposals from-labels --days 30</span> reads the
+        false positives labelled above and files them as proposed cut-off changes to the
+        rules that produced them. It files proposals and applies nothing; a person still
+        decides each one. The same work runs daily on its own as the{" "}
+        <span className="mono">tuning.propose</span> job, so proposals can be waiting
+        even if you never run the command. There is no screen for them yet, so read them
+        with <span className="mono">nometria proposals list</span>. What they are and how
+        deciding works is on the <Link href="/policies">Rules tab</Link>.
       </div>
     </>
   );

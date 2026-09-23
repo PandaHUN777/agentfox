@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 
 const TABS: { key: string; label: string }[] = [
   { key: "checklist", label: "Checklist" },
+  { key: "map", label: "What's in here" },
   { key: "connect", label: "Connect" },
   { key: "tokens", label: "API tokens" },
 ];
@@ -69,7 +70,10 @@ export default async function Start({
       <p className="sub">
         Getting a fresh instance pointed at something real, end to end: connect a
         source, generate a token if you're integrating by hand, then work through
-        what's still open. Any term that doesn't explain itself is decoded on the{" "}
+        what's still open. If you have never seen this product before, read{" "}
+        <Link href="/start?tab=map">What&rsquo;s in here</Link> first: it lists every
+        area, what each one answers, and what you would do there. Any term that
+        doesn't explain itself is decoded on the{" "}
         <Link href="/glossary">Glossary</Link>.
       </p>
 
@@ -86,6 +90,7 @@ export default async function Start({
       </div>
 
       {tab === "checklist" && <ChecklistTab />}
+      {tab === "map" && <MapTab />}
       {tab === "connect" && (
         <ConnectTab scanRunId={scan_run_id} hostedScanRunId={hosted_scan_run_id} scanError={scan_error} />
       )}
@@ -175,6 +180,256 @@ async function ChecklistTab() {
         actually active for yours on the{" "}
         <Link href="/policies?tab=guardrails">Guardrail tuning tab</Link> before assuming
         step 7 gives you full coverage.
+      </div>
+    </>
+  );
+}
+
+/**
+ * The sidebar is a list of nouns. Nothing in the signed-in product said what any
+ * of them are for, so a first-time reader had to open all eleven and infer.
+ * One row per area: the question it answers, and the thing you actually do there.
+ * The second table is the part that is genuinely invisible — capabilities that
+ * work and ship today but have no screen, so nobody would ever find out they
+ * exist by clicking around.
+ */
+const AREAS: {
+  name: string;
+  href: string;
+  answers: string;
+  doThere: string;
+}[] = [
+  {
+    name: "Overview",
+    href: "/",
+    answers: "What needs a person right now, most severe first.",
+    doThere:
+      "Start a working session here. Every row links through to the finding, approval or conversation it is about.",
+  },
+  {
+    name: "Agents",
+    href: "/agents",
+    answers:
+      "Which agents exist, who is accountable for each one, and which models and tools each one actually calls.",
+    doThere:
+      "Register an agent, or claim one that turned up in traffic without ever being registered. Open an agent to see its traces, its lineage and its risk tier.",
+  },
+  {
+    name: "Verified sources",
+    href: "/sources",
+    answers:
+      "Which of the places your agents read from are systems of record, and which are somebody's notes.",
+    doThere:
+      "Tier a source, then validate it: validation fetches it and checks the content is still what it was, which a registered key on its own never proves.",
+  },
+  {
+    name: "Findings",
+    href: "/findings",
+    answers:
+      "Which problems are worth a person's attention, ranked by severity, with the evidence attached.",
+    doThere:
+      "Read a finding, then resolve it with a note or suppress it with a reason. One routine blocked call is not a finding; a pattern or a severe one is.",
+  },
+  {
+    name: "Traces",
+    href: "/traces",
+    answers:
+      "What one agent actually did on one request: the prompt, what it retrieved, which tools it called, and every guardrail decision along the way.",
+    doThere:
+      "Open a trace when you want to know why a specific request was allowed, redacted, escalated or blocked. Filter by agent or by outcome to find it.",
+  },
+  {
+    name: "Evaluation",
+    href: "/evals",
+    answers:
+      "Whether the agent gets the answer right, not just whether it avoids saying something unsafe.",
+    doThere:
+      "Build a suite of known questions and run it, or sample real traffic and score that instead. This is also where you run red-team probes against an agent.",
+  },
+  {
+    name: "Policies",
+    href: "/policies",
+    answers:
+      "The rules that decide what a detector's result does: allow, redact, escalate or block.",
+    doThere:
+      "Read what is in force for an agent, and check which policies are still in observe mode rather than enforcing. Changes are simulated against recorded traffic before they are promoted.",
+  },
+  {
+    name: "Guardrail tuning",
+    href: "/policies?tab=guardrails",
+    answers:
+      "Whether those checks are catching real problems, how much time they cost, and which ones someone has quietly silenced.",
+    doThere:
+      "Label a detection as a false positive, and turn that label into a scoped suppression that expires on its own rather than a detector somebody switches off.",
+  },
+  {
+    name: "Access Control",
+    href: "/entitlement",
+    answers:
+      "Whether an agent's answer contained only what the specific person asking was cleared to see.",
+    doThere:
+      "Add the people and teams an agent answers for, grant them resources, then read the report on how much the agent could reach that its callers could not.",
+  },
+  {
+    name: "Approvals",
+    href: "/approvals",
+    answers:
+      "Which single tool calls a policy handed to a human instead of deciding on its own.",
+    doThere:
+      "Approve a call so it runs, or deny it so it does not. An unanswered request denies itself when it expires rather than sitting open.",
+  },
+  {
+    name: "Escalation",
+    href: "/approvals?tab=escalation",
+    answers:
+      "Which whole conversations should have reached a person, including the ones that never did.",
+    doThere:
+      "Work the hand-off queue, and read the conversations that qualified for a human and kept going anyway. Set the conditions that qualify one.",
+  },
+  {
+    name: "Compliance",
+    href: "/compliance",
+    answers:
+      "Which controls are actually holding, computed from telemetry rather than attested on a form, mapped across seven frameworks.",
+    doThere:
+      "Build an evidence package for an auditor, verify the audit chain, and read the risk register and the regulatory dates. Framework mappings ship as drafts until a named reviewer signs one off.",
+  },
+  {
+    name: "Glossary",
+    href: "/glossary",
+    answers:
+      "What every word and code in this interface means, including the ones this product invented.",
+    doThere: "Look up anything above that did not explain itself.",
+  },
+];
+
+const OFF_SCREEN: { name: string; where: string; body: React.ReactNode }[] = [
+  {
+    name: "Change proposals",
+    where: "nometria proposals · /api/proposals",
+    body: (
+      <>
+        Every change this product wants to make to its own governance configuration is
+        filed as a proposal instead of applied. A proposal carries the diff, the
+        evidence behind it and every decision taken on it. A change that loosens a
+        control is never applied automatically, and a loosening at org level needs two
+        different approvers. Explained in full on the{" "}
+        <Link href="/policies">Policies page</Link>.
+      </>
+    ),
+  },
+  {
+    name: "Capability grants",
+    where: "nometria capability grant · /api/identities/{id}/capabilities",
+    body: (
+      <>
+        What an agent is allowed to do, decided from the action rather than from the
+        prompt. Least privilege here is default deny: an agent with no grant for a tool
+        cannot call it. Explained on the{" "}
+        <Link href="/agents">Agents page</Link>.
+      </>
+    ),
+  },
+  {
+    name: "Evaluation gate for CI",
+    where: "nometria eval gate · POST /api/eval/gate",
+    body: (
+      <>
+        Runs a suite against a baseline run and exits non-zero on a regression, so a
+        pull request can fail on it. It can write JUnit and SARIF files for whatever
+        reads them. Explained on the{" "}
+        <Link href="/evals">Evaluation page</Link>.
+      </>
+    ),
+  },
+];
+
+function MapTab() {
+  return (
+    <>
+      <p className="sub" style={{ marginTop: 16 }}>
+        Every area of this product, what question it answers, and what you would
+        actually do there. The sidebar groups these as Discover, Monitor, Test and
+        Govern, which is roughly the order you meet them in.
+      </p>
+
+      <div className="panel scroll-x">
+        <table>
+          <thead>
+            <tr>
+              <th>area</th>
+              <th>what it answers</th>
+              <th>what you do there</th>
+            </tr>
+          </thead>
+          <tbody>
+            {AREAS.map((a) => (
+              <tr key={a.href}>
+                <td className="small" style={{ whiteSpace: "nowrap" }}>
+                  <Link href={a.href}>{a.name}</Link>
+                </td>
+                <td className="small wrap" style={{ maxWidth: 400 }}>
+                  {a.answers}
+                </td>
+                <td className="small muted wrap" style={{ maxWidth: 420 }}>
+                  {a.doThere}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Things that work but have no screen</h2>
+      <p className="sub" style={{ marginTop: -8 }}>
+        These three are part of the product and are running today. There is no page for
+        them, so you would never find them by clicking around. Each one is used from the
+        command line or over HTTP, and each has a paragraph on the page it belongs to.
+      </p>
+      <div className="panel scroll-x">
+        <table>
+          <thead>
+            <tr>
+              <th>capability</th>
+              <th>used from</th>
+              <th>what it is</th>
+            </tr>
+          </thead>
+          <tbody>
+            {OFF_SCREEN.map((c) => (
+              <tr key={c.name}>
+                <td className="small" style={{ whiteSpace: "nowrap" }}>
+                  {c.name}
+                </td>
+                <td
+                  className="mono small muted wrap"
+                  style={{ maxWidth: 220, overflowWrap: "anywhere" }}
+                >
+                  {c.where}
+                </td>
+                <td className="small wrap" style={{ maxWidth: 480 }}>
+                  {c.body}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="note-panel">
+        <strong>Two pages need no sign-in.</strong> The{" "}
+        <Link href="/playground">Playground</Link> runs a governed request in a sandbox
+        so somebody can see what this does without an account, and{" "}
+        <Link href="/benchmark">Benchmark</Link> is the published result set behind the
+        claims it makes. Neither reads your workspace.
+      </div>
+
+      <div className="note-panel">
+        <strong>The dashboard is only an API client.</strong> Everything on these pages
+        comes from the control plane over HTTP, and the same calls are available to you
+        directly. The full route list is in the product&rsquo;s own HTTP API reference,
+        and a token to call them with is on the{" "}
+        <Link href="/start?tab=tokens">API tokens tab</Link>.
       </div>
     </>
   );

@@ -45,6 +45,14 @@ export default async function TraceDetail({
       </p>
       <p className="mono small muted" style={{ marginTop: -8 }}>{t.id}</p>
 
+      <p className="small muted" style={{ maxWidth: "78ch" }}>
+        One request, taken apart: how long each step took, where the values in its tool
+        calls came from, and every check that ran with the result it returned. This is
+        where you answer &ldquo;why did it do that&rdquo; for a single call. If a check
+        got it wrong here, say so on the detection itself; that feedback is what the{" "}
+        <Link href="/policies?tab=guardrails">Guardrail tuning tab</Link> works from.
+      </p>
+
       {review_error && <div className="error">{review_error}</div>}
       {review_notice && <div className="note-panel">{review_notice}</div>}
 
