@@ -66,12 +66,14 @@ def test_the_bypass_is_real_not_simulated(seeded, no_detectors):
             "taint.irreversible_tool",
         ),
         # A declared numeric ceiling, checked on the value rather than the prose.
+        # payments-ops does hold payments.refund, so this is not default deny — the
+        # grant exists and 900 is outside the ceiling it declares.
         (
             "payments-ops",
             "payments.refund",
             {"amount": 900, "currency": "USD", "charge_id": "ch_1"},
             {"amount": "tool_result"},
-            "capability.denied",
+            "capability.constraint_violated",
         ),
         # An unbounded mutation carried inside an ordinary-looking argument.
         (

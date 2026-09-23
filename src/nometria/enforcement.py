@@ -243,6 +243,29 @@ class EnforcementResult:
         }
 
 
+#: Risk codes whose condition a shipped policy pack already has a rule for, mapped to
+#: that rule's id. The codes in `effects.py` and `data_access.py` are hyphenated for
+#: historical reasons; every rule id in the product is dotted, and a decision that
+#: printed both spellings of one rule (`cascade.reaches_destructive` next to
+#: `cascade-reaches-destructive`) looked like two findings and read like a bug. The
+#: codes themselves are unchanged: `when: action_risk:` in the packs still matches on
+#: them, and so does anything reading `taint.action`.
+RISK_CODE_RULE_IDS = {
+    "cascade-reaches-destructive": "cascade.reaches_destructive",
+    "cascade-cycle": "cascade.cycle",
+    "cascade-too-deep": "cascade.blast_radius",
+    "unscoped-table": "access.unscoped_table",
+    "undeclared-table": "access.undeclared_table",
+}
+
+#: Every rule id that means "this call was refused at the capability layer". The
+#: synthetic fallback below checks the whole set, so a pack that already said it in
+#: its own words is not echoed under a second id.
+_CAPABILITY_REFUSAL_RULE_IDS = frozenset(
+    {"capability.denied", "capability.default_deny", "capability.constraint_violated"}
+)
+
+
 def _fired_rule(
     rule_id: str,
     effect: str,
@@ -251,12 +274,20 @@ def _fired_rule(
     severity: str | None = None,
     controls: list[str] | None = None,
     evidence: dict[str, Any] | None = None,
+    mode: str = "enforce",
 ) -> dict[str, Any]:
     """One entry in `rules_fired` for a synthetic (non-policy-authored) rule —
     the shape a dozen-plus call sites in this module built by hand. Optional keys
     are omitted rather than set to ``None`` so every call site keeps exactly the
-    keys it had before this was factored out."""
-    rule: dict[str, Any] = {"rule_id": rule_id, "effect": effect, "reason": reason}
+    keys it had before this was factored out.
+
+    ``mode`` says whether *this rule's* effect was applied or only recorded. It
+    defaults to ``enforce`` because a synthetic rule is a fact about the call rather
+    than a policy opinion: the absence of a grant, a destructive statement, a killed
+    agent. Those set the verdict whatever mode the packs are bound in. The two call
+    sites that are gated on the decision's mode pass it explicitly.
+    """
+    rule: dict[str, Any] = {"rule_id": rule_id, "effect": effect, "reason": reason, "mode": mode}
     if severity is not None:
         rule["severity"] = severity
     if controls is not None:
@@ -616,12 +647,25 @@ class Enforcer:
         if not capability.get("granted", True):
             verdict = "block"
             effective = "block"
-            if "capability.denied" not in fired_ids:
+            if not (fired_ids & _CAPABILITY_REFUSAL_RULE_IDS):
+                # Two different refusals, and saying the wrong one is a defect a
+                # reader can catch: "no grant exists" versus "the grant you hold
+                # declares a limit this call exceeded".
+                if capability.get("constraint_violations"):
+                    synthetic_id = "capability.constraint_violated"
+                    synthetic_reason = capability.get("constraint_reason") or "; ".join(
+                        capability.get("reasons") or []
+                    )
+                else:
+                    synthetic_id = "capability.default_deny"
+                    synthetic_reason = "; ".join(
+                        capability.get("reasons") or ["no capability granted"]
+                    )
                 rules_fired.append(
                     _fired_rule(
-                        "capability.default_deny",
+                        synthetic_id,
                         "block",
-                        "; ".join(capability.get("reasons") or ["no capability granted"]),
+                        synthetic_reason,
                         severity="high",
                         controls=["NOM-IAM-02"],
                     )
@@ -638,6 +682,7 @@ class Enforcer:
                         "; ".join(capability.get("reasons") or ["approval required"]),
                         severity="medium",
                         controls=["NOM-IAM-03"],
+                        mode=mode,
                     )
                 )
 
@@ -668,14 +713,27 @@ class Enforcer:
         # does. It is a fact about what the statement will do, not a policy opinion —
         # and a customer who wrote the rule explicitly does not see it twice.
         for risk in action.get("critical", []):
-            if risk["code"] in fired_ids:
+            # A risk *code* is how `effects.py` and `actions.py` name a condition;
+            # a rule id is how a decision names what fired. For the conditions the
+            # shipped packs already have a rule for, they are the same rule and must
+            # print under one id — otherwise the same refusal appears twice, once
+            # dotted and once hyphenated, and the dedupe below never sees it.
+            rule_id = RISK_CODE_RULE_IDS.get(risk["code"], risk["code"])
+            if rule_id in fired_ids:
+                # Deduped, but the risk knows something the pack's written reason
+                # does not — which destructive tool, which table. Keep that on the
+                # entry that survives rather than losing it with the duplicate.
+                for existing in rules_fired:
+                    if existing.get("rule_id") == rule_id and "evidence" not in existing:
+                        existing["evidence"] = risk.get("evidence", {})
+                        existing["detail"] = risk["detail"]
                 continue
             verdict = "block"
             effective = "block"
-            fired_ids.add(risk["code"])
+            fired_ids.add(rule_id)
             rules_fired.append(
                 _fired_rule(
-                    risk["code"],
+                    rule_id,
                     "block",
                     risk["detail"],
                     severity="critical",
@@ -751,6 +809,7 @@ class Enforcer:
                     severity="medium",
                     controls=["NOM-GOV-07"],
                     evidence=ladder_decision.to_json(),
+                    mode=mode,
                 )
             )
 

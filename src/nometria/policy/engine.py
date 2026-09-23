@@ -69,6 +69,7 @@ class NativePolicyEngine:
                     severity=rule.severity,
                     controls=list(rule.controls),
                     redaction=rule.redaction,
+                    mode=policy.mode,
                 )
             )
 
@@ -200,7 +201,13 @@ class NativePolicyEngine:
 
     @staticmethod
     def _capability_state(capability: dict[str, Any]) -> str:
+        """Mirrors ``CapabilityDecision.state``. ``denied`` is reserved for the case
+        where no grant exists at all; a grant that exists and was exceeded is
+        ``constraint_violated``, so the two get different rules and different
+        reasons."""
         if not capability.get("granted", True):
+            if capability.get("constraint_violations"):
+                return "constraint_violated"
             return "denied"
         if capability.get("requires_approval"):
             return "requires_approval"
@@ -263,7 +270,11 @@ class NativePolicyEngine:
         if rule.when.tool:
             bits.append(f"tool '{p.tool_key}'")
         if rule.when.capability:
-            bits.append(f"capability {rule.when.capability}")
+            # A violated constraint already knows the grant, the limit and the value
+            # that failed it. Printing "capability constraint_violated" instead would
+            # be the boilerplate this rule exists to replace.
+            detail = str(p.capability.get("constraint_reason") or "")
+            bits.append(detail if detail else f"capability {rule.when.capability}")
         return "; ".join(bits) or f"rule '{rule.id}' matched"
 
 
@@ -277,15 +288,28 @@ def combine(decisions: list[PolicyDecision]) -> PolicyDecision:
         mode="observe",
         engine=decisions[0].engine,
     )
+    # Which pack's mode governed *this* decision. Taking "enforce if any bound pack
+    # is in enforce" describes the deployment, not the decision, and it produced the
+    # contradiction an audit found in the public sandbox: a pack bound in observe
+    # raised the effective verdict to block, nothing was applied, and the record
+    # still said mode `enforce` because a different pack that fired nothing happened
+    # to be bound in enforce. The mode reported is the mode of the pack that set the
+    # effective verdict; per-rule modes carry the rest (FiredRule.mode).
+    governing: PolicyDecision | None = None
     for d in decisions:
         merged.rules_fired.extend(d.rules_fired)
         if EFFECT_RANK[d.verdict] > EFFECT_RANK[merged.verdict]:
             merged.verdict = d.verdict
         if EFFECT_RANK[d.effective_verdict] > EFFECT_RANK[merged.effective_verdict]:
             merged.effective_verdict = d.effective_verdict
-        if d.mode == "enforce":
-            merged.mode = "enforce"
+            governing = d
         if merged.policy_key is None:
             merged.policy_key = d.policy_key
             merged.policy_version = d.policy_version
+    if governing is not None:
+        merged.mode = governing.mode
+    elif any(d.mode == "enforce" for d in decisions):
+        # Nothing fired anywhere, so no pack governed anything. Report the binding,
+        # which is the only fact there is.
+        merged.mode = "enforce"
     return merged

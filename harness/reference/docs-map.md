@@ -58,6 +58,8 @@ Quote coverage numbers only from these, and only after regenerating.
 | `benchmarks/REPORT.md`, `benchmarks/*/README.md` (one per benchmark area) | running or changing that benchmark |
 | `benchmarks/data/README.md`, `benchmarks/data_generalization/README.md`, `docs/dataset-sourcing.md` | dataset provenance and licensing |
 | `demo/redteam-live/README.md`, `demo/redteam-live-lang/README.md` | running or deploying the live demos |
+| `CONTRIBUTING.md` | setting up to work on the code: the extras to install, the checks that must pass, and the two things that surprise people (vendored wheels, numbers bound to result files) |
+| `SECURITY.md` | reporting or triaging a vulnerability, including what is deliberately not one here |
 | `deploy/README-dashboard.md` | deploying the hosted dashboard (Render/Fly/Vercel), its shared secrets and the Neon migration state |
 | `docs/audit-tracker-pmlanguage.md`, `docs/audit-tracker-designreview.md` | dashboard copy/UX work (open backlogs) |
 

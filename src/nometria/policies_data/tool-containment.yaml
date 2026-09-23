@@ -68,6 +68,20 @@ rules:
     reason: "No capability grants this agent the requested tool and action (default deny)."
     controls: [NOM-IAM-02]
 
+  # The grant exists. A declared limit on one of the arguments did not hold, which
+  # is a different refusal from "nobody gave this agent the tool" and has to read as
+  # one: the reason is generated rather than written here, so it can name the limit
+  # and the value that failed it.
+  - id: capability.constraint_violated
+    description: >
+      The agent holds a grant for this tool, and this call fell outside a limit the
+      grant declares on one of its arguments.
+    when:
+      capability: constraint_violated
+    effect: block
+    severity: high
+    controls: [NOM-IAM-02]
+
   - id: capability.approval_required
     description: This specific action is allowed, but only with a human's sign-off first — see Approvals.
     when:

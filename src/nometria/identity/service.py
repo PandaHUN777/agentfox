@@ -162,6 +162,9 @@ class CapabilityDecision:
     matched_capability_id: str | None = None
     reasons: list[str] = field(default_factory=list)
     constraint_violations: list[str] = field(default_factory=list)
+    #: A sentence a person can read, naming the grant, the declared limit and the
+    #: value that failed it. Empty unless `constraint_violations` is populated.
+    constraint_reason: str = ""
     max_taint: str = "none"
     taint_violation: str | None = None
     #: The matched grant's constraints, carried forward so downstream gates (P9-7
@@ -170,8 +173,13 @@ class CapabilityDecision:
 
     @property
     def state(self) -> str:
+        """``denied`` means *no grant exists*. A grant that exists and was exceeded
+        is a different fact and gets a different name, because reporting it as
+        default deny tells the caller to go and ask for a permission they already
+        hold — and contradicts the grant sitting in the same response.
+        """
         if not self.granted:
-            return "denied"
+            return "constraint_violated" if self.constraint_violations else "denied"
         return "requires_approval" if self.requires_approval else "granted"
 
     def to_json(self) -> dict[str, Any]:
@@ -182,6 +190,7 @@ class CapabilityDecision:
             "capability_id": self.matched_capability_id,
             "reasons": self.reasons,
             "constraint_violations": self.constraint_violations,
+            "constraint_reason": self.constraint_reason,
             "max_taint": self.max_taint,
             "taint_violation": self.taint_violation,
             "constraints": self.constraints,
@@ -246,6 +255,38 @@ def _constraint_ok(value: Any, spec: Any) -> tuple[bool, str]:
     return True, ""
 
 
+#: How each comparator reads in a sentence a person has to act on. `lt` is not
+#: "fails lt 1000" to anyone outside this file.
+_LIMIT_PHRASES = {
+    "lt": "below {expected}",
+    "lte": "at most {expected}",
+    "gt": "above {expected}",
+    "gte": "at least {expected}",
+    "eq": "exactly {expected}",
+    "ne": "anything but {expected}",
+    "in": "one of {expected}",
+    "not_in": "none of {expected}",
+    "contains": "text containing {expected}",
+    "matches": "text matching {expected}",
+}
+
+
+def _describe_violation(path: str, spec: Any, value: Any) -> str:
+    """One clause: what the grant allows on this argument, and what was asked for.
+
+    Always names the limit and the value that failed it, because "constraints
+    violated" tells the reader nothing they can fix.
+    """
+    if not isinstance(spec, dict):
+        allowed = f"exactly {spec!r}"
+    else:
+        allowed = " and ".join(
+            _LIMIT_PHRASES.get(op, f"{op} {{expected}}").format(expected=repr(expected))
+            for op, expected in spec.items()
+        )
+    return f"{path} {allowed}, but this call passed {value!r}"
+
+
 def check_capability(
     session: Session,
     identity: Identity | None,
@@ -293,6 +334,7 @@ def check_capability(
     decision.max_taint = capability.max_taint
     decision.constraints = dict(capability.constraints_json or {})
 
+    violation_clauses: list[str] = []
     for path, spec in (capability.constraints_json or {}).items():
         # Reserved keys configure the grant itself rather than constraining an
         # argument path; treating `requires_verified_state` as a path would look for
@@ -305,11 +347,19 @@ def check_capability(
         ok, why = _constraint_ok(value, spec)
         if not ok:
             decision.constraint_violations.append(f"{path}: {why}")
+            violation_clauses.append(_describe_violation(path, spec, value))
 
     if decision.constraint_violations:
-        decision.reasons.append(
-            f"argument constraints violated: {'; '.join(decision.constraint_violations)}"
+        # The grant is real and the caller holds it. What failed is a declared limit
+        # on an argument, so the refusal names the grant, the limit and the number.
+        decision.constraint_reason = " ".join(
+            [
+                f"{identity.principal} holds a grant for '{capability.tool_key}', so this "
+                f"is not a missing permission."
+            ]
+            + [f"The grant allows {clause}." for clause in violation_clauses]
         )
+        decision.reasons.append(decision.constraint_reason)
         return decision
 
     worst = max(

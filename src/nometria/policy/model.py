@@ -213,6 +213,11 @@ class FiredRule:
     severity: str = "medium"
     controls: list[str] = field(default_factory=list)
     redaction: str = "mask"
+    #: The mode of the pack this rule was evaluated under, so a reader of one entry
+    #: can tell whether its effect was applied or only recorded. A decision merges
+    #: several packs and they need not share a mode, which is exactly how a sandbox
+    #: bound in observe ended up with a decision labelled `enforce`.
+    mode: str = "observe"
 
     def to_json(self) -> dict[str, Any]:
         return {
@@ -221,6 +226,7 @@ class FiredRule:
             "reason": self.reason,
             "severity": self.severity,
             "controls": self.controls,
+            "mode": self.mode,
         }
 
 

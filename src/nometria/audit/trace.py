@@ -248,7 +248,15 @@ def full_trace(session: Session, trace_id: str) -> dict[str, Any] | None:
                 "detector": r.detector_key,
                 "version": r.detector_version,
                 "surface": r.surface,
+                # Two different facts, and one field was being asked to carry both.
+                # `status` answers "did this detector execute" — ok, timeout,
+                # skipped_budget — and other code (P3-6 degradation) depends on that
+                # meaning, so it is untouched. `matched` answers "did it find
+                # anything", which is what a reader of the run table actually wants
+                # and could not previously tell: the detector that drove a block and
+                # the three that saw nothing all read `ok`.
                 "status": r.status,
+                "matched": bool(findings_by_run.get(r.id)),
                 "duration_ms": r.duration_ms,
                 "score": r.score,
                 "findings": findings_by_run.get(r.id, []),

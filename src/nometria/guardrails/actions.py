@@ -829,8 +829,13 @@ def environment_risk(analysis: ActionAnalysis, environment: str) -> ActionRisk |
     return ActionRisk(
         code="action.production_irreversible",
         severity="critical",
+        # "bound to environment 'production'" reads as a claim about a live system.
+        # In the public sandbox it is not one: the agent fixture simply carries the
+        # default value of its own `environment` column, and an anonymous visitor
+        # was left wondering whose production this was. The check is unchanged; the
+        # sentence now says where the value came from.
         detail=f"irreversible {analysis.operation} action with {analysis.blast_radius} blast "
-        f"radius, bound to environment '{environment}'",
+        f"radius, and the calling agent declares environment '{environment}'",
         evidence={"targets": analysis.targets, "blast_radius": analysis.blast_radius},
     )
 

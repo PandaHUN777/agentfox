@@ -197,16 +197,30 @@ class OpaPolicyEngine:
             decision.engine = "native(opa-fallback)"
             return decision
 
-        fired = [
-            FiredRule(
-                rule_id=f.get("rule_id", "?"),
-                effect=f.get("effect", "block"),
-                reason=f.get("reason", ""),
-                severity=f.get("severity", "medium"),
-                controls=list(f.get("controls", [])),
+        # X-4: every block carries an auditable reason. A rule whose reason is meant
+        # to be generated (the capability-constraint rule names the limit and the
+        # value that failed it, which cannot be written into the pack) comes back
+        # from OPA with an empty string, so generate it here exactly as the native
+        # engine does rather than shipping a blank.
+        from .engine import NativePolicyEngine
+
+        by_id = {rule.id: rule for rule in policy.rules}
+        fired = []
+        for f in result.get("rules_fired", []):
+            rule_id = f.get("rule_id", "?")
+            reason = f.get("reason", "")
+            if not reason and rule_id in by_id:
+                reason = NativePolicyEngine._explain(by_id[rule_id], pinput)
+            fired.append(
+                FiredRule(
+                    rule_id=rule_id,
+                    effect=f.get("effect", "block"),
+                    reason=reason,
+                    severity=f.get("severity", "medium"),
+                    controls=list(f.get("controls", [])),
+                    mode=policy.mode,
+                )
             )
-            for f in result.get("rules_fired", [])
-        ]
         effective = result.get("verdict", policy.default_effect)
         return PolicyDecision(
             verdict=effective if policy.mode == "enforce" else "allow",
@@ -222,10 +236,13 @@ class OpaPolicyEngine:
     def _shape(p: PolicyInput) -> dict:
         data = p.to_json()
         cap = dict(p.capability)
-        cap["state"] = (
-            "denied"
-            if not cap.get("granted", True)
-            else ("requires_approval" if cap.get("requires_approval") else "granted")
-        )
+        if not cap.get("granted", True):
+            # Same split as NativePolicyEngine._capability_state: a grant that exists
+            # and was exceeded is not the absence of a grant.
+            cap["state"] = "constraint_violated" if cap.get("constraint_violations") else "denied"
+        elif cap.get("requires_approval"):
+            cap["state"] = "requires_approval"
+        else:
+            cap["state"] = "granted"
         data["capability"] = cap
         return data
