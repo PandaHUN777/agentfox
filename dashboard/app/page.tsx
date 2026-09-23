@@ -373,7 +373,13 @@ function Stats() {
   const stats: [string, string][] = [
     ["8 of 8", "attacks contained with every detector switched off"],
     ["4 of 4", "legitimate calls still allowed in that same run"],
-    ["42 of 42", "attacker calls that act, contained in an AgentDojo replay of 617 calls"],
+    // The denominator travels with the number: a stat card is what gets screenshotted,
+    // and the repository's own README says selling the headline without the read-only
+    // caveat is misrepresentation.
+    [
+      "42 of 42",
+      "attacker calls that act, contained in an AgentDojo replay. 62 of 65 attacker calls overall; the three that escaped only read",
+    ],
     ["66.7%", "held-out injection recall, published rather than rounded up"],
   ];
   return (
