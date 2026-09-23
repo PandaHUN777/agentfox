@@ -347,13 +347,15 @@ export function Playground({ apiBase }: { apiBase: string }) {
             <Wordmark />
           </div>
           <p className="sub muted">
-            Try to break a real agent. Every verdict here is produced by the same
-            enforcement code the product runs in production, against your own
-            private sandbox that forgets everything in 30 minutes. The agent
-            replying to you is not a model: it is a deterministic stub, and when
-            you inject it, it complies, because containment has to hold after the
-            model has already been convinced. What you are testing is the policy,
-            not a model&apos;s mood on the day.
+            Try to break a real agent. Every verdict here comes from the same
+            enforcement code the product runs in production, in your own private
+            sandbox that forgets everything in 30 minutes.
+          </p>
+          <p className="sub muted small">
+            The agent replying to you is a deterministic stub, not a model, and when
+            you inject it, it complies. That is deliberate: containment has to hold
+            after the model has already been convinced, so what you are testing here
+            is the policy.
           </p>
         </div>
         <Link href="/login" className="btn-scan">
@@ -827,9 +829,10 @@ export function Playground({ apiBase }: { apiBase: string }) {
               what you found here first.
             </p>
             {/* CONTACT_HREF at the top of this file is the single place to
-                change this. Point it at a real address or a booking link. */}
+                change this. Point it at a real address or a booking link, and the
+                label below becomes "Get in touch" on its own. */}
             <a className="btn-primary" href={CONTACT_HREF}>
-              Get in touch
+              {CONTACT_HREF === "/login" ? "Sign in and scan your own repo" : "Get in touch"}
             </a>
           </div>
         </>

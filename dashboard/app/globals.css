@@ -1296,6 +1296,12 @@ select.input-select, input.input-text, textarea.input-text {
 
 .pg-shell { max-width: 1180px; margin: 0 auto; padding: 28px 20px 64px; }
 .pg-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+/* Below this width the sign-in button sat beside a paragraph narrow enough that the
+   text wrapped around it, which is the first thing a visitor on a phone sees. */
+@media (max-width: 560px) {
+  .pg-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .pg-header .btn-scan { align-self: flex-start; }
+}
 .pg-header .brand { display: flex; align-items: center; gap: 8px; font-weight: 640; }
 .pg-header p.sub { margin: 4px 0 0; }
 .pg-columns { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
