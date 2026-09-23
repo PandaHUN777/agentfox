@@ -47,8 +47,8 @@ export function ExpandableFindingRow({
           )}
         </td>
         <td className="small">{typeInfo.label}</td>
-        <td className="small wrap">
-          <span className="row" style={{ gap: 6, alignItems: "baseline" }}>
+        <td className="small wrap" style={{ minWidth: "22ch" }}>
+          <span>
             <button
               type="button"
               onClick={(e) => {
@@ -67,6 +67,7 @@ export function ExpandableFindingRow({
                 color: "inherit",
                 font: "inherit",
                 lineHeight: 1,
+                marginRight: 6,
               }}
             >
               <span className="expand-caret" aria-hidden="true">{open ? "▾" : "▸"}</span>
