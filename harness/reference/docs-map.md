@@ -28,6 +28,8 @@ commit; `scripts/check_harness.py` fails if a repo `.md` file is unclassified.
 | `docs/appendix-b-control-catalog.md` | NOM-* controls and their framework mappings | All mappings DRAFT; YAML path in the doc is stale |
 | `docs/appendix-e-threat-model.md` | threats to customers' agents and to the product | |
 | `docs/appendix-a-oss-register.md` | why an OSS project is (not) used, licences | Check before adding a dependency |
+| `docs/README.md` | the index of docs/: what each document is for and who it is for | Start here when you do not know which document answers a question |
+| `docs/getting-started.md` | a linear first hour for a new user, ending with their own agent governed | Written for a newcomer, not for an agent; each step says what it proves |
 | `docs/evidence-standards.md` | how to read any number in this repo, and the limits that apply before it | Read before quoting a benchmark |
 | `benchmarks/README.md` | which benchmark proves which claim | Index; quote numbers from the linked methodology only |
 | `THIRD_PARTY_NOTICES.md` | attribution obligations | Update when adding a dependency |
