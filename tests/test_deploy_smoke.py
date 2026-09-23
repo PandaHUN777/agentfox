@@ -72,7 +72,11 @@ class FakeDeployment:
         self.enforce_status = 200
         self.cors_status = 200
         self.cors_allow_origin = DASH
-        self.dashboard_status = {"/login": 200, "/playground": 200}
+        self.dashboard_status = {"/login": 200, "/playground": 200, "/benchmark": 200}
+        self.root = FakeResponse(200, {"name": "nometria", "version": "0.1.0", "docs": "/docs"})
+        #: How many reads a sandbox survives before it starts answering 404, which is
+        #: what a visitor hit when sandboxes lived in one process of a many-process API.
+        self.sandbox_reads_before_gone = None
         # Playground chat: what the sandbox reports before and after the enforce flip.
         self.observe_blocked = False
         self.observe_effective_verdict = "block"
@@ -110,6 +114,14 @@ class FakeDeployment:
             return FakeResponse(self.dashboard_status.get(url[len(DASH) :], 404))
         path = url[len(API) :]
 
+        if path in ("", "/"):
+            return self.root
+        if path.endswith("/state"):
+            self.state_reads = getattr(self, "state_reads", 0) + 1
+            limit = self.sandbox_reads_before_gone
+            if limit is not None and self.state_reads > limit:
+                return FakeResponse(404, {"detail": "expired or never existed"})
+            return FakeResponse(200, {"traces": [], "chain": {"valid": True}})
         if path == "/api/health":
             return self.health
         if path == "/openapi.json":
@@ -291,9 +303,13 @@ def test_a_playground_that_will_not_create_a_sandbox_fails():
 
 
 def test_a_sandbox_response_without_a_session_id_fails():
+    """Both sandbox checks depend on creation, so both report it rather than one hiding it."""
     client = FakeDeployment()
     client.session_body = {"mode": "observe"}
-    assert_only_failure(run(client), "playground_end_to_end", "no session_id")
+    results = run(client)
+    failed = {n for n, r in results.items() if not r.ok}
+    assert failed == {"playground_end_to_end", "playground_sandbox_survives"}
+    assert "no session_id" in results["playground_end_to_end"].detail
 
 
 def test_observe_mode_that_already_blocks_fails():
@@ -402,6 +418,25 @@ def stub_httpx(monkeypatch):
     return client
 
 
+def test_a_sandbox_that_vanishes_between_reads_is_caught():
+    """The failure this check exists for: one instance serves it, the next has never heard of it."""
+    fake = FakeDeployment()
+    fake.sandbox_reads_before_gone = 3
+    assert_only_failure(run(fake), "playground_sandbox_survives", "was gone on read 4")
+
+
+def test_a_private_benchmark_page_is_caught():
+    fake = FakeDeployment()
+    fake.dashboard_status["/benchmark"] = 307  # bounced to sign-in
+    assert_only_failure(run(fake), "dashboard_benchmark", "returned 307")
+
+
+def test_a_bare_404_at_the_api_root_is_caught():
+    fake = FakeDeployment()
+    fake.root = FakeResponse(404, {"detail": "Not Found"})
+    assert_only_failure(run(fake), "api_root_is_discoverable", "returned 404")
+
+
 def test_main_exits_zero_and_prints_a_pass_line_per_check(stub_httpx, capsys):
     code = deploy_smoke.main(["--api-url", API, "--dashboard-url", DASH])
     out = capsys.readouterr().out
@@ -418,7 +453,7 @@ def test_main_exits_non_zero_and_names_the_failing_check(stub_httpx, capsys):
     out = capsys.readouterr().out
     assert code == 1
     assert "FAIL  cors_preflight_from_dashboard" in out
-    assert "1 of 8 checks failed: cors_preflight_from_dashboard" in out
+    assert f"1 of {len(deploy_smoke.CHECKS)} checks failed: cors_preflight_from_dashboard" in out
 
 
 def test_main_json_output_is_machine_readable(stub_httpx, capsys):

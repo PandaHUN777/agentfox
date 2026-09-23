@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, apiErrorProps } from "@/lib/api";
 import { ApiDown, ControlStatus, DraftCaveat, InfoTip, Panel, Stat, StatLink, pct, ts } from "@/components/ui";
 import { PrintButton } from "@/components/PrintButton";
 
@@ -52,7 +52,7 @@ export default async function Compliance({
     return (
       <>
         <h1>Compliance</h1>
-        <ApiDown error={String(e?.message || e)} />
+        <ApiDown {...apiErrorProps(e)} />
       </>
     );
   }
@@ -563,7 +563,7 @@ async function BoardTab() {
   try {
     v = await api("/api/board");
   } catch (e: any) {
-    return <ApiDown error={String(e?.message || e)} />;
+    return <ApiDown {...apiErrorProps(e)} />;
   }
 
   const inv = v.inventory;
@@ -597,7 +597,7 @@ async function BoardTab() {
         />
         <StatLink
           n={inv.shadow}
-          label="ungoverned"
+          label="unregistered"
           tone={inv.shadow ? "bad" : "ok"}
           href="/agents"
           hint="Traffic observed from an agent that was never registered — see the Agents page."

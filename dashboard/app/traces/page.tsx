@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { api, safeApi } from "@/lib/api";
+import { api, safeApi, apiErrorProps } from "@/lib/api";
 import { ApiDown } from "@/components/ui";
 import { ExpandableTraceRow } from "@/components/ExpandableTraceRow";
 
@@ -26,7 +26,7 @@ export default async function Traces({
     return (
       <>
         <h1>Traces</h1>
-        <ApiDown error={String(e?.message || e)} />
+        <ApiDown {...apiErrorProps(e)} />
       </>
     );
   }
@@ -44,24 +44,30 @@ export default async function Traces({
       </p>
 
       <form action="/traces" method="GET" className="chipbar">
-        <span className="chipbar-label">filter:</span>
-        <Link href={`/traces?${agentQs.replace(/^&/, "")}`} className={`chip${!sp.verdict && !sp.entity_type ? " active" : ""}`}>all</Link>
-        <Link href={`/traces?verdict=block${agentQs}`} className={`chip${sp.verdict === "block" ? " active" : ""}`}>blocked</Link>
-        <Link href={`/traces?verdict=escalate${agentQs}`} className={`chip${sp.verdict === "escalate" ? " active" : ""}`}>escalated</Link>
-        <Link href={`/traces?entity_type=INJECTION${agentQs}`} className={`chip${sp.entity_type === "INJECTION" ? " active" : ""}`}>injection</Link>
-        <Link href={`/traces?entity_type=PII${agentQs}`} className={`chip${sp.entity_type === "PII" ? " active" : ""}`}>PII</Link>
-        <Link href={`/traces?entity_type=SECRET${agentQs}`} className={`chip${sp.entity_type === "SECRET" ? " active" : ""}`}>secrets</Link>
-        <span className="chipbar-label" style={{ marginLeft: 10 }}>agent:</span>
+        {/* `display: contents` so naming the group costs nothing in layout. */}
+        <span role="group" aria-label="Filter traces by outcome" style={{ display: "contents" }}>
+          <span className="chipbar-label">filter:</span>
+          <Link href={`/traces?${agentQs.replace(/^&/, "")}`} className={`chip${!sp.verdict && !sp.entity_type ? " active" : ""}`} aria-current={!sp.verdict && !sp.entity_type ? "true" : undefined}>all</Link>
+          <Link href={`/traces?verdict=block${agentQs}`} className={`chip${sp.verdict === "block" ? " active" : ""}`} aria-current={sp.verdict === "block" ? "true" : undefined}>blocked</Link>
+          <Link href={`/traces?verdict=escalate${agentQs}`} className={`chip${sp.verdict === "escalate" ? " active" : ""}`} aria-current={sp.verdict === "escalate" ? "true" : undefined}>escalated</Link>
+          <Link href={`/traces?entity_type=INJECTION${agentQs}`} className={`chip${sp.entity_type === "INJECTION" ? " active" : ""}`} aria-current={sp.entity_type === "INJECTION" ? "true" : undefined}>injection</Link>
+          <Link href={`/traces?entity_type=PII${agentQs}`} className={`chip${sp.entity_type === "PII" ? " active" : ""}`} aria-current={sp.entity_type === "PII" ? "true" : undefined}>PII</Link>
+          <Link href={`/traces?entity_type=SECRET${agentQs}`} className={`chip${sp.entity_type === "SECRET" ? " active" : ""}`} aria-current={sp.entity_type === "SECRET" ? "true" : undefined}>secrets</Link>
+        </span>
+        <label htmlFor="traces-agent-filter" className="chipbar-label" style={{ marginLeft: 10 }}>
+          agent:
+        </label>
         {sp.verdict && <input type="hidden" name="verdict" value={sp.verdict} />}
         {sp.entity_type && <input type="hidden" name="entity_type" value={sp.entity_type} />}
         <select
+          id="traces-agent-filter"
           name="agent"
           defaultValue={sp.agent ?? ""}
           style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 12, fontFamily: "inherit" }}
         >
           <option value="">all agents</option>
           {(agents.agents || []).map((a: any) => (
-            <option key={a.slug} value={a.slug}>{a.slug}</option>
+            <option key={a.slug} value={a.slug}>{a.name || a.slug}</option>
           ))}
         </select>
         <button type="submit" className="chip" style={{ cursor: "pointer" }}>filter</button>

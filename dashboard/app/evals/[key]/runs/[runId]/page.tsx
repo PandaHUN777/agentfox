@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ApiError, api, safeApi } from "@/lib/api";
+import { ApiError, api, safeApi, apiErrorProps } from "@/lib/api";
 import { ApiDown, InfoTip, NotFound, Panel, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Modal } from "@/components/Modal";
@@ -25,7 +25,7 @@ export default async function RunDetail({
         {e instanceof ApiError && e.status === 404 ? (
           <NotFound what="run" detail={runId} back={{ href: `/evals/${key}`, label: key }} />
         ) : (
-          <ApiDown error={String(e?.message || e)} />
+          <ApiDown {...apiErrorProps(e)} />
         )}
       </>
     );

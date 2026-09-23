@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ApiError, api } from "@/lib/api";
+import { ApiError, api, apiErrorProps } from "@/lib/api";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ApiDown, InfoTip, NotFound, Severity, ts } from "@/components/ui";
 
@@ -30,7 +30,7 @@ export default async function EscalationConversation({
             back={{ href: "/approvals?tab=escalation", label: "Escalation" }}
           />
         ) : (
-          <ApiDown error={String(e?.message || e)} />
+          <ApiDown {...apiErrorProps(e)} />
         )}
       </>
     );

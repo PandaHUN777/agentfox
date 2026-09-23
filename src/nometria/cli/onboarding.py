@@ -23,7 +23,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from ._style import SEVERITY_COLOUR
+from ._style import SEVERITY_COLOUR, short_id
 
 console = Console()
 
@@ -76,6 +76,37 @@ def _session():
     return session_scope()
 
 
+#: What `nometria check` writes in the severity column. Short enough for a table and
+#: still a word, so the row survives a terminal with no colour and a pasted log.
+_SEVERITY_MARK = {
+    "critical": "CRITICAL",
+    "high": "high",
+    "medium": "medium",
+    "low": "low",
+    "info": "info",
+}
+
+
+def _fit_path(file: str, line: int, width: int) -> str:
+    """``src/nometria/gateway/routes/inline.py:42`` shortened from the *left*.
+
+    The previous rendering cut from the right, which removed the filename and the
+    line number — the two parts of the path that are the point of printing it. When a
+    path will not fit, leading directories are dropped and the cut is marked.
+    """
+    label = f"{file}:{line}"
+    if len(label) <= width:
+        return label
+    parts = label.split("/")
+    for index in range(1, len(parts)):
+        candidate = "…/" + "/".join(parts[index:])
+        if len(candidate) <= width:
+            return candidate
+    # A single filename longer than the column: keep its end, which carries the
+    # extension and the line number.
+    return "…" + label[-(width - 1) :]
+
+
 def _print_next_steps(steps: list[tuple[str, str]]) -> None:
     """A command that ends without a next action makes the reader do the synthesis."""
     table = Table(show_header=False, box=None, padding=(0, 2))
@@ -86,9 +117,21 @@ def _print_next_steps(steps: list[tuple[str, str]]) -> None:
 
 
 def init(
-    path: Path = typer.Option(Path("."), "--path", "-p", help="Project directory."),
-    environment: str = typer.Option("development", "--env", "-e"),
-    demo: bool = typer.Option(False, "--demo", help="Also load the demo fixtures."),
+    path: Path = typer.Option(
+        Path("."), "--path", "-p", help="Where to write nometria.toml. Default: here."
+    ),
+    environment: str = typer.Option(
+        "development",
+        "--env",
+        "-e",
+        help="Name this deployment: development, staging or production. It decides "
+        "how strictly `nometria doctor` grades authentication.",
+    ),
+    demo: bool = typer.Option(
+        False,
+        "--demo",
+        help="Also load the demo fixtures: three agents, an eval suite and sample traffic.",
+    ),
 ) -> None:
     """Set everything up. Idempotent, offline, and safe to run twice.
 
@@ -166,9 +209,13 @@ def init(
 
 
 def check(
-    path: Path = typer.Argument(Path("."), help="Directory to scan."),
-    as_json: bool = typer.Option(False, "--json"),
-    limit: int = typer.Option(15, "--limit", "-n", help="Findings to show."),
+    path: Path = typer.Argument(Path("."), help="Directory to scan. Default: here."),
+    as_json: bool = typer.Option(
+        False, "--json", help="Full records for scripts: every site, whole paths, no table."
+    ),
+    limit: int = typer.Option(
+        15, "--limit", "-n", help="How many sites to show, worst first."
+    ),
     fail_on_ungoverned: bool = typer.Option(
         False, "--fail", help="Exit non-zero if any model call is ungoverned (for CI)."
     ),
@@ -220,18 +267,40 @@ def check(
 
     ranked = report.ranked(limit)
     if ranked:
-        table = Table(box=None, padding=(0, 2), header_style="dim")
-        table.add_column("")
-        table.add_column("where")
-        table.add_column("what")
+        # A budget for the path column, so the paths can be shortened deliberately
+        # (from the left, filename last) instead of being cut by the renderer at
+        # whatever column happened to be left over.
+        where_width = max(28, min(52, console.width // 2))
+        table = Table(box=None, padding=(0, 1), header_style="dim")
+        table.add_column("severity", no_wrap=True)
+        table.add_column("where", no_wrap=True, width=where_width)
+        # Fold rather than the default ellipsis: a call site cut to
+        # "run_completion(.…" is the one field that says which site this is.
+        table.add_column("what", ratio=1, overflow="fold")
         for site in ranked:
             colour = SEVERITY_COLOUR.get(site.severity, "dim")
-            mark = "[green]✓[/]" if site.governed else f"[{colour}]●[/]"
-            table.add_row(mark, f"[dim]{site.file}:{site.line}[/]", site.detail[:78])
+            # The severity is spelled out, not signalled by the colour of a dot. A
+            # hard-coded credential and an ordinary call site rendered as the same
+            # glyph in any terminal without colour, and in every copied transcript.
+            mark = (
+                "[green]governed[/]"
+                if site.governed
+                else f"[{colour}]{_SEVERITY_MARK.get(site.severity, site.severity)}[/]"
+            )
+            # No slice: the detail is what tells you which call site this is, and a
+            # row ending mid-word reads as a rendering fault, not as a finding.
+            where = _fit_path(site.file, site.line, where_width)
+            table.add_row(mark, f"[dim]{where}[/]", site.detail)
         console.print()
         console.print(table)
         if len(report.sites) > len(ranked):
-            console.print(f"  [dim]… and {len(report.sites) - len(ranked)} more (--limit)[/]")
+            # A hint has to be a command someone can run. "(--limit)" is a flag name.
+            target = "" if str(path) == "." else f" {path}"
+            console.print(
+                f"  [dim]{len(report.sites) - len(ranked)} more not shown. "
+                f"See all of them:[/] [cyan]nometria check{target} "
+                f"--limit {len(report.sites)}[/]"
+            )
 
     if report.errors:
         console.print(f"\n  [yellow]{len(report.errors)} file(s) could not be parsed[/]")
@@ -249,7 +318,13 @@ def check(
         raise typer.Exit(1)
 
 
-def doctor(as_json: bool = typer.Option(False, "--json")) -> None:
+def doctor(
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="One record per check, for CI. Exits non-zero on a failed check either way.",
+    ),
+) -> None:
     """Is the runtime configured the way you think it is?
 
     Reports only — it changes nothing. Every line is a fact about this deployment, and
@@ -368,7 +443,8 @@ def doctor(as_json: bool = typer.Option(False, "--json")) -> None:
             "warn",
             "containment",
             f"{tools_acting} acting tool(s) declared but no capability grants — least "
-            "privilege is unconfigured, so policy is the only thing standing in the way.",
+            "privilege is unconfigured, so policy is the only thing standing in the way. "
+            "Grant them with `nometria capability grant <agent> <tool> --limit ...`.",
         )
     else:
         add(
@@ -449,25 +525,55 @@ def doctor(as_json: bool = typer.Option(False, "--json")) -> None:
         raise typer.Exit(1)
 
 
+#: Worst first. `nometria check` advertises this list as ranked by severity, and for
+#: a long time it was ordered by creation time instead.
+SEVERITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
+
+
 def findings_cmd(
-    severity: str | None = typer.Option(None, "--severity", "-s"),
-    limit: int = typer.Option(20, "--limit", "-n"),
-    as_json: bool = typer.Option(False, "--json"),
+    severity: str | None = typer.Option(
+        None,
+        "--severity",
+        "-s",
+        help="Show only this severity: critical, high, medium, low or info.",
+    ),
+    limit: int = typer.Option(
+        20, "--limit", "-n", help="How many findings to show, worst first."
+    ),
+    as_json: bool = typer.Option(
+        False,
+        "--json",
+        help="Full records for scripts: whole ids, fingerprints, subjects and timestamps.",
+    ),
 ) -> None:
-    """What the platform found. The list `nometria.auto()` tells you to read."""
-    from sqlalchemy import select
+    """What the platform found. The list `nometria.auto()` tells you to read.
+
+    Ordered worst first, then most recently seen. A finding that keeps happening is
+    one row with a count, not one row per occurrence, so the length of this list is
+    the number of distinct problems.
+    """
+    from sqlalchemy import case, func, select
 
     from ..models import Finding
 
-    with _session() as session:
-        stmt = (
-            select(Finding)
-            .where(Finding.status == "open")
-            .order_by(Finding.created_at.desc())
-            .limit(limit)
+    if severity and severity not in SEVERITY_RANK:
+        console.print(
+            f"[red]unknown severity '{severity}'[/]. Use one of: "
+            f"{', '.join(SEVERITY_RANK)}"
         )
+        raise typer.Exit(2)
+
+    with _session() as session:
+        # Ranked in SQL, not after the fact: sorting the page the database happened to
+        # return would show the worst of twenty rows, not the twenty worst rows.
+        rank = case(SEVERITY_RANK, value=Finding.severity, else_=9)
+        recency = func.coalesce(Finding.last_seen_at, Finding.created_at)
+        stmt = select(Finding).where(Finding.status == "open")
         if severity:
             stmt = stmt.where(Finding.severity == severity)
+        total = session.scalar(
+            select(func.count()).select_from(stmt.subquery())
+        )
         rows = [
             {
                 "id": f.id,
@@ -480,27 +586,61 @@ def findings_cmd(
                 "fingerprint": f.fingerprint,
                 "last_seen_at": f.last_seen_at.isoformat() if f.last_seen_at else None,
             }
-            for f in session.scalars(stmt)
+            for f in session.scalars(stmt.order_by(rank, recency.desc()).limit(limit))
         ]
 
     if as_json:
         console.print_json(json.dumps(rows, default=str))
         return
     if not rows:
-        console.print("[green]No open findings.[/]")
+        scope = f" at severity '{severity}'" if severity else ""
+        console.print(f"[green]No open findings{scope}.[/]")
         return
 
-    table = Table(box=None, padding=(0, 2), header_style="dim")
-    table.add_column("severity")
-    table.add_column("type")
-    table.add_column("what")
+    # Narrow padding and a merged severity/count column so the title keeps enough
+    # width to wrap between words on an 80-column terminal instead of inside one.
+    table = Table(box=None, padding=(0, 1), header_style="dim")
+    table.add_column("id", no_wrap=True)
+    table.add_column("severity", no_wrap=True)
+    table.add_column("type", no_wrap=True)
+    # No slice: a type cut to "INJECTION.INSTRUCTION_OVER" names a category that does
+    # not exist, and nothing can be grepped for it.
+    table.add_column("what", ratio=1)
     for row in rows:
         colour = SEVERITY_COLOUR.get(row["severity"], "dim")
+        occurrences = row["occurrences"] or 1
+        seen = f" [bold]{occurrences}x[/]" if occurrences > 1 else ""
         table.add_row(
-            f"[{colour}]{row['severity']}[/]", f"[dim]{row['type']}[/]", row["title"][:80]
+            f"[dim]{short_id(row['id'])}[/]",
+            f"[{colour}]{row['severity']}[/]{seen}",
+            f"[dim]{row['type']}[/]",
+            row["title"],
         )
     console.print(table)
-    console.print(f"\n  [dim]{len(rows)} open finding(s). Full detail in the control plane.[/]")
+
+    repeats = sum((row["occurrences"] or 1) for row in rows)
+    shown = f"{len(rows)} of {total}" if total and total > len(rows) else str(len(rows))
+    console.print(
+        f"\n  [dim]{shown} open finding(s)"
+        + (f", {repeats} occurrences in total" if repeats > len(rows) else "")
+        + ".[/]"
+    )
+
+    steps: list[tuple[str, str]] = []
+    if total and total > len(rows):
+        steps.append((f"nometria findings --limit {total}", "show the rest of them"))
+    worst = min(rows, key=lambda r: SEVERITY_RANK.get(r["severity"], 9))["severity"]
+    if not severity and worst in ("critical", "high"):
+        steps.append((f"nometria findings --severity {worst}", f"just the {worst} ones"))
+    steps.append(("nometria findings --json", "whole ids, fingerprints and subjects"))
+    steps.append(("nometria doctor", "check the runtime configuration that produced these"))
+    steps.append(
+        (
+            "nometria serve",
+            "control plane on http://127.0.0.1:8080, the full detail view",
+        )
+    )
+    _print_next_steps(steps)
 
 
 def quickstart() -> None:

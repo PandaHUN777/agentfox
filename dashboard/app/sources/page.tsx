@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, apiErrorProps } from "@/lib/api";
 import { ApiDown, InfoTip, Panel } from "@/components/ui";
 import { ContextCheck } from "@/components/ContextCheck";
 import { Modal } from "@/components/Modal";
@@ -72,7 +72,7 @@ export default async function Sources({
     return (
       <>
         <h1>Verified sources</h1>
-        <ApiDown error={String(e?.message || e)} />
+        <ApiDown {...apiErrorProps(e)} />
       </>
     );
   }

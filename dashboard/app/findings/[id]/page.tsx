@@ -1,4 +1,4 @@
-import { ApiError, api, safeApi } from "@/lib/api";
+import { ApiError, api, safeApi, apiErrorProps } from "@/lib/api";
 import { AgentLink, ApiDown, ControlChip, NotFound, Severity, findingTypeInfo, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FindingEvidence } from "@/components/FindingEvidence";
@@ -39,7 +39,7 @@ export default async function FindingDetail({
         {e instanceof ApiError && e.status === 404 ? (
           <NotFound what="finding" detail={id} back={{ href: "/findings", label: "Findings" }} />
         ) : (
-          <ApiDown error={String(e?.message || e)} />
+          <ApiDown {...apiErrorProps(e)} />
         )}
       </>
     );

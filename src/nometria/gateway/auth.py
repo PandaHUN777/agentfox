@@ -58,6 +58,19 @@ _hasher = PasswordHasher()
 DEV_ENVIRONMENTS = {"development", "dev", "test", "testing", "local"}
 
 
+def _is_sandbox_org(org_id: str | None) -> bool:
+    """Whether a tenant is a public-playground sandbox.
+
+    Imported lazily to keep this module free of a dependency on the playground.
+    Sandbox tenants hold fixture data belonging to an anonymous visitor and no
+    operator, so nothing here may ever resolve a principal into one — see
+    :func:`authenticate` and :func:`resolve_agent`.
+    """
+    from .playground_sessions import is_sandbox_id
+
+    return is_sandbox_id(org_id or "")
+
+
 class AuthenticationRequired(Exception):
     """No usable credential was presented."""
 
@@ -223,6 +236,14 @@ def resolve_agent(session: Session, raw: str) -> tuple[Identity, str] | None:
             agent = session.get(Agent, identity.agent_id)
             if agent is not None:
                 org = agent.org_id
+    if _is_sandbox_org(org):
+        # A playground sandbox seeds its own agent credentials. They are random and
+        # never shown to the visitor, so this is defence in depth rather than a known
+        # path: the inline API is not a way into a sandbox, whatever credential is
+        # presented. It does not make sandbox credentials secret — it makes them
+        # useless here.
+        log.warning("refused an agent credential resolving to a playground sandbox")
+        return None
     return identity, org
 
 
@@ -266,7 +287,17 @@ def authenticate(
 
     email = header_user or "admin@example.com"
     with system_scope("resolving a development identity header", routine=True):
-        user = session.scalar(select(User).where(User.email == email))
+        candidates = list(session.scalars(select(User).where(User.email == email)))
+    # Email is unique per tenant, not globally (see models.User), so this lookup can
+    # see more than one row. Two rules resolve it, and both are stated rather than
+    # left to whichever row the database returns first:
+    #   * a playground sandbox's fixture users are never operators;
+    #   * the deployment's own configured tenant wins, then the lowest org_id, so the
+    #     same header always resolves to the same user.
+    operators = [u for u in candidates if not _is_sandbox_org(u.org_id)]
+    default_org = get_settings().org_id
+    operators.sort(key=lambda u: (u.org_id != default_org, u.org_id))
+    user = operators[0] if operators else None
     if user is None or not user.active:
         raise AuthenticationRequired(
             f"unknown user '{email}'. Send X-Nometria-User or a nom_api_ bearer token."

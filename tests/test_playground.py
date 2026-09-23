@@ -1,18 +1,25 @@
 """The public playground: unauthenticated, per-visitor sandboxes over the real
 enforcement path (gateway/routes/playground.py, gateway/playground_sessions.py).
 
-Uses the module's process-global `PlaygroundStore` directly for the isolation/TTL/
-rate-limit unit tests (it is deliberately not reset by `isolated_db`, since a
-playground sandbox is a wholly separate in-memory engine unrelated to the
-configured deployment database `isolated_db` isolates) and the shared `client`
-fixture for the HTTP-level behavior.
+A sandbox is a tenant in the deployment database, so these tests share the
+`isolated_db` database with everything else and a sandbox's rows are separated from
+the seeded default org by `tenancy.py`'s session filter.
+
+What the cross-instance tests here do and do not prove: they build a second app and a
+second `PlaygroundStore`, which shows a sandbox is not held in any one object's
+memory. They run in one process against one SQLite file, so they do not exercise two
+machines or a Postgres connection pool. The property they pin down is the one that
+broke on the serverless deployment — a sandbox that only exists inside the process
+that created it.
 """
 
 from __future__ import annotations
 
+import datetime as dt
 import importlib
 
 import pytest
+from sqlalchemy import select
 
 from nometria.seed import POISONED_DOCUMENT
 
@@ -50,8 +57,8 @@ def test_unknown_session_404s(client):
 
 
 def test_two_sandboxes_are_isolated(client):
-    """Enforcing on one visitor's sandbox must never affect another's — each is a
-    wholly separate in-memory engine, not a shared DB filtered by session id."""
+    """Enforcing on one visitor's sandbox must never affect another's. Each sandbox is
+    its own tenant, so the policy row one visitor flips is not the row another reads."""
     sid_a = _create(client)
     sid_b = _create(client)
 
@@ -269,18 +276,115 @@ def test_actions_on_one_sandbox_are_rate_limited(client, monkeypatch):
     assert second.status_code == 429
 
 
-def test_sandbox_is_swept_after_ttl_expiry():
+def _expire(session_id: str, *, seconds_ago: int = 60) -> None:
+    """Backdate a sandbox's expiry, the way the clock would."""
+    from nometria.db import session_scope
+    from nometria.models import PlaygroundSandbox, utcnow
+    from nometria.tenancy import bind_session
+
+    with session_scope() as session:
+        bind_session(session, session_id)
+        row = session.get(PlaygroundSandbox, session_id)
+        assert row is not None
+        row.expires_at = utcnow() - dt.timedelta(seconds=seconds_ago)
+
+
+def test_sandbox_is_unreadable_once_its_ttl_has_passed():
     from nometria.gateway.playground_sessions import PlaygroundStore
 
     store = PlaygroundStore()
     record = store.create()
     assert store.get(record.id) is not None
 
-    record.last_used -= 31 * 60  # monotonic seconds; older than SESSION_TTL_SECONDS
+    _expire(record.id)
     assert store.get(record.id) is None
 
 
+def test_expiry_deletes_the_sandboxs_data_not_just_its_registry_row():
+    """Expiry has to sweep, not only hide: a public endpoint that accumulated one
+    seeded world per visitor forever would be a storage leak with a nice error page."""
+    from nometria.db import session_scope
+    from nometria.gateway.playground_sessions import PlaygroundStore
+    from nometria.models import Agent, PlaygroundSandbox
+    from nometria.tenancy import bind_session
+
+    store = PlaygroundStore()
+    record = store.create()
+
+    with session_scope() as session:
+        bind_session(session, record.id)
+        assert session.scalars(select(Agent)).all(), "sandbox should start seeded"
+
+    _expire(record.id)
+    assert store.get(record.id) is None
+
+    with session_scope() as session:
+        bind_session(session, record.id)
+        assert session.get(PlaygroundSandbox, record.id) is None
+        assert session.scalars(select(Agent)).all() == []
+
+
+def test_sweep_removes_expired_sandboxes_and_leaves_live_ones():
+    from nometria.gateway.playground_sessions import PlaygroundStore
+
+    store = PlaygroundStore()
+    stale = store.create()
+    live = store.create()
+    _expire(stale.id)
+
+    assert store.sweep() == 1
+    assert store.get(stale.id) is None
+    assert store.get(live.id) is not None
+
+
+def test_expiry_does_not_touch_the_deployments_own_data():
+    """The sweep deletes by tenant. A bug in it is another tenant's rows, so this
+    pins the boundary rather than trusting the query."""
+    from nometria.db import session_scope
+    from nometria.gateway.playground_sessions import PlaygroundStore
+    from nometria.models import Agent
+    from nometria.seed import seed
+
+    with session_scope() as session:
+        seed(session)
+    with session_scope() as session:
+        before = len(session.scalars(select(Agent)).all())
+    assert before > 0
+
+    store = PlaygroundStore()
+    record = store.create()
+    _expire(record.id)
+    store.sweep()
+
+    with session_scope() as session:
+        assert len(session.scalars(select(Agent)).all()) == before
+
+
+def test_a_session_id_that_names_a_real_tenant_is_refused():
+    """The path parameter becomes a tenant binding, so its shape is checked before
+    anything is read. Without the check, `/sessions/org_default/state` would bind a
+    session to the deployment's own tenant."""
+    from nometria.gateway.playground_sessions import PlaygroundStore, is_sandbox_id
+
+    store = PlaygroundStore()
+    for candidate in ("org_default", "pg_short", "pg_" + "z" * 32, "../org_default", ""):
+        assert is_sandbox_id(candidate) is False
+        assert store.get(candidate) is None
+
+
+def test_sandbox_ids_are_unguessable():
+    from nometria.gateway.playground_sessions import is_sandbox_id, new_sandbox_id
+
+    ids = {new_sandbox_id() for _ in range(50)}
+    assert len(ids) == 50
+    assert all(is_sandbox_id(i) for i in ids)
+    # 32 hex characters is 128 bits; the id is the only credential the playground has.
+    assert all(len(i) == len("pg_") + 32 for i in ids)
+
+
 def test_max_concurrent_sandboxes_evicts_the_oldest():
+    """The cap is deployment-wide now that the registry is a table. It was per
+    process before, which on a serverless deployment meant it bounded nothing."""
     from nometria.gateway.playground_sessions import PlaygroundStore
 
     store = PlaygroundStore()
@@ -296,3 +400,211 @@ def test_max_concurrent_sandboxes_evicts_the_oldest():
         assert store.get(third.id) is not None
     finally:
         mod.MAX_SESSIONS = original_cap
+
+
+def test_the_cap_counts_sandboxes_made_by_other_store_instances():
+    """A second store is a stand-in for a second serverless instance: the count it
+    enforces has to include sandboxes it did not create itself."""
+    import nometria.gateway.playground_sessions as mod
+    from nometria.gateway.playground_sessions import PlaygroundStore
+
+    original_cap = mod.MAX_SESSIONS
+    mod.MAX_SESSIONS = 2
+    try:
+        first = PlaygroundStore().create()
+        PlaygroundStore().create()
+        third = PlaygroundStore().create()
+        assert PlaygroundStore().get(first.id) is None
+        assert PlaygroundStore().get(third.id) is not None
+    finally:
+        mod.MAX_SESSIONS = original_cap
+
+
+# ---------------------------------------------------------------------------
+# The finding this file's rewrite exists for: a sandbox has to outlive the process
+# and the app object that created it.
+# ---------------------------------------------------------------------------
+
+
+def _fresh_client():
+    """A second app, built from scratch, sharing only the database.
+
+    Stands in for the next serverless instance in `api/vercel.json`. It shares no
+    Python object with the first client beyond the module-level rate limiters.
+    """
+    from fastapi.testclient import TestClient
+
+    from nometria.gateway.app import create_app
+
+    return TestClient(create_app())
+
+
+def test_a_sandbox_made_on_one_app_instance_is_readable_on_another(client):
+    """The deployed failure: `api/vercel.json` runs this app as serverless functions,
+    so the follow-up request lands on a different instance. With sandboxes in a
+    module-level dict that instance found nothing and told the visitor their sandbox
+    had expired — a routing lottery, not a timer."""
+    sid = _create(client)
+    client.post(
+        f"/api/playground/sessions/{sid}/chat",
+        json={"agent": "support-triage", "message": "How long do I have to request a refund?"},
+    )
+
+    second = _fresh_client()
+    state = second.get(f"/api/playground/sessions/{sid}/state")
+    assert state.status_code == 200
+    assert len(state.json()["traces"]) >= 1
+
+    # And it is writable there, not merely readable.
+    reply = second.post(
+        f"/api/playground/sessions/{sid}/chat",
+        json={"agent": "support-triage", "message": "How long do I have to request a refund?"},
+    )
+    assert reply.status_code == 200
+
+    # Back on the first instance, the second instance's turn is visible too.
+    back = client.get(f"/api/playground/sessions/{sid}/state")
+    assert len(back.json()["traces"]) >= 2
+
+
+def test_a_second_store_instance_resolves_the_first_ones_sandbox():
+    from nometria.gateway.playground_sessions import PlaygroundStore
+
+    created = PlaygroundStore().create()
+    resolved = PlaygroundStore().get(created.id)
+    assert resolved is not None and resolved.id == created.id
+
+
+def test_one_sandbox_cannot_read_anothers_data(client):
+    """Isolation is the tenant filter, so this asks for one sandbox's trace through
+    another sandbox's session id and expects a 404 rather than the trace."""
+    sid_a = _create(client)
+    sid_b = _create(client)
+
+    reply = client.post(
+        f"/api/playground/sessions/{sid_a}/chat",
+        json={"agent": "support-triage", "message": "How long do I have to request a refund?"},
+    ).json()
+    trace_id = reply["verdict"]["trace_id"]
+
+    assert client.get(f"/api/playground/sessions/{sid_a}/trace/{trace_id}").status_code == 200
+    assert client.get(f"/api/playground/sessions/{sid_b}/trace/{trace_id}").status_code == 404
+
+    state_b = client.get(f"/api/playground/sessions/{sid_b}/state").json()
+    assert state_b["traces"] == []
+
+
+def test_a_sandbox_cannot_read_the_deployments_own_agents(client):
+    """The `client` fixture seeds the default org. A sandbox queries the same tables
+    and must see only its own copies."""
+    from nometria.db import session_scope
+    from nometria.models import Agent
+    from nometria.tenancy import bind_session
+
+    sid = _create(client)
+    with session_scope() as session:
+        bind_session(session, sid)
+        sandbox_ids = {a.id for a in session.scalars(select(Agent))}
+    with session_scope() as session:
+        default_ids = {a.id for a in session.scalars(select(Agent))}
+
+    assert sandbox_ids and default_ids
+    assert sandbox_ids.isdisjoint(default_ids)
+
+
+def test_a_sandbox_tenant_cannot_be_authenticated_into(client):
+    """A sandbox seeds fixture users with the same addresses as the demo org's. The
+    development identity header must still resolve to an operator, never into a
+    visitor's sandbox."""
+    sid = _create(client)
+    resp = client.get("/api/agents", headers={"X-Nometria-User": "admin@example.com"})
+    assert resp.status_code == 200
+    slugs = {a["slug"] for a in resp.json()["agents"]}
+    assert slugs  # the deployment's own org, not the empty view a sandbox binding gives
+
+    from nometria.db import session_scope
+    from nometria.models import User
+    from nometria.tenancy import bind_session
+
+    with session_scope() as session:
+        bind_session(session, sid)
+        sandbox_admin = session.scalar(select(User).where(User.email == "admin@example.com"))
+    assert sandbox_admin is not None, "the sandbox really does hold a same-email user"
+
+
+# ---------------------------------------------------------------------------
+# Verdict naming (see gateway/verdicts.py)
+# ---------------------------------------------------------------------------
+
+
+def test_playground_verdicts_carry_both_namings(client):
+    sid = _create(client)
+    body = client.post(
+        f"/api/playground/sessions/{sid}/chat",
+        json={
+            "agent": "support-triage",
+            "message": "Summarise the Q3 refunds document.",
+            "document": POISONED_DOCUMENT,
+        },
+    ).json()
+
+    verdict = body["verdict"]
+    assert verdict["applied_verdict"] == verdict["verdict"] == "allow"
+    assert verdict["would_be_verdict"] == verdict["effective_verdict"] == "block"
+    assert body["conversation_window_verdict"]["applied_verdict"] is not None
+
+    tool = client.post(
+        f"/api/playground/sessions/{sid}/tool-call",
+        json={
+            "agent": "support-triage",
+            "tool": "payments.transfer",
+            "arguments": {"amount": 10, "currency": "USD", "to": "acct_x"},
+        },
+    ).json()
+    assert tool["applied_verdict"] == tool["verdict"]
+    assert tool["would_be_verdict"] == tool["effective_verdict"]
+
+
+def test_an_unmigrated_database_says_what_to_run(client):
+    """A deployment that has not run migration c4a71e8b2d16 has no
+    `playground_sandboxes` table. The visitor gets a 503 naming the migration rather
+    than a 500 that reads as the playground being broken.
+
+    Simulated by dropping the table, which reproduces the missing-table half of the
+    problem. It does not reproduce the other half (a `users.email` index that is still
+    globally unique), which cannot be recreated here because the test database is
+    built from the current models.
+    """
+    from nometria.db import get_engine
+    from nometria.models import PlaygroundSandbox
+
+    PlaygroundSandbox.__table__.drop(get_engine())
+
+    resp = client.post("/api/playground/sessions")
+
+    assert resp.status_code == 503
+    assert "c4a71e8b2d16" in resp.json()["detail"]
+
+
+def test_an_agent_credential_from_a_sandbox_is_useless_on_the_inline_api(client):
+    """A sandbox seeds its own agent credentials. They are random and never shown to
+    the visitor, so this is defence in depth rather than a known path — but the inline
+    API must not be a way into a sandbox tenant whatever credential is presented.
+
+    It does not make sandbox credentials secret. It makes them worthless here.
+    """
+    from nometria.db import session_scope
+    from nometria.gateway.auth import resolve_agent
+    from nometria.identity import ensure_identity, issue_credential
+    from nometria.models import Agent
+    from nometria.tenancy import bind_session
+
+    sid = _create(client)
+    with session_scope() as session:
+        bind_session(session, sid)
+        agent = session.scalar(select(Agent).where(Agent.slug == "support-triage"))
+        assert agent is not None
+        _credential, raw = issue_credential(session, ensure_identity(session, agent))
+
+    with session_scope() as session:
+        assert resolve_agent(session, raw) is None

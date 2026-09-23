@@ -56,23 +56,111 @@ def _verdict_style(verdict: str) -> str:
     }.get(verdict, "white")
 
 
-def _show(result, label: str) -> None:
+def _rule_modes(session) -> dict[str, tuple[str, str]]:
+    """``rule_id -> (policy key, that policy's mode)`` for every bound policy.
+
+    Several packs are bound at once and they are not all in the same mode. The
+    merged decision carries one mode — "enforce" if *any* bound pack enforces — so
+    printing it next to a rule that came from a pack in observe said the opposite of
+    what happened. This is the lookup that lets each rule say its own mode.
+    """
+    from ..policy import active_policies
+
+    out: dict[str, tuple[str, str]] = {}
+    for document, _version, _binding in active_policies(session):
+        for rule in document.rules:
+            out[rule.id] = (document.key, document.mode)
+    return out
+
+
+def _show(result, label: str, session=None) -> None:
     console.print(
         f"  [bold]{label}[/]  "
         f"enforced=[{_verdict_style(result.verdict)}]{result.verdict}[/]  "
         f"policy-would=[{_verdict_style(result.effective_verdict)}]{result.effective_verdict}[/]  "
-        f"mode=[dim]{result.mode}[/]  "
         f"[dim]{result.latency_ms:.1f}ms[/]"
     )
+    modes = _rule_modes(session) if (session is not None and result.rules_fired) else {}
     for rule in result.rules_fired:
+        rule_id = rule.get("rule_id")
+        pack, mode = modes.get(rule_id, ("", ""))
+        # The mode that decided this rule's effect, not the mode of the merged set.
+        where = f"  [dim]{pack} is in {mode}[/]" if mode else ""
         console.print(
-            f"      [magenta]{rule.get('rule_id')}[/] → {rule.get('effect')}  "
-            f"[dim]{rule.get('reason', '')[:110]}[/]"
+            f"      [magenta]{rule_id}[/] → {rule.get('effect')}{where}"
         )
+        console.print(f"        [dim]{rule.get('reason', '')[:110]}[/]")
         if rule.get("controls"):
-            console.print(f"      [dim]controls: {', '.join(rule['controls'])}[/]")
+            console.print(f"        [dim]controls: {', '.join(rule['controls'])}[/]")
     if result.entities:
         console.print(f"      [dim]detected: {', '.join(result.entities)}[/]")
+
+
+def _steady_state_spans(session, exclude_trace: str) -> dict[str, float]:
+    """Median duration per span name across every *other* trace in this database.
+
+    Measured, not asserted: the comparison a "one-time warm-up" claim needs is the
+    same span on the calls that did not pay for it. The median rather than the
+    minimum, so one unusually fast call cannot flatter the number.
+    """
+    from statistics import median
+
+    from sqlalchemy import select
+
+    from ..models import Span
+
+    grouped: dict[str, list[float]] = {}
+    for span in session.scalars(select(Span).where(Span.trace_id != exclude_trace)):
+        grouped.setdefault(span.name, []).append(span.duration_ms)
+    return {name: median(values) for name, values in grouped.items() if values}
+
+
+#: How many times slower than its steady state a span has to be before it is called a
+#: cold start rather than ordinary variance.
+COLD_START_FACTOR = 5
+
+
+def _span_line(span: dict[str, Any], steady: dict[str, float]) -> tuple[str, bool]:
+    """One span row, and whether it was a cold start.
+
+    The trace the walkthrough prints is the first call of the process, so its
+    guardrail spans also paid for loading every detector. Printing 3500ms here next
+    to section 01's 3ms for the same call read as a contradiction. It is a cold
+    start, and the number a reader needs is the one every later call gets.
+    """
+    later = steady.get(span["name"])
+    cold = later is not None and span["duration_ms"] > later * COLD_START_FACTOR
+    note = f"  [yellow]first call only, {later:.1f}ms once warm[/]" if cold else ""
+    return (
+        f"    [dim]{span['kind']:<10}[/] {span['name']:<28} "
+        f"[dim]{span['duration_ms']:.1f}ms[/]{note}",
+        cold,
+    )
+
+
+def _shared_control_count(session, frameworks: tuple[str, ...]) -> int:
+    """How many controls every one of these frameworks maps, when that is all of them.
+
+    Returns 0 when the frameworks cover different control sets, so the explanation
+    printed next to the posture table is only printed when it is true of this catalog.
+    """
+    from sqlalchemy import select
+
+    from ..models import Control, FrameworkMapping
+
+    every_control = set(session.scalars(select(Control.key)))
+    if not every_control:
+        return 0
+    for framework in frameworks:
+        mapped = {
+            m.control_key
+            for m in session.scalars(
+                select(FrameworkMapping).where(FrameworkMapping.framework == framework)
+            )
+        }
+        if not every_control <= mapped:
+            return 0
+    return len(every_control)
 
 
 #: Step 08 promotes this policy to enforce to show the difference. The promotion is
@@ -146,7 +234,7 @@ def _walkthrough() -> dict[str, Any]:
             intent="answer a customer refund question",
             model="echo-1",
         )
-        _show(result, "user question")
+        _show(result, "user question", session)
         console.print(f"  [green]response[/] {response.text if response else '—'}")
         console.print(f"  [dim]trace {result.trace_id}[/]")
         summary["normal_verdict"] = result.verdict
@@ -168,7 +256,7 @@ def _walkthrough() -> dict[str, Any]:
             intent="summarise the Q3 refunds document",
             model="echo-1",
         )
-        _show(result, "retrieved document")
+        _show(result, "retrieved document", session)
         console.print(
             "  [dim]The baseline policy ships in observe mode, so the call was not "
             "blocked — but the platform recorded exactly what it would have done. "
@@ -193,7 +281,7 @@ def _walkthrough() -> dict[str, Any]:
             arguments={"amount": 250, "currency": "USD", "to": "acct_customer_44"},
             intent="refund a duplicate charge",
         )
-        _show(clean, "transfer, argument from the user")
+        _show(clean, "transfer, argument from the user", session)
 
         tainted = enforcer.guard_tool_call(
             agent_slug="payments-ops",
@@ -202,7 +290,7 @@ def _walkthrough() -> dict[str, Any]:
             provenance={"to": "tool_result"},
             intent="refund a duplicate charge",
         )
-        _show(tainted, "transfer, recipient from the poisoned document")
+        _show(tainted, "transfer, recipient from the poisoned document", session)
         console.print(
             f"  [bold yellow]→ suspended pending human approval ({tainted.approval_id})[/]"
         )
@@ -215,7 +303,7 @@ def _walkthrough() -> dict[str, Any]:
             arguments={"amount": 25000, "currency": "USD", "to": "acct_x"},
             intent="settle an invoice",
         )
-        _show(over, "transfer above the capability's argument constraint")
+        _show(over, "transfer above the capability's argument constraint", session)
         summary["over_limit_verdict"] = over.verdict
 
     # ---------------------------------------------------------------
@@ -298,7 +386,7 @@ def _walkthrough() -> dict[str, Any]:
     _rule("Silent failure — the plausible, confident, wrong answer", "06")
     console.print(
         "  [dim]No safety filter flags this. No schema check flags it. It is fluent, "
-        "specific and completely wrong — roughly 78% of AI failures look like this.[/]"
+        "specific and completely wrong.[/]"
     )
     with session_scope() as session:
         suite = session.query(EvalSuite).filter_by(key="support-quality").one()
@@ -385,7 +473,7 @@ def _walkthrough() -> dict[str, Any]:
             intent="summarise the Q3 refunds document",
             model="echo-1",
         )
-        _show(result, "the same injection, now enforced")
+        _show(result, "the same injection, now enforced", session)
         summary["enforced_verdict"] = result.verdict
 
     # ---------------------------------------------------------------
@@ -398,10 +486,20 @@ def _walkthrough() -> dict[str, Any]:
                 f"agent={detail['trace']['agent']}  "
                 f"verdict={detail['trace']['verdict']}"
             )
-            for span in detail["spans"]:
+            # This is the *first* call of the run, so its guardrail spans also paid for
+            # loading every detector. Printing 3500ms here next to section 01's 3ms for
+            # the same call reads as a contradiction; it is a cold start, and the number
+            # a reader needs is the one every later call gets.
+            steady = _steady_state_spans(session, exclude_trace=normal_trace)
+            lines = [_span_line(span, steady) for span in detail["spans"]]
+            warmed = any(cold for _text, cold in lines)
+            for text, _cold in lines:
+                console.print(text)
+            if warmed:
                 console.print(
-                    f"    [dim]{span['kind']:<10}[/] {span['name']:<28} "
-                    f"[dim]{span['duration_ms']:.1f}ms[/]"
+                    "  [dim]Detectors are loaded on the first call of the process. The "
+                    "warm figure is the median of the same span across every other "
+                    "call recorded in this database.[/]"
                 )
             console.print(
                 f"  decisions: {len(detail['decisions'])}  "
@@ -463,7 +561,8 @@ def _walkthrough() -> dict[str, Any]:
         table.add_column("degraded", justify="right", style="yellow")
         table.add_column("failing", justify="right", style="red")
         table.add_column("not impl.", justify="right", style="dim")
-        for framework in ("eu-ai-act", "nist-ai-rmf", "iso-42001", "soc2"):
+        frameworks = ("eu-ai-act", "nist-ai-rmf", "iso-42001", "soc2")
+        for framework in frameworks:
             p = posture(session, framework)
             counts = p["counts"]
             table.add_row(
@@ -475,6 +574,16 @@ def _walkthrough() -> dict[str, Any]:
                 str(counts["not_implemented"]),
             )
         console.print(table)
+        # The rows look copy-pasted and are not. Saying why costs one line and is
+        # cheaper than a reader deciding the table is filler — and the reason is
+        # checked against the mappings rather than asserted.
+        shared = _shared_control_count(session, frameworks)
+        if shared:
+            console.print(
+                f"  [dim]The rows match because all {shared} controls map into every "
+                "one of these frameworks: one control answers a clause in each, so the "
+                "same telemetry decides its status four times.[/]"
+            )
         console.print(
             f"  overall control effectiveness: [bold]{(overall['effectiveness'] or 0):.0%}[/]"
         )

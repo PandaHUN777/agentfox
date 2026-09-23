@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { api, apiErrorProps } from "@/lib/api";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ApiDown } from "@/components/ui";
 
@@ -29,7 +29,7 @@ export default async function FrameworkReview({
     return (
       <>
         <h1>Frameworks</h1>
-        <ApiDown error={String(e?.message || e)} />
+        <ApiDown {...apiErrorProps(e)} />
       </>
     );
   }

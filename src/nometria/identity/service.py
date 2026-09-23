@@ -197,6 +197,7 @@ def grant_capability(
     requires_approval: bool = False,
     max_taint: str = "user",
     granted_by: str = "system",
+    expires_at: dt.datetime | None = None,
 ) -> Capability:
     capability = Capability(
         identity_id=identity.id,
@@ -206,8 +207,25 @@ def grant_capability(
         requires_approval=requires_approval,
         max_taint=max_taint,
         granted_by=granted_by,
+        expires_at=expires_at,
     )
     session.add(capability)
+    session.flush()
+    return capability
+
+
+def revoke_capability(session: Session, capability_id: str) -> Capability | None:
+    """Remove a grant. Returns the row that was removed, or None if there was none.
+
+    The row is deleted rather than flagged, so a count of capabilities is a count of
+    what an agent may actually do right now — the number `nometria doctor` reports.
+    The history is not lost: the caller writes the removal to the audit chain, which
+    is append-only and keeps the full shape of the grant that was withdrawn.
+    """
+    capability = session.get(Capability, capability_id)
+    if capability is None:
+        return None
+    session.delete(capability)
     session.flush()
     return capability
 
@@ -258,7 +276,9 @@ def check_capability(
         c
         for c in capabilities
         if fnmatch.fnmatch(tool_key, c.tool_key)
-        and (c.expires_at is None or c.expires_at > now)
+        # SQLite gives a naive datetime back; comparing it to `utcnow` raises, which
+        # would turn every *expiring* grant into a crash at decision time.
+        and (c.expires_at is None or as_aware(c.expires_at) > now)
         and ("*" in (c.actions or ["*"]) or action in (c.actions or []))
     ]
     if not matches:

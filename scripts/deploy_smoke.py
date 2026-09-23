@@ -317,6 +317,60 @@ def check_dashboard_playground(ctx: Context) -> str:
     return _dashboard_page(ctx, "/playground")
 
 
+def check_dashboard_benchmark(ctx: Context) -> str:
+    """The benchmark evidence page is public.
+
+    The playground invites a visitor to check its one quantitative claim. While that
+    link pointed into a private repository it answered 404, so the page offered
+    evidence and then lost it. This proves the destination is reachable without an
+    account; it does not check that the numbers on it are right.
+    """
+    return _dashboard_page(ctx, "/benchmark")
+
+
+def check_api_root_is_discoverable(ctx: Context) -> str:
+    """The API root says what this is instead of a bare 404."""
+    response = ctx.client.get(ctx.api_url + "/")
+    if response.status_code != 200:
+        raise CheckFailed(
+            f"GET / returned {response.status_code}. Someone who pastes the API host in a "
+            "browser should learn what it is and where the docs are."
+        )
+    body = _json_body(response, "GET /")
+    if not isinstance(body, dict) or not body:
+        raise CheckFailed("GET / returned an empty body")
+    return f"root responds with {', '.join(sorted(body)[:4])}"
+
+
+def check_playground_sandbox_survives(ctx: Context) -> str:
+    """A sandbox stays readable across repeated requests.
+
+    Sandboxes used to live in one server process while the API runs as many, so a
+    follow-up request landing on another instance was told the sandbox had expired.
+    This samples the same sandbox several times to catch that; it cannot prove
+    durability over the full advertised lifetime in one run.
+    """
+    created = _json_body(
+        ctx.client.post(f"{ctx.api_url}/api/playground/sessions", json={}),
+        "POST /api/playground/sessions",
+    )
+    session_id = created.get("session_id")
+    if not session_id:
+        raise CheckFailed("sandbox creation returned no session_id")
+    url = f"{ctx.api_url}/api/playground/sessions/{session_id}/state"
+    for attempt in range(1, 9):
+        response = ctx.client.get(url)
+        if response.status_code == 404:
+            raise CheckFailed(
+                f"sandbox {session_id} was gone on read {attempt} of 8. A request reached an "
+                "instance that had never seen it, which is what a visitor experiences as "
+                "'this sandbox has expired' in the middle of the demo."
+            )
+        if response.status_code != 200:
+            raise CheckFailed(f"reading the sandbox returned {response.status_code}")
+    return f"sandbox {session_id} readable on 8 consecutive reads"
+
+
 CHECKS: tuple[tuple[str, Callable[[Context], str]], ...] = (
     ("api_health", check_api_health),
     ("api_openapi_routes", check_openapi_routes),
@@ -326,6 +380,9 @@ CHECKS: tuple[tuple[str, Callable[[Context], str]], ...] = (
     ("cors_preflight_from_dashboard", check_cors_preflight),
     ("dashboard_login", check_dashboard_login),
     ("dashboard_playground", check_dashboard_playground),
+    ("dashboard_benchmark", check_dashboard_benchmark),
+    ("api_root_is_discoverable", check_api_root_is_discoverable),
+    ("playground_sandbox_survives", check_playground_sandbox_survives),
 )
 
 

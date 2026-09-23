@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { api, safeApi } from "@/lib/api";
-import { ApiDown, Empty, InfoTip, Panel, Severity, Stat } from "@/components/ui";
+import { api, safeApi, apiErrorProps } from "@/lib/api";
+import { ApiDown, Empty, InfoTip, Panel, Severity, Stat, agentName } from "@/components/ui";
 import { Countdown } from "@/components/Countdown";
 
 export const dynamic = "force-dynamic";
@@ -58,13 +58,36 @@ async function RulesTab({ agent }: { agent?: string }) {
       safeApi("/api/agents", { agents: [] }),
     ]);
   } catch (e: any) {
-    return <ApiDown error={String(e?.message || e)} />;
+    return <ApiDown {...apiErrorProps(e)} />;
   }
 
   const proposed = policies.policies.filter((p: any) => p.proposed);
 
   return (
     <>
+      {/* The product's own claim, stated where a reader is actually looking at
+          policies, instead of only in a paragraph on Start here. Written to be
+          checkable: it says what containment reasons over, and what it depends
+          on, rather than promising that injections cannot get through. */}
+      <div className="note-panel" style={{ marginTop: 14 }}>
+        <strong>Tool containment: the rule that holds after a filter is fooled.</strong>{" "}
+        Most rules here read the text of a request. One does not. Tool containment
+        looks at the action instead: which tool is being called, what its arguments
+        are, where those arguments came from, and how much damage the tool can do.
+        An irreversible tool called with arguments that came out of a retrieved
+        document or another tool's output needs a human, whether or not any detector
+        flagged the text that led there. That is why an injection can succeed at
+        convincing the model and still not get the action executed.{" "}
+        <strong>It is only as good as the declarations behind it:</strong> a tool
+        recorded as <code className="mono">read</code> that actually moves money is
+        not contained by anything. The four impact tiers are{" "}
+        <code className="mono">read</code>, <code className="mono">write</code>,{" "}
+        <code className="mono">high_impact</code> and{" "}
+        <code className="mono">irreversible</code>, declared per tool — see{" "}
+        <Link href="/agents">Agents</Link> for what each of yours is recorded as, and
+        the <Link href="/glossary">Glossary</Link> for the terms.
+      </div>
+
       {proposed.length > 0 && (
         <>
           <h2>Pending review</h2>
@@ -118,8 +141,9 @@ async function RulesTab({ agent }: { agent?: string }) {
         (e.g. "every agent starting with support-") rather than picked one at a time.
       </p>
       <form action="/policies" method="GET" className="chipbar" style={{ marginBottom: 4 }}>
-        <span className="chipbar-label">agent:</span>
+        <label htmlFor="policies-agent-filter" className="chipbar-label">agent:</label>
         <select
+          id="policies-agent-filter"
           name="agent"
           defaultValue={agent ?? ""}
           style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 12, fontFamily: "inherit" }}
@@ -133,8 +157,24 @@ async function RulesTab({ agent }: { agent?: string }) {
         {agent && <Link href="/policies" className="chip">clear agent ×</Link>}
       </form>
       <div className="panel scroll-x">
-        {policies.policies.length === 0 && agent ? (
-          <Empty>No policy's declared scope matches &lsquo;{agent}&rsquo;.</Empty>
+        {/* Two different nothings. A filter that matched nothing is a dead end to
+            back out of; no policies at all is a workspace nobody has connected
+            yet, and the fix for that is on another page entirely. Gating only on
+            `agent` sent the second case a bare column header and no sentence. */}
+        {policies.policies.length === 0 ? (
+          agent ? (
+            <Empty>
+              No policy's declared scope matches &lsquo;{agentName(agents, agent)}&rsquo;.
+              Policies are scoped by name pattern, so an agent can be covered by a
+              policy that never names it. Clear the filter to see all of them.
+            </Empty>
+          ) : (
+            <Empty>
+              No policies yet. Policies arrive with the code they govern: connect a
+              repository on <Link href="/start?tab=connect">Start here</Link> and the
+              scan proposes a starting set, in observe mode, for you to review here.
+            </Empty>
+          )
         ) : (
         <table>
           <thead>
@@ -198,6 +238,17 @@ async function RulesTab({ agent }: { agent?: string }) {
         actually holds up, rather than assuming it does.
       </p>
       <div className="panel scroll-x">
+        {/* This list comes from a `safeApi` fallback, so an empty array here is
+            just as likely to mean the probes call failed as it is to mean there
+            are none — either way, column headers over nothing said neither. */}
+        {probes.probes.length === 0 ? (
+          <Empty>
+            No attack simulations are listed. They ship with the product, so an empty
+            list here usually means the control plane could not be asked for them
+            rather than that none exist. Reload, and if it stays empty the deployment
+            is missing its probe library.
+          </Empty>
+        ) : (
         <table>
           <thead>
             <tr><th>probe</th><th>category</th><th>surface</th><th>severity</th><th>OWASP</th><th>ATLAS</th></tr>
@@ -215,6 +266,7 @@ async function RulesTab({ agent }: { agent?: string }) {
             ))}
           </tbody>
         </table>
+        )}
       </div>
       <p className="small muted" style={{ marginTop: 10 }}>
         Wrapped runners:{" "}
@@ -249,7 +301,7 @@ async function GuardrailTuningTab({ agent }: { agent?: string }) {
       api("/api/guardrails/feedback?limit=50"),
     ]);
   } catch (e: any) {
-    return <ApiDown error={String(e?.message || e)} />;
+    return <ApiDown {...apiErrorProps(e)} />;
   }
 
   const health = suppressions.health || {};
@@ -264,8 +316,9 @@ async function GuardrailTuningTab({ agent }: { agent?: string }) {
 
       <form action="/policies" method="GET" className="chipbar" style={{ marginBottom: 4 }}>
         <input type="hidden" name="tab" value="guardrails" />
-        <span className="chipbar-label">agent:</span>
+        <label htmlFor="guardrails-agent-filter" className="chipbar-label">agent:</label>
         <select
+          id="guardrails-agent-filter"
           name="agent"
           defaultValue={agent ?? ""}
           style={{ padding: "3px 8px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 12, fontFamily: "inherit" }}

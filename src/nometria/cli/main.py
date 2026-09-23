@@ -31,19 +31,53 @@ app = typer.Typer(
 )
 console = Console()
 
-agents_app = typer.Typer(help="Agent registry and discovery (Pillar 1).", no_args_is_help=True)
-policy_app = typer.Typer(
-    help="Policy authoring, simulation and promotion (Pillar 6).", no_args_is_help=True
+agents_app = typer.Typer(
+    help="Find every agent that is running, and who owns it (Pillar 1).",
+    no_args_is_help=True,
 )
-eval_app = typer.Typer(help="Evaluation, CI gating and drift (Pillar 4).", no_args_is_help=True)
-audit_app = typer.Typer(help="Audit chain verification (Pillar 5).", no_args_is_help=True)
-evidence_app = typer.Typer(help="Auditor evidence packages (Pillar 5).", no_args_is_help=True)
-compliance_app = typer.Typer(help="Controls, frameworks and risk (Pillar 6).", no_args_is_help=True)
-redteam_app = typer.Typer(help="Adversarial testing (Pillar 4).", no_args_is_help=True)
-scan_app = typer.Typer(help="Hygiene scanning (Pillar 1).", no_args_is_help=True)
-db_app = typer.Typer(help="Database schema migrations (PL-2).", no_args_is_help=True)
-tools_app = typer.Typer(help="Declared tool metadata for action assurance (P9).", no_args_is_help=True)
-access_app = typer.Typer(help="Data-access scoping declarations (P18).", no_args_is_help=True)
+policy_app = typer.Typer(
+    help="Write the rules, try them against recorded traffic, then turn them on "
+    "(Pillar 6).",
+    no_args_is_help=True,
+)
+eval_app = typer.Typer(
+    help="Score an agent, fail the build on a regression, watch for drift (Pillar 4).",
+    no_args_is_help=True,
+)
+audit_app = typer.Typer(
+    help="Check that the recorded history has not been altered (Pillar 5).",
+    no_args_is_help=True,
+)
+evidence_app = typer.Typer(
+    help="Export a package an auditor can verify without us (Pillar 5).",
+    no_args_is_help=True,
+)
+compliance_app = typer.Typer(
+    help="Where this deployment stands against each framework, computed from "
+    "telemetry (Pillar 6).",
+    no_args_is_help=True,
+)
+redteam_app = typer.Typer(
+    help="Attack your own configuration and score what got through (Pillar 4).",
+    no_args_is_help=True,
+)
+scan_app = typer.Typer(
+    help="Snapshot an MCP server's tools and check them for hygiene (Pillar 1).",
+    no_args_is_help=True,
+)
+db_app = typer.Typer(
+    help="Apply, roll back and inspect the database schema.", no_args_is_help=True
+)
+tools_app = typer.Typer(
+    help="Declare what each tool can do, so containment has something to reason "
+    "over (P9).",
+    no_args_is_help=True,
+)
+access_app = typer.Typer(
+    help="Declare which column decides whose row it is, so a query across every "
+    "customer stops reading as ordinary (P18).",
+    no_args_is_help=True,
+)
 
 app.add_typer(agents_app, name="agents")
 app.add_typer(policy_app, name="policy")
@@ -62,8 +96,9 @@ app.add_typer(db_app, name="db")
 # ten minutes.
 from .auth_cli import register as _register_auth  # noqa: E402
 from .business_cli import register as _register_business  # noqa: E402
-from .mcp_cli import register as _register_mcp  # noqa: E402
+from .capability_cli import register as _register_capability  # noqa: E402
 from .controls_cli import register as _register_controls  # noqa: E402
+from .mcp_cli import register as _register_mcp  # noqa: E402
 from .onboarding import register as _register_onboarding  # noqa: E402
 from .quickscan import register as _register_quickscan  # noqa: E402
 
@@ -73,6 +108,7 @@ _register_auth(app)
 _register_controls(app)
 _register_business(app)
 _register_mcp(app)
+_register_capability(app)
 
 
 def _session():
@@ -94,7 +130,7 @@ def _emit(payload: Any, as_json: bool) -> None:
 
 @app.command()
 def version() -> None:
-    """Show every version that participates in a decision (X-4)."""
+    """Show the version of everything that takes part in a decision."""
     from ..compliance.catalog import load_catalog
     from ..config import get_settings
 
@@ -134,16 +170,22 @@ def seed(
         "when first issued; this flag is the only way to see them.",
     ),
 ) -> None:
-    """Create a demonstrable environment: agents, policies, controls, eval suite."""
+    """Load a demonstrable environment: three agents, policies, controls and an
+    eval suite, with traffic already recorded against them."""
     from ..seed import seed as run_seed
 
     with _session() as session:
         summary = run_seed(session)
     console.print("[green]seeded[/]")
+    catalog = summary["catalog"]
+    # "0 created" is the normal result of a second run, and read as a failure every
+    # time. Say how many controls are *there*, and mention creation only when the run
+    # actually created some.
+    created = catalog["controls_created"]
     console.print(
-        f"  controls    {summary['catalog']['controls_created']} created, "
-        f"{summary['catalog']['mappings']} mappings "
-        f"([yellow]{summary['catalog']['review_status']}[/])"
+        f"  controls    {catalog['mappings']} framework mappings "
+        f"([yellow]{catalog['review_status']}[/])"
+        + (f", {created} control(s) newly created" if created else ", all already present")
     )
     console.print(f"  obligations {summary['obligations']}")
     console.print(f"  policies    {', '.join(summary.get('policies', []))}")
@@ -158,6 +200,17 @@ def seed(
             "`nometria seed --show-keys` on a fresh database is the only way to see "
             "them in full.[/]"
         )
+
+    from .onboarding import _print_next_steps
+
+    _print_next_steps(
+        [
+            ("nometria demo", "the end-to-end walkthrough against what was just seeded"),
+            ("nometria findings", "what the seeded traffic already raised"),
+            ("nometria capability list", "what each seeded agent is allowed to do"),
+            ("nometria doctor", "check the runtime configuration"),
+        ]
+    )
 
 
 @app.command()
@@ -581,13 +634,26 @@ def policy_observe(key: str) -> None:
 
 
 def _set_mode(key: str, mode: str) -> None:
+    from sqlalchemy import select
+
     from ..audit import chain
+    from ..models import Policy
     from ..policy import set_mode
 
     with _session() as session:
         binding = set_mode(session, key, mode)
         if binding is None:
+            # "unknown policy" with no list leaves the reader guessing at a key they
+            # have never seen written down.
+            known = sorted(p.key for p in session.scalars(select(Policy)))
             console.print(f"[red]unknown policy '{key}'[/]")
+            if known:
+                console.print(f"  known policies: {', '.join(known)}")
+                console.print("  [dim]`nometria policy list` shows each one's mode.[/]")
+            else:
+                console.print(
+                    "  no policies loaded yet. Run `nometria init` to load the shipped packs."
+                )
             raise typer.Exit(1)
         chain.append(
             session,
@@ -1567,7 +1633,7 @@ def analyse_action(
     dialect: str = typer.Option("postgres", help="SQL dialect"),
     environment: str = typer.Option("production", help="environment the action binds to"),
 ) -> None:
-    """P9 — what would this artefact actually do?
+    """Read an artefact and say what running it would actually do (P9).
 
     Deterministic, offline and immediate: no database, no model, no network. The point
     is that an engineer can check a generated statement before it is ever executed.

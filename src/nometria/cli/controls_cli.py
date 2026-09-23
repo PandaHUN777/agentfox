@@ -481,25 +481,34 @@ def entitlement_report(days: int = typer.Option(7, "--days")) -> None:
 
 def register(app: typer.Typer) -> None:
     boundary_app = typer.Typer(
-        help="Knowledge boundaries and abstention (P7).", no_args_is_help=True
+        help="Declare what an agent has no data for, so it says so instead of "
+        "guessing (P7).",
+        no_args_is_help=True,
     )
     boundary_app.command(name="set")(boundary_set)
     boundary_app.command(name="check")(boundary_check)
     app.add_typer(boundary_app, name="boundary")
 
-    sources_app = typer.Typer(help="Source authority and freshness (P8).", no_args_is_help=True)
+    sources_app = typer.Typer(
+        help="Say which sources are authoritative and how stale is too stale (P8).",
+        no_args_is_help=True,
+    )
     sources_app.command(name="add")(sources_add)
     sources_app.command(name="import")(sources_import)
     sources_app.command(name="list")(sources_list)
     app.add_typer(sources_app, name="sources")
 
-    escalation_app = typer.Typer(help="Escalation governance (P11).", no_args_is_help=True)
+    escalation_app = typer.Typer(
+        help="Decide when an agent must hand a conversation to a person (P11).",
+        no_args_is_help=True,
+    )
     escalation_app.command(name="set")(escalation_set)
     escalation_app.command(name="scan")(escalation_scan)
     app.add_typer(escalation_app, name="escalation")
 
     entitlement_app = typer.Typer(
-        help="End-user entitlement and disclosure control (P10).", no_args_is_help=True
+        help="Control what each end user is entitled to see (P10).",
+        no_args_is_help=True,
     )
     entitlement_app.command(name="principal")(principal_set)
     entitlement_app.command(name="grant")(grant_add)

@@ -7,6 +7,20 @@ governance product that needs a re-architecture never gets installed.
 
 Blocks return a body carrying the trace id, the decision id, the rule that fired and
 a human-readable reason. Never block without an auditable reason (X-4).
+
+**Two verdicts, and which one to gate on.** Every enforcement body and every set of
+response headers here carries both:
+
+* ``verdict`` / ``applied_verdict`` (``X-Nometria-Verdict``,
+  ``X-Nometria-Applied-Verdict``) — what actually happened to this request.
+* ``effective_verdict`` / ``would_be_verdict`` (``X-Nometria-Effective-Verdict``,
+  ``X-Nometria-Would-Be-Verdict``) — the counterfactual: what the bound policy asserts
+  should happen. In observe mode this is the verdict that did *not* take effect.
+
+Gate on the applied one. Gating on the counterfactual means refusing traffic this
+platform allowed, which is the opposite of what observe mode is for. The
+``applied_``/``would_be_`` names are aliases added by ``gateway/verdicts.py``; the
+original keys are unchanged and carry the same values.
 """
 
 from __future__ import annotations
@@ -28,6 +42,7 @@ from ...config import get_settings
 from ...enforcement import EnforcementResult, Enforcer
 from ...registry.service import detect_shadow_agents
 from ..deps import agent_credential, db
+from ..verdicts import verdict_headers, with_verdict_aliases
 
 log = logging.getLogger(__name__)
 
@@ -116,7 +131,12 @@ def _blocked_response(result, status: int = 403) -> JSONResponse:
             "error": {
                 "type": "nometria_policy_violation",
                 "message": result.reason or "blocked by policy",
+                # Both names, same values: `applied_verdict`/`would_be_verdict` say
+                # which one took effect (gateway/verdicts.py).
                 "verdict": result.verdict,
+                "applied_verdict": result.verdict,
+                "effective_verdict": result.effective_verdict,
+                "would_be_verdict": result.effective_verdict,
                 "trace_id": result.trace_id,
                 "decision_id": result.decision_id,
                 "policy_version": result.policy_version_id,
@@ -136,10 +156,17 @@ def _blocked_response(result, status: int = 403) -> JSONResponse:
 
 
 def _headers(result) -> dict[str, str]:
+    """Governance headers, with both namings of the two verdicts.
+
+    `X-Nometria-Verdict` and `X-Nometria-Effective-Verdict` keep exactly the values
+    they had. `X-Nometria-Applied-Verdict` and `X-Nometria-Would-Be-Verdict` repeat
+    them under names that say which one took effect.
+    """
     return {
         "X-Nometria-Trace": result.trace_id or "",
         "X-Nometria-Verdict": result.verdict,
         "X-Nometria-Effective-Verdict": result.effective_verdict,
+        **verdict_headers(result),
         "X-Nometria-Decision": result.decision_id or "",
         "X-Nometria-Mode": result.mode,
         "X-Nometria-Latency-Ms": f"{result.latency_ms:.2f}",
@@ -413,6 +440,8 @@ def _stream_openai(events, model: str):
                         "type": "nometria_policy_violation",
                         "message": result.reason or "blocked by policy",
                         "verdict": result.verdict,
+                        "applied_verdict": result.verdict,
+                        "would_be_verdict": result.effective_verdict,
                         "trace_id": result.trace_id,
                         "decision_id": result.decision_id,
                         "rules_fired": result.rules_fired,
@@ -428,7 +457,13 @@ def _stream_openai(events, model: str):
             )
             # Trailing governance metadata: verdict is only knowable at the end, and
             # headers were already flushed when the stream opened.
-            yield _sse({"nometria": event.result.to_json() if event.result else {}})
+            yield _sse(
+                {
+                    "nometria": with_verdict_aliases(event.result.to_json())
+                    if event.result
+                    else {}
+                }
+            )
             yield "data: [DONE]\n\n"
             return
     yield "data: [DONE]\n\n"
@@ -480,7 +515,9 @@ def _stream_anthropic(events, model: str):
                     "type": "message_delta",
                     "delta": {"stop_reason": event.finish_reason or "end_turn"},
                     "usage": event.usage,
-                    "nometria": event.result.to_json() if event.result else {},
+                    "nometria": with_verdict_aliases(event.result.to_json())
+                    if event.result
+                    else {},
                 }
             )
             yield _sse({"type": "message_stop"})
@@ -733,7 +770,9 @@ def mcp_call(
     decision = outcome.post_decision or outcome.pre_decision
     if not outcome.allowed and decision is not None:
         return _blocked_response(decision)
-    return JSONResponse(content={"result": outcome.result, **outcome.to_json()})
+    return JSONResponse(
+        content={"result": outcome.result, **with_verdict_aliases(outcome.to_json())}
+    )
 
 
 class GuardContentRequest(BaseModel):
@@ -768,12 +807,23 @@ def guard_content(
     request: Request,
     session: Session = Depends(db),
 ) -> dict[str, Any]:
+    """Enforce on content without proxying.
+
+    The route's first line is kept short because `scripts/api_routes.py` uses it as
+    this operation's label in Appendix C.
+
+    `verdict`/`applied_verdict` is what happened; `effective_verdict`/
+    `would_be_verdict` is what the bound policy says should happen, which in observe
+    mode is the one that did not take effect. Gate on the applied one.
+    """
     surface = "output" if request.url.path.endswith("/output") else payload.surface
-    return Enforcer(session).check_content(
-        agent_slug=payload.agent,
-        content=payload.content,
-        surface=surface,
-        taint_source=payload.taint_source,
+    return with_verdict_aliases(
+        Enforcer(session).check_content(
+            agent_slug=payload.agent,
+            content=payload.content,
+            surface=surface,
+            taint_source=payload.taint_source,
+        )
     )
 
 
@@ -806,7 +856,7 @@ def guard_tool_call(
         prior_tools=payload.prior_tools,
         prior_steps=payload.prior_steps,
     )
-    return result.to_json()
+    return with_verdict_aliases(result.to_json())
 
 
 class GuardMemoryWriteRequest(BaseModel):
@@ -848,7 +898,7 @@ def guard_memory_write(
         trace=trace,
         credential=credential,
     )
-    return result.to_json()
+    return with_verdict_aliases(result.to_json())
 
 
 class GuardAgentMessageRequest(BaseModel):
@@ -887,7 +937,7 @@ def guard_agent_message(
         signature=payload.signature,
         trace=trace,
     )
-    return result.to_json()
+    return with_verdict_aliases(result.to_json())
 
 
 # ---------------------------------------------------------------------------

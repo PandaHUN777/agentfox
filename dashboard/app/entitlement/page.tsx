@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, apiErrorProps } from "@/lib/api";
 import { ApiDown, Empty, InfoTip, Panel, Stat } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +42,7 @@ export default async function Entitlement() {
     return (
       <>
         <h1>Access Control</h1>
-        <ApiDown error={String(e?.message || e)} />
+        <ApiDown {...apiErrorProps(e)} />
       </>
     );
   }
@@ -87,22 +87,31 @@ export default async function Entitlement() {
 
           <h2>Why content was withheld</h2>
           <div className="panel">
-            <table>
-              <thead>
-                <tr>
-                  <th>reason</th>
-                  <th>chunks</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(report.reasons || {}).map(([reason, count]: [string, any]) => (
-                  <tr key={reason}>
-                    <td className="mono">{reason.replace(/_/g, " ")}</td>
-                    <td className="mono small">{count}</td>
+            {/* Checks ran and withheld nothing is a real, good answer — and it is
+                not the same picture as two column headers over no rows. */}
+            {Object.keys(report.reasons || {}).length === 0 ? (
+              <Empty>
+                Nothing was withheld in this window. Every piece of content the agent
+                retrieved, the person asking was cleared to see.
+              </Empty>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>reason</th>
+                    <th>chunks</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {Object.entries(report.reasons).map(([reason, count]: [string, any]) => (
+                    <tr key={reason}>
+                      <td className="mono">{reason.replace(/_/g, " ")}</td>
+                      <td className="mono small">{count}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </>
       )}
@@ -152,28 +161,28 @@ export default async function Entitlement() {
         <Panel title="Add a person or group">
           <form action="/api/entitlement/principals" method="POST" className="body stack">
             <div>
-              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              <label htmlFor="ent-principal-subject" className="small muted" style={{ display: "block", marginBottom: 4 }}>
                 Email or team name
               </label>
-              <input type="text" name="subject" required placeholder="alice@yourcompany.com" style={inputStyle} />
+              <input type="text" id="ent-principal-subject" name="subject" required placeholder="alice@yourcompany.com" style={inputStyle} />
             </div>
             <div>
-              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              <label htmlFor="ent-principal-display" className="small muted" style={{ display: "block", marginBottom: 4 }}>
                 Display name (optional)
               </label>
-              <input type="text" name="display" placeholder="Alice from Support" style={inputStyle} />
+              <input type="text" id="ent-principal-display" name="display" placeholder="Alice from Support" style={inputStyle} />
             </div>
             <div>
-              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              <label htmlFor="ent-principal-groups" className="small muted" style={{ display: "block", marginBottom: 4 }}>
                 Teams they belong to (comma-separated)
               </label>
-              <input type="text" name="groups" placeholder="support-team, all-staff" style={inputStyle} />
+              <input type="text" id="ent-principal-groups" name="groups" placeholder="support-team, all-staff" style={inputStyle} />
             </div>
             <div>
-              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              <label htmlFor="ent-principal-clearances" className="small muted" style={{ display: "block", marginBottom: 4 }}>
                 Sensitive categories they're cleared to see (comma-separated, leave blank if none)
               </label>
-              <input type="text" name="clearances" placeholder="pii_sensitive" style={inputStyle} />
+              <input type="text" id="ent-principal-clearances" name="clearances" placeholder="pii_sensitive" style={inputStyle} />
             </div>
             <div>
               <button type="submit" className="btn-primary">Add person or group</button>
@@ -232,23 +241,27 @@ export default async function Entitlement() {
           <form action="/api/entitlement/grants" method="POST" className="body stack">
             <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
               <div style={{ flex: 1, minWidth: 200 }}>
-                <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                <label htmlFor="ent-grant-resource" className="small muted" style={{ display: "block", marginBottom: 4 }}>
                   Which source can they see?
                 </label>
-                <input type="text" name="resource" required placeholder="price-book" style={inputStyle} />
+                <input type="text" id="ent-grant-resource" name="resource" required placeholder="price-book" style={inputStyle} />
               </div>
               <div style={{ flex: 1, minWidth: 200 }}>
-                <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                <label htmlFor="ent-grant-principal" className="small muted" style={{ display: "block", marginBottom: 4 }}>
                   Person or team (must match a name above)
                 </label>
-                <input type="text" name="principal" required placeholder="support-team" style={inputStyle} />
+                <input type="text" id="ent-grant-principal" name="principal" required placeholder="support-team" style={inputStyle} />
               </div>
             </div>
             <input type="hidden" name="principal_kind" value="group" />
-            <div>
-              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
-                Only needed if the source contains sensitive data (they still need a matching clearance above)
-              </label>
+            {/* A <label> pointing at nothing does not name these five checkboxes;
+                a fieldset's legend does, so each one is read as "insider-only,
+                within sensitive categories" rather than as a loose checkbox. */}
+            <fieldset style={{ border: "none", padding: 0, margin: 0, minWidth: 0 }}>
+              <legend className="small muted" style={{ padding: 0, marginBottom: 4 }}>
+                Sensitive categories this grant covers — only needed if the source
+                contains sensitive data, and they still need a matching clearance above
+              </legend>
               <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
                 {CLASS_OPTIONS.map((c) => (
                   <label key={c.value} className="small" style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -257,7 +270,7 @@ export default async function Entitlement() {
                   </label>
                 ))}
               </div>
-            </div>
+            </fieldset>
             <div>
               <button type="submit" className="btn-primary">Add grant</button>
             </div>

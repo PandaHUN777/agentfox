@@ -15,3 +15,26 @@ SEVERITY_COLOUR = {
     "low": "cyan",
     "info": "dim",
 }
+
+
+#: How many trailing characters of an id are shown in a table. Ids here are
+#: time-ordered, so everything created in the same second shares a *leading* prefix
+#: and differs only at the tail — an abbreviation that keeps the head would print the
+#: same string on every row.
+ID_TAIL = 8
+
+
+def short_id(value: str, tail: int = ID_TAIL) -> str:
+    """An id short enough for a table column and still unique on the eye."""
+    if not value or len(value) <= tail:
+        return value or "—"
+    return f"…{value[-tail:]}"
+
+
+def match_id(value: str, candidate: str) -> bool:
+    """True when what the user typed names this id: the whole thing, or the tail as
+    printed in a table (with or without the leading ellipsis)."""
+    typed = (value or "").lstrip("…").strip()
+    if not typed:
+        return False
+    return candidate == value or candidate.endswith(typed)

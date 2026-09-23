@@ -1,9 +1,29 @@
 import Link from "next/link";
-import { api, safeApi } from "@/lib/api";
+import { api, safeApi, apiErrorProps } from "@/lib/api";
 import { ApiDown, InfoTip, Panel, Severity, Stat, StatLink, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * The four tiers a tool can be declared at (`nometria tools declare --impact`).
+ * high_impact was missing here, so a tool at that tier rendered as an untoned
+ * tag — visually identical to a read-only one, which is the opposite of what it
+ * means. Every containment rule reasons over this axis, so it has to be complete.
+ */
+const IMPACT_TONE: Record<string, string> = {
+  read: "",
+  write: "warn",
+  high_impact: "warn",
+  irreversible: "bad",
+};
+
+const IMPACT_MEANS: Record<string, string> = {
+  read: "Returns information and changes nothing.",
+  write: "Changes something, and the change can be undone.",
+  high_impact: "Significant effect, but still reversible — untrusted arguments send it for approval.",
+  irreversible: "Cannot be undone. Untrusted arguments always require a human.",
+};
 
 export default async function AgentDetail({
   params,
@@ -31,7 +51,7 @@ export default async function AgentDetail({
     return (
       <>
         <h1>{slug}</h1>
-        <ApiDown error={String(e?.message || e)} />
+        <ApiDown {...apiErrorProps(e)} />
       </>
     );
   }
@@ -257,7 +277,7 @@ export default async function AgentDetail({
               <tr><td className="muted">environment</td><td>{a.environment}</td></tr>
               <tr><td className="muted">risk tier</td><td><span className="tag">{a.risk_tier}</span></td></tr>
               <tr><td className="muted">framework</td><td>{a.framework || "—"}</td></tr>
-              <tr><td className="muted">registered</td><td>{a.registered ? <span className="tag ok">yes</span> : <span className="tag bad">shadow</span>}</td></tr>
+              <tr><td className="muted">registered</td><td>{a.registered ? <span className="tag ok">yes</span> : <span className="tag bad">unregistered</span>}</td></tr>
               <tr><td className="muted">declared models</td><td className="small mono">{a.declared_models?.join(", ") || "—"}</td></tr>
               <tr><td className="muted">declared tools</td><td className="small mono wrap">{a.declared_tools?.join(", ") || "—"}</td></tr>
               <tr><td className="muted">data classes</td><td className="small">{a.data_classes?.join(", ") || "—"}</td></tr>
@@ -271,7 +291,7 @@ export default async function AgentDetail({
           note={
             <>
               derived from traces, not config{" "}
-              <InfoTip text="'Observed' means seen actually happening in traced traffic. Contrast with the 'declared models'/'declared tools' rows in Registration, which are just what someone typed in — a mismatch between the two is itself a signal worth noticing. When a target is a registered tool, its impact tier (read/write/irreversible) and — if it came through an MCP server — that server's trust level are shown alongside it." />
+              <InfoTip text="'Observed' means seen actually happening in traced traffic. Contrast with the 'declared models'/'declared tools' rows in Registration, which are just what someone typed in — a mismatch between the two is itself a signal worth noticing. When a target is a registered tool, its impact tier (read, write, high_impact or irreversible) and — if it came through an MCP server — that server's trust level are shown alongside it." />
             </>
           }
         >
@@ -302,7 +322,10 @@ export default async function AgentDetail({
                       {toolByKey[l.target] && (
                         <>
                           {" "}
-                          <span className={`tag ${toolByKey[l.target].impact === "irreversible" ? "bad" : toolByKey[l.target].impact === "write" ? "warn" : ""}`}>
+                          <span
+                            className={`tag ${IMPACT_TONE[toolByKey[l.target].impact] ?? ""}`}
+                            title={IMPACT_MEANS[toolByKey[l.target].impact]}
+                          >
                             {toolByKey[l.target].impact}
                           </span>
                           {toolByKey[l.target].mcp_server_id && mcpById[toolByKey[l.target].mcp_server_id] && (

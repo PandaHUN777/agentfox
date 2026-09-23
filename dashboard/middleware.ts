@@ -16,12 +16,30 @@ import { SESSION_COOKIE } from "@/lib/api";
 // talks directly to the gateway's own unauthenticated `/api/playground/*` routes
 // from the browser, never through this app's cookie-authenticated `api()` helper,
 // so it needs no session here either.
-const PUBLIC_PATHS = ["/login", "/api/auth", "/playground"];
+//
+// /benchmark is public for the same reason: it is the page the playground's
+// "read the full benchmark" link points at, so it is read by people who have no
+// account yet. It is a static page with no session and no API call.
+const PUBLIC_PATHS = ["/login", "/api/auth", "/playground", "/benchmark"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const headers = new Headers(req.headers);
   headers.set("x-pathname", pathname);
+
+  // A page whose control-plane call came back 401/403 links here. The cookie is
+  // still set and still looks fine to the check below, so without clearing it
+  // the user is stuck in a loop: /login sees a cookie and bounces them back into
+  // the app, which 401s again. This is the one place that can actually drop it —
+  // a Server Component cannot set cookies. `expired=1` is what the login page
+  // reads to explain what happened; the incoming value is never rendered.
+  if (pathname === "/login" && req.nextUrl.searchParams.get("session") === "expired") {
+    const url = new URL("/login", req.url);
+    url.searchParams.set("expired", "1");
+    const res = NextResponse.redirect(url);
+    res.cookies.delete(SESSION_COOKIE);
+    return res;
+  }
 
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
   const signedIn = Boolean(req.cookies.get(SESSION_COOKIE)?.value);

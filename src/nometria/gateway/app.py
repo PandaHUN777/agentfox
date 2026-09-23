@@ -129,6 +129,11 @@ def create_app() -> FastAPI:
             "X-Nometria-Trace",
             "X-Nometria-Verdict",
             "X-Nometria-Effective-Verdict",
+            # Same two values under names that say which one took effect:
+            # applied = what happened, would-be = the counterfactual. See
+            # gateway/verdicts.py.
+            "X-Nometria-Applied-Verdict",
+            "X-Nometria-Would-Be-Verdict",
             "X-Nometria-Decision",
             "X-Nometria-Mode",
             "X-Nometria-Latency-Ms",
@@ -247,10 +252,56 @@ def create_app() -> FastAPI:
     app.include_router(messaging.router)
     app.include_router(proposals.router)
     # Unauthenticated by design (see playground.py's module docstring) — the only
-    # router in this app that never depends on `current_user`, and the one place
-    # this process is not stateless (NFR-3, contradicted deliberately: see
-    # playground_sessions.py's own note on why that's an accepted trade-off here).
+    # router in this app that never depends on `current_user`. It keeps no state in
+    # this process: a sandbox is a tenant in the deployment database, so any instance
+    # can serve any sandbox and NFR-3 still holds.
     app.include_router(playground.router)
+
+    def _health_payload() -> dict[str, Any]:
+        degradation = service_health()
+        return {
+            "status": "ok",
+            "version": __version__,
+            "governance_healthy": degradation.get("healthy"),
+            "degradation": degradation,
+        }
+
+    @app.get("/", tags=["platform"], summary="Service root")
+    def root() -> dict[str, Any]:
+        """Name the service and say where to go next. Unauthenticated.
+
+        Added because `GET /` and `GET /health` both returned `{"detail":"Not Found"}`
+        on the deployed API while only `/api/health` worked, which reads as a dead host
+        to anyone checking by hand or with a default uptime probe.
+
+        It reports the product name, the running version, and paths. It reports no
+        configuration: not the database, the provider, the policy mode, the fail mode,
+        the enabled detectors or any credential. Reaching this route proves the process
+        is up and serving HTTP and nothing more — it runs no dependency check, so a 200
+        here does not mean the database or the detectors are healthy. `/api/health`
+        answers that.
+        """
+        return {
+            "service": "nometria",
+            "description": (
+                "Governance, security and compliance for AI agents. Inline enforcement "
+                "under /v1, control plane under /api."
+            ),
+            "version": __version__,
+            "docs": "/docs",
+            "openapi": "/openapi.json",
+            "health": "/api/health",
+            "metrics": "/metrics",
+        }
+
+    @app.get("/health", tags=["platform"], summary="Health")
+    def health_alias() -> dict[str, Any]:
+        """The same payload as `/api/health`, at the path probes default to.
+
+        An alias, not a second implementation: both call the same function, so the two
+        cannot drift apart and report different things about one process.
+        """
+        return _health_payload()
 
     # `summary` pinned so the docstring below does not rewrite this route's label in
     # the generated Appendix C table (scripts/api_routes.py) — the explanation belongs
@@ -266,13 +317,7 @@ def create_app() -> FastAPI:
         nothing, so a 200 here is exactly the signal that cannot tell a working control
         from an absent one.
         """
-        degradation = service_health()
-        return {
-            "status": "ok",
-            "version": __version__,
-            "governance_healthy": degradation.get("healthy"),
-            "degradation": degradation,
-        }
+        return _health_payload()
 
     @app.get("/api/version", tags=["platform"])
     def version() -> dict[str, Any]:

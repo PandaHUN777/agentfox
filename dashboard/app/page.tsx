@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, apiErrorProps } from "@/lib/api";
 import { ApiDown, Severity, Stat, StatLink, findingTypeInfo, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ export default async function Overview() {
     return (
       <>
         <h1>Overview</h1>
-        <ApiDown error={String(e?.message || e)} />
+        <ApiDown {...apiErrorProps(e)} />
       </>
     );
   }
@@ -141,7 +141,7 @@ export default async function Overview() {
       <h2>Inventory</h2>
       <div className="cards">
         <StatLink n={inv.agents} label="agents under management" href="/agents" />
-        <StatLink n={inv.shadow} label="shadow (ungoverned)" tone={inv.shadow ? "bad" : "ok"} href="/agents" />
+        <StatLink n={inv.shadow} label="unregistered" tone={inv.shadow ? "bad" : "ok"} href="/agents" hint="Sending traffic but never registered, so nobody is accountable for them. Shown as an 'Unregistered agent' finding too." />
         <StatLink n={inv.unowned} label="without an owner" tone={inv.unowned ? "warn" : "ok"} href="/agents" />
         <StatLink
           n={onboarding.counts.boundaries}
@@ -163,6 +163,20 @@ export default async function Overview() {
           <Link href="/start">Start here →</Link>
         </div>
       )}
+
+      {/* Containment is the thing this product is actually for, and until now it
+          appeared once, in body text, on Start here. Three sentences on the page
+          everyone lands on, with the dependency stated rather than skipped. */}
+      <div className="note-panel">
+        <strong>What holds when a guardrail is fooled.</strong> The numbers above
+        count text that a detector caught. The control underneath them does not read
+        text at all: it checks the action — which tool, what arguments, where those
+        arguments came from, and how much damage the tool can do — so an irreversible
+        call built out of untrusted content is refused or sent for approval even when
+        nothing flagged the prompt. It depends entirely on tools being declared
+        honestly; a tool recorded as read-only that isn't, is not covered.{" "}
+        <Link href="/policies">See it on Policies →</Link>
+      </div>
     </>
   );
 }

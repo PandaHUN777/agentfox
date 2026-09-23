@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { api, safeApi, ApiError } from "@/lib/api";
+import { api, safeApi, ApiError, apiErrorProps } from "@/lib/api";
 import { ApiDown, Panel, Empty } from "@/components/ui";
 import { RepoTable } from "@/components/RepoTable";
 import { TokenManager } from "@/components/TokenManager";
@@ -23,13 +23,23 @@ const inputStyle = {
   fontFamily: "inherit",
 } as const;
 
+/**
+ * The id is derived from the field's own `name` (unique within a form, and
+ * stable between server and client render — `useId` is not available in a
+ * Server Component) so the label is actually associated with its input rather
+ * than just sitting above it. Without that, a screen reader announces four
+ * unlabelled text boxes and clicking the label does nothing.
+ */
 function Field({ label, ...props }: { label: string } & React.InputHTMLAttributes<HTMLInputElement>) {
+  const id =
+    props.id ||
+    `field-${String(props.name || label).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
   return (
     <div>
-      <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+      <label htmlFor={id} className="small muted" style={{ display: "block", marginBottom: 4 }}>
         {label}
       </label>
-      <input style={inputStyle} {...props} />
+      <input id={id} style={inputStyle} {...props} />
     </div>
   );
 }
@@ -89,7 +99,7 @@ async function ChecklistTab() {
   try {
     onboarding = await api("/api/onboarding");
   } catch (e: any) {
-    return <ApiDown error={String(e?.message || e)} />;
+    return <ApiDown {...apiErrorProps(e)} />;
   }
 
   const { steps, completed, total, next, counts, connected } = onboarding;
@@ -197,14 +207,14 @@ async function ConnectTab({
   scanError?: string;
 }) {
   let repos: { github_login: string; repos: Repo[] } | null = null;
-  let connectError: string | null = null;
+  let connectError: { error: string; status?: number } | null = null;
   try {
     repos = await api("/api/integrations/github/repos");
   } catch (e: any) {
     if (e instanceof ApiError && e.status === 404) {
       // not connected yet — not an error, the normal first-visit state
     } else {
-      connectError = String(e?.message || e);
+      connectError = apiErrorProps(e);
     }
   }
 
@@ -275,7 +285,7 @@ async function ConnectTab({
         </div>
       )}
 
-      {connectError && <ApiDown error={connectError} />}
+      {connectError && <ApiDown {...connectError} />}
 
       {!repos ? (
         // Neither option is connected yet — both cards are compact, so a

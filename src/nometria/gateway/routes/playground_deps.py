@@ -9,11 +9,22 @@ from __future__ import annotations
 
 from fastapi import HTTPException
 
-from ..playground_sessions import PlaygroundSession, action_limiter, get_store
+from ..playground_sessions import (
+    PlaygroundSession,
+    PlaygroundUnavailable,
+    action_limiter,
+    get_store,
+)
 
 
 def playground_session(session_id: str) -> PlaygroundSession:
-    record = get_store().get(session_id)
+    try:
+        record = get_store().get(session_id)
+    except PlaygroundUnavailable as exc:
+        # 503, not 404: "expired or never existed" would be a false statement about
+        # the visitor's sandbox when the real problem is that the database could not
+        # be read.
+        raise HTTPException(503, str(exc)) from exc
     if record is None:
         raise HTTPException(
             404, "This playground sandbox has expired or never existed — create a new one."

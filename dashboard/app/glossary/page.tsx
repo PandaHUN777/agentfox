@@ -120,6 +120,41 @@ export default function Glossary() {
               </td>
             </tr>
             <tr>
+              <td className="mono small">Tool containment</td>
+              <td className="small">
+                Deciding whether a tool call is allowed to run, from the call itself
+                rather than from the wording of the prompt: which tool, what
+                arguments, where those arguments came from, and the tool's declared
+                impact tier. It is the reason an injection can succeed at convincing
+                the model and still not get the action executed. It holds only as far
+                as the declarations go — a tool declared{" "}
+                <span className="mono">read</span> that actually deletes records is
+                not contained by it. See <a href="/policies">Policies</a>.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono small">Impact tier</td>
+              <td className="small">
+                How much damage one tool can do, declared per tool and the axis every
+                containment rule reasons over:{" "}
+                <span className="mono">read</span> (returns information),{" "}
+                <span className="mono">write</span> (changes something recoverable),{" "}
+                <span className="mono">high_impact</span> (significant but
+                reversible), <span className="mono">irreversible</span> (cannot be
+                undone — money moved, a message sent, a record deleted). Set with{" "}
+                <span className="mono">nometria tools declare --impact</span>.
+              </td>
+            </tr>
+            <tr>
+              <td className="mono small">Argument provenance / taint</td>
+              <td className="small">
+                Where the values in a tool call came from — typed by the user, pulled
+                out of a retrieved document, or copied from another tool's output.
+                Containment rules use it to tell an action the user asked for from one
+                an attacker planted in content the agent read.
+              </td>
+            </tr>
+            <tr>
               <td className="mono small">Provenance</td>
               <td className="small">
                 Being able to point to exactly which source document backed a specific

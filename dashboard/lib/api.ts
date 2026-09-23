@@ -60,6 +60,19 @@ export async function api<T = any>(path: string, init?: RequestInit): Promise<T>
   return res.json() as Promise<T>;
 }
 
+/**
+ * Turns whatever a failed `api()` call threw into the props `<ApiDown>` needs.
+ *
+ * The status is the whole point: without it every failure reads as "the server
+ * is down", including an expired session (401) and a missing record (404). A
+ * network-level failure has no status at all, which is the case ApiDown treats
+ * as genuinely unreachable.
+ */
+export function apiErrorProps(e: unknown): { error: string; status?: number } {
+  const error = String((e as any)?.message || e);
+  return e instanceof ApiError ? { error, status: e.status } : { error };
+}
+
 /** Fetch that renders an inline error rather than blanking the page. */
 export async function safeApi<T = any>(path: string, fallback: T): Promise<T> {
   try {

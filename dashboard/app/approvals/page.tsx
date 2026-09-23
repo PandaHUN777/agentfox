@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { api, safeApi } from "@/lib/api";
+import { api, safeApi, apiErrorProps } from "@/lib/api";
 import { AgentLink, ApiDown, Empty, InfoTip, Severity, ts } from "@/components/ui";
 import { Countdown } from "@/components/Countdown";
 
@@ -57,8 +57,12 @@ export default async function Approvals({
       <h1>Approvals</h1>
       <p className="sub">
         Two ways a request needs a human: sign-off on one specific tool call, or a
-        hand-off of a whole conversation. An unanswered approval denies
-        automatically once it expires (fail-closed) rather than sitting open
+        hand-off of a whole conversation. Every request in the first queue is a{" "}
+        <Link href="/policies">policy</Link> that returned{" "}
+        <span className="mono">escalate</span> instead of deciding on its own:
+        approving it lets the call run, denying it blocks the call the same way an{" "}
+        <span className="mono">block</span> verdict would. An unanswered approval
+        denies automatically once it expires (fail-closed) rather than sitting open
         forever.
       </p>
 
@@ -96,7 +100,7 @@ async function ApprovalsTab({ status: rawStatus }: { status?: string }) {
       safeApi("/api/agents", { agents: [] }),
     ]);
   } catch (e: any) {
-    return <ApiDown error={String(e?.message || e)} />;
+    return <ApiDown {...apiErrorProps(e)} />;
   }
 
   const agentSlug: Record<string, string> = {};
@@ -104,10 +108,15 @@ async function ApprovalsTab({ status: rawStatus }: { status?: string }) {
 
   return (
     <>
-      <div className="chipbar" style={{ marginTop: 4, marginBottom: 4 }}>
+      <div className="chipbar" style={{ marginTop: 4, marginBottom: 4 }} role="group" aria-label="Filter approvals by status">
         <span className="chipbar-label">status:</span>
         {STATUSES.map((s) => (
-          <Link key={s} href={`/approvals?status=${s}`} className={`chip${status === s ? " active" : ""}`}>
+          <Link
+            key={s}
+            href={`/approvals?status=${s}`}
+            className={`chip${status === s ? " active" : ""}`}
+            aria-current={status === s ? "true" : undefined}
+          >
             {s}
           </Link>
         ))}
@@ -125,7 +134,7 @@ async function ApprovalsTab({ status: rawStatus }: { status?: string }) {
                 <th>requested</th>
                 <th>
                   expires
-                  <InfoTip text="Past this time, an unanswered request denies automatically — the default timeout action fails closed rather than leaving a risky call in limbo." />
+                  <InfoTip text="Past this time, an unanswered request is denied automatically and the call is blocked — the default timeout action fails closed rather than leaving a risky call in limbo." />
                 </th>
                 {status === "pending" && <th></th>}
               </tr>
@@ -135,7 +144,7 @@ async function ApprovalsTab({ status: rawStatus }: { status?: string }) {
                 <tr key={a.id}>
                   <td className="small">
                     {agentSlug[a.agent_id] ? (
-                      <Link href={`/agents/${agentSlug[a.agent_id]}`}>{agentSlug[a.agent_id]}</Link>
+                      <AgentLink slug={agentSlug[a.agent_id]} agents={agents.agents || []} />
                     ) : (
                       <span className="muted">unattributed</span>
                     )}
@@ -151,11 +160,11 @@ async function ApprovalsTab({ status: rawStatus }: { status?: string }) {
                     <td className="small">
                       <div className="review-actions" style={{ flexDirection: "column", gap: 4 }}>
                         <form action={`/api/approvals/${a.id}/approve`} method="POST" className="row" style={{ gap: 4 }}>
-                          <input type="text" name="rationale" placeholder="rationale (optional)" style={{ padding: "3px 6px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 11.5, width: 130 }} />
+                          <input type="text" name="rationale" aria-label="Approval rationale (optional)" placeholder="rationale (optional)" style={{ padding: "3px 6px", borderRadius: 5, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 11.5, width: 130 }} />
                           <button type="submit" className="btn-approve">Approve</button>
                         </form>
                         <form action={`/api/approvals/${a.id}/deny`} method="POST">
-                          <button type="submit" className="btn-reject">Deny</button>
+                          <button type="submit" className="btn-reject" title="The tool call does not run — the same outcome as a block verdict.">Deny</button>
                         </form>
                       </div>
                     </td>
@@ -191,7 +200,7 @@ async function EscalationTab({ agent }: { agent?: string }) {
       safeApi("/api/escalation/policy", null),
     ]);
   } catch (e: any) {
-    return <ApiDown error={String(e?.message || e)} />;
+    return <ApiDown {...apiErrorProps(e)} />;
   }
 
   const rate = report.missed_rate ?? 0;

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE } from "@/lib/api";
@@ -5,15 +6,24 @@ import { Wordmark } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * This page is the sign-up path as much as the sign-in one — a GitHub identity
+ * nobody has seen before creates a new org on the far side of it — so it can't
+ * greet everyone with "Welcome back". It also has to answer "what is this" for
+ * a reader who arrived from a link and has no idea, and offer the one thing
+ * that needs no account at all: the playground.
+ */
 export default async function Login({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; expired?: string }>;
 }) {
-  if ((await cookies()).get(SESSION_COOKIE)?.value) {
+  const { error, expired } = await searchParams;
+  // Middleware clears the stale cookie on its way here (see middleware.ts), so
+  // by this point an expired session has no cookie left to redirect on.
+  if (!expired && (await cookies()).get(SESSION_COOKIE)?.value) {
     redirect("/start");
   }
-  const { error } = await searchParams;
 
   return (
     <div className="login-shell">
@@ -24,17 +34,34 @@ export default async function Login({
         <small className="muted" style={{ display: "block", marginBottom: 18 }}>
           AI agent governance platform
         </small>
-        <h1 style={{ fontSize: 20 }}>Welcome back</h1>
+        <h1 style={{ fontSize: 20 }}>Sign in or create a workspace</h1>
         <p className="sub" style={{ maxWidth: "none" }}>
-          Sign in with GitHub to see your agents and connect a repo — the same grant
-          lets us scan it for what needs governing.
+          Nometria keeps a register of every AI agent you run, the rules each one has
+          to follow, and a record of what it actually did. Sign in with GitHub: if
+          this is your first time, that creates a new workspace for you.
         </p>
+        {expired && (
+          <div className="error small" style={{ textAlign: "left", marginBottom: 16 }}>
+            Your session expired, so you were signed out. Signing in again picks up
+            where you left off.
+          </div>
+        )}
         {error && <div className="error small">{error}</div>}
         <a className="btn-github" href="/api/auth/github/login">
           Sign in with GitHub
         </a>
         <p className="small muted" style={{ marginTop: 18 }}>
-          We only read code structure to detect what you're using — never execute it.
+          Signing in with GitHub is also what lets you connect a repository, so we can
+          scan it for agents that need governing. We only read code structure to detect
+          what you&rsquo;re using, never execute it.
+        </p>
+        <p className="small" style={{ marginTop: 18 }}>
+          <Link href="/playground">Try the playground first</Link>
+          <span className="muted">
+            {" "}
+            — send a prompt at a sample agent and watch what gets blocked. No account,
+            nothing to install.
+          </span>
         </p>
       </div>
     </div>

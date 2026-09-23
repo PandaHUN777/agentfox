@@ -9,10 +9,44 @@
  * real email, no real model call — see the backend module's own docstring).
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Wordmark } from "./Logo";
 import { Panel, Verdict } from "./ui";
+
+/**
+ * Where the closing call to action sends someone. Point this at a real address
+ * or a booking link before showing this page to anyone; it defaults to the
+ * sign-in route only so the button is never a dead end.
+ */
+const CONTACT_HREF = "/login";
+
+/**
+ * The public methodology page for the comparison table further down. It used to
+ * be a GitHub URL into a private repository, which 404d for every visitor.
+ */
+const BENCHMARK_HREF = "/benchmark";
+
+/**
+ * The offline `echo` provider tags its deterministic replies with
+ * `[echo:<digest>] ` (src/nometria/providers/echo.py). That is a test-substrate
+ * detail, not something a visitor should have to read past.
+ */
+const ECHO_TAG = /^\[echo:[0-9a-f]+\]\s*/;
+
+function agentReply(reply?: string | null): string {
+  if (!reply) return "(no reply: the call was blocked before the model ran)";
+  return reply.replace(ECHO_TAG, "");
+}
+
+/** Carries the HTTP status so a vanished sandbox (404) is told apart from a bug. */
+class ApiError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.status = status;
+  }
+}
 
 type EnforcementVerdict = {
   verdict: string;
@@ -116,6 +150,10 @@ export function Playground({ apiBase }: { apiBase: string }) {
   const [splitRunning, setSplitRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sandboxState, setSandboxState] = useState<any>(null);
+  // Set when any route 404s, which means the server no longer has this sandbox.
+  const [sandboxLost, setSandboxLost] = useState(false);
+  const [bootstrapError, setBootstrapError] = useState<string | null>(null);
+  const [bootstrapping, setBootstrapping] = useState(true);
 
   const [toolAgent, setToolAgent] = useState("support-triage");
   const [toolKey, setToolKey] = useState("payments.transfer");
@@ -126,33 +164,74 @@ export function Playground({ apiBase }: { apiBase: string }) {
 
   const turnsRef = useRef<HTMLDivElement>(null);
 
-  async function call<T = any>(path: string, init?: RequestInit): Promise<T> {
-    const res = await fetch(`${apiBase}${path}`, {
-      ...init,
-      headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
-    });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new Error(body.detail || `${res.status} ${res.statusText}`);
+  const call = useCallback(
+    async function call<T = any>(path: string, init?: RequestInit): Promise<T> {
+      const res = await fetch(`${apiBase}${path}`, {
+        ...init,
+        headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new ApiError(res.status, body.detail || `${res.status} ${res.statusText}`);
+      }
+      return res.json();
+    },
+    [apiBase],
+  );
+
+  /**
+   * Sandboxes are thrown away on the server, so any route here can start
+   * returning 404 mid-demo. Bootstrapping is a named, re-runnable action rather
+   * than a one-shot mount effect so the recovery button below can call it.
+   */
+  const bootstrap = useCallback(async () => {
+    setBootstrapping(true);
+    setBootstrapError(null);
+    setSandboxLost(false);
+    setError(null);
+    try {
+      const body = await call<World & { mode: string }>("/api/playground/sessions", {
+        method: "POST",
+      });
+      setSessionId(body.session_id);
+      setWorld(body);
+      setDocumentText(body.poisoned_document);
+      setMode("observe");
+      setTurns([]);
+      setToolResult(null);
+      setSandboxState(null);
+    } catch (e: any) {
+      setSessionId(null);
+      // An ApiError carries the gateway's own sentence (the rate limiter's, for
+      // example), which is already plain English. Anything else is the network,
+      // and "Failed to fetch" is not something to put in front of a visitor.
+      setBootstrapError(
+        e instanceof ApiError
+          ? e.message
+          : "The sandbox service could not be reached from your browser. This is usually temporary.",
+      );
+    } finally {
+      setBootstrapping(false);
     }
-    return res.json();
+  }, [call]);
+
+  /**
+   * A 404 means the sandbox is gone, which is a normal thing to happen after 30
+   * minutes and needs a new one, not an error message. Anything else is a real
+   * failure and gets shown as one.
+   */
+  function reportCallFailure(e: any) {
+    if (e instanceof ApiError && e.status === 404) {
+      setSandboxLost(true);
+      setError(null);
+      return;
+    }
+    setError(String(e?.message || e));
   }
 
   useEffect(() => {
-    let cancelled = false;
-    call<World & { mode: string }>("/api/playground/sessions", { method: "POST" })
-      .then((body) => {
-        if (cancelled) return;
-        setSessionId(body.session_id);
-        setWorld(body);
-        setDocumentText(body.poisoned_document);
-      })
-      .catch((e) => setError(String(e.message || e)));
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiBase]);
+    void bootstrap();
+  }, [bootstrap]);
 
   useEffect(() => {
     turnsRef.current?.scrollTo({ top: turnsRef.current.scrollHeight, behavior: "smooth" });
@@ -161,8 +240,11 @@ export function Playground({ apiBase }: { apiBase: string }) {
   async function refreshState(sid: string) {
     try {
       setSandboxState(await call(`/api/playground/sessions/${sid}/state`));
-    } catch {
+    } catch (e: any) {
       // The sidebar is best-effort — a failed refresh shouldn't block the chat.
+      // A 404 is different: the sandbox itself is gone, and saying so is the
+      // whole point of the recovery banner.
+      if (e instanceof ApiError && e.status === 404) setSandboxLost(true);
     }
   }
 
@@ -185,7 +267,7 @@ export function Playground({ apiBase }: { apiBase: string }) {
         ...t,
         {
           role: "agent",
-          text: body.reply || "(no reply — the call was blocked before the model ran)",
+          text: agentReply(body.reply),
           verdict: body.verdict,
           windowVerdict: body.conversation_window_verdict,
           blocked: body.blocked,
@@ -193,7 +275,7 @@ export function Playground({ apiBase }: { apiBase: string }) {
       ]);
       refreshState(sessionId);
     } catch (e: any) {
-      setError(String(e.message || e));
+      reportCallFailure(e);
     } finally {
       setSending(false);
     }
@@ -226,7 +308,7 @@ export function Playground({ apiBase }: { apiBase: string }) {
       });
       setMode(next);
     } catch (e: any) {
-      setError(String(e.message || e));
+      reportCallFailure(e);
     }
   }
 
@@ -243,7 +325,11 @@ export function Playground({ apiBase }: { apiBase: string }) {
       setToolResult(body);
       refreshState(sessionId);
     } catch (e: any) {
-      setToolResult({ error: String(e.message || e) });
+      if (e instanceof ApiError && e.status === 404) {
+        setSandboxLost(true);
+      } else {
+        setToolResult({ error: String(e?.message || e) });
+      }
     } finally {
       setToolBusy(false);
     }
@@ -261,10 +347,13 @@ export function Playground({ apiBase }: { apiBase: string }) {
             <Wordmark />
           </div>
           <p className="sub muted">
-            Try to break a real agent. Every verdict below comes from the same
-            enforcement code the product runs in production — nothing here is
-            mocked. Nothing here is real either: this is your own private,
-            throwaway sandbox, and it forgets everything in 30 minutes.
+            Try to break a real agent. Every verdict here is produced by the same
+            enforcement code the product runs in production, against your own
+            private sandbox that forgets everything in 30 minutes. The agent
+            replying to you is not a model: it is a deterministic stub, and when
+            you inject it, it complies, because containment has to hold after the
+            model has already been convinced. What you are testing is the policy,
+            not a model&apos;s mood on the day.
           </p>
         </div>
         <Link href="/login" className="btn-scan">
@@ -272,16 +361,188 @@ export function Playground({ apiBase }: { apiBase: string }) {
         </Link>
       </header>
 
+      {(sandboxLost || bootstrapError) && (
+        <div className="pg-recovery">
+          <strong>
+            {sandboxLost ? "This sandbox is gone." : "The sandbox did not start."}
+          </strong>
+          <p className="small muted">
+            {bootstrapError ||
+              "Sandboxes are thrown away after 30 minutes, and a server restart drops them too. Nothing was saved and nothing is broken. Start a new one and carry on where you left off."}
+          </p>
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => void bootstrap()}
+            disabled={bootstrapping}
+          >
+            {bootstrapping ? "Starting…" : "Start a new sandbox"}
+          </button>
+        </div>
+      )}
+
       {error && <div className="error">{error}</div>}
 
       {!sessionId ? (
-        <div className="body muted small">Setting up your sandbox…</div>
+        !bootstrapError && (
+          <div className="body muted small">Setting up your sandbox…</div>
+        )
       ) : (
         <>
+          {/*
+            The order below is deliberate: containment leads, detection follows.
+            Cards used to run chat, then indirect injection, then the tool call,
+            which put the argument this product actually makes below the fold and
+            made the page read like the injection detector this market mocks.
+          */}
+          <div className="pg-lede">
+            <p>
+              Assume the injection works. That is the premise here, not a
+              failure, and it is why the panels are in this order.
+            </p>
+            <ol>
+              <li>
+                <strong>The refusal comes first.</strong> Ask the support agent
+                to transfer $5,000. It holds no payments grant, so the call is
+                refused by the capability check with no model in the loop and no
+                detector reading any text.
+              </li>
+              <li>
+                <strong>Then the injection that asks for it.</strong> Type an
+                attack into the chat and watch what the detectors do and do not
+                catch, in <strong>observe</strong> mode first.
+              </li>
+              <li>
+                <strong>Then the same attack arriving from a document</strong>{" "}
+                the agent retrieved on its own, which is the shape no user ever
+                types and a stateless text scanner sees out of context.
+              </li>
+            </ol>
+          </div>
           <div className="pg-columns">
             <div className="stack">
+              <Panel title="1. Try a tool call directly" note="Tiers C & D">
+                <div className="body">
+                  <p className="small muted" style={{ marginTop: 0 }}>
+                    Real capability grants, no LLM in the loop needed to test
+                    them — pick a preset or write your own arguments. The first
+                    preset is the transfer an injection asks for. The support
+                    agent holds no payments grant, so the refusal comes from the
+                    grant itself, not from anything reading the text.
+                  </p>
+                  <div className="pg-presets" style={{ padding: 0, marginBottom: 10 }}>
+                    {TOOL_PRESETS.map((p) => (
+                      <button
+                        key={p.label}
+                        type="button"
+                        className="pg-preset-btn"
+                        onClick={() => {
+                          setToolAgent(p.agent);
+                          setToolKey(p.tool);
+                          setToolArgsText(JSON.stringify(p.arguments, null, 2));
+                          setToolIntent(p.intent);
+                        }}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="field-grid">
+                    <div>
+                      <label className="small muted">agent</label>
+                      <select
+                        className="input-select"
+                        style={{ width: "100%" }}
+                        value={toolAgent}
+                        onChange={(e) => setToolAgent(e.target.value)}
+                      >
+                        {world?.agents.map((a) => (
+                          <option key={a.slug} value={a.slug}>
+                            {a.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="small muted">tool</label>
+                      <select
+                        className="input-select"
+                        style={{ width: "100%" }}
+                        value={toolKey}
+                        onChange={(e) => setToolKey(e.target.value)}
+                      >
+                        {Object.entries(world?.tools || {}).map(([key, t]) => (
+                          <option key={key} value={key}>
+                            {key} ({t.impact})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="span-2">
+                      <label className="small muted">arguments (JSON)</label>
+                      <textarea
+                        className="input-text mono"
+                        rows={4}
+                        style={{ width: "100%" }}
+                        value={toolArgsText}
+                        onChange={(e) => setToolArgsText(e.target.value)}
+                      />
+                    </div>
+                    <div className="span-2">
+                      <label className="small muted">
+                        declared intent — an irreversible tool with no intent
+                        escalates for human review regardless of arguments (EU AI
+                        Act Art. 14)
+                      </label>
+                      <input
+                        className="input-text"
+                        style={{ width: "100%" }}
+                        value={toolIntent}
+                        onChange={(e) => setToolIntent(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ marginTop: 10 }}
+                    onClick={runToolCall}
+                    disabled={toolBusy}
+                  >
+                    Attempt this call
+                  </button>
+                  {toolResult && (
+                    <div className="pg-trace" style={{ borderTop: "none", paddingLeft: 0 }}>
+                      {"error" in toolResult ? (
+                        <span className="tag bad">{toolResult.error}</span>
+                      ) : (
+                        <>
+                          {pill(toolResult.verdict)}{" "}
+                          <span className="muted">{toolResult.reason}</span>
+                          {/*
+                            The top-level reason is usually verbatim the reason
+                            of the rule that produced it, so printing both put
+                            the same sentence on screen twice. Show the rule id
+                            on its own in that case; it is the part that adds
+                            something.
+                          */}
+                          {toolResult.rules_fired?.map((r, i) => (
+                            <div key={i} className="pg-trace-rule small muted">
+                              <span className="mono">{r.rule_id}</span>
+                              {r.reason?.trim() !== toolResult.reason?.trim() && (
+                                <> — {r.reason}</>
+                              )}
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </Panel>
+
               <Panel
-                title={`Chat with ${world?.agents.find((a) => a.slug === agent)?.name || agent}`}
+                title={`2. Chat with ${world?.agents.find((a) => a.slug === agent)?.name || agent}`}
                 note={
                   <select
                     className="input-select"
@@ -380,7 +641,7 @@ export function Playground({ apiBase }: { apiBase: string }) {
               </Panel>
 
               <Panel
-                title="Indirect injection — edit the retrieved document"
+                title="3. Indirect injection — edit the retrieved document"
                 note="Tier B"
               >
                 <div className="body">
@@ -416,113 +677,6 @@ export function Playground({ apiBase }: { apiBase: string }) {
                       Have the agent summarize it
                     </button>
                   </div>
-                </div>
-              </Panel>
-
-              <Panel title="Try a tool call directly" note="Tiers C & D">
-                <div className="body">
-                  <p className="small muted" style={{ marginTop: 0 }}>
-                    Real capability grants, no LLM in the loop needed to test
-                    them — pick a preset or write your own arguments.
-                  </p>
-                  <div className="pg-presets" style={{ padding: 0, marginBottom: 10 }}>
-                    {TOOL_PRESETS.map((p) => (
-                      <button
-                        key={p.label}
-                        type="button"
-                        className="pg-preset-btn"
-                        onClick={() => {
-                          setToolAgent(p.agent);
-                          setToolKey(p.tool);
-                          setToolArgsText(JSON.stringify(p.arguments, null, 2));
-                          setToolIntent(p.intent);
-                        }}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="field-grid">
-                    <div>
-                      <label className="small muted">agent</label>
-                      <select
-                        className="input-select"
-                        style={{ width: "100%" }}
-                        value={toolAgent}
-                        onChange={(e) => setToolAgent(e.target.value)}
-                      >
-                        {world?.agents.map((a) => (
-                          <option key={a.slug} value={a.slug}>
-                            {a.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="small muted">tool</label>
-                      <select
-                        className="input-select"
-                        style={{ width: "100%" }}
-                        value={toolKey}
-                        onChange={(e) => setToolKey(e.target.value)}
-                      >
-                        {Object.entries(world?.tools || {}).map(([key, t]) => (
-                          <option key={key} value={key}>
-                            {key} ({t.impact})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="span-2">
-                      <label className="small muted">arguments (JSON)</label>
-                      <textarea
-                        className="input-text mono"
-                        rows={4}
-                        style={{ width: "100%" }}
-                        value={toolArgsText}
-                        onChange={(e) => setToolArgsText(e.target.value)}
-                      />
-                    </div>
-                    <div className="span-2">
-                      <label className="small muted">
-                        declared intent — an irreversible tool with no intent
-                        escalates for human review regardless of arguments (EU AI
-                        Act Art. 14)
-                      </label>
-                      <input
-                        className="input-text"
-                        style={{ width: "100%" }}
-                        value={toolIntent}
-                        onChange={(e) => setToolIntent(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="btn-primary"
-                    style={{ marginTop: 10 }}
-                    onClick={runToolCall}
-                    disabled={toolBusy}
-                  >
-                    Attempt this call
-                  </button>
-                  {toolResult && (
-                    <div className="pg-trace" style={{ borderTop: "none", paddingLeft: 0 }}>
-                      {"error" in toolResult ? (
-                        <span className="tag bad">{toolResult.error}</span>
-                      ) : (
-                        <>
-                          {pill(toolResult.verdict)}{" "}
-                          <span className="muted">{toolResult.reason}</span>
-                          {toolResult.rules_fired?.map((r, i) => (
-                            <div key={i} className="pg-trace-rule small muted">
-                              <span className="mono">{r.rule_id}</span> — {r.reason}
-                            </div>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  )}
                 </div>
               </Panel>
             </div>
@@ -610,35 +764,57 @@ export function Playground({ apiBase }: { apiBase: string }) {
               cases. Full methodology, raw predictions and the honest trade-offs
               (including where llm-guard still wins) are in the report.
             </p>
-            <table>
-              <thead>
-                <tr>
-                  <th></th>
-                  <th className="num">precision</th>
-                  <th className="num">recall</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>Nometria (Tier B, indirect injection)</td>
-                  <td className="num">66.7%</td>
-                  <td className="num">100.0%</td>
-                </tr>
-                <tr>
-                  <td className="muted">llm-guard</td>
-                  <td className="num muted">81.8%</td>
-                  <td className="num muted">90.0%</td>
-                </tr>
-              </tbody>
-            </table>
+            {/*
+              The detection rows are unchanged and llm-guard is ahead on
+              precision, which stays stated plainly. The containment rows are
+              added because detection is not the axis this product argues on:
+              the containment figures are measured with every detector disabled,
+              from benchmarks/containment/README.md.
+            */}
+            <div className="scroll-x">
+              <table>
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th className="num">Nometria</th>
+                    <th className="num">llm-guard</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Indirect-injection detection, precision (20 cases)</td>
+                    <td className="num">66.7%</td>
+                    <td className="num">81.8%</td>
+                  </tr>
+                  <tr>
+                    <td>Indirect-injection detection, recall (20 cases)</td>
+                    <td className="num">100.0%</td>
+                    <td className="num">90.0%</td>
+                  </tr>
+                  <tr>
+                    <td>Attacks contained with every detector disabled</td>
+                    <td className="num">8/8</td>
+                    <td className="num muted">not applicable</td>
+                  </tr>
+                  <tr>
+                    <td>Legitimate calls still allowed in that same run</td>
+                    <td className="num">4/4</td>
+                    <td className="num muted">not applicable</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="small muted">
+              llm-guard is ahead on detection precision and that is the honest
+              read of those two rows. It cannot take part in the other two at
+              all: it scans text, and containment is decided by capability
+              grants, argument provenance and declared constraints, which are
+              not text it can see. The containment run disabled every detector
+              and confirmed the bypass was total, with 0 detector entities
+              raised across the attack set.
+            </p>
             <p className="small" style={{ marginBottom: 0 }}>
-              <a
-                href="https://github.com/architsharm/guardrails/blob/main/benchmarks/agent_security/README.md"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Read the full benchmark →
-              </a>
+              <Link href={BENCHMARK_HREF}>Read the full benchmark →</Link>
             </p>
           </div>
 
@@ -650,8 +826,11 @@ export function Playground({ apiBase }: { apiBase: string }) {
               capability model, your compliance framework — we'd like to hear
               what you found here first.
             </p>
-            {/* Intentionally no submission form / booking link wired here yet —
-                point this at wherever you actually want the conversation to go. */}
+            {/* CONTACT_HREF at the top of this file is the single place to
+                change this. Point it at a real address or a booking link. */}
+            <a className="btn-primary" href={CONTACT_HREF}>
+              Get in touch
+            </a>
           </div>
         </>
       )}

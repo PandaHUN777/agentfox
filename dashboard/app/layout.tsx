@@ -125,7 +125,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // middleware.ts) and has its own minimal header — the authenticated sidebar/
   // topbar chrome would be both wrong (nothing here is signed in) and a giveaway
   // of internal nav to an anonymous visitor.
-  const isChromelessPage = isLoginPage || pathname.startsWith("/playground");
+  // /benchmark is public and is linked from the playground, so a signed-out visitor
+  // reaches it. Wrapping it in the app chrome would hand them a sidebar whose every
+  // row bounces to sign-in.
+  const isChromelessPage =
+    isLoginPage || pathname.startsWith("/playground") || pathname.startsWith("/benchmark");
 
   let me: any = null;
   let attention: any = null;

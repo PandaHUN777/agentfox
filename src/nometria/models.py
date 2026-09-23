@@ -379,10 +379,26 @@ class ApprovalRequest(Base, TimestampMixin):
 
 
 class User(Base, TimestampMixin):
+    """An operator of the control plane.
+
+    Email is unique **per tenant**, not globally — the same correction migration
+    ``217f32001df6`` made to several other tables. A global unique meant two tenants
+    could not both have a user at the same address, which is wrong on its face for a
+    multi-tenant system (two companies, one shared contractor) and which made it
+    impossible to seed a second fixture world at all: `seed.seed` already tests for an
+    existing user with a tenant-filtered query, so it inserted and the global index
+    rejected the insert.
+
+    The lookup this affects is the development identity header, which resolves a user
+    by email before any tenant is known. `gateway/auth.py` resolves that ambiguity
+    explicitly rather than relying on the index to make it impossible.
+    """
+
     __tablename__ = "users"
+    __table_args__ = (UniqueConstraint("org_id", "email", name="ux_users_org_email"),)
 
     id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.user_id)
-    email: Mapped[str] = mapped_column(String(200), unique=True, index=True)
+    email: Mapped[str] = mapped_column(String(200), index=True)
     name: Mapped[str] = mapped_column(String(200), default="")
     role: Mapped[str] = mapped_column(String(32), default="developer")
     # OIDC/SAML seam (P2-4). Populated by an IdP when one is wired.
@@ -1604,6 +1620,47 @@ class JobSchedule(Base, TimestampMixin):
     last_enqueued_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
     next_due_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True), index=True)
     created_by: Mapped[str] = mapped_column(String(120), default="")
+
+
+# ---------------------------------------------------------------------------
+# Public playground
+# ---------------------------------------------------------------------------
+
+
+class PlaygroundSandbox(Base, TimestampMixin):
+    """The registry row for one public-playground sandbox.
+
+    A sandbox is a tenant. Its ``org_id`` is its own id, and every row the visitor's
+    activity produces (traces, decisions, findings, audit entries, the seeded demo
+    fixtures) is written under that org, so the ordinary session-level tenant filter in
+    ``tenancy.py`` is what keeps one sandbox out of another. No sandbox-specific filter
+    exists, because a filter somebody has to remember is not a control.
+
+    This row is what makes a sandbox outlive the process that created it: before it
+    existed, sandboxes lived in a module-level dict with a per-sandbox in-memory SQLite
+    engine, which works on one long-lived container and does not work at all on the
+    serverless deployment in ``api/vercel.json``, where the next request is a different
+    instance and finds nothing.
+
+    What the id proves and does not prove: the id is a 128-bit random value and it is
+    the only credential the playground has, so holding it is what grants access. It
+    does not identify a person and it is not revocable. Anyone the visitor sends the
+    link to can read the sandbox.
+    """
+
+    __tablename__ = "playground_sandboxes"
+
+    #: Also this sandbox's ``org_id``. Format is checked before it is ever bound to a
+    #: session, so a caller cannot name a real tenant in the path and be bound to it.
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    #: Idle expiry. Extended on each use, so the TTL the page shows is time since the
+    #: visitor's last action, not time since creation.
+    expires_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), index=True)
+    last_used_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    #: Trace ids this sandbox produced, oldest first, capped. Stored rather than
+    #: recomputed so the live sidebar shows the visitor's own actions in the order they
+    #: happened and not the seeded fixtures' traces.
+    trace_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
 
 
 __all__ = [n for n in dir() if n[0].isupper()]

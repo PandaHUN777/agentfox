@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ApiError, api } from "@/lib/api";
+import { ApiError, api, apiErrorProps } from "@/lib/api";
 import { ApiDown, ControlChip, InfoTip, NotFound, Panel, Verdict, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { controlTitleMap } from "@/lib/controls";
@@ -25,7 +25,7 @@ export default async function TraceDetail({
         {e instanceof ApiError && e.status === 404 ? (
           <NotFound what="trace" detail={id} back={{ href: "/traces", label: "Traces" }} />
         ) : (
-          <ApiDown error={String(e?.message || e)} />
+          <ApiDown {...apiErrorProps(e)} />
         )}
       </>
     );

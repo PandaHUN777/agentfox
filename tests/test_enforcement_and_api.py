@@ -1145,3 +1145,209 @@ def test_sdk_decorator_authorises_before_running(seeded):
     with pytest.raises(PolicyViolation):
         transfer(amount=25000, currency="USD", to="acct_x")
     assert calls == [], "the function must not run when the call is denied"
+
+
+# ---------------------------------------------------------------------------
+# Which verdict took effect (gateway/verdicts.py)
+# ---------------------------------------------------------------------------
+#
+# `verdict` is what happened and `effective_verdict` is the counterfactual, which is
+# the wrong way round for the names: "effective" reads as the authoritative one and is
+# the hypothetical. In observe mode an integrator gating on it refuses traffic this
+# platform allowed. The gateway therefore emits `applied_verdict` and
+# `would_be_verdict` alongside, with the same values.
+#
+# These tests check the wire format only. They do not test enforcement itself — the
+# rest of this file does that — and they deliberately assert the old keys are still
+# present, because the aliases are additive and breaking a field nobody was warned
+# about would be its own version of this bug.
+
+
+def _observe_mode_injection(client) -> dict:
+    """An input the baseline policy would block, sent while the policy is observing.
+
+    This is the only interesting case: it is where the two verdicts differ, so it is
+    where reading the wrong one changes what an integrator does.
+    """
+    return client.post(
+        "/v1/guard/input",
+        json={"agent": "support-triage", "content": INDIRECT_INJECTION},
+    ).json()
+
+
+def test_guard_input_carries_both_namings_of_the_two_verdicts(client):
+    body = _observe_mode_injection(client)
+
+    assert body["verdict"] == "allow", "observe mode does not stop traffic"
+    assert body["effective_verdict"] == "block", "the policy would have stopped it"
+    assert body["applied_verdict"] == body["verdict"]
+    assert body["would_be_verdict"] == body["effective_verdict"]
+
+
+def test_guard_tool_call_carries_both_namings(client):
+    body = client.post(
+        "/v1/guard/tool_call",
+        json={
+            "agent": "support-triage",
+            "tool": "payments.transfer",
+            "arguments": {"amount": 10, "currency": "USD", "to": "acct_x"},
+        },
+    ).json()
+
+    assert body["applied_verdict"] == body["verdict"]
+    assert body["would_be_verdict"] == body["effective_verdict"]
+
+
+def test_guard_memory_write_and_agent_message_carry_both_namings(client):
+    memory = client.post(
+        "/v1/guard/memory_write",
+        json={"agent": "support-triage", "content": "the refund window is 30 days"},
+    ).json()
+    assert memory["applied_verdict"] == memory["verdict"]
+    assert memory["would_be_verdict"] == memory["effective_verdict"]
+
+    message = client.post(
+        "/v1/guard/agent_message",
+        json={"sender": "support-triage", "content": "please check order 44"},
+    ).json()
+    assert message["applied_verdict"] == message["verdict"]
+    assert message["would_be_verdict"] == message["effective_verdict"]
+
+
+def test_the_old_keys_are_unchanged(client):
+    """The aliases add names. They must not rename, drop or re-value anything, or the
+    fix for a confusing field becomes a broken one."""
+    body = _observe_mode_injection(client)
+
+    assert set(body) >= {"verdict", "effective_verdict", "mode", "rules_fired", "entities"}
+    assert body["verdict"] == body["applied_verdict"]
+    assert body["effective_verdict"] == body["would_be_verdict"]
+
+
+def test_proxy_responses_carry_both_verdict_headers(client):
+    response = client.post(
+        "/v1/chat/completions",
+        json={"model": "echo-1", "messages": [{"role": "user", "content": "hello"}]},
+        headers={"X-Nometria-Agent": "support-triage"},
+    )
+
+    assert response.headers["X-Nometria-Verdict"] == "allow"
+    assert response.headers["X-Nometria-Applied-Verdict"] == response.headers["X-Nometria-Verdict"]
+    assert (
+        response.headers["X-Nometria-Would-Be-Verdict"]
+        == response.headers["X-Nometria-Effective-Verdict"]
+    )
+
+
+def test_the_alias_headers_are_exposed_across_origins(client):
+    """The dashboard and the playground page read these cross-origin. A header the
+    browser hides is a header that does not exist to them."""
+    from nometria.gateway.app import create_app
+
+    exposed = {
+        h.lower()
+        for m in create_app().user_middleware
+        for h in (m.kwargs.get("expose_headers") or [])
+    }
+    assert {"x-nometria-applied-verdict", "x-nometria-would-be-verdict"} <= exposed
+
+
+def test_a_block_body_says_which_verdict_took_effect(client):
+    client.post(
+        "/api/policies/baseline/mode",
+        json={"mode": "enforce"},
+        headers=as_user("admin@example.com"),
+    )
+    response = client.post(
+        "/v1/chat/completions",
+        json={"model": "echo-1", "messages": [{"role": "user", "content": INDIRECT_INJECTION}]},
+        headers={"X-Nometria-Agent": "support-triage"},
+    )
+
+    assert response.status_code == 403
+    error = response.json()["error"]
+    assert error["verdict"] == error["applied_verdict"] == "block"
+    assert error["would_be_verdict"] == error["effective_verdict"]
+
+
+def test_nested_rule_effects_are_not_aliased():
+    """`rules_fired[*].effect` is one rule's own outcome, not this request's. Aliasing
+    it would invent a claim about what took effect that nobody made."""
+    from nometria.gateway.verdicts import with_verdict_aliases
+
+    payload = with_verdict_aliases(
+        {"verdict": "allow", "effective_verdict": "block", "rules_fired": [{"effect": "block"}]}
+    )
+
+    assert payload["rules_fired"] == [{"effect": "block"}]
+    assert "applied_verdict" not in payload["rules_fired"][0]
+
+
+def test_an_alias_already_set_is_left_alone():
+    from nometria.gateway.verdicts import with_verdict_aliases
+
+    payload = with_verdict_aliases({"verdict": "allow", "applied_verdict": "deliberate"})
+
+    assert payload["applied_verdict"] == "deliberate"
+
+
+# ---------------------------------------------------------------------------
+# The service root
+# ---------------------------------------------------------------------------
+#
+# `GET /` and `GET /health` both returned {"detail":"Not Found"} on the deployed API
+# while only `/api/health` worked, which reads as a dead host to anyone checking by
+# hand or with a default uptime probe.
+
+
+def test_the_root_names_the_service_and_where_to_go_next(client):
+    body = client.get("/").json()
+
+    assert body["service"] == "nometria"
+    assert body["version"]
+    assert body["docs"] == "/docs"
+    assert body["health"] == "/api/health"
+
+
+def test_the_root_needs_no_credential(client):
+    """Unauthenticated on purpose: a root that 401s is indistinguishable from a root
+    that is missing, to a probe and to a person."""
+    assert client.get("/").status_code == 200
+
+
+def test_the_root_leaks_no_configuration(client):
+    """It says what the service is. It must not say how it is configured.
+
+    Pinned as an exact key set rather than a search for suspicious words: a whitelist
+    fails when someone adds a field, which is the moment to think about it, while a
+    blacklist passes for every leak nobody thought of in advance.
+    """
+    from nometria.config import get_settings
+
+    body = client.get("/").json()
+
+    assert set(body) == {
+        "service",
+        "description",
+        "version",
+        "docs",
+        "openapi",
+        "health",
+        "metrics",
+    }
+
+    settings = get_settings()
+    values = " ".join(str(v) for v in body.values())
+    for leaked in (settings.database_url, settings.audit_signing_key or "\0"):
+        assert leaked not in values
+
+
+def test_health_is_served_at_both_paths_with_the_same_answer(client):
+    """An alias, not a second implementation: two health endpoints that can disagree
+    about one process are worse than one."""
+    root_level = client.get("/health")
+    api_level = client.get("/api/health")
+
+    assert root_level.status_code == 200
+    assert root_level.json() == api_level.json()
+    assert root_level.json()["status"] == "ok"

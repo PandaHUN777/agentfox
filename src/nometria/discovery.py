@@ -13,6 +13,22 @@ side effect at import time, which is most real applications.
 
 The output is ranked by what an engineer should look at first, not by file order. An
 alphabetical list of forty findings is the same as no list.
+
+**Reading Python only, and then saying "clean", was the worst failure this scanner
+had.** Pointed at a TypeScript repository it opened the three JSON config files it
+recognised, matched nothing, and printed "No model calls found" — a security product
+reporting a clean result after looking at none of the source. Two things follow from
+that and are load-bearing here: the scanner reads TypeScript and JavaScript as well as
+Python, and a scan that read no file it understands says exactly that instead of
+reporting an absence of findings (:attr:`ScanReport.inconclusive`).
+
+The TypeScript/JavaScript pass is regex over source lines, not a parse: there is no JS
+parser in this project's dependencies and adding one to a static scanner is a large
+cost for a list of call sites. It is therefore written for precision over recall — a
+false "you are ungoverned" is a lie in the same way a false "clean" is. Call shapes
+that are ambiguous on their own (LangChain's `.invoke()`, which every runnable
+including a prompt template has) are deliberately not matched, so this pass under-
+reports rather than inventing findings, and the report says which languages it read.
 """
 
 from __future__ import annotations
@@ -49,6 +65,20 @@ SKIP_DIRS = {
     "htmlcov",
     ".terraform",
 }
+
+#: Source files this scanner can actually read for model calls. A file outside this
+#: set is counted as skipped and named in the report, never silently ignored.
+PYTHON_SUFFIXES = {".py"}
+JS_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs"}
+CODE_SUFFIXES = PYTHON_SUFFIXES | JS_SUFFIXES
+
+#: Read for secrets and for MCP server declarations, not for model calls. Opening one
+#: of these is not evidence that the repository's source was examined, which is why
+#: they are counted separately from :data:`CODE_SUFFIXES`.
+CONFIG_SUFFIXES = {".yaml", ".yml", ".json", ".toml", ".env"}
+
+#: What to tell an operator when a scan read nothing it understands.
+SUPPORTED_LANGUAGES = "Python (.py), TypeScript and JavaScript (.ts, .tsx, .js, .jsx, .mjs)"
 
 #: Call shapes that mean "a model was invoked". Matched on the attribute path rather
 #: than the receiver, because the receiver is a variable whose name we cannot know.
@@ -154,11 +184,42 @@ class Site:
 @dataclass
 class ScanReport:
     root: str
+    #: Every file opened, source and config alike.
     files_scanned: int = 0
+    #: Files opened whose language this scanner can read for model calls
+    #: (:data:`CODE_SUFFIXES`). ``None`` means this report did not come from a
+    #: filesystem walk at all — an OpenAPI spec scan (`discovery_openapi.py`) or a
+    #: hand-built report — so there is nothing to claim about source coverage either
+    #: way, and :attr:`inconclusive` stays False.
+    code_files_scanned: int | None = None
+    #: Suffix -> how many files carried it and were not read. What makes it possible
+    #: to say *which* languages were seen and skipped rather than just "none matched".
+    skipped_suffixes: dict[str, int] = field(default_factory=dict)
     frameworks: list[str] = field(default_factory=list)
     sites: list[Site] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     governed_files: list[str] = field(default_factory=list)
+
+    @property
+    def inconclusive(self) -> bool:
+        """True when the walk read no file in a language this scanner understands.
+
+        The distinction this exists to preserve: "we looked and found no model calls"
+        and "we could not look" are different answers, and only the first is evidence
+        of anything. Reporting the second as the first is a security product calling a
+        repository clean after reading none of it, which is how this scanner behaved on
+        every TypeScript repository until it learned to read TypeScript.
+        """
+        return self.code_files_scanned == 0
+
+    def skipped_summary(self, limit: int = 6) -> str:
+        """The skipped extensions, most common first, as a readable clause."""
+        if not self.skipped_suffixes:
+            return "no other files were present"
+        ranked = sorted(self.skipped_suffixes.items(), key=lambda kv: (-kv[1], kv[0]))
+        shown = ", ".join(f"{suffix} ({count})" for suffix, count in ranked[:limit])
+        remaining = len(ranked) - limit
+        return shown + (f" and {remaining} more extension(s)" if remaining > 0 else "")
 
     @property
     def model_calls(self) -> list[Site]:
@@ -184,6 +245,13 @@ class ScanReport:
 
     @property
     def coverage(self) -> float:
+        """Fraction of governable call sites that are governed.
+
+        1.0 with no call sites at all means "nothing found to govern", which is only
+        meaningful alongside :attr:`inconclusive`: on a scan that read no source, this
+        is 1.0 because the denominator is empty, not because anything was verified.
+        Any caller showing this number should show `inconclusive` with it.
+        """
         calls = self.governable
         if not calls:
             return 1.0
@@ -208,6 +276,14 @@ class ScanReport:
         return {
             "root": self.root,
             "files_scanned": self.files_scanned,
+            "code_files_scanned": self.code_files_scanned,
+            "skipped_suffixes": dict(
+                sorted(self.skipped_suffixes.items(), key=lambda kv: (-kv[1], kv[0]))
+            ),
+            "supported_languages": SUPPORTED_LANGUAGES,
+            # True means this scan read nothing it understands; every count below is
+            # then an absence of evidence, not evidence of absence.
+            "inconclusive": self.inconclusive,
             "frameworks": self.frameworks,
             "model_calls": len(self.model_calls),
             "agent_definitions": len(self.agent_definitions),
@@ -261,10 +337,29 @@ class ScanReport:
         A report that ends without a next action makes the reader do the synthesis,
         and most readers will not.
         """
-        if not self.governable:
+        if self.inconclusive:
+            # Never reachable by the "no model calls found" branch below: a scan that
+            # read nothing has no basis for saying anything was absent.
             return (
-                "No model calls found. If this repo calls a model through a wrapper we "
-                "don't recognise, govern it explicitly with the SDK."
+                "This scan read no source file it understands, so it says nothing about "
+                f"whether this repository calls a model. Supported: {SUPPORTED_LANGUAGES}. "
+                f"Seen and skipped: {self.skipped_summary()}. "
+                "Point the scan at a directory containing source in a supported language, "
+                "or govern the calls explicitly with the SDK."
+            )
+        if not self.governable:
+            if self.code_files_scanned is None:
+                # Not a filesystem walk (an OpenAPI spec scan), so there is no file
+                # count to quote and no language coverage to claim.
+                return (
+                    "No model calls found. If this repo calls a model through a wrapper "
+                    "we don't recognise, govern it explicitly with the SDK."
+                )
+            return (
+                f"No model calls found in {self.code_files_scanned} source file(s). "
+                f"This scan reads {SUPPORTED_LANGUAGES}; anything else in the repository "
+                "was not examined. If this repo calls a model through a wrapper we don't "
+                "recognise, govern it explicitly with the SDK."
             )
         if self.ungoverned:
             return (
@@ -387,6 +482,222 @@ class _Visitor(ast.NodeVisitor):
                 break
 
 
+# ---------------------------------------------------------------------------
+# TypeScript / JavaScript
+# ---------------------------------------------------------------------------
+#
+# Regex over source lines, not a parse. Written for precision: every pattern below is
+# either an attribute path that is distinctive on its own (`.chat.completions.create`)
+# or a bare name that is only counted when the file imported the package it belongs to
+# (`generateText` without an import from `ai` is somebody else's function).
+#
+# Deliberately not matched, and why:
+#   * `.invoke()` / `.stream()` / `.batch()` — in LangChain JS these are the methods on
+#     every runnable, including prompt templates and output parsers. Matching them
+#     would report a prompt template as a model call. The model constructors below are
+#     matched instead, which is one site per model rather than one per chain call.
+#   * `useChat` / `useCompletion` — React hooks that call the app's own route handler,
+#     not a provider. The route handler is where the model call is, and it is matched
+#     there.
+#   * `embed` / `embedMany` — embeddings, not generation. Not what P9 governs.
+#
+# The cost of that choice, stated rather than left to be discovered: a call shape that
+# is ambiguous on its own is only counted in a file that imported the SDK it belongs
+# to. A repository that constructs its client in one module and calls it from another
+# will have the call under-reported. That is the direction to be wrong in for a tool
+# whose other failure mode is telling a team they are ungoverned when they are not —
+# and the scan still names the framework, so the report does not go silent.
+
+#: Module specifier -> framework label. Looked up longest-prefix-first, so
+#: `@langchain/langgraph` beats `@langchain` and a subpath import resolves to its
+#: package.
+_JS_FRAMEWORK_IMPORTS = {
+    "openai": "OpenAI SDK",
+    "@anthropic-ai/sdk": "Anthropic SDK",
+    "@anthropic-ai/bedrock-sdk": "Anthropic SDK",
+    "@anthropic-ai/vertex-sdk": "Anthropic SDK",
+    "ai": "Vercel AI SDK",
+    "@ai-sdk": "Vercel AI SDK",
+    "@langchain/langgraph": "LangGraph",
+    "@langchain": "LangChain",
+    "langchain": "LangChain",
+    "llamaindex": "LlamaIndex",
+    "@llamaindex": "LlamaIndex",
+    "crewai-ts": "CrewAI",
+    "@modelcontextprotocol/sdk": "MCP",
+    "@google/generative-ai": "Google GenAI SDK",
+    "@google/genai": "Google GenAI SDK",
+    "@google-cloud/vertexai": "Google GenAI SDK",
+    "@aws-sdk/client-bedrock-runtime": "AWS SDK",
+    "next": "Next.js",
+    "express": "Express",
+    "langfuse": "Langfuse",
+    "langsmith": "LangSmith",
+    "@opentelemetry": "OpenTelemetry",
+}
+
+#: `import x from "pkg"`, `import "pkg"`, `require("pkg")`, `await import("pkg")`.
+_JS_IMPORT = re.compile(r"""\b(?:from|require|import)\s*\(?\s*["']([^"']+)["']""")
+
+#: A line that is only a comment. Cheap guard against a commented-out call, or prose
+#: in a docblock, becoming a finding.
+_JS_COMMENT_LINE = re.compile(r"^\s*(?://|/\*|\*)")
+
+#: (pattern, provider, required framework labels or None if the shape stands alone).
+_JS_MODEL_CALLS: tuple[tuple[re.Pattern[str], str, tuple[str, ...] | None], ...] = (
+    (re.compile(r"\.chat\.completions\.(?:create|stream)\s*\("), "openai", None),
+    (re.compile(r"\.beta\.chat\.completions\.(?:parse|stream)\s*\("), "openai", None),
+    # Gated: each of these is a plausible method name on something that is not a
+    # model client (`db.messages.create`, `surveyResponses.create`), so the file has
+    # to have imported the SDK for the shape to mean what it looks like.
+    (re.compile(r"\.responses\.(?:create|stream|parse)\s*\("), "openai", ("OpenAI SDK",)),
+    (re.compile(r"\.completions\.create\s*\("), "openai", ("OpenAI SDK",)),
+    (
+        re.compile(r"\.messages\.(?:create|stream)\s*\("),
+        "anthropic",
+        ("Anthropic SDK",),
+    ),
+    (
+        re.compile(r"\.generateContent(?:Stream)?\s*\("),
+        "google",
+        ("Google GenAI SDK",),
+    ),
+    (
+        re.compile(
+            r"\bnew\s+(?:ConverseCommand|ConverseStreamCommand|InvokeModelCommand"
+            r"|InvokeModelWithResponseStreamCommand)\s*\("
+        ),
+        "bedrock",
+        None,
+    ),
+    (
+        re.compile(
+            r"\bnew\s+Chat(?:OpenAI|Anthropic|GoogleGenerativeAI|VertexAI|BedrockConverse"
+            r"|MistralAI|Ollama|Groq|Fireworks|Together|Cohere|DeepSeek)\s*\("
+        ),
+        "langchain",
+        ("LangChain", "LangGraph"),
+    ),
+    (re.compile(r"\binitChatModel\s*\("), "langchain", ("LangChain", "LangGraph")),
+    (
+        re.compile(r"\b(?:generateText|streamText|generateObject|streamObject|streamUI)\s*\("),
+        "vercel-ai",
+        ("Vercel AI SDK",),
+    ),
+)
+
+#: Framework orchestration entrypoints — same reasoning as `_AGENT_DEFINITIONS` for
+#: Python: these wrap the model call rather than making it, so a repo built on one can
+#: show zero model calls while clearly running an agent.
+_JS_AGENT_DEFINITIONS: tuple[tuple[re.Pattern[str], str, tuple[str, ...]], ...] = (
+    (re.compile(r"\bcreateReactAgent\s*\("), "LangGraph", ("LangChain", "LangGraph")),
+    (re.compile(r"\bnew\s+StateGraph\s*\("), "LangGraph", ("LangChain", "LangGraph")),
+    (re.compile(r"\bnew\s+AgentExecutor\s*\("), "LangChain", ("LangChain", "LangGraph")),
+)
+
+#: Tool declarations, each gated on the package that defines the shape.
+_JS_TOOLS: tuple[tuple[re.Pattern[str], str, tuple[str, ...]], ...] = (
+    (re.compile(r"\btool\s*\(\s*\{"), "Vercel AI SDK tool", ("Vercel AI SDK",)),
+    (
+        re.compile(r"""\.(?:registerTool|tool)\s*\(\s*["']([\w.\-]+)["']"""),
+        "MCP tool",
+        ("MCP",),
+    ),
+)
+
+
+def _js_framework(specifier: str) -> str | None:
+    """Resolve an import specifier to a framework label, longest prefix first.
+
+    Relative imports are the repository's own modules and carry no framework
+    information, so they resolve to nothing.
+    """
+    if not specifier or specifier.startswith((".", "/")):
+        return None
+    candidates = [specifier]
+    parts = specifier.split("/")
+    if specifier.startswith("@"):
+        candidates.append("/".join(parts[:2]))
+        candidates.append(parts[0])
+    else:
+        candidates.append(parts[0])
+    for candidate in candidates:
+        label = _JS_FRAMEWORK_IMPORTS.get(candidate)
+        if label:
+            return label
+    return None
+
+
+def _scan_javascript(source: str, rel: str) -> tuple[list[Site], set[str]]:
+    """Find model calls, agent definitions and tool declarations in one TS/JS file.
+
+    Two passes, because an import can appear below the call that needs it (a top-level
+    `await import`, or simply a file whose imports are not all at the top): frameworks
+    are collected first, then the gated patterns are matched against that set.
+    """
+    lines = source.splitlines()
+    frameworks: set[str] = set()
+    for line in lines:
+        if _JS_COMMENT_LINE.match(line):
+            continue
+        for specifier in _JS_IMPORT.findall(line):
+            label = _js_framework(specifier)
+            if label:
+                frameworks.add(label)
+
+    def gated(required: tuple[str, ...] | None) -> bool:
+        return required is None or bool(frameworks.intersection(required))
+
+    sites: list[Site] = []
+    for line_no, line in enumerate(lines, start=1):
+        if _JS_COMMENT_LINE.match(line):
+            continue
+        # One site per line, most specific pattern first, so `.chat.completions.create`
+        # is not also counted by `.completions.create`.
+        for pattern, provider, required in _JS_MODEL_CALLS:
+            match = pattern.search(line)
+            if match and gated(required):
+                sites.append(
+                    Site(
+                        kind="model_call",
+                        file=rel,
+                        line=line_no,
+                        detail=match.group(0).strip(),
+                        provider=provider,
+                        severity="high",
+                    )
+                )
+                break
+        for pattern, framework, required in _JS_AGENT_DEFINITIONS:
+            match = pattern.search(line)
+            if match and gated(required):
+                sites.append(
+                    Site(
+                        kind="agent_definition",
+                        file=rel,
+                        line=line_no,
+                        detail=match.group(0).strip(),
+                        provider=framework.lower(),
+                        severity="high",
+                    )
+                )
+                break
+        for pattern, label, required in _JS_TOOLS:
+            match = pattern.search(line)
+            if match and gated(required):
+                sites.append(
+                    Site(
+                        kind="tool",
+                        file=rel,
+                        line=line_no,
+                        detail=f"{label}: {match.group(0).strip()}",
+                        severity="medium",
+                    )
+                )
+                break
+    return sites, frameworks
+
+
 def scan_file(path: Path, root: Path) -> tuple[list[Site], set[str], bool]:
     rel = str(path.relative_to(root))
     try:
@@ -413,6 +724,10 @@ def scan_file(path: Path, root: Path) -> tuple[list[Site], set[str], bool]:
         )
         frameworks |= visitor.frameworks
         governed = visitor.governed
+    elif path.suffix in JS_SUFFIXES:
+        js_sites, js_frameworks = _scan_javascript(source, rel)
+        sites.extend(js_sites)
+        frameworks |= js_frameworks
 
     for line_no, line in enumerate(source.splitlines(), start=1):
         if _SQL_BUILD.search(line):
@@ -456,17 +771,25 @@ def scan(root: str | Path = ".", *, include_config: bool = True) -> ScanReport:
     report = ScanReport(root=str(root_path))
     frameworks: set[str] = set()
 
-    suffixes = {".py"}
+    suffixes = set(CODE_SUFFIXES)
     if include_config:
-        suffixes |= {".yaml", ".yml", ".json", ".toml", ".env"}
+        suffixes |= CONFIG_SUFFIXES
+    report.code_files_scanned = 0
 
     for dirpath, dirnames, filenames in os.walk(root_path):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")]
         for filename in filenames:
             path = Path(dirpath) / filename
             if path.suffix not in suffixes:
+                # Recorded, not discarded: "we read nothing here" is the finding that
+                # matters when the answer comes back empty, and it cannot be recovered
+                # later from a count of files that were read.
+                suffix = path.suffix.lower() or "(no extension)"
+                report.skipped_suffixes[suffix] = report.skipped_suffixes.get(suffix, 0) + 1
                 continue
             report.files_scanned += 1
+            if path.suffix in CODE_SUFFIXES:
+                report.code_files_scanned += 1
             try:
                 sites, found, governed = scan_file(path, root_path)
             except RuntimeError as exc:

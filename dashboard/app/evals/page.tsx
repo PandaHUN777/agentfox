@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { api, safeApi } from "@/lib/api";
-import { ApiDown, InfoTip, Panel, Stat, ts } from "@/components/ui";
+import { api, safeApi, apiErrorProps } from "@/lib/api";
+import { AgentLink, ApiDown, Empty, InfoTip, Panel, Stat, ts } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -24,7 +24,7 @@ export default async function Evals({
     return (
       <>
         <h1>Evaluation</h1>
-        <ApiDown error={String(e?.message || e)} />
+        <ApiDown {...apiErrorProps(e)} />
       </>
     );
   }
@@ -136,7 +136,7 @@ export default async function Evals({
             <tbody>
               {slos.slos.map((s: any) => (
                 <tr key={s.slo_id}>
-                  <td className="small"><Link href={`/agents/${s.agent}`}>{s.agent}</Link></td>
+                  <td className="small"><AgentLink slug={s.agent} agents={agents.agents || []} /></td>
                   <td className="mono small">{s.scorer}</td>
                   <td className="small wrap muted" style={{ maxWidth: 260 }}>{s.objective || "—"}</td>
                   <td className="num small">{s.target ?? "—"}</td>
@@ -171,16 +171,16 @@ export default async function Evals({
         <div className="body" style={{ borderTop: "1px solid var(--border)" }}>
           <form action="/api/eval/slos" method="POST" className="row" style={{ gap: 6, flexWrap: "wrap" }}>
             <select
-              name="agent" required
+              name="agent" required aria-label="Agent this SLO applies to"
               style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
             >
               <option value="">agent…</option>
               {(agents.agents || []).map((a: any) => (
-                <option key={a.slug} value={a.slug}>{a.slug}</option>
+                <option key={a.slug} value={a.slug}>{a.name || a.slug}</option>
               ))}
             </select>
             <select
-              name="scorer" required
+              name="scorer" required aria-label="Scorer this SLO measures"
               style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
             >
               <option value="">scorer…</option>
@@ -193,7 +193,7 @@ export default async function Evals({
               style={{ flex: 1, minWidth: 220, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
             />
             <select
-              name="window" defaultValue="7d"
+              name="window" defaultValue="7d" aria-label="Measurement window"
               style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
             >
               <option value="1d">1 day</option>
@@ -201,7 +201,7 @@ export default async function Evals({
               <option value="30d">30 days</option>
             </select>
             <input
-              type="number" name="target" step="0.01" min="0" max="1" defaultValue="0.9" required
+              type="number" name="target" aria-label="Target, between 0 and 1" step="0.01" min="0" max="1" defaultValue="0.9" required
               style={{ width: 80, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
             />
             <button type="submit" className="btn-primary">Declare SLO</button>
@@ -219,16 +219,16 @@ export default async function Evals({
       </p>
       <form action="/api/eval/online" method="POST" className="row" style={{ gap: 6, marginBottom: 24, flexWrap: "wrap" }}>
         <select
-          name="agent" required defaultValue=""
+          name="agent" required defaultValue="" aria-label="Agent whose traffic to sample"
           style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
         >
           <option value="" disabled>choose an agent…</option>
           {(agents.agents || []).map((a: any) => (
-            <option key={a.slug} value={a.slug}>{a.slug}</option>
+            <option key={a.slug} value={a.slug}>{a.name || a.slug}</option>
           ))}
         </select>
         <select
-          name="since_days" defaultValue="30"
+          name="since_days" defaultValue="30" aria-label="How far back to sample"
           style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
         >
           <option value="1">last 1 day</option>
@@ -266,14 +266,17 @@ export default async function Evals({
       )}
 
       <h2>Suites</h2>
-      {suites.suites.length === 0 && (
-        <p className="small muted" style={{ marginTop: -8 }}>
-          No suite has ever been created for this org — that's why this reads 0, not
-          because evaluation is broken. Create one below, or promote a real production
-          trace into it once it exists.
-        </p>
-      )}
       <div className="panel">
+        {/* Said once, inside the panel where the missing rows are. A paragraph
+            above an empty table reads as a caption for something, and then the
+            something is a bare column header. */}
+        {suites.suites.length === 0 ? (
+          <Empty>
+            No suite has ever been created for this workspace — that is why this reads
+            0, not because evaluation is broken. Create one in the form below, or
+            promote a real production trace into a suite once one exists.
+          </Empty>
+        ) : (
         <table>
           <thead><tr><th>suite</th><th>description</th><th>tags</th><th className="num">cases</th></tr></thead>
           <tbody>
@@ -287,18 +290,19 @@ export default async function Evals({
             ))}
           </tbody>
         </table>
+        )}
         <div className="body" style={{ borderTop: "1px solid var(--border)" }}>
           <form action="/api/eval/suites" method="POST" className="row" style={{ gap: 6 }}>
             <input
-              type="text" name="key" placeholder="key, e.g. support-quality" required
+              type="text" name="key" aria-label="Suite key" placeholder="key, e.g. support-quality" required
               style={{ width: 200, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
             />
             <input
-              type="text" name="name" placeholder="name (optional)"
+              type="text" name="name" aria-label="Suite name (optional)" placeholder="name (optional)"
               style={{ width: 200, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
             />
             <input
-              type="text" name="description" placeholder="description (optional)"
+              type="text" name="description" aria-label="Suite description (optional)" placeholder="description (optional)"
               style={{ flex: 1, minWidth: 200, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
             />
             <button type="submit" className="btn-primary">Create suite</button>
@@ -312,11 +316,12 @@ export default async function Evals({
           name="agent"
           required
           defaultValue=""
+          aria-label="Agent to run probes against"
           style={{ padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
         >
           <option value="" disabled>choose an agent…</option>
           {(agents.agents || []).map((a: any) => (
-            <option key={a.slug} value={a.slug}>{a.slug}</option>
+            <option key={a.slug} value={a.slug}>{a.name || a.slug}</option>
           ))}
         </select>
         <button type="submit" className="btn-scan">Run built-in probes</button>

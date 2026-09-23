@@ -118,6 +118,9 @@ All framework mappings are `review_status: draft` and ship chip-labelled
 | `tools set-triggers KEY [--triggers CSV]` | W | Declare downstream side effects for cascade analysis. |
 | `access declare-scope TABLE --column COL [--principal-key id] [--restricted-columns CSV]` | W | Row-ownership column for data-access analysis. |
 | `access declare-reference TABLE` | W | A table that belongs to nobody. |
+| `capability grant AGENT TOOL [--action/-a CSV] [--limit/-l path=value \| path:op=value] [--max-taint none\|user\|retrieved\|tool_result\|subagent\|memory] [--requires-approval] [--expires-in-days N] [--granted-by WHO] [--yes]` | W | Least privilege, the half of containment that decides whether an action is allowed at all. Confirms before writing and records `capability.granted` on the audit chain. A comparison the policy engine cannot evaluate is refused at grant time, so a grant never looks narrower than it is. |
+| `capability list [AGENT] [--json]` | R | Grants with their limits, taint ceiling and expiry. |
+| `capability revoke CAPABILITY_ID [--yes]` | W | Accepts the short id the table prints. |
 
 ## Agent controls — `boundary`, `sources`, `escalation`, `entitlement` (P7, P8, P10, P11)
 

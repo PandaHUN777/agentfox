@@ -24,7 +24,7 @@ export function NotificationsBell({
         <div className="notif-head">Needs attention</div>
         {count === 0 ? (
           <div className="notif-empty small muted">
-            No open findings, breached hand-offs, or shadow agents right now — this
+            No open findings, breached hand-offs, or unregistered agents right now — this
             doesn't cover the Compliance risk register or unassessed/unowned agents,
             see <Link href="/compliance?tab=board">Board view</Link> for those.
           </div>

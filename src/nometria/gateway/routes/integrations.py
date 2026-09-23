@@ -358,6 +358,13 @@ def trigger_scan(
     run.completed_at = utcnow()
     run.summary_json = {
         "files_scanned": report.files_scanned,
+        # A repository this scanner cannot read produces an empty `sites` that looks
+        # exactly like a clean one. These two say which it was: `code_files_scanned`
+        # is how much source was actually examined, and `inconclusive` is true when
+        # that was none — see discovery.ScanReport.inconclusive.
+        "code_files_scanned": report.code_files_scanned,
+        "inconclusive": report.inconclusive,
+        "next_step": report.next_step(),
         "frameworks": report.frameworks,
         "sites": report.by_kind(),
         "agents_proposed": created_agents,

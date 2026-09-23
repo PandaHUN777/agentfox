@@ -99,7 +99,7 @@ from the code. Regenerate after changing any route:
 
 <!-- BEGIN GENERATED ROUTES: scripts/api_routes.py --write -->
 
-188 operations, generated from the running app's OpenAPI document. Request and response schemas: `GET /openapi.json` or the interactive `/docs`.
+190 operations, generated from the running app's OpenAPI document. Request and response schemas: `GET /openapi.json` or the interactive `/docs`.
 
 ### Inline enforcement (`/v1`)
 
@@ -107,9 +107,9 @@ from the code. Regenerate after changing any route:
 |---|---|---|
 | `POST` | `/v1/chat/completions` | OpenAI-compatible inline proxy |
 | `POST` | `/v1/guard/agent_message` | Authorise an inter-agent message (P17, NOM-IAM-08) |
-| `POST` | `/v1/guard/input` | Enforce on an input without proxying |
+| `POST` | `/v1/guard/input` | Enforce on content without proxying. |
 | `POST` | `/v1/guard/memory_write` | Authorise a memory write (P14, NOM-RTG-13) |
-| `POST` | `/v1/guard/output` | Enforce on an output without proxying |
+| `POST` | `/v1/guard/output` | Enforce on content without proxying. |
 | `POST` | `/v1/guard/tool_call` | Authorise a tool call (P3-4, P2-2) |
 | `POST` | `/v1/mcp/call` | Govern one MCP call for callers that are not in-process Python. |
 | `POST` | `/v1/messages` | Anthropic-compatible inline proxy |
@@ -341,23 +341,25 @@ from the code. Regenerate after changing any route:
 
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/playground/sessions` | Create Session |
+| `POST` | `/api/playground/sessions` | Create a playground sandbox. |
 | `POST` | `/api/playground/sessions/{session_id}/chat` | Chat |
 | `POST` | `/api/playground/sessions/{session_id}/enforce` | Flip the baseline policy observe -> enforce (or back) for this sandbox only. |
 | `GET` | `/api/playground/sessions/{session_id}/state` | Everything the live sidebar needs: recent traces (decisions + detector runs |
-| `POST` | `/api/playground/sessions/{session_id}/tool-call` | Try a tool call directly — Tiers C (parameter exploitation) and D (excessive |
+| `POST` | `/api/playground/sessions/{session_id}/tool-call` | Try a tool call directly, with no model in the loop. |
 | `GET` | `/api/playground/sessions/{session_id}/trace/{trace_id}` | Trace Detail |
 
 ### Other
 
 | Method | Path | Purpose |
 |---|---|---|
+| `GET` | `/` | Name the service and say where to go next. Unauthenticated. |
 | `GET` | `/api/proposals` | List change proposals, filtered by status, kind and scope. |
 | `GET` | `/api/proposals/{proposal_id}` | One proposal with its diff, evidence, proof and decisions. |
 | `POST` | `/api/proposals/{proposal_id}/apply` | Apply an approved proposal, or settle one whose canary has finished. |
 | `POST` | `/api/proposals/{proposal_id}/decide` | Approve or reject; an org-level loosening needs two different approvers. |
 | `POST` | `/api/proposals/{proposal_id}/rollback` | Undo an applied or canaried proposal through its applier. |
 | `POST` | `/api/proposals/{proposal_id}/verify` | Record whether an applied change worked; ``verified: false`` rolls it back. |
+| `GET` | `/health` | The same payload as `/api/health`, at the path probes default to. |
 
 <!-- END GENERATED ROUTES -->
 

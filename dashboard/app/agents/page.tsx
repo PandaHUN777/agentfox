@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, apiErrorProps } from "@/lib/api";
 import { ApiDown, InfoTip, Panel, Stat, ts } from "@/components/ui";
 import { Modal } from "@/components/Modal";
 
@@ -21,7 +21,7 @@ export default async function Agents({
     return (
       <>
         <h1>Agents</h1>
-        <ApiDown error={String(e?.message || e)} />
+        <ApiDown {...apiErrorProps(e)} />
       </>
     );
   }
@@ -41,48 +41,7 @@ export default async function Agents({
     <>
       <div className="row" style={{ justifyContent: "space-between", alignItems: "flex-start", gap: 16 }}>
         <h1 style={{ marginBottom: 0 }}>Agent registry</h1>
-        <Modal
-          trigger="+ Register an agent manually"
-          triggerClassName="btn-primary"
-          title="Register an agent manually"
-        >
-          <p className="small muted" style={{ marginTop: 0, marginBottom: 12 }}>
-            For an agent that doesn't live in a scanned repo, or hasn't been connected yet — see{" "}
-            <Link href="/start?tab=connect">Connect</Link> for the repo-scan path instead.
-          </p>
-          <form action="/api/agents" method="POST" className="stack">
-            <div>
-              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Slug (unique, lowercase)</label>
-              <input type="text" name="slug" required placeholder="e.g. billing-support" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
-            </div>
-            <div>
-              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Name</label>
-              <input type="text" name="name" placeholder="e.g. Billing Support Agent" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
-            </div>
-            <div>
-              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Purpose</label>
-              <input type="text" name="purpose" placeholder="e.g. answers billing questions from account history" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
-            </div>
-            <div className="row" style={{ gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Owner email</label>
-                <input type="email" name="owner_email" placeholder="owner@company.com" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }} />
-              </div>
-              <div style={{ flex: 1 }}>
-                <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Risk tier</label>
-                <select name="risk_tier" defaultValue="limited" style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}>
-                  <option value="minimal">minimal</option>
-                  <option value="limited">limited</option>
-                  <option value="high">high</option>
-                  <option value="prohibited">prohibited</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <button type="submit" className="btn-primary">Register agent</button>
-            </div>
-          </form>
-        </Modal>
+        <RegisterAgentModal idPrefix="header" />
       </div>
       <p className="sub">
         Every agent, its accountable owner and risk tier, and the models and tools it
@@ -96,9 +55,9 @@ export default async function Agents({
         <Stat n={inv.registered} label="registered" tone="ok" />
         <Stat
           n={inv.shadow}
-          label="shadow"
+          label="unregistered"
           tone={inv.shadow ? "bad" : "ok"}
-          hint="Seen making calls but never registered here — either through a repo scan or the form below. An agent nobody registered is an agent nobody is accountable for."
+          hint="Seen making calls but never registered here — either through a repo scan or the form below. An agent nobody registered is an agent nobody is accountable for. The same record is called an 'Unregistered agent' wherever it appears as a finding."
         />
         <Stat
           n={inv.unowned}
@@ -164,7 +123,7 @@ export default async function Agents({
 
       {shadow.shadow_agents.length > 0 && (
         <>
-          <h2>Shadow agents</h2>
+          <h2>Unregistered agents</h2>
           <Panel
             title="Observed but never registered"
             note="detected from traffic, not from a form"
@@ -199,8 +158,31 @@ export default async function Agents({
 
       <h2>All agents</h2>
       {realAgents.length === 0 ? (
-        <div className="body muted small" style={{ marginBottom: 8 }}>
-          No agents that look like real, customer-facing code yet.
+        // Muted text and no way forward was the whole state a new workspace got
+        // here. Both routes into the registry belong in it, because which one
+        // applies depends on where the agent lives, not on which is preferred.
+        <div className="hero empty" style={{ marginBottom: 8 }}>
+          <div className="hero-title">
+            {agents.agents.length === 0
+              ? "No agents registered yet"
+              : "Nothing here looks like a production agent yet"}
+          </div>
+          <p>
+            {agents.agents.length === 0
+              ? "The registry is the list of agents you are accountable for. There are two ways to fill it."
+              : "Everything found so far looks like tests, scripts or examples — listed further down. Real agents get here one of two ways."}
+          </p>
+          <p className="small muted">
+            Connecting a repository finds the agents already in your code and proposes
+            them for review. Registering by hand is for an agent that does not live in
+            a repo you can connect.
+          </p>
+          <div className="row" style={{ marginTop: 14 }}>
+            <Link href="/start?tab=connect" className="btn-scan">
+              Connect a repo
+            </Link>
+            <RegisterAgentModal idPrefix="empty" />
+          </div>
         </div>
       ) : (
         <div className="panel scroll-x">
@@ -225,7 +207,7 @@ export default async function Agents({
                   <td>
                     <Link href={`/agents/${a.slug}`}>{a.name || a.slug}</Link>
                     {a.name && <div className="mono small muted">{a.slug}</div>}
-                    {a.status === "shadow" && <div><span className="tag bad">shadow</span></div>}
+                    {a.status === "shadow" && <div><span className="tag bad">unregistered</span></div>}
                     {a.status === "draft" && <div><span className="tag warn">draft</span></div>}
                     {a.is_seed && (
                       <div>
@@ -287,5 +269,70 @@ export default async function Agents({
         </details>
       )}
     </>
+  );
+}
+
+const fieldStyle = {
+  width: "100%",
+  padding: "5px 9px",
+  borderRadius: 6,
+  border: "1px solid var(--border)",
+  background: "var(--panel-2)",
+  color: "var(--text)",
+  fontSize: 13,
+  fontFamily: "inherit",
+} as const;
+
+/**
+ * Rendered twice — once in the page header, once inside the no-agents empty
+ * state — so every input id is prefixed. Two copies of the same form on one page
+ * with the same ids would leave each `htmlFor` pointing at whichever input the
+ * browser saw first, which is the bug the labels were added to fix.
+ */
+function RegisterAgentModal({ idPrefix }: { idPrefix: string }) {
+  const id = (field: string) => `${idPrefix}-register-agent-${field}`;
+  return (
+    <Modal
+      trigger="+ Register an agent manually"
+      triggerClassName="btn-primary"
+      title="Register an agent manually"
+    >
+      <p className="small muted" style={{ marginTop: 0, marginBottom: 12 }}>
+        For an agent that doesn&rsquo;t live in a scanned repo, or hasn&rsquo;t been connected yet — see{" "}
+        <Link href="/start?tab=connect">Connect</Link> for the repo-scan path instead.
+      </p>
+      <form action="/api/agents" method="POST" className="stack">
+        <div>
+          <label htmlFor={id("slug")} className="small muted" style={{ display: "block", marginBottom: 4 }}>Slug (unique, lowercase)</label>
+          <input id={id("slug")} type="text" name="slug" required placeholder="e.g. billing-support" style={fieldStyle} />
+        </div>
+        <div>
+          <label htmlFor={id("name")} className="small muted" style={{ display: "block", marginBottom: 4 }}>Name</label>
+          <input id={id("name")} type="text" name="name" placeholder="e.g. Billing Support Agent" style={fieldStyle} />
+        </div>
+        <div>
+          <label htmlFor={id("purpose")} className="small muted" style={{ display: "block", marginBottom: 4 }}>Purpose</label>
+          <input id={id("purpose")} type="text" name="purpose" placeholder="e.g. answers billing questions from account history" style={fieldStyle} />
+        </div>
+        <div className="row" style={{ gap: 12 }}>
+          <div style={{ flex: 1 }}>
+            <label htmlFor={id("owner")} className="small muted" style={{ display: "block", marginBottom: 4 }}>Owner email</label>
+            <input id={id("owner")} type="email" name="owner_email" placeholder="owner@company.com" style={fieldStyle} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label htmlFor={id("risk")} className="small muted" style={{ display: "block", marginBottom: 4 }}>Risk tier</label>
+            <select id={id("risk")} name="risk_tier" defaultValue="limited" style={fieldStyle}>
+              <option value="minimal">minimal</option>
+              <option value="limited">limited</option>
+              <option value="high">high</option>
+              <option value="prohibited">prohibited</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <button type="submit" className="btn-primary">Register agent</button>
+        </div>
+      </form>
+    </Modal>
   );
 }

@@ -9,12 +9,19 @@ import { AgentLink, Verdict, ts } from "@/components/ui";
  * (see components/ExpandableFindingRow.tsx's comment for the findings side of
  * this) — so opening a row fetches the full trace once, via the client-fetchable
  * /api/traces/[id] proxy, and caches it in state for the rest of the session.
+ *
+ * Expansion lives on its own <button> (with aria-expanded) and the trace id is a
+ * real link to the trace's own page: a click handler on the <tr> alone left this
+ * table unreachable by keyboard, and gave a collapsed row no way at all to reach
+ * the trace it describes. The row click is kept for mouse users; controls inside
+ * it stop propagation.
  */
 export function ExpandableTraceRow({ trace, agents }: { trace: any; agents: any[] }) {
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const panelId = `trace-detail-${trace.id}`;
 
   const toggle = () => {
     setOpen((v) => !v);
@@ -32,10 +39,34 @@ export function ExpandableTraceRow({ trace, agents }: { trace: any; agents: any[
     <>
       <tr onClick={toggle} style={{ cursor: "pointer" }} className={open ? "row-expanded" : undefined}>
         <td className="mono small">
-          <span className="expand-caret" aria-hidden="true">{open ? "▾" : "▸"}</span>
-          {trace.id}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggle();
+            }}
+            aria-expanded={open}
+            aria-controls={open ? panelId : undefined}
+            aria-label={`${open ? "Hide" : "Show"} decisions for trace ${trace.id}`}
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              margin: "0 3px 0 0",
+              cursor: "pointer",
+              color: "inherit",
+              font: "inherit",
+              lineHeight: 1,
+              verticalAlign: "baseline",
+            }}
+          >
+            <span className="expand-caret" aria-hidden="true">{open ? "▾" : "▸"}</span>
+          </button>
+          <Link href={`/traces/${trace.id}`} onClick={(e) => e.stopPropagation()}>
+            {trace.id}
+          </Link>
         </td>
-        <td><AgentLink slug={trace.agent} agents={agents} className="small" /></td>
+        <td onClick={(e) => e.stopPropagation()}><AgentLink slug={trace.agent} agents={agents} className="small" /></td>
         <td><Verdict value={trace.verdict} /></td>
         <td className="small muted">{trace.environment}</td>
         <td className="small muted">{trace.model || "—"}</td>
@@ -43,7 +74,7 @@ export function ExpandableTraceRow({ trace, agents }: { trace: any; agents: any[
         <td className="small muted">{ts(trace.started_at)}</td>
       </tr>
       {open && (
-        <tr className="row-expanded">
+        <tr className="row-expanded" id={panelId}>
           <td colSpan={7} style={{ padding: "4px 14px 18px" }}>
             {loading && <p className="small muted">Loading…</p>}
             {error && <p className="small error">{error}</p>}

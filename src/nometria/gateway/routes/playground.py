@@ -2,15 +2,25 @@
 
 Unauthenticated by design, the same way `inline.py`'s `/v1/guard/*` routes are: no
 `current_user`, no role check, no account. What keeps this safe to expose publicly
-is not auth, it's that every route here only ever touches one visitor's own
-throwaway sandbox (`playground_sessions.py`) — never the deployment's real
-database, never a real model provider, never real money or email (the seeded
-`payments.transfer`/`email.send` tools have no real backend; the `echo` provider
-never calls out).
+is that every route here only ever touches one visitor's own sandbox tenant
+(`playground_sessions.py`), and that nothing in a sandbox reaches the outside: no
+real model provider, no real money or email (the seeded `payments.transfer` /
+`email.send` tools have no backend; the `echo` provider never calls out).
+
+A sandbox lives in the deployment database under its own `org_id`, so the tenant
+filter in `tenancy.py` is what separates one visitor from another and from the
+deployment's own data — the same mechanism that separates two paying customers.
+The session id in the path is the only credential; see `playground_sessions.py`
+for what that does and does not prove.
 
 Every verdict returned here comes from the same `Enforcer`/`McpGovernor` code path
 the rest of the product uses — this file adds session plumbing, not detection
 logic.
+
+Every verdict body carries both `verdict`/`applied_verdict` (what happened to this
+request) and `effective_verdict`/`would_be_verdict` (what the bound policy says
+should happen, which in observe mode is the one that did not take effect). See
+`gateway/verdicts.py`.
 """
 
 from __future__ import annotations
@@ -23,7 +33,14 @@ from sqlalchemy import select
 
 from ...models import Agent
 from ...seed import AGENTS, CAPABILITIES, POISONED_DOCUMENT, TOOLS
-from ..playground_sessions import PlaygroundSession, get_store, session_creation_limiter
+from ..playground_sessions import (
+    SESSION_TTL_SECONDS,
+    PlaygroundSession,
+    PlaygroundUnavailable,
+    get_store,
+    session_creation_limiter,
+)
+from ..verdicts import with_verdict_aliases
 from .playground_deps import playground_session
 
 router = APIRouter(prefix="/api/playground", tags=["playground"])
@@ -35,16 +52,28 @@ def _client_key(request: Request) -> str:
 
 @router.post("/sessions", status_code=201)
 def create_session(request: Request) -> dict[str, Any]:
+    """Create a playground sandbox.
+
+    A private tenant in the deployment database, seeded with the demo fixtures.
+    `session_id` is the only credential. It survives this process, so a follow-up
+    request served by a different instance finds the same sandbox; it expires
+    `expires_in_seconds` after the last action on it, and its data is then deleted.
+    """
     if not session_creation_limiter.check(_client_key(request)):
         raise HTTPException(
             429,
             "Too many playground sandboxes from this address recently — please try "
             "again in a while.",
         )
-    record = get_store().create()
+    try:
+        record = get_store().create()
+    except PlaygroundUnavailable as exc:
+        # 503 rather than 500: the playground is unavailable, the rest of the API is
+        # not, and the message names what an operator has to run.
+        raise HTTPException(503, str(exc)) from exc
     return {
         "session_id": record.id,
-        "expires_in_seconds": 30 * 60,
+        "expires_in_seconds": SESSION_TTL_SECONDS,
         "agents": [
             {"slug": a["slug"], "name": a["name"], "purpose": a["purpose"]} for a in AGENTS
         ],
@@ -99,7 +128,7 @@ def chat(
             session_id=session_id,
             intent="playground chat",
         )
-        record.remember_trace(result.trace_id)
+        record.remember_trace(session, result.trace_id)
 
         answer = response.text if response is not None else None
         if answer:
@@ -117,8 +146,8 @@ def chat(
             "reply": answer,
             "blocked": result.blocked,
             "escalated": result.escalated,
-            "verdict": result.to_json(),
-            "conversation_window_verdict": window_result.to_json(),
+            "verdict": with_verdict_aliases(result.to_json()),
+            "conversation_window_verdict": with_verdict_aliases(window_result.to_json()),
         }
 
 
@@ -136,8 +165,14 @@ def tool_call(
     payload: PlaygroundToolCallRequest,
     record: PlaygroundSession = Depends(playground_session),
 ) -> dict[str, Any]:
-    """Try a tool call directly — Tiers C (parameter exploitation) and D (excessive
-    agency) don't need an LLM to decide to misbehave; the visitor decides.
+    """Try a tool call directly, with no model in the loop.
+
+    Tiers C (parameter exploitation) and D (excessive agency) don't need an LLM to
+    decide to misbehave; the visitor decides.
+
+    `verdict`/`applied_verdict` is what happened to this call;
+    `effective_verdict`/`would_be_verdict` is what the bound policy says should
+    happen, which in observe mode is the one that did not take effect.
     """
     from ...audit.trace import start_trace
     from ...enforcement import Enforcer
@@ -161,8 +196,8 @@ def tool_call(
             intent=payload.intent,
             trace=trace,
         )
-        record.remember_trace(result.trace_id or trace.id)
-        return result.to_json()
+        record.remember_trace(session, result.trace_id or trace.id)
+        return with_verdict_aliases(result.to_json())
 
 
 class PlaygroundEnforceRequest(BaseModel):
@@ -206,7 +241,7 @@ def state(
 
     with record.session_scope() as session:
         compute_all(session)
-        traces = [full_trace(session, tid) for tid in reversed(record.trace_ids)]
+        traces = [full_trace(session, tid) for tid in reversed(record.trace_ids(session))]
         chain_info = chain.chain_stats(session)
         verification = chain.verify_range(session)
         posture_info = posture(session)

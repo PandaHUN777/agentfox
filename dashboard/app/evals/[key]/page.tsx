@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { api, safeApi } from "@/lib/api";
+import { api, safeApi, apiErrorProps } from "@/lib/api";
 import { ApiDown, Panel, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 
@@ -26,7 +26,7 @@ export default async function SuiteDetail({
     return (
       <>
         <h1>Suite</h1>
-        <ApiDown error={String(e?.message || e)} />
+        <ApiDown {...apiErrorProps(e)} />
       </>
     );
   }

@@ -1,4 +1,4 @@
-import { api, safeApi, ApiError } from "@/lib/api";
+import { api, safeApi, ApiError, apiErrorProps } from "@/lib/api";
 import { ApiDown, Panel, ts } from "@/components/ui";
 import { PolicyEditor } from "@/components/PolicyEditor";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -75,7 +75,7 @@ export default async function PolicyDetail({
       return (
         <>
           <h1>Policy</h1>
-          <ApiDown error={String(e?.message || e)} />
+          <ApiDown {...apiErrorProps(e)} />
         </>
       );
     }

@@ -12,6 +12,19 @@ export { InfoTip } from "./InfoTip";
  * primary label. Pass the already-fetched agents list so this needs no extra
  * request; falls back to the slug if the agent isn't found in it.
  */
+/**
+ * The display name for a slug, for the places that need the text without a link
+ * (a filter chip, a sentence). Same rule as `AgentLink`: show what a person
+ * named the agent, fall back to the slug when there is nothing better.
+ */
+export function agentName(
+  agents: { agents?: { slug: string; name?: string }[] } | { slug: string; name?: string }[] | null | undefined,
+  slug: string,
+): string {
+  const list = Array.isArray(agents) ? agents : agents?.agents || [];
+  return list.find((a) => a.slug === slug)?.name || slug;
+}
+
 export function AgentLink({
   slug,
   agents,
@@ -255,14 +268,95 @@ export function Empty({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function ApiDown({ error }: { error: string }) {
+/**
+ * True only where someone can actually act on "run `nometria serve`" — i.e. the
+ * control plane is a process on their own machine or in their own deployment.
+ *
+ * `NOMETRIA_SELF_HOSTED` is the explicit switch; with it unset we infer from
+ * whether the configured API URL is a loopback address, which is exactly the
+ * local-dev case and never the hosted one. The default direction matters: on the
+ * hosted deployment nobody can run that command, so telling them to is worse
+ * than saying nothing.
+ *
+ * Read inside the render (not at module scope) so it follows the running
+ * process's environment rather than whatever was set when the bundle was built.
+ */
+function isSelfHosted(): boolean {
+  const flag = process.env.NOMETRIA_SELF_HOSTED;
+  if (flag !== undefined && flag !== "") return /^(1|true|yes)$/i.test(flag);
+  const url = process.env.NOMETRIA_API_URL;
+  if (!url) return true; // no URL configured at all means the built-in localhost default
+  return /^https?:\/\/(127\.0\.0\.1|localhost|\[::1\])(:|\/|$)/i.test(url);
+}
+
+/**
+ * What a page shows when its control-plane fetch came back not-ok.
+ *
+ * It used to say "API unreachable, start it with `nometria serve`" for every
+ * status, which is wrong twice over: an expired session is a 401 from a server
+ * that is plainly running, and on the hosted deployment nobody has a server to
+ * start. So the status picks the sentence, and the self-host hint is shown only
+ * where it is actionable.
+ */
+export function ApiDown({ error, status }: { error: string; status?: number }) {
+  if (status === 401 || status === 403) {
+    const revoked = status === 403;
+    return (
+      <div className="error">
+        <strong>{revoked ? "This session is not allowed to see that." : "Your session has expired."}</strong>
+        <div className="small" style={{ marginTop: 6 }}>
+          {revoked ? (
+            <>
+              The control plane is up and recognised you, but rejected this request.
+              Either your access was changed, or this workspace is not yours to read.
+              Signing in again picks up any new access.
+            </>
+          ) : (
+            <>The control plane no longer accepts this sign-in. Signing in again fixes it.</>
+          )}{" "}
+          <Link href="/login?session=expired">Sign in again</Link>.
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 404) {
+    return (
+      <div className="error">
+        <strong>The control plane has no such record.</strong>
+        <div className="small" style={{ marginTop: 6 }}>
+          The server answered normally, it just has nothing at this address. The link
+          may be stale, or nothing has created this yet.
+        </div>
+        <div className="small mono muted" style={{ marginTop: 8 }}>
+          {error}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="error">
-      <strong>Control-plane API unreachable.</strong>
+      <strong>
+        {status && status >= 500
+          ? "The control plane returned an error."
+          : "Control-plane API unreachable."}
+      </strong>
       <div className="small" style={{ marginTop: 6 }}>
-        Start it with <code className="mono">nometria serve</code>, then reload. Set{" "}
-        <code className="mono">NOMETRIA_API_URL</code> if it is not on{" "}
-        <code className="mono">http://127.0.0.1:8080</code>.
+        {status && status >= 500 ? (
+          <>Nothing on this page is missing because of anything you did. Reload in a
+          moment; if it keeps happening the control plane needs a look.</>
+        ) : (
+          <>The dashboard could not reach the control plane at all. Reload once it is back.</>
+        )}
+        {isSelfHosted() && (
+          <>
+            {" "}
+            Start it with <code className="mono">nometria serve</code>, then reload. Set{" "}
+            <code className="mono">NOMETRIA_API_URL</code> if it is not on{" "}
+            <code className="mono">http://127.0.0.1:8080</code>.
+          </>
+        )}
       </div>
       <div className="small mono muted" style={{ marginTop: 8 }}>
         {error}
