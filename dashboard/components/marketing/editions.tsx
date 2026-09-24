@@ -41,7 +41,7 @@ import type { CSSProperties } from "react";
  * exist, so none of them appear.
  */
 
-const SUPPORT_EMAIL = "support@agentfox.com";
+const SUPPORT_EMAIL = "support@nometria.com";
 
 const SUPPORTED_HREF =
   `mailto:${SUPPORT_EMAIL}` +
@@ -52,8 +52,6 @@ const CLOUD_HREF =
   "?subject=Managed%20cloud%20waitlist%20(in%20development)";
 
 const REPO_HREF = "https://github.com/architsharm/guardrails";
-
-const INSTALL_CMD = "pip install git+https://github.com/architsharm/guardrails.git";
 
 /* --- Shared furniture --------------------------------------------------- */
 
@@ -76,19 +74,6 @@ const ACTION_FOOT: CSSProperties = {
   display: "grid",
   gap: 10,
   minWidth: 0,
-};
-
-const CODE_BLOCK: CSSProperties = {
-  margin: 0,
-  padding: "11px 12px",
-  background: "var(--mk-surface-2)",
-  border: "1px solid var(--mk-border)",
-  borderRadius: "var(--mk-r-md)",
-  color: "var(--mk-muted)",
-  lineHeight: 1.6,
-  overflowX: "auto",
-  whiteSpace: "pre-wrap",
-  overflowWrap: "anywhere",
 };
 
 /** One labelled line inside an edition column. */
@@ -135,16 +120,12 @@ export function Editions() {
             </Item>
             <Item label="Cost">Free, Apache-2.0. No licence key, no gated features.</Item>
 
+            {/* The install block used to sit here. It made this column half again as
+                tall as its two neighbours, which pushed their actions into the middle
+                of an empty card, and it is already on the page twice: in the hero's
+                fine print and in the closing block. */}
             <div style={ACTION_FOOT}>
               <span className="mk-label">Start here</span>
-              <pre className="mk-mono" style={CODE_BLOCK}>
-                {INSTALL_CMD}
-              </pre>
-              <p className="mk-fine" style={{ margin: 0 }}>
-                The command is <code className="mk-mono">agentfox</code> and the package
-                imports as <code className="mk-mono">agentfox</code>.{" "}
-                <code className="mk-mono">nometria</code>, the old name, still works.
-              </p>
               <a
                 className="mk-btn mk-btn-outline"
                 href={REPO_HREF}
@@ -182,7 +163,7 @@ export function Editions() {
                 href={SUPPORTED_HREF}
                 style={{ justifyContent: "center" }}
               >
-                Email {SUPPORT_EMAIL}
+                Email us
               </a>
             </div>
           </div>
@@ -216,20 +197,34 @@ export function Editions() {
             </div>
           </div>
         </div>
+      </div>
+    </section>
+  );
+}
 
-        {/* The open-source promise, made checkable. */}
-        <div className="mk-grid mk-grid-4 mk-up mk-d4" style={{ marginTop: 28 }}>
+/**
+ * The open-source promise with a file next to each line, so a reader can check any
+ * of the four rather than take them.
+ */
+export function OpenSourcePromise() {
+  return (
+    <section className="mk-section-tight">
+      <div className="mk-wrap">
+        <div className="mk-grid mk-grid-4 mk-up">
           {OSS_FACTS.map((f) => (
             <div
               key={f.label}
               className="mk-card"
-              style={{ padding: 16, display: "grid", gap: 6, minWidth: 0 }}
+              style={{ padding: 20, display: "grid", gap: 6, minWidth: 0 }}
             >
               <span className="mk-label">{f.label}</span>
               <p className="mk-body" style={{ margin: 0, fontSize: ".9rem", lineHeight: 1.5 }}>
                 {f.body}
               </p>
-              <code className="mk-mono" style={{ color: "var(--mk-faint)", overflowWrap: "anywhere" }}>
+              <code
+                className="mk-mono"
+                style={{ color: "var(--mk-faint)", overflowWrap: "anywhere" }}
+              >
                 {f.where}
               </code>
             </div>

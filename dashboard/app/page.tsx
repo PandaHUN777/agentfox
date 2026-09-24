@@ -6,11 +6,9 @@ import { ApiDown, Severity, Stat, StatLink, findingTypeInfo, ts } from "@/compon
 import { CATEGORY_CAP } from "./how-it-works/_public";
 import { SITE_URL, SUPPORT_EMAIL, publicPageMetadata, HOME_TITLE, HOME_DESCRIPTION } from "@/lib/site";
 import { MarketingNav, REPO } from "@/components/marketing/nav";
-import { Hero } from "@/components/marketing/hero";
-import { Decisions } from "@/components/marketing/decisions";
-import { Evidence, HowItWorks, Honesty, FAQ, CTA, Footer } from "@/components/marketing/sections";
-import { Capabilities } from "@/components/marketing/capabilities";
-import { Editions, WhyOpen } from "@/components/marketing/editions";
+import { HowItWorks, FAQ, CTA, Footer } from "@/components/marketing/sections";
+import { Hero, Stack, Benefits, Proof, Limits } from "@/components/marketing/home";
+import { Editions } from "@/components/marketing/editions";
 
 export const dynamic = "force-dynamic";
 
@@ -315,32 +313,21 @@ function Landing() {
       <LandingJsonLd />
       <MarketingNav />
       <main>
-        {/* What goes wrong, what can happen to a call, what it is, what is in it,
-            whether it works, how you adopt it, what it costs, what it cannot do, and
-            four questions.
+        {/* Benefit, proof, price, honesty. Each section states what the reader gets
+            and then shows it, and no two adjacent sections have the same shape.
 
-            Decisions comes straight after the hero because the hero shows one decision
-            and the obvious next question is "what else can it say". Four outcomes on
-            one screen answers it before the reader has to scroll for it.
-
-            A three-beat prose explainer used to sit here. Two of its beats are now
-            said better by the hero lede and by the four cards, which show the outcomes
-            rather than describing them, and the third, the honest detection numbers,
-            moved into the Evidence lede where the numbers it justifies already were.
-
-            Proof sits after the product rather than before it: "8 of 8 contained"
-            means nothing to someone who has not yet been told what containment is.
-            The long version of each pillar is /product, because this page's job is to
-            get someone to the playground or the repository, not to be the
-            documentation. */}
+            The order is the order a sceptic reads in: what is it, does it fit my
+            stack, what does it actually do for me, is any of that true, what does it
+            cost, and what will go wrong. The limits are near the end on purpose:
+            they are the last thing a buyer checks and the first thing a competitor
+            quotes, so they are ours to state plainly rather than theirs to find. */}
         <Hero />
-        <Decisions />
-        <Capabilities />
-        <Evidence />
+        <Stack />
+        <Benefits />
+        <Proof />
         <HowItWorks />
         <Editions />
-        <WhyOpen />
-        <Honesty />
+        <Limits />
         <FAQ n={4} more />
         <CTA />
       </main>

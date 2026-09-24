@@ -218,21 +218,18 @@ const STEPS: { title: string; body: React.ReactNode }[] = [
 
 export function HowItWorks() {
   return (
-    <section id="adopt" className="mk-section">
+    <section id="adopt" className="mk-section mk-band">
       <div className="mk-wrap mk-split mk-split-wide">
         <div className="mk-up">
-          <span className="mk-eyebrow">Getting there</span>
+          <span className="mk-eyebrow">Rollout</span>
+          {/* The old heading ran to four ragged lines in this column and described a
+              process. This one states the promise the four steps exist to keep. */}
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
-            From nothing to governed, in the order you would actually do it.
+            Nothing is blocked until you say so.
           </h2>
           <p className="mk-body" style={{ marginTop: 14, maxWidth: "48ch" }}>
             Nothing in the first three steps refuses a call. A library that starts rejecting
             production traffic because someone added an import gets switched off within a day.
-          </p>
-          <p className="mk-fine" style={{ marginTop: 18, maxWidth: "48ch" }}>
-            One exception from day one: a tool that can move money, delete something or send an
-            email, called with a value that came from a document rather than a person, is
-            refused or sent to a human.
           </p>
         </div>
         <ol className="mk-steps mk-up mk-d2" style={{ listStyle: "none", margin: 0, padding: 0 }}>

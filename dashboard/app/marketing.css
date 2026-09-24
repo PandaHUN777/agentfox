@@ -149,11 +149,11 @@
 
 /* Apple's content column is a little under 1000px and the page is centred in it.
    Wider than this and running text stops being comfortable to read. */
-.mk-wrap { max-width: 1040px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+.mk-wrap { max-width: 1120px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
 .mk-narrow { max-width: 700px; margin: 0 auto; }
 /* Space is the main compositional device here, so sections are generous and scale
    with the viewport rather than sitting at one fixed value. */
-.mk-section { padding-block: clamp(64px, 9vw, 116px); }
+.mk-section { padding-block: clamp(56px, 7.5vw, 100px); }
 .mk-section-tight { padding-block: clamp(44px, 6vw, 72px); }
 
 /* --- Type -------------------------------------------------------------- */
@@ -215,16 +215,20 @@
   border: 1px solid transparent;
   transition: background-color .2s ease, border-color .2s ease, opacity .2s ease;
 }
-.mk-btn-primary { background: var(--mk-cta); color: var(--mk-cta-fg); }
-.mk-btn-primary:hover { background: var(--mk-cta-hover); }
-.mk-btn-outline {
+/* Scoped to `.mk` on purpose. `.mk a` above is (0,1,1) and a bare `.mk-btn-primary`
+   is (0,1,0), so the link colour won every button that is an anchor — which is all
+   of them — and painted the accent orange on the navy fill at roughly 2:1. Matching
+   the specificity is what makes the label white again. */
+.mk .mk-btn-primary { background: var(--mk-cta); color: var(--mk-cta-fg); }
+.mk .mk-btn-primary:hover { background: var(--mk-cta-hover); }
+.mk .mk-btn-outline {
   background: transparent;
   color: var(--mk-accent);
   border-color: var(--mk-border-strong);
 }
-.mk-btn-outline:hover { border-color: var(--mk-accent); background: var(--mk-accent-soft); }
-.mk-btn-ghost { color: var(--mk-muted); padding-inline: 12px; }
-.mk-btn-ghost:hover { color: var(--mk-text); }
+.mk .mk-btn-outline:hover { border-color: var(--mk-accent); background: var(--mk-accent-soft); }
+.mk .mk-btn-ghost { color: var(--mk-muted); padding-inline: 12px; }
+.mk .mk-btn-ghost:hover { color: var(--mk-text); }
 .mk a:focus-visible, .mk button:focus-visible {
   outline: 2px solid var(--mk-accent);
   outline-offset: 3px;
@@ -365,6 +369,77 @@
 .mk-d5 { animation-delay: .25s; }
 @media (prefers-reduced-motion: reduce) {
   .mk-up { animation: none; }
+}
+
+/* --- Benefit patterns -------------------------------------------------- */
+
+/* A three-tick list. The reference site this design answers to uses one under
+   every section paragraph, and it is the single biggest reason its sections scan:
+   three short benefit lines beat a paragraph that contains the same three facts. */
+.mk-ticks { list-style: none; margin: 22px 0 0; padding: 0; display: grid; gap: 12px; }
+.mk-ticks li {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 12px;
+  align-items: start;
+  font-size: 1rem;
+  color: var(--mk-text);
+}
+.mk-ticks li::before {
+  content: "";
+  width: 18px; height: 18px; margin-top: 3px;
+  border-radius: 999px;
+  background: var(--mk-accent-soft);
+  /* A tick drawn in the accent, so the list needs no icon library. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b3431f' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+  background-size: 12px 12px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mk-ticks li::before {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff7a45' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+  }
+}
+:root[data-theme="dark"] .mk-ticks li::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff7a45' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
+
+/* Three ticks across, for the sections that put the picture underneath rather than
+   beside. One column on a phone, where three tracks would leave every tick a
+   two-word ribbon. */
+@media (min-width: 900px) {
+  .mk-ticks-row { grid-template-columns: repeat(3, 1fr); gap: 28px; }
+}
+
+/* A section's heading beside its own supporting line. The heading is allowed the
+   larger track: it is set at display size and a narrow one rags badly. `end`
+   aligns the two on their last baseline rather than their tops, which is what
+   stops a two-line heading from floating above a one-line lede. */
+.mk-head { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 900px) {
+  .mk-head { grid-template-columns: 1.15fr 1fr; gap: 48px; align-items: end; }
+  .mk-head > p { margin-bottom: 4px; }
+}
+
+/* The "works with what you already run" strip. Names, not logos: we integrate with
+   these projects and have no permission to use anyone's mark. */
+.mk-strip {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: 10px 28px;
+  font-size: .95rem; color: var(--mk-muted);
+}
+.mk-strip span { white-space: nowrap; }
+
+/* One statement per section, set large. Used where a section has a single idea and
+   no list, so the page has a change of pace rather than eight identical grids. */
+.mk-statement {
+  font-family: var(--mk-display);
+  font-size: clamp(1.5rem, 2.8vw, 2.1rem);
+  line-height: 1.25;
+  letter-spacing: -.02em;
+  font-weight: 600;
+  max-width: 24ch;
 }
 
 /* --- Bands, lists, footer ---------------------------------------------- */

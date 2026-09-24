@@ -3,7 +3,7 @@ import Link from "next/link";
 import { publicPageMetadata, SUPPORT_EMAIL } from "@/lib/site";
 import { MarketingNav } from "@/components/marketing/nav";
 import { Footer } from "@/components/marketing/sections";
-import { Editions, WhyOpen } from "@/components/marketing/editions";
+import { Editions, OpenSourcePromise, WhyOpen } from "@/components/marketing/editions";
 
 export const dynamic = "force-dynamic";
 
@@ -55,6 +55,7 @@ export default function Pricing() {
           </div>
         </section>
         <Editions />
+        <OpenSourcePromise />
         <WhyOpen />
       </main>
       <Footer />

@@ -18,6 +18,15 @@
         "cd /Users/architsharma/guardrails/dashboard && NOMETRIA_API_URL=http://127.0.0.1:8080 NOMETRIA_PLAYGROUND_API_URL=http://127.0.0.1:8080 npm run dev"
       ],
       "port": 3000
+    },
+    {
+      "name": "landing",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/architsharma/guardrails/.claude/worktrees/gap-analysis-failure-modes-2a3ba9/dashboard/.next/standalone && PORT=3100 HOSTNAME=127.0.0.1 node server.js"
+      ],
+      "port": 3100
     }
   ]
 }

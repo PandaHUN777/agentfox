@@ -22,7 +22,7 @@ import { Panel, Verdict } from "./ui";
  * infer a literal, so the two `=== "/login"` checks below stay legal TypeScript
  * whatever this is pointed at next.
  */
-const CONTACT_HREF: string = "mailto:support@agentfox.com";
+const CONTACT_HREF: string = "mailto:support@nometria.com";
 
 /**
  * The one public channel that actually reaches a maintainer today. The closing

@@ -49,7 +49,7 @@ export const SITE_DESCRIPTION =
 export const REPO_URL = "https://github.com/architsharm/guardrails";
 
 /** Verified in components/marketing/editions.tsx and components/Playground.tsx. */
-export const SUPPORT_EMAIL = "support@agentfox.com";
+export const SUPPORT_EMAIL = "support@nometria.com";
 
 /** Absolute URL for a path, for canonicals and structured data. */
 export function absolute(path: string): string {
