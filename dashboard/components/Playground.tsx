@@ -15,11 +15,14 @@ import { Wordmark } from "./Logo";
 import { Panel, Verdict } from "./ui";
 
 /**
- * Where the closing call to action sends someone. Point this at a real address
- * or a booking link before showing this page to anyone; it defaults to the
- * sign-in route only so the button is never a dead end.
+ * Where the closing call to action sends someone. This is the real support
+ * address, not a placeholder: it reaches a maintainer. With it set, the button
+ * below reads "Get in touch" and the apologetic note about there being no
+ * contact address drops out on its own. Typed as `string` rather than left to
+ * infer a literal, so the two `=== "/login"` checks below stay legal TypeScript
+ * whatever this is pointed at next.
  */
-const CONTACT_HREF = "/login";
+const CONTACT_HREF: string = "mailto:support@nometria.com";
 
 /**
  * The one public channel that actually reaches a maintainer today. The closing

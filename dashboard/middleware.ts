@@ -61,6 +61,13 @@ export function middleware(req: NextRequest) {
   return NextResponse.next({ request: { headers } });
 }
 
+// Static files under public/ are excluded by extension as well as by prefix. Without
+// this, a signed-out visitor's request for a marketing screenshot is a request with no
+// session cookie, so the redirect above sends it to /login and the browser gets HTML
+// where it asked for an image: every picture on the public homepage renders broken,
+// and only for the signed-out visitors the page exists for.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:webp|png|jpg|jpeg|gif|svg|ico|avif|woff2?|txt|xml|webmanifest|pdf)$).*)",
+  ],
 };

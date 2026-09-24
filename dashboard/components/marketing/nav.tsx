@@ -10,8 +10,12 @@ import { BrandLockup } from "@/components/marketing/brand";
  * to a sign-in wall is worse than no row.
  */
 
+// Three in-page anchors and three real pages. The anchors are what a visitor who
+// wants to know what this does actually needs; the pages are the two things that
+// need no account plus the source.
 const LINKS: [string, string][] = [
-  ["How it works", "/how-it-works"],
+  ["Product", "/#pillars"],
+  ["Open source", "/#editions"],
   ["Playground", "/playground"],
   ["Benchmarks", "/benchmark"],
 ];

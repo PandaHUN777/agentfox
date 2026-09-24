@@ -5,15 +5,16 @@ import { ApiDown, Severity, Stat, StatLink, findingTypeInfo, ts } from "@/compon
 import { CATEGORY } from "./how-it-works/_public";
 import { MarketingNav } from "@/components/marketing/nav";
 import { Hero } from "@/components/marketing/hero";
+import { Evidence, HowItWorks, Honesty, FAQ, CTA, Footer } from "@/components/marketing/sections";
 import {
-  Features,
-  Evidence,
-  HowItWorks,
-  Honesty,
-  FAQ,
-  CTA,
-  Footer,
-} from "@/components/marketing/sections";
+  Pillars,
+  Guardrails,
+  Containment,
+  Discovery,
+  Assurance,
+  Evidence2,
+} from "@/components/marketing/pillars";
+import { Editions, WhyOpen } from "@/components/marketing/editions";
 
 export const dynamic = "force-dynamic";
 
@@ -229,9 +230,19 @@ function Landing() {
       <MarketingNav />
       <main>
         <Hero />
-        <Features />
+        {/* What it is, then each pillar with the real screen that proves it, then
+            the numbers, then how you adopt it, then what it costs, then the limits.
+            A visitor who only scrolls sees the product; the prose is underneath. */}
+        <Pillars />
+        <Guardrails />
+        <Containment />
+        <Discovery />
+        <Assurance />
+        <Evidence2 />
         <Evidence />
         <HowItWorks />
+        <Editions />
+        <WhyOpen />
         <Honesty />
         <FAQ />
         <CTA />
