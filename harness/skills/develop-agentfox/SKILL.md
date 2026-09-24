@@ -33,8 +33,11 @@ Fixtures live in `tests/conftest.py`: `session`, `seeded`, `enforcer`, `client`,
 
 ## 3. Rules that have caused production incidents
 
-1. **Vendored wheels.** Two deploys install the package from committed wheels
-   (`api/vendor/`, `demo/redteam-live-lang/vendor/`). Install the hook once with
+1. **Vendored wheels.** Two deploys install the package from a locally built wheel,
+   in a `vendor/` directory under `api/` and under `demo/redteam-live-lang/`. Those
+   directories are build output and are not in the repository — each carries its own
+   `.gitignore` of `*` — so the paths are written here in prose rather than as repo
+   paths, which is also why check_harness.py cannot resolve them. Install the hook with
    `uvx pre-commit install`; it rebuilds them when `src/agentfox/` changes. Without the hook:
    `uv build --wheel --out-dir api/vendor && uv build --wheel --out-dir demo/redteam-live-lang/vendor`.
    CI's `vendored-wheel-freshness` job fails otherwise.
