@@ -1329,6 +1329,11 @@ input[type="checkbox"], input[type="radio"] {
 }
 .pg-header .brand { display: flex; align-items: center; gap: 8px; font-weight: 640; }
 .pg-header p.sub { margin: 4px 0 0; }
+/* The playground's page heading. Sized to the header it sits in rather than to
+   the global h1 (25px), which would make the lede under it look like an
+   afterthought. It carries the visual weight the first line of that lede
+   already had, so promoting it to a heading changed the outline, not the page. */
+.pg-header h1.pg-title { font-size: 16px; font-weight: 640; letter-spacing: -0.012em; margin: 8px 0 0; }
 .pg-columns { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
 @media (max-width: 860px) { .pg-columns { grid-template-columns: 1fr; } }
 
@@ -1391,7 +1396,7 @@ input[type="checkbox"], input[type="radio"] {
 .pg-cta-note { max-width: 520px; margin: 14px auto 0; }
 
 .pg-callout { border: 1px solid var(--hairline); background: var(--panel-2); border-radius: var(--r-3); padding: 16px 18px; margin-top: 18px; }
-.pg-callout h3 { margin: 0 0 8px; font-size: 14px; }
+.pg-callout h2 { margin: 0 0 8px; font-size: 14px; }
 .pg-callout table { margin-top: 8px; }
 
 .pg-cta { text-align: center; margin-top: 30px; padding: 26px 20px; border: 1px solid var(--hairline); border-radius: var(--r-3); background: var(--panel); }

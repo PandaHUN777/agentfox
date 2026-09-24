@@ -7,6 +7,7 @@ import { CATEGORY_CAP } from "./how-it-works/_public";
 import { SITE_URL, SUPPORT_EMAIL, publicPageMetadata, HOME_TITLE, HOME_DESCRIPTION } from "@/lib/site";
 import { MarketingNav, REPO } from "@/components/marketing/nav";
 import { Hero } from "@/components/marketing/hero";
+import { Explain } from "@/components/marketing/explain";
 import { Evidence, HowItWorks, Honesty, FAQ, CTA, Footer } from "@/components/marketing/sections";
 import { Capabilities } from "@/components/marketing/capabilities";
 import { Editions, WhyOpen } from "@/components/marketing/editions";
@@ -314,13 +315,19 @@ function Landing() {
       <LandingJsonLd />
       <MarketingNav />
       <main>
-        {/* What it is, what is in it, whether it works, how you adopt it, what it
-            costs, what it cannot do, and four questions. Proof sits after the product
-            rather than before it: "8 of 8 contained" means nothing to someone who has
+        {/* What goes wrong, what it is, what is in it, whether it works, how you adopt
+            it, what it costs, what it cannot do, and four questions.
+
+            Explain comes second because everything after it assumed a reader who
+            already knew what prompt injection was, and most readers do not: an index
+            of six pillars means nothing to someone who has not been shown the failure
+            the pillars exist for. Proof sits after the product rather than before it,
+            for the same reason: "8 of 8 contained" means nothing to someone who has
             not yet been told what containment is. The long version of each pillar is
             /product, because this page's job is to get someone to the playground or
             the repository, not to be the documentation. */}
         <Hero />
+        <Explain />
         <Capabilities />
         <Evidence />
         <HowItWorks />

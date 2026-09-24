@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = publicPageMetadata({
   title: "Privacy",
   description:
-    "What the hosted playground and GitHub sign-in actually store, for how long, and why a self-hosted install sends us nothing at all.",
+    "What the hosted playground and GitHub sign-in actually store, for how long, the three companies that touch it, and why a copy you run yourself sends us nothing.",
   path: "/privacy",
 });
 

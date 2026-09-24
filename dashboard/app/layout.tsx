@@ -234,7 +234,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="en" className={`${albertSans.variable} ${GeistMono.variable} ${GeistSans.variable}`}>
+    <html lang="en-GB" className={`${albertSans.variable} ${GeistMono.variable} ${GeistSans.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>

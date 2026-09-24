@@ -10,7 +10,7 @@
  * `changeFrequency` and `priority` are hints, not instructions, and they are set
  * from how these pages actually behave: the landing page and the product page
  * change when the product is described differently, the benchmarks change when a
- * benchmark is rerun, and /login has not changed in months.
+ * benchmark is rerun, and the legal pages change when the service does.
  *
  * `lastModified` is the build time rather than a hardcoded date. Every one of these
  * pages is rendered from source in this repository, so a deployment is the only
@@ -50,7 +50,11 @@ const ROUTES: Entry[] = [
   { path: "/privacy", changeFrequency: "yearly", priority: 0.4 },
   { path: "/terms", changeFrequency: "yearly", priority: 0.3 },
   { path: "/security", changeFrequency: "yearly", priority: 0.4 },
-  { path: "/login", changeFrequency: "yearly", priority: 0.2 },
+  // /login is deliberately absent. It is public and crawlable (app/robots.ts allows
+  // it on purpose, so the `noindex` on the page itself can be read at all), but a
+  // sitemap is a list of URLs you are asking to have indexed, and app/login/page.tsx
+  // asks for the opposite. Listing it anyway produces a "Submitted URL marked
+  // noindex" error in Search Console for a page that is behaving exactly as intended.
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

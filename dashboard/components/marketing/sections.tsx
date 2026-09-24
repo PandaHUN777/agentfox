@@ -217,7 +217,7 @@ const STEPS: { title: string; body: React.ReactNode }[] = [
 
 export function HowItWorks() {
   return (
-    <section id="how" className="mk-section">
+    <section id="adopt" className="mk-section">
       <div className="mk-wrap mk-split mk-split-wide">
         <div className="mk-up">
           <span className="mk-eyebrow">Getting there</span>

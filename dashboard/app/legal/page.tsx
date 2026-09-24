@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = publicPageMetadata({
   title: "Legal",
   description:
-    "Privacy, terms, security disclosure, the Apache-2.0 licence and third-party notices, in one place.",
+    "Privacy, terms, security disclosure, the Apache-2.0 licence and third-party notices, with a line on each saying what you will find before you open it.",
   path: "/legal",
 });
 

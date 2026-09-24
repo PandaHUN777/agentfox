@@ -415,10 +415,18 @@ export function Playground({ apiBase }: { apiBase: string }) {
           <div className="brand">
             <Wordmark />
           </div>
+          {/*
+            The page had no <h1> at all: the wordmark is a logo, not a heading, so
+            the document outline started at the <h3> further down. Same words, in
+            the same order, as the sentence that already opened this paragraph —
+            only the tag changed, so a crawler and a screen reader now get the one
+            top-level heading every other public page already has.
+          */}
+          <h1 className="pg-title">Try to break a real agent.</h1>
           <p className="sub muted">
-            Try to break a real agent. Every verdict here comes from the same
-            enforcement code the product runs in production, in your own private
-            sandbox that forgets everything in 30 minutes.
+            Every verdict here comes from the same enforcement code the product runs
+            in production, in your own private sandbox that forgets everything in 30
+            minutes.
           </p>
           <p className="sub muted small">
             The agent replying to you is a deterministic stub, not a model, and when
@@ -1078,7 +1086,11 @@ export function Playground({ apiBase }: { apiBase: string }) {
           </div>
 
           <div className="pg-callout">
-            <h3>How this compares to a stateless text scanner</h3>
+            {/* <h2>, not <h3>: this and the call to action below are the two
+                top-level sections under the page heading, and an <h3> here skipped
+                a level straight from the <h1>. Styling is unchanged — the rule in
+                globals.css moved with it. */}
+            <h2>How this compares to a stateless text scanner</h2>
             <p className="small muted" style={{ marginTop: 0 }}>
               This isn't a claimed number — it's a real, independently-installed{" "}
               <code className="mono">llm-guard</code> scored on the identical 20

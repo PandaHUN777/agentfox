@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = publicPageMetadata({
   title: "Support and how to get help",
   description:
-    "Which issue template to use, where questions go, the private route for vulnerabilities, and what one maintainer can honestly promise.",
+    "Which issue template to use, where questions go, the private route for a vulnerability, where the docs live, and what one maintainer can honestly promise.",
   path: "/support",
 });
 
