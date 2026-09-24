@@ -55,7 +55,7 @@ export default async function Login({
           <Wordmark />
         </div>
         <small className="muted" style={{ display: "block", marginBottom: 18 }}>
-          AI agent governance platform
+          by Nometria
         </small>
         <h1 style={{ fontSize: 20 }}>Sign in or create a workspace</h1>
         <p className="sub" style={{ maxWidth: "none" }}>

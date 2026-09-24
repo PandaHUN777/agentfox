@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BrandLockup } from "@/components/marketing/brand";
 
 /**
  * The lower half of the public landing page: what it does, what was measured, how you
@@ -566,7 +567,7 @@ export function Footer() {
         style={{ display: "flex", flexWrap: "wrap", gap: 28, justifyContent: "space-between" }}
       >
         <div style={{ maxWidth: "34ch" }}>
-          <span className="mk-brand-name">AgentFox</span>
+          <BrandLockup size={30} sub />
           <p className="mk-fine" style={{ margin: "8px 0 0" }}>
             An open-source control plane for AI agents. Maintained in the open by one
             developer.

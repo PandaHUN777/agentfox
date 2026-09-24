@@ -21,21 +21,23 @@
 
 import { ImageResponse } from "next/og";
 
+import { OG_MARK_DATA_URI } from "./og-mark";
+
 /**
- * The dark palette from app/marketing.css (the `@media (prefers-color-scheme: dark)`
- * block, lines 52-60, which the `[data-theme="dark"]` block at lines 77-80 repeats
- * verbatim). Dark rather than light because a social card is shown at thumbnail size
- * against feed chrome, and the light ground (#faf9f6) disappears into most of it.
+ * The dark palette from app/marketing.css's dark block. Dark rather than light
+ * because a social card is shown at thumbnail size against feed chrome, and a
+ * near-white ground disappears into most of it.
  */
 const MK = {
-  bg: "#100e0b", // --mk-bg
-  surface: "#17150f", // --mk-surface
-  border: "#2a251c", // --mk-border
-  borderStrong: "#392f22", // --mk-border-strong
-  text: "#f1ede4", // --mk-text
-  muted: "#a89f8f", // --mk-muted
-  faint: "#7d7566", // --mk-faint
-  accent: "#e08a63", // --mk-accent
+  bg: "#000000", // --mk-bg
+  surface: "#1d1d1f", // --mk-surface
+  border: "#333336", // --mk-border
+  borderStrong: "#48484a", // --mk-border-strong
+  text: "#f5f5f7", // --mk-text
+  muted: "#a1a1a6", // --mk-muted
+  faint: "#86868b", // --mk-faint
+  accent: "#ff7a45", // --mk-accent, the text-safe orange
+  brand: "#fd4901", // --mk-brand, the logo orange
 } as const;
 
 export const OG_SIZE = { width: 1200, height: 630 };
@@ -43,31 +45,20 @@ export const OG_CONTENT_TYPE = "image/png";
 
 /** Alt text, reused by the `images` entries in app/layout.tsx. */
 export const OG_ALT =
-  "AgentFox: every call your agent makes, checked and recorded. Open source, Apache-2.0.";
+  "AgentFox: your agent believes what it reads, so limit what it is allowed to do. Open source, Apache-2.0.";
 
 /**
- * The marketing brand mark from components/marketing/brand.tsx, redrawn here
- * because that component is JSX bound to CSS variables and this renderer cannot
- * read them. Same two paths, same 24x24 viewBox: a broken dashed outer shield
- * (detection, which falls) around a solid inner keep (the capability grant, which
- * holds). Scaled by `size` rather than restyled, so the two stay the same mark.
+ * The brand mark, drawn from the supplied artwork rather than redrawn in paths.
+ *
+ * This used to hand-trace the old shield into two SVG paths. There is now a real
+ * logo file, and a second version of it maintained in code is a thing that silently
+ * drifts from the original. Satori renders a data URI fine, so the card shows the
+ * same pixels as the favicon and the page header.
  */
-export function BrandMarkStatic({ size = 64, accent = MK.accent }: { size?: number; accent?: string }) {
+export function BrandMarkStatic({ size = 64 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-      <path
-        d="M12 2.2 20.8 5.8v6.3c0 5.4-3.7 9.2-8.8 10.9C7 21.3 3.2 17.5 3.2 12.1V5.8L12 2.2Z"
-        stroke={accent}
-        strokeOpacity="0.45"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-        strokeDasharray="3.2 2.6"
-      />
-      <path
-        d="M12 7.1 17 9.2v3.6c0 3-2.1 5.2-5 6.2-2.9-1-5-3.2-5-6.2V9.2L12 7.1Z"
-        fill={accent}
-      />
-    </svg>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={OG_MARK_DATA_URI} width={size} height={size} alt="" />
   );
 }
 
@@ -97,7 +88,7 @@ export function ogImage(): ImageResponse {
               AgentFox
             </span>
             <span style={{ fontSize: 21, color: MK.muted, marginTop: 2 }}>
-              Agent control plane
+              by Nometria
             </span>
           </div>
         </div>
@@ -110,18 +101,18 @@ export function ogImage(): ImageResponse {
             style={{
               display: "flex",
               flexWrap: "wrap",
-              fontSize: 72,
+              fontSize: 58,
               fontWeight: 700,
               lineHeight: 1.08,
               letterSpacing: "-0.03em",
             }}
           >
-            <span>Every call your agent makes,&nbsp;</span>
-            <span style={{ color: MK.accent }}>checked and recorded.</span>
+            <span>Your agent believes what it reads.&nbsp;</span>
+            <span style={{ color: MK.brand }}>Limit what it is allowed to do.</span>
           </div>
-          <div style={{ display: "flex", fontSize: 28, color: MK.muted, marginTop: 26, lineHeight: 1.4 }}>
-            Guardrails on model traffic, tool calls bounded by capability grants, and a
-            tamper-evident record.
+          <div style={{ display: "flex", fontSize: 26, color: MK.muted, marginTop: 22, lineHeight: 1.45 }}>
+            Hidden text in a document can tell an AI agent to move money. AgentFox
+            refuses any call the agent was never granted.
           </div>
         </div>
 

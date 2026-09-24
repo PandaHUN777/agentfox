@@ -91,7 +91,7 @@ function LandingJsonLd() {
         "@id": `${SITE_URL}/#organisation`,
         name: "AgentFox",
         url: SITE_URL,
-        logo: `${SITE_URL}/apple-icon`,
+        logo: `${SITE_URL}/apple-icon.png`,
         sameAs: [REPO],
         contactPoint: {
           "@type": "ContactPoint",

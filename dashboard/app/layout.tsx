@@ -79,15 +79,6 @@ export const metadata: Metadata = {
     googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
   },
   alternates: { canonical: "/" },
-  // app/icon.tsx and app/apple-icon.tsx generate these same two routes by the file
-  // convention, and file-based metadata takes precedence over this block. It is
-  // written out anyway because it is the declaration of record: it names the sizes
-  // and types those two files must keep producing, and it is what still describes
-  // the icons if either file is ever replaced by a static asset.
-  icons: {
-    icon: [{ url: "/icon", type: "image/png", sizes: "32x32" }],
-    apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
-  },
 };
 
 /**
@@ -246,7 +237,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <nav className="side">
               <div className="brand">
                 <Wordmark />
-                <small>AI agent governance platform</small>
+                <small>by Nometria</small>
               </div>
               <SideNav nav={NAV} />
               <ThemeToggle />

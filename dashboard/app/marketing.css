@@ -37,12 +37,24 @@
   --mk-muted: #6e6e73;
   --mk-faint: #86868b;
 
-  /* One accent, used sparingly: links, the primary button, and the second clause of
-     a headline. 5.68:1 on white, so it is safe for body-size text too. */
-  --mk-accent: #b3431f;
-  --mk-accent-hover: #933516;
+  /* The brand is the two colours in the mark: navy #012455 and orange #fd4901.
+     They are split by job rather than used interchangeably, because the measured
+     contrast forces it.
+       --mk-brand  the logo orange. 3.31:1 on white, so display sizes and the mark
+                   only, never body text.
+       --mk-accent a darkened orange at 5.32:1, which is what links, eyebrows and
+                   anything at text size actually use.
+       --mk-cta    the primary button. Navy with a white label is 15.4:1, where
+                   orange with any label is under 4.5:1. */
+  --mk-brand: #fd4901;
+  --mk-navy: #012455;
+  --mk-accent: #c23600;
+  --mk-accent-hover: #a32d00;
   --mk-accent-fg: #ffffff;
-  --mk-accent-soft: #fbefe9;
+  --mk-accent-soft: #fff0e9;
+  --mk-cta: #012455;
+  --mk-cta-hover: #01326f;
+  --mk-cta-fg: #ffffff;
 
   /* Semantic colours for verdicts. Separate from the accent, and never used for
      decoration: green here always means a call was allowed. */
@@ -81,10 +93,15 @@
     --mk-text: #f5f5f7;
     --mk-muted: #a1a1a6;
     --mk-faint: #86868b;
-    --mk-accent: #f5906a;
-    --mk-accent-hover: #ffa684;
-    --mk-accent-fg: #1d1d1f;
-    --mk-accent-soft: #2b1a13;
+    --mk-brand: #fd4901;
+    --mk-navy: #9ab4e2;
+    --mk-accent: #ff7a45;
+    --mk-accent-hover: #ff9066;
+    --mk-accent-fg: #14110e;
+    --mk-accent-soft: #2a1408;
+    --mk-cta: #fd4901;
+    --mk-cta-hover: #ff6a2b;
+    --mk-cta-fg: #14110e;
     --mk-good: #6fd3a6;
     --mk-good-soft: #10231b;
     --mk-stop: #ff9d92;
@@ -101,8 +118,10 @@
   --mk-bg: #000000; --mk-surface: #1d1d1f; --mk-surface-2: #161617;
   --mk-border: #333336; --mk-border-strong: #48484a;
   --mk-text: #f5f5f7; --mk-muted: #a1a1a6; --mk-faint: #86868b;
-  --mk-accent: #f5906a; --mk-accent-hover: #ffa684; --mk-accent-fg: #1d1d1f;
-  --mk-accent-soft: #2b1a13;
+  --mk-brand: #fd4901; --mk-navy: #9ab4e2;
+  --mk-accent: #ff7a45; --mk-accent-hover: #ff9066; --mk-accent-fg: #14110e;
+  --mk-accent-soft: #2a1408;
+  --mk-cta: #fd4901; --mk-cta-hover: #ff6a2b; --mk-cta-fg: #14110e;
   --mk-good: #6fd3a6; --mk-good-soft: #10231b;
   --mk-stop: #ff9d92; --mk-stop-soft: #2a1513;
   --mk-hold: #e8be74; --mk-hold-soft: #241d12;
@@ -156,7 +175,7 @@
   letter-spacing: -.028em;
   font-weight: 600;
 }
-.mk-h1 em { font-style: normal; color: var(--mk-accent); }
+.mk-h1 em { font-style: normal; color: var(--mk-brand); }
 .mk-h2 {
   font-size: clamp(1.9rem, 4vw, 2.9rem);
   line-height: 1.1;
@@ -196,8 +215,8 @@
   border: 1px solid transparent;
   transition: background-color .2s ease, border-color .2s ease, opacity .2s ease;
 }
-.mk-btn-primary { background: var(--mk-accent); color: var(--mk-accent-fg); }
-.mk-btn-primary:hover { background: var(--mk-accent-hover); }
+.mk-btn-primary { background: var(--mk-cta); color: var(--mk-cta-fg); }
+.mk-btn-primary:hover { background: var(--mk-cta-hover); }
 .mk-btn-outline {
   background: transparent;
   color: var(--mk-accent);
@@ -369,7 +388,7 @@
 .mk-step { display: flex; gap: 16px; align-items: flex-start; }
 .mk-step-n {
   flex: 0 0 30px; height: 30px; border-radius: 980px;
-  background: var(--mk-accent); color: var(--mk-accent-fg);
+  background: var(--mk-brand); color: #ffffff;
   display: grid; place-items: center;
   font-size: 14px; font-weight: 600;
 }
@@ -405,7 +424,11 @@
 
 /* --- Brand ------------------------------------------------------------- */
 
-.mk-brand { display: inline-flex; align-items: center; gap: 9px; text-decoration: none; color: inherit; }
+.mk-brand,
+.mk a.mk-brand {
+  display: inline-flex; align-items: center; gap: 9px;
+  text-decoration: none; color: var(--mk-text);
+}
 .mk-brand-name { font-family: var(--mk-display); font-weight: 600; letter-spacing: -.02em; font-size: 1.05rem; }
 .mk-brand-sub {
   font-size: .7rem; letter-spacing: .02em; color: var(--mk-faint);

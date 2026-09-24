@@ -1,51 +1,42 @@
 /**
  * The marketing brand mark and lockup.
  *
- * The signed-in app keeps its solid shield (components/Logo.tsx). This is the same
- * family a step further: the outer line is drawn broken and never filled, and a solid
- * shape sits inside it. That is the product's argument as a picture. Detection is the
- * outer line and it falls; the inner keep is what the action actually has to pass, and
- * it holds after the model has already been convinced.
+ * The mark is the supplied artwork at `public/brand/mark.webp`, not a redrawing of
+ * it. It is a geometric fox head in the two brand colours, and hand-tracing that
+ * into SVG paths produces something subtly wrong in a way nobody notices until it
+ * sits next to the real file. The same artwork is the favicon and the apple-touch
+ * icon (`app/icon.png`, `app/apple-icon.png`), so the tab, the home screen and the
+ * page header are one image rather than three near-misses.
  *
- * Drawn inline rather than loaded from a file so it inherits the accent token and is
- * correct in both themes without a second asset.
+ * Being a raster with its own colours, it does not follow the theme. That is right
+ * for a logo: the mark's navy and orange both read on white and on black.
+ *
+ * The naming is "AgentFox by Nometria", matching the supplied lockup. `sub` prints
+ * the parent-brand line, which belongs anywhere the lockup stands alone and is off
+ * in the navigation bar, where the row is already tight.
  */
 
 export function BrandMark({ size = 30 }: { size?: number }) {
   return (
-    <svg
+    <img
+      src="/brand/mark.webp"
+      alt=""
       width={size}
       height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      style={{ flex: `0 0 ${size}px` }}
-    >
-      <path
-        d="M12 2.2 20.8 5.8v6.3c0 5.4-3.7 9.2-8.8 10.9C7 21.3 3.2 17.5 3.2 12.1V5.8L12 2.2Z"
-        stroke="var(--mk-accent)"
-        strokeOpacity=".36"
-        strokeWidth="1.4"
-        strokeLinejoin="round"
-        strokeDasharray="3.2 2.6"
-      />
-      <path
-        d="M12 7.1 17 9.2v3.6c0 3-2.1 5.2-5 6.2-2.9-1-5-3.2-5-6.2V9.2L12 7.1Z"
-        fill="var(--mk-accent)"
-      />
-    </svg>
+      decoding="async"
+      style={{ flex: `0 0 ${size}px`, width: size, height: size, display: "block" }}
+    />
   );
 }
 
-/** Mark plus name. `sub` prints the parent-brand line under it for the footer lockup. */
+/** Mark plus name. `sub` adds the "by Nometria" line underneath. */
 export function BrandLockup({ size = 28, sub = false }: { size?: number; sub?: boolean }) {
   return (
     <span className="mk-brand">
       <BrandMark size={size} />
       <span style={{ display: "grid", lineHeight: 1.15 }}>
         <span className="mk-brand-name">AgentFox</span>
-        {sub && <span className="mk-brand-sub">Agent control plane</span>}
+        {sub && <span className="mk-brand-sub">by Nometria</span>}
       </span>
     </span>
   );
