@@ -227,7 +227,7 @@ async function RulesTab({ agent }: { agent?: string }) {
 
       <p className="small muted" style={{ marginTop: 10 }}>
         Simulate a change before promoting it:{" "}
-        <code className="mono">nometria policy simulate -f candidate.yaml</code> — it
+        <code className="mono">agentfox policy simulate -f candidate.yaml</code> — it
         exits non-zero when the change would newly block production traffic.
       </p>
 
@@ -298,7 +298,7 @@ async function RulesTab({ agent }: { agent?: string }) {
 }
 
 /**
- * The improvement loop has a full API and a `nometria proposals` command group and
+ * The improvement loop has a full API and an `agentfox proposals` command group and
  * no screen at all, so a dashboard user has no way to learn it exists, let alone
  * that there may be proposals waiting on their decision. Until there is a page for
  * it, saying so plainly here is better than the current silence.
@@ -344,32 +344,32 @@ function ChangeProposals() {
           <tbody>
             <tr>
               <td className="small">See what is waiting</td>
-              <td className="mono small">nometria proposals list --status proposed</td>
+              <td className="mono small">agentfox proposals list --status proposed</td>
               <td className="mono small muted">GET /api/proposals?status=</td>
             </tr>
             <tr>
               <td className="small">Read one in full</td>
-              <td className="mono small">nometria proposals show ID</td>
+              <td className="mono small">agentfox proposals show ID</td>
               <td className="mono small muted">GET /api/proposals/{"{id}"}</td>
             </tr>
             <tr>
               <td className="small">Decide on one</td>
-              <td className="mono small">nometria proposals approve ID --actor you --note &quot;...&quot;</td>
+              <td className="mono small">agentfox proposals approve ID --actor you --note &quot;...&quot;</td>
               <td className="mono small muted">POST /api/proposals/{"{id}"}/decide</td>
             </tr>
             <tr>
               <td className="small">Put it into effect</td>
-              <td className="mono small">nometria proposals apply ID</td>
+              <td className="mono small">agentfox proposals apply ID</td>
               <td className="mono small muted">POST /api/proposals/{"{id}"}/apply</td>
             </tr>
             <tr>
               <td className="small">Undo it</td>
-              <td className="mono small">nometria proposals rollback ID --reason &quot;...&quot;</td>
+              <td className="mono small">agentfox proposals rollback ID --reason &quot;...&quot;</td>
               <td className="mono small muted">POST /api/proposals/{"{id}"}/rollback</td>
             </tr>
             <tr>
               <td className="small">Record whether it worked</td>
-              <td className="mono small">nometria proposals verify ID --actor you</td>
+              <td className="mono small">agentfox proposals verify ID --actor you</td>
               <td className="mono small muted">POST /api/proposals/{"{id}"}/verify</td>
             </tr>
           </tbody>
@@ -707,13 +707,13 @@ async function GuardrailTuningTab({ agent }: { agent?: string }) {
       <div className="note-panel">
         <strong>A false positive can become a proposed rule change, not just a
         suppression.</strong>{" "}
-        <span className="mono">nometria proposals from-labels --days 30</span> reads the
+        <span className="mono">agentfox proposals from-labels --days 30</span> reads the
         false positives labelled above and files them as proposed cut-off changes to the
         rules that produced them. It files proposals and applies nothing; a person still
         decides each one. The same work runs daily on its own as the{" "}
         <span className="mono">tuning.propose</span> job, so proposals can be waiting
         even if you never run the command. There is no screen for them yet, so read them
-        with <span className="mono">nometria proposals list</span>. What they are and how
+        with <span className="mono">agentfox proposals list</span>. What they are and how
         deciding works is on the <Link href="/policies">Rules tab</Link>.
       </div>
     </>

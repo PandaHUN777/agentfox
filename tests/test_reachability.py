@@ -7,7 +7,7 @@ surface at all, and escalation needed the host application to push conversation 
 that nothing was pushing.
 
 A control nobody can switch on is not a control. These tests check that each of them
-can now be reached the same way `nometria check` is: one command, no client library,
+can now be reached the same way `agentfox check` is: one command, no client library,
 no reading the PRD first.
 """
 

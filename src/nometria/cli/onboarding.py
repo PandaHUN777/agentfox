@@ -4,9 +4,9 @@ The rest of the CLI has forty commands across nine sub-apps, which is right for 
 operator running a governance programme and wrong for the first ten minutes. Someone
 evaluating this should be able to type three words and understand their exposure:
 
-    nometria init      # set everything up
-    nometria check     # scan the repo and highlight what is ungoverned
-    nometria doctor    # is the runtime configured the way I think it is?
+    agentfox init      # set everything up
+    agentfox check     # scan the repo and highlight what is ungoverned
+    agentfox doctor    # is the runtime configured the way I think it is?
 
 Every one of them is safe to run: `init` is idempotent, `check` reads source without
 importing it, and `doctor` only reports. None of them can break a running system, so
@@ -69,14 +69,14 @@ def _config_text(environment: str) -> str:
 
 def _session():
     """A session on an initialised database. `init_db` is idempotent, and without it
-    a command run before `nometria init` dies on "no such table"."""
+    a command run before `agentfox init` dies on "no such table"."""
     from ..db import init_db, session_scope
 
     init_db()
     return session_scope()
 
 
-#: What `nometria check` writes in the severity column. Short enough for a table and
+#: What `agentfox check` writes in the severity column. Short enough for a table and
 #: still a word, so the row survives a terminal with no colour and a pasted log.
 _SEVERITY_MARK = {
     "critical": "CRITICAL",
@@ -125,7 +125,7 @@ def init(
         "--env",
         "-e",
         help="Name this deployment: development, staging or production. It decides "
-        "how strictly `nometria doctor` grades authentication.",
+        "how strictly `agentfox doctor` grades authentication.",
     ),
     demo: bool = typer.Option(
         False,
@@ -164,7 +164,7 @@ def init(
         if settings.policies_dir.exists():
             documents = load_from_dir(settings.policies_dir)
             for document in documents:
-                save_policy(session, document, author="init", notes="loaded by nometria init")
+                save_policy(session, document, author="init", notes="loaded by agentfox init")
             # Say the truth per pack: a blanket "observe mode" was wrong the moment one
             # shipped pack (tool-containment) declared enforce.
             console.print(f"  [green]✓[/] {len(documents)} policy pack(s) loaded")
@@ -178,7 +178,7 @@ def init(
             if enforcing:
                 console.print(
                     f"      [dim]{', '.join(enforcing)} blocks from the start — "
-                    "demote with `nometria policy observe <key>`.[/]"
+                    "demote with `agentfox policy observe <key>`.[/]"
                 )
 
     config_path = Path(path) / "nometria.toml"
@@ -197,13 +197,13 @@ def init(
 
     _print_next_steps(
         [
-            ("nometria check", "scan this repo and see what is ungoverned"),
+            ("agentfox check", "scan this repo and see what is ungoverned"),
             ("import nometria; nometria.auto()", "one line in your entry point"),
             (
-                "nometria tools declare <key> --impact irreversible",
+                "agentfox tools declare <key> --impact irreversible",
                 "declare what each tool can do — this is what still holds when a detector misses",
             ),
-            ("nometria doctor", "check containment readiness, not just detectors"),
+            ("agentfox doctor", "check containment readiness, not just detectors"),
         ]
     )
 
@@ -298,7 +298,7 @@ def check(
             target = "" if str(path) == "." else f" {path}"
             console.print(
                 f"  [dim]{len(report.sites) - len(ranked)} more not shown. "
-                f"See all of them:[/] [cyan]nometria check{target} "
+                f"See all of them:[/] [cyan]agentfox check{target} "
                 f"--limit {len(report.sites)}[/]"
             )
 
@@ -427,7 +427,7 @@ def doctor(
             "bad" if decisions else "warn",
             "containment",
             "no tools declared — nothing constrains what an agent may do when a detector "
-            "misses. Declare them with `nometria tools declare <key> --impact ...`."
+            "misses. Declare them with `agentfox tools declare <key> --impact ...`."
             + (" Traffic is already being governed without them." if decisions else ""),
         )
     elif tools_acting == 0:
@@ -444,7 +444,7 @@ def doctor(
             "containment",
             f"{tools_acting} acting tool(s) declared but no capability grants — least "
             "privilege is unconfigured, so policy is the only thing standing in the way. "
-            "Grant them with `nometria capability grant <agent> <tool> --limit ...`.",
+            "Grant them with `agentfox capability grant <agent> <tool> --limit ...`.",
         )
     else:
         add(
@@ -460,7 +460,7 @@ def doctor(
         f"{scoped_tables} table(s) declared row-scoped"
         if scoped_tables
         else "no table row-scoping declared — a query across every customer's rows reads "
-        "as ordinary. Declare with `nometria access declare-scope <table> --column ...`.",
+        "as ordinary. Declare with `agentfox access declare-scope <table> --column ...`.",
     )
 
     detectors = available_detectors()
@@ -500,7 +500,7 @@ def doctor(
         add("ok", "answerability", f"{boundaries} boundary/boundaries declared")
 
     if findings:
-        add("warn", "findings", f"{findings} open — run `nometria findings`")
+        add("warn", "findings", f"{findings} open — run `agentfox findings`")
     else:
         add("ok", "findings", "none open")
 
@@ -525,7 +525,7 @@ def doctor(
         raise typer.Exit(1)
 
 
-#: Worst first. `nometria check` advertises this list as ranked by severity, and for
+#: Worst first. `agentfox check` advertises this list as ranked by severity, and for
 #: a long time it was ordered by creation time instead.
 SEVERITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3, "info": 4}
 
@@ -628,15 +628,15 @@ def findings_cmd(
 
     steps: list[tuple[str, str]] = []
     if total and total > len(rows):
-        steps.append((f"nometria findings --limit {total}", "show the rest of them"))
+        steps.append((f"agentfox findings --limit {total}", "show the rest of them"))
     worst = min(rows, key=lambda r: SEVERITY_RANK.get(r["severity"], 9))["severity"]
     if not severity and worst in ("critical", "high"):
-        steps.append((f"nometria findings --severity {worst}", f"just the {worst} ones"))
-    steps.append(("nometria findings --json", "whole ids, fingerprints and subjects"))
-    steps.append(("nometria doctor", "check the runtime configuration that produced these"))
+        steps.append((f"agentfox findings --severity {worst}", f"just the {worst} ones"))
+    steps.append(("agentfox findings --json", "whole ids, fingerprints and subjects"))
+    steps.append(("agentfox doctor", "check the runtime configuration that produced these"))
     steps.append(
         (
-            "nometria serve",
+            "agentfox serve",
             "control plane on http://127.0.0.1:8080, the full detail view",
         )
     )
@@ -649,20 +649,20 @@ def quickstart() -> None:
         Panel(
             "\n".join(
                 [
-                    "[bold]1.[/] [cyan]nometria init[/]",
+                    "[bold]1.[/] [cyan]agentfox init[/]",
                     "   [dim]database, controls, baseline policy in observe mode[/]",
                     "",
                     "[bold]2.[/] Add one line to your entry point:",
                     "   [cyan]import nometria; nometria.auto()[/]",
                     "   [dim]every model call is now traced, evaluated and audited[/]",
                     "",
-                    "[bold]3.[/] [cyan]nometria check[/]",
+                    "[bold]3.[/] [cyan]agentfox check[/]",
                     "   [dim]see what is still ungoverned[/]",
                     "",
-                    "[bold]4.[/] [cyan]nometria findings[/]",
+                    "[bold]4.[/] [cyan]agentfox findings[/]",
                     "   [dim]see what it found[/]",
                     "",
-                    "[bold]5.[/] [cyan]nometria policy enforce baseline[/]",
+                    "[bold]5.[/] [cyan]agentfox policy enforce baseline[/]",
                     "   [dim]when the findings look right — this is the only step that blocks[/]",
                 ]
             ),

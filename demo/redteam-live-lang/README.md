@@ -70,7 +70,7 @@ re-run.
 **This demo uses its own database file** (`demo/redteam-live-lang/demo.db`, via
 `_env.py`) — never the repo's own `nometria.db`, and never `demo/redteam-live/
 demo.db` either, so the two demos can be seeded and run side by side without
-colliding. Every command below — including the `nometria` CLI ones — needs to see
+colliding. Every command below — including the `agentfox` CLI ones — needs to see
 the *same* database, so either run everything from inside `demo/redteam-live-lang/`
 (the scripts set the default relative to themselves) or export it explicitly:
 
@@ -88,7 +88,7 @@ the same four grants as the CrewAI demo's agent:
 |---|---|
 | `lookup_customer` | unrestricted |
 | `search_orders` | unrestricted |
-| `issue_refund` | **capped at $500** (`constraints: {amount: {lte: 500}}`) — mirrors `nometria seed`'s own `payments-ops` agent |
+| `issue_refund` | **capped at $500** (`constraints: {amount: {lte: 500}}`) — mirrors `agentfox seed`'s own `payments-ops` agent |
 | `send_email` | **requires human approval** — same shape as `payments-ops`'s `email.send` grant |
 
 It is not a superuser. A red-team probe attempting a $50,000 refund, or an
@@ -98,7 +98,7 @@ switched off for the demo.
 ## Step 1 — show the probe library
 
 ```bash
-nometria redteam probes
+agentfox redteam probes
 ```
 
 Real output, captured while building this demo:
@@ -301,10 +301,10 @@ Byte-for-byte the same mechanics and the same rules firing as the CrewAI demo's 
 (order IDs and dollar amounts included) — expected, since this script never touches
 the agent framework at all.
 
-## `nometria redteam run` — an honest read of a real run
+## `agentfox redteam run` — an honest read of a real run
 
 ```bash
-nometria redteam run support-crew-live-lang
+agentfox redteam run support-crew-live-lang
 ```
 
 Real output, captured while building this demo:
@@ -330,7 +330,7 @@ faithful reading of EU AI Act Art. 14, not a bug, and it's agent-configuration-d
 rather than framework-driven, so it reproduces identically here).
 
 ```bash
-nometria policy list
+agentfox policy list
 #  baseline             v1  observe  12
 #  eu-ai-act-high-risk  v1  observe   7
 #  tool-containment     v1  enforce  10
@@ -340,7 +340,7 @@ To show a genuine before/after on the `baseline` pack (real output, captured whi
 building this demo):
 
 ```bash
-nometria policy enforce baseline
+agentfox policy enforce baseline
 python -c "
 import _env
 from nometria.db import init_db, session_scope
@@ -355,7 +355,7 @@ with session_scope() as s:
     print(r['verdict'], [rule['rule_id'] for rule in r['rules_fired']])
 "
 # block ['injection.direct', 'injection.system_prompt_leak', 'eu.art15.injection_resistance']
-nometria policy observe baseline   # put it back
+agentfox policy observe baseline   # put it back
 ```
 
 ## No LLM key?
@@ -370,7 +370,7 @@ third-party network calls happen anywhere in this demo.
 ## What I verified myself (and what I didn't)
 
 Everything above that shows real output — the `verify_mechanics.py` run, the
-`nometria redteam probes` / `redteam run` output, the `nometria policy list` /
+`agentfox redteam probes` / `redteam run` output, the `agentfox policy list` /
 `policy enforce baseline` before/after — was actually run, in an isolated scratch
 virtualenv, while building this demo. I additionally confirmed, directly, without
 needing a live key:
@@ -525,7 +525,7 @@ not assumed; see `web.py`'s docstring).
    real product compliance data.
 3. The standard `NOMETRIA_*` environment variables (service auth secret, token
    encryption key, audit signing key, evidence dir, environment, auth mode) —
-   freshly generated for this project, the same way `nometria init` generates them
+   freshly generated for this project, the same way `agentfox init` generates them
    locally, not copied from `guardrails-api`'s.
 4. **One thing that has to come from you, not from Claude**: `ANTHROPIC_API_KEY` or
    `OPENAI_API_KEY`, set as an environment variable on the new Vercel project.

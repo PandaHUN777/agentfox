@@ -5,7 +5,7 @@ description: Turns a written business rule or policy document ("refunds over $50
 
 # Business guardrails
 
-> Commands below are written as `nometria …`. If `nometria` isn't on PATH, see
+> Commands below are written as `agentfox …`. If `agentfox` isn't on PATH, see
 > [Running the CLI](../../AGENTS.md#running-the-cli).
 
 This is the no-code path. The user describes the rule in words, and the product has 22
@@ -22,9 +22,9 @@ is in or out.
 ## 2. Pick the kind
 
 ```bash
-nometria guardrails suggest "<the rule, verbatim>"
-nometria guardrails catalogue
-nometria guardrails explain <kind_id>
+agentfox guardrails suggest "<the rule, verbatim>"
+agentfox guardrails catalogue
+agentfox guardrails explain <kind_id>
 ```
 
 `explain` prints the parameters and a worked example. For a longer policy document, run
@@ -48,10 +48,10 @@ for example `governance/guardrails/refund-approval.yaml`, so it's reviewed like 
 ## 4. Apply in observe, then prove it
 
 ```bash
-nometria guardrails apply governance/guardrails/refund-approval.yaml --mode observe
-nometria guardrails show refund-approval
-nometria guardrails test refund-approval "0,10,10.01,100,500,500.01,100000"
-nometria guardrails check
+agentfox guardrails apply governance/guardrails/refund-approval.yaml --mode observe
+agentfox guardrails show refund-approval
+agentfox guardrails test refund-approval "0,10,10.01,100,500,500.01,100000"
+agentfox guardrails check
 ```
 
 - Test the **boundaries** the user named, plus one value on either side of each.

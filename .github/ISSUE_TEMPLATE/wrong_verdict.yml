@@ -64,7 +64,7 @@ body:
       label: Policy pack and mode
       description: >
         Which pack the rule came from and whether it was in `observe` or `enforce`.
-        `nometria policy list` prints both. The shipped packs are `baseline`,
+        `agentfox policy list` prints both. The shipped packs are `baseline`,
         `tool-containment` and `eu-ai-act-high-risk`.
       placeholder: "tool-containment, enforce"
     validations:
@@ -118,7 +118,7 @@ body:
       label: A reproduction we can run
       description: >
         A redacted version of the call, ideally one that still reproduces. If it is a
-        policy question rather than a detector one, `nometria policy simulate --file
+        policy question rather than a detector one, `agentfox policy simulate --file
         <candidate.yaml>` replays recorded traffic against a candidate policy and is
         often the fastest way to show us the disagreement.
       render: shell
@@ -132,8 +132,8 @@ body:
       description: >
         Containment is exactly as good as the declarations behind it. If the call
         involved a tool, paste its impact tier (`read`, `write`, `high_impact`,
-        `irreversible`) from `nometria tools list`, and the capability grant that
-        applied. `nometria doctor` grades declaration quality and often explains a
+        `irreversible`) from `agentfox tools list`, and the capability grant that
+        applied. `agentfox doctor` grades declaration quality and often explains a
         surprising verdict on its own.
       render: shell
     validations:
@@ -143,7 +143,7 @@ body:
     id: version
     attributes:
       label: Nometria version
-      description: Output of `nometria version`, or the commit SHA if you run from a clone.
+      description: Output of `agentfox version`, or the commit SHA if you run from a clone.
       placeholder: "0.1.0, or commit 1b91e2c"
     validations:
       required: true

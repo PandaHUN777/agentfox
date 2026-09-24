@@ -10,7 +10,7 @@ command that writes, promotes, stops or submits anything. If you're unsure wheth
 command writes, check its tag in the harness's `reference/cli.md`; only **R** and **R\*** are
 allowed.
 
-Collect, using `nometria` (or `uv run nometria` in a source checkout):
+Collect, using `agentfox` (or `uv run agentfox` in a source checkout):
 
 1. `doctor --json`, `auth status`, `version`
 2. `agents list --json`, `agents controls`

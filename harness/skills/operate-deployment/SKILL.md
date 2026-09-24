@@ -5,7 +5,7 @@ description: Covers running Nometria as a service. It starts the gateway and das
 
 # Operate a deployment
 
-> Commands below are written as `nometria …`. If `nometria` isn't on PATH, see
+> Commands below are written as `agentfox …`. If `agentfox` isn't on PATH, see
 > [Running the CLI](../../AGENTS.md#running-the-cli).
 
 ## Local: gateway and dashboard
@@ -15,7 +15,7 @@ entries (`gateway` on 8080, `dashboard` on 3000). Its paths point at the main ch
 adjust them in a worktree. Otherwise run these as background processes, never inline:
 
 ```bash
-NOMETRIA_PLAYGROUND_CORS_ORIGIN=http://localhost:3000 nometria serve --port 8080
+NOMETRIA_PLAYGROUND_CORS_ORIGIN=http://localhost:3000 agentfox serve --port 8080
 (cd dashboard && npm ci && NOMETRIA_API_URL=http://127.0.0.1:8080 npm run dev)
 ```
 
@@ -36,27 +36,27 @@ The defaults are egress off, the echo provider, observe mode, and fail-open.
 
 ## Production hardening checklist
 
-Go through every line with the user. `nometria doctor` and `nometria auth status` verify
+Go through every line with the user. `agentfox doctor` and `agentfox auth status` verify
 several of them.
 
 | # | Check | How |
 |---|---|---|
-| 1 | Dev auth header refused | `NOMETRIA_ENVIRONMENT=production`, `NOMETRIA_AUTH_MODE=token` (or `oidc`); `nometria auth status` |
+| 1 | Dev auth header refused | `NOMETRIA_ENVIRONMENT=production`, `NOMETRIA_AUTH_MODE=token` (or `oidc`); `agentfox auth status` |
 | 2 | Postgres, not SQLite | `NOMETRIA_DATABASE_URL=postgresql+psycopg://…`, `[postgres]` extra |
 | 3 | Secrets changed from dev defaults | `NOMETRIA_AUDIT_SIGNING_KEY`, `NOMETRIA_SERVICE_AUTH_SECRET`, `NOMETRIA_TOKEN_ENCRYPTION_KEY`, `NOMETRIA_CRON_SECRET` |
 | 4 | Fail mode deliberate | `NOMETRIA_FAIL_MODE=closed` for high-risk agents; know that `open` lets requests through on detector timeout |
 | 5 | Egress intentional | `NOMETRIA_ALLOW_EGRESS=true` only when a real provider is configured |
-| 6 | Detectors as expected | `nometria doctor` lists them; add extras for Presidio or classifiers |
-| 7 | Operator tokens, not shared logins | `nometria auth issue <email> --days 90` (shown once; the user stores it) |
-| 8 | Migrations current | `nometria db current` = head; `nometria db upgrade` |
-| 9 | Audit checkpoints scheduled | `nometria audit checkpoint` on a timer; jobs runner via `/api/internal/jobs/run` with the cron secret |
+| 6 | Detectors as expected | `agentfox doctor` lists them; add extras for Presidio or classifiers |
+| 7 | Operator tokens, not shared logins | `agentfox auth issue <email> --days 90` (shown once; the user stores it) |
+| 8 | Migrations current | `agentfox db current` = head; `agentfox db upgrade` |
+| 9 | Audit checkpoints scheduled | `agentfox audit checkpoint` on a timer; jobs runner via `/api/internal/jobs/run` with the cron secret |
 
 Reference: [reference/config.md](../../reference/config.md).
 
 ## Upgrades: order matters
 
 The wheel does not bundle `migrations/`, and the hosted API and demo share one database.
-So: **run `nometria db upgrade` against the target DB first, then deploy the new code.** The
+So: **run `agentfox db upgrade` against the target DB first, then deploy the new code.** The
 reverse order has taken production down with `UndefinedColumn` before. `db downgrade` is
 destructive (BLK); every migration ships a tested downgrade, but data in dropped columns is
 gone.
@@ -64,5 +64,5 @@ gone.
 ## Health
 
 `GET /api/health` returns liveness. `GET /metrics` gives Prometheus metrics.
-`nometria doctor` gives a runtime self-check. `GET /api/reliability` shows circuit breakers
+`agentfox doctor` gives a runtime self-check. `GET /api/reliability` shows circuit breakers
 and the fallback chain.

@@ -9,7 +9,7 @@ note: docs/appendix-c-api-spec.md has drifted from the code; prefer this file or
 
 # HTTP API
 
-One FastAPI process (`nometria serve`, default `127.0.0.1:8080`) serves two surfaces:
+One FastAPI process (`agentfox serve`, default `127.0.0.1:8080`) serves two surfaces:
 
 - **`/v1/*` — inline enforcement.** Sits in the request path of an agent.
 - **`/api/*` — control plane.** Registry, policy, eval, audit, compliance. The dashboard is only a client of this.
@@ -18,8 +18,8 @@ One FastAPI process (`nometria serve`, default `127.0.0.1:8080`) serves two surf
 
 | Caller | Credential | Notes |
 |---|---|---|
-| Operator / script | `Authorization: Bearer nom_api_…` | Mint with `nometria auth issue EMAIL` or `POST /api/tokens`. Shown once. |
-| Local development | `X-Nometria-User: you@example.com` | Accepted only when `auth_mode=development`, or `auto` + a dev/test/local environment. `nometria auth status` tells you. |
+| Operator / script | `Authorization: Bearer nom_api_…` | Mint with `agentfox auth issue EMAIL` or `POST /api/tokens`. Shown once. |
+| Local development | `X-Nometria-User: you@example.com` | Accepted only when `auth_mode=development`, or `auto` + a dev/test/local environment. `agentfox auth status` tells you. |
 | Agent (inline) | `Authorization: Bearer nom_agt_…` | Optional; binds the tenant. Unauthenticated inline traffic is recorded as shadow traffic. |
 
 Write routes need a role for their family (owner, admin, security, compliance, developer,
@@ -78,5 +78,5 @@ curl -s localhost:8080/v1/guard/input -H 'content-type: application/json' \
 
 For push-style integration there are **finding webhooks** (`NOMETRIA_WEBHOOK_URL`, see
 `reference/config.md`), `GET /metrics` (Prometheus), `GET /api/export/siem`, and LangSmith
-or Langfuse correlation. The **MCP server** is a separate stdio process, `nometria mcp serve`,
+or Langfuse correlation. The **MCP server** is a separate stdio process, `agentfox mcp serve`,
 not an HTTP route. `POST /v1/mcp/call` governs calls *to* other MCP servers.

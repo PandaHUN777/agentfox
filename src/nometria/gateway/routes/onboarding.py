@@ -119,7 +119,7 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "id": "install",
             "title": "Run it yourself, if you want it in your own infrastructure",
             "done": agents > 0,
-            "command": "pip install nometria && nometria init",
+            "command": "pip install nometria && agentfox init",
             "detail": (
                 "Optional. Everything above works from this browser and from any language "
                 "over HTTP, so nothing here blocks you. Install it when you want the "
@@ -131,7 +131,7 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "id": "review",
             "title": "Review what it found",
             "done": decisions > 0,
-            "command": "nometria findings",
+            "command": "agentfox findings",
             "detail": "Decisions and findings from real traffic, not from a sample dataset.",
         },
         {
@@ -158,7 +158,7 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "id": "enforce",
             "title": "Turn enforcement on",
             "done": enforcing > 0,
-            "command": "nometria policy enforce baseline",
+            "command": "agentfox policy enforce baseline",
             "detail": (
                 "Promotes the content-based policies (prompt injection, PII, safety) from "
                 "observe to enforce — do it when the findings look right, not before. Tool "

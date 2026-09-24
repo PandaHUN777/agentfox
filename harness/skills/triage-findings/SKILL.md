@@ -5,17 +5,17 @@ description: Turns Nometria's open findings into a prioritised, grouped action l
 
 # Triage findings
 
-> Commands below are written as `nometria …`. If `nometria` isn't on PATH, see
+> Commands below are written as `agentfox …`. If `agentfox` isn't on PATH, see
 > [Running the CLI](../../AGENTS.md#running-the-cli).
 
 ## 1. Pull the queue
 
 ```bash
-nometria findings --json --limit 200
+agentfox findings --json --limit 200
 ```
 
 To filter, add `--severity critical` (or high, medium, low). An empty list on a new install
-usually means nothing has been governed yet; `nometria doctor` confirms it.
+usually means nothing has been governed yet; `agentfox doctor` confirms it.
 
 ## 2. Group before you judge
 
@@ -35,7 +35,7 @@ show it. Order the groups by:
 ## 3. Decide per group
 
 Use the "first move" column in
-[reference/detectors-and-findings.md](../../reference/detectors-and-findings.md#findings-the-queue-nometria-findings-reads).
+[reference/detectors-and-findings.md](../../reference/detectors-and-findings.md#findings-the-queue-agentfox-findings-reads).
 For detections, look at the evidence before calling anything a false positive:
 
 - `evidence_json` holds the entities, rules fired, and the trace id.

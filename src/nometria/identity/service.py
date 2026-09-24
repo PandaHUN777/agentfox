@@ -227,7 +227,7 @@ def revoke_capability(session: Session, capability_id: str) -> Capability | None
     """Remove a grant. Returns the row that was removed, or None if there was none.
 
     The row is deleted rather than flagged, so a count of capabilities is a count of
-    what an agent may actually do right now — the number `nometria doctor` reports.
+    what an agent may actually do right now — the number `agentfox doctor` reports.
     The history is not lost: the caller writes the removal to the audit chain, which
     is append-only and keeps the full shape of the grant that was withdrawn.
     """

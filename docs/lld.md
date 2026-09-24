@@ -28,7 +28,7 @@ central modules live at the package root.
 | `answerability.py` | 603 | Pillar 7 — knowledge-boundary declaration and pre-generation abstention gate. |
 | `provenance.py` | 560 | Pillar 8 — source-authority binding for retrieved content. |
 | `attribution.py` | 538 | Pillar 13 — failure attribution across a multi-step/multi-agent execution. |
-| `discovery.py` | 524 | Pillar 1 — repo/config-based agent and tool discovery (`nometria check`). |
+| `discovery.py` | 524 | Pillar 1 — repo/config-based agent and tool discovery (`agentfox check`). |
 | `commitments.py` | 496 | Pillar F6 — commitment/advice/liability-language detection. |
 | `entitlement.py` | 464 | Pillar 10 — end-user principal → visible-resource resolution. |
 | `effects.py` | 461 | Side-effect / irreversibility classification for tool calls. |
@@ -36,14 +36,14 @@ central modules live at the package root.
 | `data_access.py` | 384 | Data-access scope declarations (Pillar 10 companion). |
 | `reliability.py` | 340 | Circuit breaker / fallback around provider calls. |
 | `arbitration.py` | 309 | Multi-source conflict resolution (which of several retrieved facts wins). |
-| `register.py` | 281 | Compliance risk register (`nometria compliance risk` — distinct from `commitments.py`'s commitment register; don't conflate the two when reading call sites). |
+| `register.py` | 281 | Compliance risk register (`agentfox compliance risk` — distinct from `commitments.py`'s commitment register; don't conflate the two when reading call sites). |
 | `tenancy.py` | 270 | Multi-tenant isolation — session-level `with_loader_criteria` enforcement, not per-query filtering. |
 | `tool_contract.py` | 264 | Pillar 18 — semantic tool-contract governance (data access, result fidelity, source arbitration). |
 | `config.py` / `db.py` | 259 / 225 | Settings (env-var driven) and engine/session setup. |
 | `agent_loop.py` | 222 | Pillar 15 (PL-4) — `LoopGovernor`: alternating-cycle and stalled-run detection across a multi-turn tool-calling loop. Called from `enforcement.py:2367`. As of 2026-09-04, actively being extended (uncommitted diff) to accept a full step-history (`prior_steps`) from callers, not just a per-tool repeat count — see [production-readiness-review.md](production-readiness-review.md). |
 | `jobs.py` | 178 | Async job-queue interface. **Zero callers outside itself and tests as of 2026-09-04** — a genuinely stub-only module (built, tested, not wired to anything on a live path). |
 | `system_log.py` / `operator_log.py` | 132 / 218 | Structured operator-action logging (distinct from the audit chain — these are operational logs, not the tamper-evident record). |
-| `session_scan.py` | 124 | `nometria quickscan`'s local AI-tool-session transcript scan. |
+| `session_scan.py` | 124 | `agentfox quickscan`'s local AI-tool-session transcript scan. |
 | `ids.py` / `crypto.py` / `finding.py` | 55 / 45 / 40 | ID generation, crypto helpers, the shared `Finding` type used across pillars. |
 
 ### 1.2 Subpackages
@@ -52,7 +52,7 @@ central modules live at the package root.
 |---|---|---|---|
 | **`audit/`** | 1728 | `chain.py` 399, `evidence.py` 560, `trace.py` 329, `otel.py` 160, `siem.py` 233 | Pillar 5 — hash chain, evidence packages, OTel-based tracing. See §6. |
 | **`business/`** | 2505 | `compile.py` 1010, `catalogue.py` 583, `ladder.py` 396, `graph.py` 314, `store.py` 159 | Turns written business rules ("refunds under $10 auto-approve") into executable guardrails; merges conflicting rules from multiple authors. |
-| **`cli/`** | 3665 | `main.py` 1304, `controls_cli.py` 508, `demo.py` 504, `onboarding.py` 421, `business_cli.py` 388, `auth_cli.py` 216, `quickscan.py` 187, `submit.py` 115 | The `nometria` binary. See §11. |
+| **`cli/`** | 3665 | `main.py` 1304, `controls_cli.py` 508, `demo.py` 504, `onboarding.py` 421, `business_cli.py` 388, `auth_cli.py` 216, `quickscan.py` 187, `submit.py` 115 | The `agentfox` binary. See §11. |
 | **`compliance/`** | 1189 | `status.py` 516, `risk.py` 380, `catalog.py` 250 | Pillar 6 — control catalog, framework mapping, computed status, risk register. |
 | **`evaluation/`** | 3166 | `redteam.py` 780, `silent_failure.py` 438, `runner.py` 366, `scorers.py` 350, `gating.py` 309, `drift.py` 288, `ragas_adapter.py` 241, `adapters.py` 189, `model_groundedness.py` 127 | Pillar 4 — native eval runner, promptfoo/Ragas adapters, CI regression gate, drift detection, red-team. |
 | **`gateway/`** | 7171 | `app.py` 402, `auth.py` 276, `deps.py` 122, `playground_sessions.py` 196, `routes/` (17 files, 6170 lines) | The FastAPI app — inline proxy + control-plane API. See §10. |
@@ -196,7 +196,7 @@ Invariants enforced in code, not just convention:
 - **Checkpoint signing** — `audit_checkpoints` periodically sign the chain state; the signing
   key is deliberately kept **outside the application database** (customer-held in a self-host
   deployment), so a full DB compromise alone cannot forge a checkpoint.
-- **Independent, stdlib-only verification** — the verifier (exercised by `nometria audit
+- **Independent, stdlib-only verification** — the verifier (exercised by `agentfox audit
   verify` and, per the gap-analysis audit, tested standalone outside the repo) recomputes the
   chain from raw entries with no dependency on the application's own trust — this is what
   makes the tamper-evident claim demonstrable in under a minute rather than merely asserted.
@@ -325,7 +325,7 @@ unauthenticated demo sessions.
 
 ## 11. CLI command tree — `src/nometria/cli/main.py` (1304 lines)
 
-`app = typer.Typer(name="nometria", ...)`. Top-level verbs (`main.py:93-173`): `version`,
+`app = typer.Typer(name="agentfox", ...)`. Top-level verbs (`main.py:93-173`): `version`,
 `seed`, `demo`, `serve` (runs `uvicorn.run("nometria.gateway.app:app", ...)` — **the exact
 same app object `api/index.py` re-exports**, HLD §9).
 

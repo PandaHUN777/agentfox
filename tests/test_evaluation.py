@@ -430,7 +430,7 @@ def test_campaign_blocks_injection_probes_when_enforcing(seeded):
 def test_campaigns_are_static_unless_adaptive_is_asked_for(seeded):
     """Adaptive mode (`evaluation/adaptive.py`) is opt-in. This pins the default from
     the Pillar-4 suite as well as from the adaptive suite, because the default is what
-    CI and `nometria redteam run` call and the cost of it flipping silently is a
+    CI and `agentfox redteam run` call and the cost of it flipping silently is a
     campaign that mutates and retries where an operator expected a fixed list."""
     campaign = run_campaign(seeded, "support-triage")
     assert "adaptive" not in campaign.summary_json

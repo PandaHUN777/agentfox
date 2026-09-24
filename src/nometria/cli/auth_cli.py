@@ -20,7 +20,7 @@ console = Console()
 
 def _session():
     """A session on an initialised database. `init_db` is idempotent, and without it
-    a command run before `nometria init` dies on "no such table"."""
+    a command run before `agentfox init` dies on "no such table"."""
     from ..db import init_db, session_scope
 
     init_db()
@@ -135,7 +135,7 @@ def tokens(as_json: bool = typer.Option(False, "--json")) -> None:
         console.print_json(json.dumps(rows, default=str))
         return
     if not rows:
-        console.print("[dim]No tokens issued. Create one with `nometria auth issue <email>`.[/]")
+        console.print("[dim]No tokens issued. Create one with `agentfox auth issue <email>`.[/]")
         return
 
     table = Table(box=None, padding=(0, 2), header_style="dim")
@@ -155,7 +155,7 @@ def tokens(as_json: bool = typer.Option(False, "--json")) -> None:
 
 
 def revoke(
-    token_id: str = typer.Argument(..., help="Token id from `nometria auth tokens`."),
+    token_id: str = typer.Argument(..., help="Token id from `agentfox auth tokens`."),
 ) -> None:
     """Revoke a token immediately."""
     from ..gateway.auth import revoke_token

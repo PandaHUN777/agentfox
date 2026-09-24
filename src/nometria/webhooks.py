@@ -365,7 +365,7 @@ def wait_for_delivery(timeout: float = 5.0) -> bool:
 def send_test_event() -> tuple[bool, str]:
     """Synchronously send a ``webhook.test`` event to the configured URL.
 
-    Returns ``(ok, detail)`` and never raises — intended for ``nometria doctor`` or a
+    Returns ``(ok, detail)`` and never raises — intended for ``agentfox doctor`` or a
     CLI check.
     """
     try:

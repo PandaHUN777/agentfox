@@ -42,7 +42,7 @@ body:
     attributes:
       label: Nometria version
       description: >
-        Output of `nometria version` (the first line is enough), or the commit SHA if
+        Output of `agentfox version` (the first line is enough), or the commit SHA if
         you are running from a clone.
       placeholder: "0.1.0, or commit 1b91e2c"
     validations:
@@ -55,10 +55,10 @@ body:
       multiple: true
       options:
         - Library, patched in with auto()
-        - Control plane, nometria serve
-        - CLI (nometria init / demo / scan / doctor / check ...)
+        - Control plane, agentfox serve
+        - CLI (agentfox init / demo / scan / doctor / check ...)
         - Docker Compose (deploy/docker-compose.yml)
-        - MCP server (nometria mcp serve)
+        - MCP server (agentfox mcp serve)
         - Hosted playground
         - Other, described below
     validations:
@@ -69,7 +69,7 @@ body:
     attributes:
       label: Policy packs and modes
       description: >
-        Which packs are bound and in which mode. `nometria policy list` prints this.
+        Which packs are bound and in which mode. `agentfox policy list` prints this.
         The shipped packs are `baseline`, `tool-containment` and
         `eu-ai-act-high-risk`; each is in `observe` or `enforce`.
       placeholder: "baseline=observe, tool-containment=enforce"

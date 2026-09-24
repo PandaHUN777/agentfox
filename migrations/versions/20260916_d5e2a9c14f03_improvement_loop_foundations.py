@@ -45,7 +45,7 @@ depends_on: str | Sequence[str] | None = None
 # `init_db()` calls create_all and then stamps the head, so a database that was
 # first created by a *newer* build already has this revision's tables while its
 # alembic_version still points at the previous one. Plain create_table then fails
-# with "table already exists" and `nometria db upgrade` dies on a database that is
+# with "table already exists" and `agentfox db upgrade` dies on a database that is
 # not actually broken — which is exactly what happened to the hosted deployment and
 # to local dev databases. Creating only what is missing costs one inspector call
 # and makes the upgrade re-runnable.

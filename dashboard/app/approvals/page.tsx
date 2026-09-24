@@ -363,7 +363,7 @@ async function EscalationTab({ agent }: { agent?: string }) {
                       <div>
                         <span
                           className="tag"
-                          title="Created by `nometria seed` for demo purposes — not a real conversation."
+                          title="Created by `agentfox seed` for demo purposes — not a real conversation."
                         >
                           sample data
                         </span>

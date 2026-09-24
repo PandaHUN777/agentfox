@@ -317,7 +317,7 @@ const AREAS: {
 const OFF_SCREEN: { name: string; where: string; body: React.ReactNode }[] = [
   {
     name: "Change proposals",
-    where: "nometria proposals · /api/proposals",
+    where: "agentfox proposals · /api/proposals",
     body: (
       <>
         Every change this product wants to make to its own governance configuration is
@@ -331,7 +331,7 @@ const OFF_SCREEN: { name: string; where: string; body: React.ReactNode }[] = [
   },
   {
     name: "Capability grants",
-    where: "nometria capability grant · /api/identities/{id}/capabilities",
+    where: "agentfox capability grant · /api/identities/{id}/capabilities",
     body: (
       <>
         What an agent is allowed to do, decided from the action rather than from the
@@ -343,7 +343,7 @@ const OFF_SCREEN: { name: string; where: string; body: React.ReactNode }[] = [
   },
   {
     name: "Evaluation gate for CI",
-    where: "nometria eval gate · POST /api/eval/gate",
+    where: "agentfox eval gate · POST /api/eval/gate",
     body: (
       <>
         Runs a suite against a baseline run and exits non-zero on a regression, so a

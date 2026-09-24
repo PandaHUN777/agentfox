@@ -3,7 +3,7 @@ title: Policy YAML schema
 layer: reference
 audience: agents authoring or explaining policy
 source_of_truth: src/nometria/policy/model.py (PolicyDocument, Rule, Condition), policy/engine.py
-verified_against: commit 6863b8b, 2026-09-15 — template validated with `nometria policy validate`
+verified_against: commit 6863b8b, 2026-09-15 — template validated with `agentfox policy validate`
 ---
 
 # Policy schema
@@ -77,8 +77,8 @@ list for your install, see `GET /api/detectors`.
 ## Hierarchy
 
 Policies compose across levels (org → team → agent → user) with `compose: extend`, set when
-saving through the API. `nometria policy effective --agent X` shows the resolved result and
-where each rule came from. `nometria policy lint` finds shadowed and conflicting rules.
+saving through the API. `agentfox policy effective --agent X` shows the resolved result and
+where each rule came from. `agentfox policy lint` finds shadowed and conflicting rules.
 
 ## Lifecycle
 

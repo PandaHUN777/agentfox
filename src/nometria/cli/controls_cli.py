@@ -6,7 +6,7 @@ escalation needed the host application to push conversation turns. All three wer
 complete engines nobody outside this repository could switch on.
 
 These commands exist so that declaring a knowledge boundary or tiering a corpus is the
-same kind of act as running `nometria check` — one line, no client library, no reading
+same kind of act as running `agentfox check` — one line, no client library, no reading
 the PRD first.
 """
 
@@ -27,7 +27,7 @@ console = Console()
 
 def _session():
     """A session on an initialised database. `init_db` is idempotent, and without it
-    a command run before `nometria init` dies on "no such table"."""
+    a command run before `agentfox init` dies on "no such table"."""
     from ..db import init_db, session_scope
 
     init_db()
@@ -124,7 +124,7 @@ def boundary_check(
 
     if boundary is None:
         console.print("[yellow]no boundary declared — nothing would be refused[/]")
-        console.print("[dim]declare one with `nometria boundary set`[/]")
+        console.print("[dim]declare one with `agentfox boundary set`[/]")
         return
     if verdict.answerable:
         console.print(f"[green]answerable[/]  [dim]({verdict.question_type})[/]")
@@ -269,7 +269,7 @@ def sources_list(as_json: bool = typer.Option(False, "--json")) -> None:
         console.print("[dim]No sources registered.[/]")
         console.print(
             "[dim]Until sources are tiered, groundedness cannot tell an authoritative "
-            "answer from a confident one. Add one with `nometria sources add`.[/]"
+            "answer from a confident one. Add one with `agentfox sources add`.[/]"
         )
         return
 
@@ -460,7 +460,7 @@ def entitlement_report(days: int = typer.Option(7, "--days")) -> None:
             )
         )
         console.print(
-            "  [dim]Register a principal with `nometria entitlement principal <subject>`, "
+            "  [dim]Register a principal with `agentfox entitlement principal <subject>`, "
             "then filter retrieval through /api/entitlement/filter.[/]"
         )
         return

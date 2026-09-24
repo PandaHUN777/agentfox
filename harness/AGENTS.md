@@ -69,9 +69,9 @@ doc to open.
 
 ## Running the CLI
 
-Skills write commands as `nometria <args>`. If `nometria` isn't on PATH:
+Skills write commands as `agentfox <args>`. If `agentfox` isn't on PATH:
 
-- In a source checkout of the Nometria repo, use `uv run nometria <args>`.
+- In a source checkout of the Nometria repo, use `uv run agentfox <args>`.
 - Anywhere, use the launcher `scripts/nometria.sh <args>` in this harness folder. With the
   Claude Code plugin, that's `${CLAUDE_PLUGIN_ROOT}/scripts/nometria.sh`. It finds an
   installed CLI or a checkout, or prints the install line.

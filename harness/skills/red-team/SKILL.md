@@ -5,24 +5,24 @@ description: Runs Nometria's adversarial probe suite (22 OWASP-LLM and MITRE-ATL
 
 # Red team
 
-> Commands below are written as `nometria …`. If `nometria` isn't on PATH, see
+> Commands below are written as `agentfox …`. If `agentfox` isn't on PATH, see
 > [Running the CLI](../../AGENTS.md#running-the-cli).
 
 ## 1. Scope
 
-- **Pick the agent:** confirm the slug with `nometria agents list`. Probes run against the
+- **Pick the agent:** confirm the slug with `agentfox agents list`. Probes run against the
   agent's *registered* grants and the policies bound to it, so a registration with no
   declared tools gives an optimistic result. Say so when it applies.
 - **Choose the database:** probes create a campaign and findings in whichever DB
   `NOMETRIA_DATABASE_URL` points at. If the user doesn't want them in their real queue, use
-  a scratch DB and `nometria seed` there.
+  a scratch DB and `agentfox seed` there.
 
 ## 2. See the probes, then run them
 
 ```bash
-nometria redteam probes
-nometria redteam run <agent>
-nometria redteam run <agent> --probes <id1>,<id2>
+agentfox redteam probes
+agentfox redteam run <agent>
+agentfox redteam run <agent> --probes <id1>,<id2>
 ```
 
 Use `--probes` to re-run just the probes that failed.

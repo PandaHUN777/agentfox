@@ -27,7 +27,7 @@ claude --plugin-dir ./harness
 [`harness/AGENTS.md`](AGENTS.md). Everything is plain markdown with relative links, and the
 skills follow the `SKILL.md` folder convention.
 
-The harness drives the `nometria` CLI, so the product has to be installed where the agent
+The harness drives the `agentfox` CLI, so the product has to be installed where the agent
 runs:
 
 ```bash
@@ -51,14 +51,14 @@ pip install "git+https://github.com/architsharm/guardrails.git"
 | `/nometria:proposals [id or status]` | Review what the improvement loop wants to change; applying anything needs your say-so |
 | `/nometria:harness-check` | Check the harness against the live CLI and repo (for maintainers) |
 
-**MCP server.** The plugin also starts `nometria mcp serve`, which gives any MCP client 27
+**MCP server.** The plugin also starts `agentfox mcp serve`, which gives any MCP client 27
 read-only tools: posture, findings and how often each one has recurred, the improvement
 loop's change proposals, policy validate and simulate, guard a piece of text, analyse a
 SQL/shell/HTTP action, audit verify, compliance status, guardrail tests and more. Nothing
 there decides, applies or rolls back a change. Other MCP clients can run it directly:
 
 ```bash
-nometria mcp serve
+agentfox mcp serve
 ```
 
 Subagents (the model delegates to them, or you ask for one by name):

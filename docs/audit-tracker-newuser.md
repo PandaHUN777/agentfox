@@ -2,7 +2,7 @@
 
 Source: four independent "fresh eyes" agents, each given zero prior context about the
 product and a distinct first-time-user persona, set loose on a live seeded instance
-(local dev server + fresh SQLite DB, `nometria seed`). None read source code or docs —
+(local dev server + fresh SQLite DB, `agentfox seed`). None read source code or docs —
 only the rendered UI, exactly like a real visitor. Personas: (1) cold visitor with no
 explanation, (2) an incident investigator following up a customer complaint, (3) a
 day-one solo operator onboarding their own agent, (4) a non-technical compliance
@@ -121,7 +121,7 @@ Legend: `[ ]` open · `[~]` in progress · `[x]` done · `[-]` intentionally def
   responses, and added a "sample data" badge on Agents (list + detail), Sources, and
   Escalation's hand-off queue (detected there via the existing `seed-` session-id
   prefix, no schema change needed). Board now shows "N of M agent(s) below are sample
-  data from `nometria seed`" in its header when applicable. Verified live on a fresh
+  data from `agentfox seed`" in its header when applicable. Verified live on a fresh
   reseed: all badges render correctly.
 
 - [x] **Detector install gaps never disclosed during onboarding.** Added a one-line

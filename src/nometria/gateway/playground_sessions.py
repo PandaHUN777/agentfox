@@ -2,7 +2,7 @@
 
 The playground (`routes/playground.py`) lets an anonymous website visitor attack a
 real agent and get a real enforcement verdict, without an account. Each visitor's
-"world" is seeded with the same deterministic demo fixtures `nometria demo` uses
+"world" is seeded with the same deterministic demo fixtures `agentfox demo` uses
 (`seed.seed`): real enforcement code, fixture data.
 
 **A sandbox is a tenant.** Its ``org_id`` is its own session id, and every row the

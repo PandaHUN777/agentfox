@@ -415,7 +415,7 @@ _RULE_HANDLERS = {
 }
 
 #: Every ``status_rule.kind`` that ``evaluate_control`` understands. An unknown kind
-#: silently falls back to ``presence``, which is why ``nometria compliance validate``
+#: silently falls back to ``presence``, which is why ``agentfox compliance validate``
 #: checks the catalog against this set.
 RULE_KINDS = frozenset(_RULE_HANDLERS)
 

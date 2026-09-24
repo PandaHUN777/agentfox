@@ -335,7 +335,7 @@ def seed(
     # --- Access scope declarations (P18) ------------------------------
     # Without these, analyse_access() has nothing to check a query against and
     # cascade_risk's sibling feature stays as inert as it was before it was wired
-    # in — declaring a couple of real tables is what lets a fresh `nometria demo`
+    # in — declaring a couple of real tables is what lets a fresh `agentfox demo`
     # actually exercise it rather than only the test suite.
     for table_name, column, principal_key, restricted in [
         ("customers", "owner_id", "id", ["ssn", "credit_card"]),

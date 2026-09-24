@@ -1,7 +1,7 @@
 """Persisted backend for jobs.py's enqueue/run/retry/dead-letter interface.
 
 `jobs.py`'s `JobQueue` is deliberately in-process (see its own docstring) — the
-right choice for `nometria demo`, the CLI, and tests, where one process's memory
+right choice for `agentfox demo`, the CLI, and tests, where one process's memory
 is all there is. It is the wrong choice for the two operations gap-analysis.md
 named as the actual candidates for this (evidence-package export, red-team-
 campaign runs): those run behind a serverless HTTP handler, where a `deque` in

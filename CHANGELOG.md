@@ -17,7 +17,7 @@ Nothing yet.
 
 The MVP described in the README. The package was declared `0.1.0` while every document
 said `MVP v0.3`; they now agree on `0.3.0`, which is what `pyproject.toml`,
-`src/nometria/__init__.py`, `nometria version` and the API's `/health` all report.
+`src/nometria/__init__.py`, `agentfox version` and the API's `/health` all report.
 
 > Note for the maintainer: replace this heading with a release date when you tag
 > `v0.3.0`. `.github/workflows/release.yml` refuses to publish unless the tag, the
@@ -34,19 +34,19 @@ said `MVP v0.3`; they now agree on `0.3.0`, which is what `pyproject.toml`,
   README.
 - **Policy engine** with three shipped packs, `baseline`, `tool-containment` and
   `eu-ai-act-high-risk`, each bindable in `observe` (records what it would have done) or
-  `enforce`. `nometria policy simulate` replays recorded traffic against a candidate
+  `enforce`. `agentfox policy simulate` replays recorded traffic against a candidate
   policy and exits non-zero when the change would newly block production traffic.
 - **Detector and scorer pipeline** across six surfaces (`input`, `output`, `tool_args`,
   `tool_result`, `memory_write`, `agent_message`), wrapping permissive OSS primitives as
   optional extras: Presidio for PII, NeMo Guardrails, Guardrails AI, Granite Guardian,
   garak and PyRIT for red-team probes, sqlglot for SQL action assurance. Every verdict
   carries the rule that produced it.
-- **Tamper-evident audit chain** with a verifier (`nometria audit verify`, exits 1 when
-  broken) and signed checkpoints (`nometria audit checkpoint`).
+- **Tamper-evident audit chain** with a verifier (`agentfox audit verify`, exits 1 when
+  broken) and signed checkpoints (`agentfox audit checkpoint`).
 - **Compliance layer**: a control catalog, framework mappings, and evidence packages.
   Mappings ship labelled `DRAFT, UNVERIFIED, NOT LEGAL ADVICE`, because they were
   produced by engineers rather than reviewed by compliance counsel.
-- **Ways to run it**: the `auto()` library patch, `nometria serve` for the gateway and
+- **Ways to run it**: the `auto()` library patch, `agentfox serve` for the gateway and
   control-plane API, an MCP server, a LangGraph integration, and Docker Compose,
   Render and Fly deployment configs under `deploy/`.
 - **CLI** covering setup and operation: `init`, `demo`, `serve`, `version`, `doctor`,

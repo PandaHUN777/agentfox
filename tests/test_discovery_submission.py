@@ -1,4 +1,4 @@
-"""The optional, explicit third path out of `nometria check` / `nometria quickscan`,
+"""The optional, explicit third path out of `agentfox check` / `agentfox quickscan`,
 next to plain terminal output and `--json`: submit a redacted summary to a running
 control plane. Nothing here runs unless a human opts in, and what's submitted is
 never file contents, line numbers, or full file paths — just counts, structure and

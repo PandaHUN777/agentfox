@@ -207,7 +207,7 @@ def test_capability_grant_refuses_a_comparison_the_engine_cannot_evaluate():
 def test_capability_list_on_an_empty_set_names_the_command_that_fills_it():
     result = runner.invoke(app, ["capability", "list"])
     assert result.exit_code == 0, result.output
-    assert "nometria capability grant" in flat(result.output)
+    assert "agentfox capability grant" in flat(result.output)
 
 
 def test_doctor_names_the_capability_command_when_least_privilege_is_unconfigured():
@@ -226,7 +226,7 @@ def test_doctor_names_the_capability_command_when_least_privilege_is_unconfigure
         c for c in _json(result.output) if c["check"] == "containment"
     )
     assert "no capability grants" in containment["detail"]
-    assert "nometria capability grant" in containment["detail"]
+    assert "agentfox capability grant" in containment["detail"]
 
 
 # ---------------------------------------------------------------------------
@@ -260,7 +260,7 @@ def _raise_findings() -> None:
 
 
 def test_findings_is_ordered_worst_first():
-    """`nometria check` advertises this list as ranked by severity and it was ordered
+    """`agentfox check` advertises this list as ranked by severity and it was ordered
     by creation time: high, medium, medium, medium, high, high."""
     _raise_findings()
     result = runner.invoke(app, ["findings", "--json"])
@@ -327,7 +327,7 @@ def test_findings_ends_with_a_next_panel_that_says_how_to_open_a_control_plane()
     _raise_findings()
     output = flat(runner.invoke(app, ["findings"]).output)
     assert "Next" in output
-    assert "nometria serve" in output
+    assert "agentfox serve" in output
     assert "Full detail in the control plane" not in output
 
 
@@ -388,7 +388,7 @@ def test_check_overflow_hint_is_a_command_that_runs(tmp_path):
     )
     output = flat(result.output)
     assert "(--limit)" not in output
-    hint = re.search(r"nometria check .*?--limit (\d+)", output)
+    hint = re.search(r"agentfox check .*?--limit (\d+)", output)
     assert hint, output
     # The number in the hint is the number of sites, so running it shows all of them.
     rerun = runner.invoke(
@@ -531,7 +531,7 @@ def test_seed_does_not_open_by_reading_as_a_failure():
 def test_seed_ends_with_a_next_panel_like_the_other_onboarding_commands():
     output = flat(runner.invoke(app, ["seed"]).output)
     assert "Next" in output
-    assert "nometria demo" in output
+    assert "agentfox demo" in output
 
 
 def test_policy_enforce_lists_the_valid_keys():

@@ -1,4 +1,4 @@
-"""Zero-effort onboarding: `nometria init`, `check`, `doctor`, `findings`.
+"""Zero-effort onboarding: `agentfox init`, `check`, `doctor`, `findings`.
 
 The rest of the CLI has forty commands across nine sub-apps, which is right for an
 operator running a governance programme and wrong for the first ten minutes. Someone
@@ -215,7 +215,7 @@ def test_init_loads_controls_and_policies_in_their_declared_modes(isolated_db, t
 
 def test_init_ends_by_telling_you_what_to_do_next(isolated_db, tmp_path):
     result = runner.invoke(app, ["init", "--path", str(tmp_path)])
-    assert "nometria check" in flat(result.output)
+    assert "agentfox check" in flat(result.output)
     assert "nometria.auto()" in flat(result.output)
 
 
@@ -357,7 +357,7 @@ def test_findings_lists_what_the_platform_found(isolated_db):
 
 def test_quickstart_is_five_steps_and_names_the_only_blocking_one(isolated_db):
     result = runner.invoke(app, ["quickstart"])
-    assert "nometria init" in flat(result.output)
+    assert "agentfox init" in flat(result.output)
     assert "nometria.auto()" in flat(result.output)
     assert "only step that blocks" in flat(result.output)
 

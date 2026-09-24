@@ -463,16 +463,16 @@ export function Containment() {
 const DISCOVERY_ITEMS: Item[] = [
   {
     // README.md "Commands"; behaviour from src/nometria/discovery.py.
-    label: "nometria check",
+    label: "agentfox check",
     body: "Walks a repository and reports what talks to a model and which of it is ungoverned. Python is parsed, TypeScript and JavaScript are read too, and the report names the languages it actually read.",
   },
   {
-    label: "nometria agents discover",
+    label: "agentfox agents discover",
     body: "Sweeps for shadow agents, drift and identity posture. Anything sending traffic without being registered is raised as a shadow_agent finding, because the problem with an unregistered agent is that nobody is accountable for it.",
   },
   {
     // src/nometria/registry/service.py raises these types.
-    label: "nometria scan mcp",
+    label: "agentfox scan mcp",
     body: "MCP tool hygiene: tool_poisoning in a tool description, an unpinned_server, schema_drift since the last scan.",
   },
   {
@@ -504,7 +504,7 @@ export function Discovery() {
             </Head>
             <Items items={DISCOVERY_ITEMS} />
             <p className="mk-fine" style={{ marginTop: 22, maxWidth: "46ch" }}>
-              <span className="mk-mono">nometria quickscan</span> is the zero-config first
+              <span className="mk-mono">agentfox quickscan</span> is the zero-config first
               look. Nothing leaves the machine it runs on.
             </p>
           </Half>
@@ -533,7 +533,7 @@ export function Discovery() {
 const ASSURANCE_ITEMS: Item[] = [
   {
     // README.md "Test before you trust".
-    label: "nometria eval gate",
+    label: "agentfox eval gate",
     body: "Scores a suite against its latest recorded baseline and exits 1 on a regression, so a build fails rather than a quality drop reaching production quietly.",
   },
   {
@@ -542,7 +542,7 @@ const ASSURANCE_ITEMS: Item[] = [
     body: "Scorers judge past output after the fact: whether an answer was supported by the context it was given, whether it was safe, whether the agent took the tool path it was meant to. Latency, cost, JSON schema and an LLM judge are registered too.",
   },
   {
-    label: "nometria redteam run",
+    label: "agentfox redteam run",
     body: "Adversarial probes fired at this agent's own capability grants, declared impact tiers and bound policies in enforce mode, mapped to the OWASP LLM Top 10 and MITRE ATLAS.",
   },
   {
@@ -611,11 +611,11 @@ export function Assurance() {
 const AUDIT_ITEMS: Item[] = [
   {
     // src/nometria/audit/chain.py.
-    label: "nometria audit verify",
+    label: "agentfox audit verify",
     body: "Re-derives the chain from the first entry and exits 1 if it is broken. Insertion, deletion, reordering and mutation are all detected, because each entry hashes the one before it.",
   },
   {
-    label: "nometria evidence export",
+    label: "agentfox evidence export",
     body: "An auditor package for one agent over a date range, shipping with a stdlib-only verify_chain.py. The auditor re-runs the check themselves rather than taking our word for the record.",
   },
   {

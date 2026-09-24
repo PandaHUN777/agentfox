@@ -1,4 +1,4 @@
-"""nometria.toml — written by `nometria init`, and now actually read.
+"""nometria.toml — written by `agentfox init`, and now actually read.
 
 Precedence, highest first: init kwargs > NOMETRIA_* env > [nometria] table > defaults.
 """

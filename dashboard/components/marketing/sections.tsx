@@ -208,9 +208,9 @@ const STEPS: { title: string; body: React.ReactNode }[] = [
     title: "Turn enforcement on when the findings look right",
     body: (
       <>
-        <code className="mk-mono">nometria policy enforce baseline</code> is the one step that
+        <code className="mk-mono">agentfox policy enforce baseline</code> is the one step that
         starts blocking model traffic, and the one-liner picks it up with no code change.{" "}
-        <code className="mk-mono">nometria policy observe baseline</code> puts it back.
+        <code className="mk-mono">agentfox policy observe baseline</code> puts it back.
       </>
     ),
   },
@@ -498,7 +498,7 @@ export function CTA() {
                 lineHeight: 1.7,
               }}
             >
-              {`pip install git+https://github.com/architsharm/guardrails.git\nnometria init && nometria demo`}
+              {`pip install git+https://github.com/architsharm/guardrails.git\nnometria init && agentfox demo`}
             </pre>
             <p className="mk-fine" style={{ marginTop: 12 }}>
               <code className="mk-mono">init</code> creates a SQLite database and loads 43

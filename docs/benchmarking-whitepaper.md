@@ -66,7 +66,7 @@ whether detectors are on or off.
 one doing its job, and the harm in that shape arrives at the exfiltration step, which is contained.
 Containment is also exactly as good as the declarations behind it — impact tiers, grants, constraints,
 triggers and scopes are operator-declared, and an irreversible tool recorded as `read` is one a tainted
-argument can reach. `nometria doctor` now grades that readiness directly.
+argument can reach. `agentfox doctor` now grades that readiness directly.
 
 ### 4.1 Prompt-injection & content-safety detection
 
@@ -175,7 +175,7 @@ Full methodology: [`benchmarks/agent_security/README.md`](../benchmarks/agent_se
 
 ### 4.13 Automated red-teaming
 
-**What it does.** A campaign runner (`nometria redteam run <agent>`) fires a suite of
+**What it does.** A campaign runner (`agentfox redteam run <agent>`) fires a suite of
 adversarial probes at a deployed agent's *actual* configuration — real capability
 grants, real policy bindings, real detector stack — and reports posture: recall (attacks
 caught) and, as of this round, precision (legitimate traffic wrongly blocked) together,

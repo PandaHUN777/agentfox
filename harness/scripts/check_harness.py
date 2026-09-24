@@ -2,7 +2,7 @@
 """Drift checker for the Nometria harness.
 
 Fails (exit 1) when the harness markdown has drifted from the product:
-  * a `nometria <group> <command> --flag` in any harness .md that the real CLI rejects
+  * an `agentfox <group> <command> --flag` in any harness .md that the real CLI rejects
   * a repo-relative path in backticks or a markdown link that does not exist
   * a skill / command / agent file missing its required frontmatter
   * a repo .md file that reference/docs-map.md does not classify
@@ -29,7 +29,7 @@ try:
     from nometria.cli.main import app
 except Exception as exc:  # pragma: no cover - environment problem, not drift
     print(
-        f"cannot import the nometria CLI ({exc}). "
+        f"cannot import the agentfox CLI ({exc}). "
         f"Run inside the project venv: uv run python {__file__}"
     )
     sys.exit(2)
@@ -44,14 +44,18 @@ def err(path: Path, msg: str) -> None:
 
 # ---------------------------------------------------------------- CLI references
 CODE_SPAN = re.compile(r"`([^`\n]+)`")
-INVOCATION = re.compile(r"(?<![\w./\[-])nometria(?:\.sh)?[ \t]+([a-z][a-z-]*(?:[ \t]+[^\s`|]+)*)")
+# `nometria` is still accepted: the console script keeps that name as an alias, so a
+# stale invocation in the markdown must still be validated rather than silently skipped.
+INVOCATION = re.compile(
+    r"(?<![\w./\[-])(?:agentfox|nometria)(?:\.sh)?[ \t]+([a-z][a-z-]*(?:[ \t]+[^\s`|]+)*)"
+)
 FLAG = re.compile(r"(?<![\w-])(--?[a-zA-Z][\w-]*)")
 NOT_COMMANDS = {"import", "is", "the", "cli", "control", "harness", "does", "starts", "must", "and"}
 
 
 def resolve(words: list[str]) -> tuple[click.Command | None, str]:
     cmd: click.Command = ROOT_CMD
-    path = ["nometria"]
+    path = ["agentfox"]
     for word in words:
         if not isinstance(cmd, click.Group):
             break
@@ -116,13 +120,13 @@ def _check_fragment(md: Path, text: str) -> None:
 
 
 def cli_md_rows(md: Path, text: str) -> None:
-    """reference/cli.md tables list commands without the `nometria ` prefix."""
+    """reference/cli.md tables list commands without the `agentfox ` prefix."""
     for line in text.splitlines():
         if not line.startswith("| `"):
             continue
         first_cell = line.split("|")[1]
         for span in CODE_SPAN.findall(first_cell):
-            spec = span if span.startswith("nometria") else "nometria " + span
+            spec = span if span.startswith(("agentfox", "nometria")) else "agentfox " + span
             _check_fragment(md, spec)
 
 

@@ -1,5 +1,5 @@
 """Optional, explicit submission of a local scan's redacted summary to a running
-control plane, from `nometria check --submit` / `nometria quickscan --submit`.
+control plane, from `agentfox check --submit` / `agentfox quickscan --submit`.
 
 Nothing here ever runs unless a human opts in — no flag and no confirmed prompt means
 this module is never imported for anything but its exceptions. What gets sent is
@@ -35,7 +35,7 @@ def submit_scan_report(report: ScanReport, *, source: str) -> dict[str, Any]:
     base = os.environ.get("NOMETRIA_API_URL")
     if not base:
         raise SubmissionUnavailable(
-            "NOMETRIA_API_URL is not set — point it at a running `nometria serve` "
+            "NOMETRIA_API_URL is not set — point it at a running `agentfox serve` "
             "(yours or your team's) to submit."
         )
 
@@ -48,7 +48,7 @@ def submit_scan_report(report: ScanReport, *, source: str) -> dict[str, Any]:
         headers["X-Nometria-User"] = dev_user
     else:
         raise SubmissionUnavailable(
-            "no credentials configured — set NOMETRIA_API_TOKEN (`nometria auth issue "
+            "no credentials configured — set NOMETRIA_API_TOKEN (`agentfox auth issue "
             "<email>` on that deployment) or NOMETRIA_USER for a dev deployment."
         )
 

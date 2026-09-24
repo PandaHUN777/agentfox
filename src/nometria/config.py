@@ -30,7 +30,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 #: Env var naming an explicit config file. Deliberately *not* a Settings field: it
 #: decides where settings come from, so it cannot itself come from that file.
 CONFIG_ENV_VAR = "NOMETRIA_CONFIG"
-#: The file `nometria init` writes, looked up in the current working directory.
+#: The file `agentfox init` writes, looked up in the current working directory.
 DEFAULT_CONFIG_FILENAME = "nometria.toml"
 #: The only table read from the file. Other tables are left for other tools.
 CONFIG_TABLE = "nometria"

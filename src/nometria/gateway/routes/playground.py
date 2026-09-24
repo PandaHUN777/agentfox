@@ -214,7 +214,7 @@ def set_enforce_mode(
 
     Nothing about the visitor's earlier messages changes retroactively — the point
     is to re-send the same injection afterwards and watch the verdict actually
-    change from "would have blocked" to "blocked", the same "aha" `nometria demo`
+    change from "would have blocked" to "blocked", the same "aha" `agentfox demo`
     already walks through interactively (`cli/demo.py`, section 08).
     """
     from ...policy import set_mode

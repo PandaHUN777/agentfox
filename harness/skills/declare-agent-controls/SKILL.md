@@ -5,7 +5,7 @@ description: Declares the agent-specific controls that stop the business failure
 
 # Declare agent controls
 
-> Commands below are written as `nometria …`. If `nometria` isn't on PATH, see
+> Commands below are written as `agentfox …`. If `agentfox` isn't on PATH, see
 > [Running the CLI](../../AGENTS.md#running-the-cli).
 
 Each control maps to a failure family in `docs/failure-modes.md`. Ask which failure the
@@ -13,15 +13,15 @@ user is worried about, then do only that section. Every command here is in
 [reference/cli.md](../../reference/cli.md#agent-controls--boundary-sources-escalation-entitlement-p7-p8-p10-p11).
 Everything starts in `observe`.
 
-Precondition: the agent is registered. Run `nometria agents list` and check it's there. If it
+Precondition: the agent is registered. Run `agentfox agents list` and check it's there. If it
 isn't, go through **onboard-codebase** first.
 
 ## F1 — answering without the data (knowledge boundary)
 
 ```bash
-nometria boundary set <agent> --systems "zendesk,billing-db" \
+agentfox boundary set <agent> --systems "zendesk,billing-db" \
   --coverage-months 24 --answerable "fact,aggregate,procedure" --out-of-scope "legal advice,medical" --mode observe
-nometria boundary check <agent> "What was our refund rate in 2019?"
+agentfox boundary check <agent> "What was our refund rate in 2019?"
 ```
 
 Try three questions with the user: one clearly in scope, one out of the coverage window,
@@ -30,8 +30,8 @@ and one out of scope. Show what the agent would say instead of answering.
 ## F2 — trusting the wrong source (source authority)
 
 ```bash
-nometria sources add policies/refunds.md --tier system_of_record --owner support-ops --sla-hours 720 --updated now
-nometria sources list --json
+agentfox sources add policies/refunds.md --tier system_of_record --owner support-ops --sla-hours 720 --updated now
+agentfox sources list --json
 ```
 
 The tiers are `system_of_record` > `approved` > `unverified` > `external`. For many sources,
@@ -41,9 +41,9 @@ top of `sources list`.
 ## F4 — over-sharing (entitlement and purpose)
 
 ```bash
-nometria entitlement principal alice@corp.com --groups "support,emea" --clearances "internal"
-nometria entitlement grant "crm/accounts/*" support --kind group --classes "internal" --purposes "support"
-nometria entitlement report --days 7
+agentfox entitlement principal alice@corp.com --groups "support,emea" --clearances "internal"
+agentfox entitlement grant "crm/accounts/*" support --kind group --classes "internal" --purposes "support"
+agentfox entitlement report --days 7
 ```
 
 The report shows how much more the agent can reach than its callers are entitled to. That
@@ -54,8 +54,8 @@ Otherwise there is nothing to check against.
 ## F5 — missed human handoffs (escalation)
 
 ```bash
-nometria escalation set --agent <agent> --turn-depth 8 --repeated-failure 2 --sla-minutes 30 --owner support-leads --mode observe
-nometria escalation scan --hours 72
+agentfox escalation set --agent <agent> --turn-depth 8 --repeated-failure 2 --sla-minutes 30 --owner support-leads --mode observe
+agentfox escalation scan --hours 72
 ```
 
 Run the scan first, before `set`, so the user sees how many conversations already qualified
@@ -64,10 +64,10 @@ and never reached a human. Only add `--apply` when they want findings raised for
 ## F3 — cross-tenant or unbounded data access
 
 ```bash
-nometria access declare-scope orders --column customer_id --restricted-columns "card_last4,email"
-nometria access declare-reference countries
-nometria tools set-triggers db.orders.update --triggers "webhook:fulfilment,trigger:audit_log"
-nometria analyse-action "UPDATE orders SET status='void'" --kind sql
+agentfox access declare-scope orders --column customer_id --restricted-columns "card_last4,email"
+agentfox access declare-reference countries
+agentfox tools set-triggers db.orders.update --triggers "webhook:fulfilment,trigger:audit_log"
+agentfox analyse-action "UPDATE orders SET status='void'" --kind sql
 ```
 
 An undeclared table is reported, never silently assumed safe. Declare the ones the agent
@@ -76,5 +76,5 @@ touches (see `agents lineage <agent>`).
 ## Close
 
 Summarise what's now declared and still in observe. Tell the user where to watch:
-`nometria findings`, or the dashboard's `/escalation`, `/entitlement` and `/sources` pages.
+`agentfox findings`, or the dashboard's `/escalation`, `/entitlement` and `/sources` pages.
 Switching any of these to `--mode enforce` is a BLK step, and the hook will ask.

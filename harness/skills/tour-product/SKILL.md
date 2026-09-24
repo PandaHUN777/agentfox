@@ -5,7 +5,7 @@ description: Runs a safe, offline tour of what Nometria does, using a throwaway 
 
 # Tour the product
 
-> Commands below are written as `nometria …`. If `nometria` isn't on PATH, see
+> Commands below are written as `agentfox …`. If `agentfox` isn't on PATH, see
 > [Running the CLI](../../AGENTS.md#running-the-cli).
 
 The goal is to show, not tell: the user watches a prompt injection get caught, a tainted
@@ -17,7 +17,7 @@ database, and nothing leaves the machine.
 ```bash
 export NOMETRIA_DATABASE_URL=sqlite:////tmp/nometria-tour.db
 export NOMETRIA_EVIDENCE_DIR=/tmp/nometria-tour-evidence
-nometria version
+agentfox version
 ```
 
 If the launcher exits 127, the product isn't installed. Offer the install line it prints
@@ -26,7 +26,7 @@ and continue once it's installed.
 ## 2. First look at their own code (read-only, about 10 seconds)
 
 ```bash
-nometria quickscan . --skip-sessions
+agentfox quickscan . --skip-sessions
 ```
 
 Summarise:
@@ -45,7 +45,7 @@ to enforce and writes demo data. That's expected; the database is the scratch on
 demo restores `baseline` to observe when it finishes.
 
 ```bash
-nometria demo
+agentfox demo
 ```
 
 Narrate the steps as they print, one sentence each:
@@ -65,11 +65,11 @@ Narrate the steps as they print, one sentence each:
 Offer two or three of these, based on what they reacted to:
 
 ```bash
-nometria findings
-nometria analyse-action "DELETE FROM customers" --kind sql
-nometria guardrails suggest "refunds above 500 dollars need a manager"
-nometria redteam probes
-nometria compliance status --framework eu-ai-act
+agentfox findings
+agentfox analyse-action "DELETE FROM customers" --kind sql
+agentfox guardrails suggest "refunds above 500 dollars need a manager"
+agentfox redteam probes
+agentfox compliance status --framework eu-ai-act
 ```
 
 For the UI, the operate-deployment skill starts the gateway and dashboard.

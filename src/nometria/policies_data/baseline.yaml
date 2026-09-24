@@ -3,7 +3,7 @@
 # Ships in OBSERVE mode. That is not timidity, it is the R3 mitigation: a guardrail
 # that starts blocking the moment it is installed produces a false block, gets turned
 # off, and never gets turned back on. Run it in observe, look at what it *would* have
-# done (`nometria policy simulate`), then promote it (`nometria policy enforce`).
+# done (`agentfox policy simulate`), then promote it (`agentfox policy enforce`).
 key: baseline
 name: Baseline runtime guardrails
 description: >

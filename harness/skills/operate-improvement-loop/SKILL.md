@@ -5,7 +5,7 @@ description: Covers the governed improvement loop. It reads the change-proposal 
 
 # Operate the improvement loop
 
-> Commands below are written as `nometria …`. If `nometria` isn't on PATH, see
+> Commands below are written as `agentfox …`. If `agentfox` isn't on PATH, see
 > [Running the CLI](../../AGENTS.md#running-the-cli).
 
 The loop never edits configuration directly. Anything it wants to change is filed as a
@@ -23,7 +23,7 @@ configuration, not taken from whoever filed it, and recomputed at filing, decisi
 ## 1. Read the inbox
 
 ```bash
-nometria proposals list --json
+agentfox proposals list --json
 ```
 
 Filter with `--status`, `--kind` and `--scope` (org, team, agent, user). Work the list in
@@ -55,7 +55,7 @@ straight from `proposed`; it has to be proven first.
 ## 3. Read one proposal before deciding
 
 ```bash
-nometria proposals show <id> --json
+agentfox proposals show <id> --json
 ```
 
 Tell the user five things in this order: what it would change (`diff`), which way it moves
@@ -78,8 +78,8 @@ that kind can only be recommended, never applied.
 ## 5. Decide
 
 ```bash
-nometria proposals approve <id> --actor "you@example.com" --note "why"
-nometria proposals reject  <id> --actor "you@example.com" --note "why"
+agentfox proposals approve <id> --actor "you@example.com" --note "why"
+agentfox proposals reject  <id> --actor "you@example.com" --note "why"
 ```
 
 Both need a named actor and a note. They go on the audit chain and an auditor reads them.
@@ -96,7 +96,7 @@ This changes live configuration. Ask the user in this conversation before runnin
 the harness hook prompt.
 
 ```bash
-nometria proposals apply <id> --actor "you@example.com"
+agentfox proposals apply <id> --actor "you@example.com"
 ```
 
 Only an `approved` proposal applies. If the diff asks for staging, apply starts a canary
@@ -119,7 +119,7 @@ case the proposal stays `applied` with the failure recorded, for a person to han
 ## 7. Roll back (BLK: confirm first)
 
 ```bash
-nometria proposals rollback <id> --actor "you@example.com" --reason "what went wrong"
+agentfox proposals rollback <id> --actor "you@example.com" --reason "what went wrong"
 ```
 
 Same gate as apply. Write the reason for a future auditor. A rollback restores what the apply
@@ -131,7 +131,7 @@ Run it when people have been labelling detections as false positives and someone
 detector to fire less often:
 
 ```bash
-nometria proposals from-labels --days 30 --json
+agentfox proposals from-labels --days 30 --json
 ```
 
 It turns labelled false positives into `policy.rule_min_score` proposals against the rule

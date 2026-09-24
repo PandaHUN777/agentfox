@@ -536,7 +536,7 @@ classification, stacked-statement rejection, unbounded-mutation and tautological
 detection, blast-radius and reversibility, environment binding, `requires_verified_state`, dry-run,
 plus shell deny-list and HTTP collection-mutation analysis. Exposed to policy as
 `action_operation` / `blast_radius_at_least` / `action_reversible` / `action_risk` conditions and
-to engineers as `nometria analyse-action`. ◐ idempotency keys (P9-8) absent.
+to engineers as `agentfox analyse-action`. ◐ idempotency keys (P9-8) absent.
 
 **Requirements.** P9-1 parse via sqlglot, **fail closed** on unparseable · P9-2 operation classification · P9-3 stacked-statement rejection · P9-4 unbounded-mutation detection (no `WHERE`, tautologies) · P9-5 blast-radius estimation · **P9-6 environment binding** · **P9-7 `requires_verified_state`** (read the record back from the SoR before an irreversible act — closes the HR incident) · P9-8 idempotency keys · P9-9 composed-privilege detection · P9-10 dry-run mode.
 
@@ -956,7 +956,7 @@ Built and tested end to end:
   it was that every integration asked the developer to change how they call the model, and the
   sum of small asks is why governance tooling sits in a proof-of-concept for six months.
   `nometria.auto()` patches the client libraries in place so an existing codebase is governed by
-  one line, in observe mode, with no other file touched. `nometria check` answers the question
+  one line, in observe mode, with no other file touched. `agentfox check` answers the question
   a platform team has to answer first and nobody has written down — *where does this codebase
   actually talk to a model?* — statically, ranked, ending in one sentence saying what to do next.
   And the control plane now leads with what needs a human rather than an inventory, and

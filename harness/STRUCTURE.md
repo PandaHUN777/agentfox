@@ -17,7 +17,7 @@ harness/
 ├── README.md                     for humans: what this is, how to install it, how to use it
 ├── STRUCTURE.md                  this file: the contract every harness file follows
 ├── .claude-plugin/plugin.json    Claude Code plugin manifest (repo root holds marketplace.json → ./harness)
-├── .mcp.json                 L3  MCP server: `nometria mcp serve`, 27 read-only tools for any MCP client
+├── .mcp.json                 L3  MCP server: `agentfox mcp serve`, 27 read-only tools for any MCP client
 ├── reference/                L1  FACTS — dense, agent-optimised, verified against code
 │   ├── cli.md                    every command, flag, side effect, exit code
 │   ├── config.md                 every NOMETRIA_* variable and extra
@@ -71,7 +71,7 @@ never copies them.
 Code, and `claude plugin validate` warns about it. The rules live in `AGENTS.md`, which any
 agent runtime can read. The `using-nometria` skill is how a plugin runtime reaches them.
 
-**Commands in skills are written `nometria …`.** The harness may be installed anywhere, so
+**Commands in skills are written `agentfox …`.** The harness may be installed anywhere, so
 skills never hard-code a path to the launcher. `AGENTS.md` → "Running the CLI" is the one
 place that explains the fallbacks.
 
@@ -98,7 +98,7 @@ uv run python harness/scripts/check_harness.py
 
 The checker loads the real Typer command tree and fails when any of these is true:
 
-- A harness file names a `nometria` command or flag that doesn't exist.
+- A harness file names an `agentfox` command or flag that doesn't exist.
 - A harness file links to a repo path that doesn't exist.
 - A skill, command or agent file is missing required frontmatter.
 - A repo `.md` file is missing from `docs-map.md`.

@@ -1,8 +1,8 @@
 ---
 description: Read-only governance posture — runtime health, open findings, policy modes, stopped agents
-allowed-tools: Bash(*nometria* doctor*) Bash(*nometria* findings*) Bash(*nometria* policy list*) Bash(*nometria* agents *) Bash(*nometria* auth status*) Bash(*nometria* proposals list*)
+allowed-tools: Bash(*agentfox* doctor*) Bash(*agentfox* findings*) Bash(*agentfox* policy list*) Bash(*agentfox* agents *) Bash(*agentfox* auth status*) Bash(*agentfox* proposals list*)
 ---
-Run these read-only commands with `nometria` (see the harness AGENTS.md "Running the CLI" if
+Run these read-only commands with `agentfox` (see the harness AGENTS.md "Running the CLI" if
 it isn't on PATH):
 
 1. `doctor --json`

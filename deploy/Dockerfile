@@ -86,6 +86,6 @@ EXPOSE 8080
 
 # Seed on first boot so the stack is demonstrable immediately, then serve. Seeding is
 # idempotent, so a restart against an existing database is a no-op. Schema *upgrades*
-# on an existing database go through `nometria db upgrade` (Alembic), not this line —
+# on an existing database go through `agentfox db upgrade` (Alembic), not this line —
 # `create_all` cannot evolve an existing schema, and this command doesn't try to.
-CMD ["sh", "-c", "nometria seed || true; exec uvicorn nometria.gateway.app:app --host 0.0.0.0 --port 8080"]
+CMD ["sh", "-c", "agentfox seed || true; exec uvicorn nometria.gateway.app:app --host 0.0.0.0 --port 8080"]

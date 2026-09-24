@@ -653,9 +653,9 @@ def _walkthrough() -> dict[str, Any]:
     console.print(
         Panel.fit(
             "[bold green]Walkthrough complete.[/]\n"
-            "[dim]nometria serve[/]      control plane on :8080\n"
-            "[dim]nometria audit verify[/]  re-check the chain\n"
-            "[dim]nometria evidence export --agent payments-ops[/]",
+            "[dim]agentfox serve[/]      control plane on :8080\n"
+            "[dim]agentfox audit verify[/]  re-check the chain\n"
+            "[dim]agentfox evidence export --agent payments-ops[/]",
             border_style="green",
         )
     )

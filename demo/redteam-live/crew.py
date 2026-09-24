@@ -43,7 +43,7 @@ class MissingApiKey(RuntimeError):
 
 
 _NO_KEY_MESSAGE = """
-nometria demo: no LLM credentials found.
+agentfox demo: no LLM credentials found.
 
 This crew needs a real LLM to reason about customer requests and decide which
 tools to call. Set ONE of these environment variables before running it:

@@ -20,19 +20,19 @@ jobs:
       - name: Install nometria
         run: pip install "git+https://github.com/architsharm/guardrails.git"
       - name: Initialise (offline, idempotent)
-        run: nometria init --env test
+        run: agentfox init --env test
       - name: Every model call is governed
-        run: nometria check . --fail
+        run: agentfox check . --fail
       - name: Policy hierarchy has no critical/high lint findings
-        run: nometria policy lint
+        run: agentfox policy lint
       - name: Business guardrails don't conflict
-        run: nometria guardrails check
+        run: agentfox guardrails check
       # Eval gate: needs a suite with cases in this DB. For a hosted control plane, point
       # NOMETRIA_DATABASE_URL at it (read-only CI credentials) and pass --baseline <run_id>.
       - name: Eval regression gate
         run: |
-          nometria seed > /dev/null      # demo suite `support-quality`; replace with your own suite setup
-          nometria eval gate support-quality --junit reports/eval.xml
+          agentfox seed > /dev/null      # demo suite `support-quality`; replace with your own suite setup
+          agentfox eval gate support-quality --junit reports/eval.xml
       - uses: actions/upload-artifact@v4
         if: always()
         with:

@@ -40,4 +40,4 @@ cryptography>=43
 # actual build error: a bare "vendor/..." resolved to ".../api/api/vendor/...").
 # Rebuild after changing src/nometria: `uv build --wheel --out-dir api/vendor` from the
 # repo root, then delete the old wheel file.
-../vendor/nometria-0.1.0-py3-none-any.whl
+../vendor/nometria-0.3.0-py3-none-any.whl

@@ -18,7 +18,7 @@ The file is `$NOMETRIA_CONFIG` if set, which must exist. Otherwise it's `./nomet
 the working directory, if present. `NOMETRIA_CONFIG=none` turns file loading off, which is
 useful in CI and containers.
 
-`nometria init` writes a `nometria.toml` whose keys are the Settings names below without the
+`agentfox init` writes a `nometria.toml` whose keys are the Settings names below without the
 prefix, for example `enforcement_budget_ms = 300`. Other tables and unknown keys are ignored
 with a warning. List values can be TOML arrays in the file. As environment variables they
 must be JSON, for example `NOMETRIA_ENABLED_DETECTORS='["pii.native","secrets.native"]'`.
@@ -31,7 +31,7 @@ Settings are cached per process, so restart after changing them.
 |---|---|---|
 | `NOMETRIA_DATABASE_URL` | `sqlite:///<repo-root>/nometria.db` | **Point this at a scratch file for demos and experiments.** Postgres (`postgresql+psycopg://…`, `[postgres]` extra) for anything real. |
 | `NOMETRIA_ENVIRONMENT` | `development` | Also decides whether the dev auth header is accepted. |
-| `NOMETRIA_AUTH_MODE` | `auto` | `auto` \| `development` \| `token` \| `oidc`. Production must not accept `X-Nometria-User`; check with `nometria auth status`. |
+| `NOMETRIA_AUTH_MODE` | `auto` | `auto` \| `development` \| `token` \| `oidc`. Production must not accept `X-Nometria-User`; check with `agentfox auth status`. |
 | `NOMETRIA_DEFAULT_POLICY_MODE` | `observe` | `observe` records, `enforce` blocks. |
 | `NOMETRIA_FAIL_MODE` | `open` | What happens when a detector errors/times out. `closed` for high-risk agents. |
 | `NOMETRIA_ALLOW_EGRESS` | `false` | Must be true for any real model provider or network fetch. |

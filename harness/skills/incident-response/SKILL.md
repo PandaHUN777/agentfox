@@ -5,7 +5,7 @@ description: Guides responding to an AI agent misbehaving in production with Nom
 
 # Incident response
 
-> Commands below are written as `nometria …`. If `nometria` isn't on PATH, see
+> Commands below are written as `agentfox …`. If `agentfox` isn't on PATH, see
 > [Running the CLI](../../AGENTS.md#running-the-cli).
 
 Speed matters, but the one thing you must not do is make it worse. Stopping an agent is
@@ -14,10 +14,10 @@ itself an outage, so it's the user's call, made with the facts in front of them.
 ## 1. Establish facts (read-only, about 2 minutes)
 
 ```bash
-nometria agents list --json
-nometria findings --json --limit 50
-nometria agents controls
-nometria audit verify
+agentfox agents list --json
+agentfox findings --json --limit 50
+agentfox agents controls
+agentfox audit verify
 ```
 
 With a server running, open the recent traces:
@@ -38,18 +38,18 @@ Offer the smallest effective option:
 | Option | Effect | Command |
 |---|---|---|
 | Deny a pending approval | stops one queued action | `POST /api/approvals/{id}/deny` |
-| Quarantine | agent stops, reversible, audited | `nometria agents quarantine <slug> --reason "<incident id / what>"` |
-| Kill | stop now | `nometria agents kill <slug> --reason "…"` |
-| Enforce a policy that's in observe | start blocking a class of action for every agent | `nometria policy enforce <key>` |
+| Quarantine | agent stops, reversible, audited | `agentfox agents quarantine <slug> --reason "<incident id / what>"` |
+| Kill | stop now | `agentfox agents kill <slug> --reason "…"` |
+| Enforce a policy that's in observe | start blocking a class of action for every agent | `agentfox policy enforce <key>` |
 
 The hook will prompt. Write the `--reason` for a future auditor, including the incident id
-and who decided. Verify containment with `nometria agents controls`.
+and who decided. Verify containment with `agentfox agents controls`.
 
 ## 3. Blast radius
 
 ```bash
-nometria agents lineage <slug> --depth 3
-nometria analyse-action "<the SQL/shell/HTTP the agent ran>" --kind sql
+agentfox agents lineage <slug> --depth 3
+agentfox analyse-action "<the SQL/shell/HTTP the agent ran>" --kind sql
 ```
 
 Lineage shows tools, data and downstream agents. List what may need checking or rotating:
@@ -61,8 +61,8 @@ Lineage shows tools, data and downstream agents. List what may need checking or 
 ## 4. Preserve evidence before anyone "cleans up"
 
 ```bash
-nometria audit checkpoint
-nometria evidence export --agent <slug> --since-days 7 --requested-by "incident <id>"
+agentfox audit checkpoint
+agentfox evidence export --agent <slug> --since-days 7 --requested-by "incident <id>"
 ```
 
 If `audit verify` failed in step 1, **don't checkpoint**. Export the evidence and record the
@@ -73,10 +73,10 @@ first broken entry; the break is itself evidence. See `docs/appendix-e-threat-mo
 - **Root cause:** decide whether it was policy (**author-policy**), integration (untrusted
   content not marked; **integrate-guardrails**), or a missing control
   (**declare-agent-controls**).
-- **Prove the fix:** replay with `nometria policy simulate -f <fixed policy>`, and/or re-run the
+- **Prove the fix:** replay with `agentfox policy simulate -f <fixed policy>`, and/or re-run the
   red-team probe that reproduces it.
 - **Resume only on the user's go-ahead** (BLK):
-  `nometria agents resume <slug> --reason "fixed by <change>"`.
+  `agentfox agents resume <slug> --reason "fixed by <change>"`.
 
 ## 6. Write it up
 

@@ -18,7 +18,7 @@ Modes — who decides whether a call is refused in-process:
   plus the agent's kill switch, quarantine and hard budget caps: `Blocked` is raised
   exactly when the *enforced* verdict stops the call, i.e. when the gateway would have
   refused it. The shipped ``baseline`` pack is in observe mode, so adding the import
-  blocks nothing; ``nometria policy enforce baseline`` is the one step that starts
+  blocks nothing; ``agentfox policy enforce baseline`` is the one step that starts
   blocking, with no second knob to find here.
 * ``"observe"`` — never raise. A library-level safety valve: every decision is still
   recorded, and what *would* have been blocked is logged and counted.
@@ -200,7 +200,7 @@ class AutoState:
                 "  Policy mode: each policy's own mode decides. Observe-mode policies "
                 "(baseline ships in observe) record what they would have blocked; "
                 "enforce-mode policies, the kill switch and budget caps raise "
-                "nometria.Blocked. `nometria policy enforce baseline` is the one step "
+                "nometria.Blocked. `agentfox policy enforce baseline` is the one step "
                 "that starts blocking."
             )
         elif self.mode == "observe":
@@ -1174,7 +1174,7 @@ def auto(
       the enforced verdict stops the call (an enforce-mode policy, the kill switch,
       quarantine or a hard budget cap) — what the gateway would refuse. The shipped
       baseline observes, so this blocks nothing until
-      ``nometria policy enforce baseline``.
+      ``agentfox policy enforce baseline``.
     * ``"observe"`` — never raise; would-have-blocked is logged and counted.
     * ``"enforce"`` — strict: raise whenever the effective verdict blocks, even for a
       policy still in observe. For tests and CI.
@@ -1227,7 +1227,7 @@ def _report_at_exit() -> None:  # pragma: no cover - process teardown
     if _STATE and _STATE.calls_governed:
         print(
             f"nometria: governed {_STATE.calls_governed} model call(s). "
-            f"Run `nometria findings` to see what it found.",
+            f"Run `agentfox findings` to see what it found.",
             file=sys.stderr,
         )
 

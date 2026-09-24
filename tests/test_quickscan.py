@@ -1,4 +1,4 @@
-"""`nometria quickscan` — the zero-account, zero-setup entry point. The whole point
+"""`agentfox quickscan` — the zero-account, zero-setup entry point. The whole point
 is that it needs nothing: no database, no init, no GitHub, no network. These tests
 deliberately do NOT use the `isolated_db` fixture other CLI tests rely on, because a
 quickscan that secretly needed a database would be the exact bug this command exists

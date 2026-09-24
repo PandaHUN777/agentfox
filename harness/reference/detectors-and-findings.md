@@ -32,7 +32,7 @@ indirect injection is contained even when no detector fires.
 | `safety.restricted` | Llama Guard (non-OSI licence) | `[restricted-classifiers]` + explicit licence env var |
 | `rails.nemo`, `rails.guardrails_ai` | NeMo Guardrails / Guardrails AI validators | `[rails]` / `[validators]` |
 
-`nometria doctor` lists which detectors are actually available. Enable extras with
+`agentfox doctor` lists which detectors are actually available. Enable extras with
 `NOMETRIA_ENABLED_DETECTORS` (JSON list).
 
 Non-detector analysis also feeds policy: action assurance on SQL/shell/HTTP (`[sql]`, fails
@@ -50,7 +50,7 @@ closed without it), taint tracking, composed privilege escalation, loop and budg
 - `degraded` lists detectors that timed out or errored. Under `fail_mode: open` the call went
   through anyway.
 
-## Findings (the queue `nometria findings` reads)
+## Findings (the queue `agentfox findings` reads)
 
 Persisted in `models.Finding`: `id, type, severity (critical|high|medium|low), status
 (open|suppressed|resolved), title, subject_type, subject_id, evidence_json, control_keys,
@@ -65,7 +65,7 @@ after being resolved reopens the same finding, keeps what the previous resolutio
 writes a `finding.recurred` entry to the audit chain, so `occurrences` counts the whole
 history. Findings raised before fingerprints existed have none, and count 1.
 
-`nometria findings --json` does not include the count. `GET /api/findings`, `GET
+`agentfox findings --json` does not include the count. `GET /api/findings`, `GET
 /api/findings/{id}` and the `nometria_finding_occurrences` MCP tool do.
 
 | Type | Meaning | First move |

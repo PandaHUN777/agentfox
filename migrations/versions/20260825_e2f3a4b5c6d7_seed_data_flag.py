@@ -1,7 +1,7 @@
 """seed data flag
 
 Adds is_seed to agents and source_records — a UX audit found seed/demo data from
-`nometria seed` was indistinguishable from real records anywhere in the UI, which a
+`agentfox seed` was indistinguishable from real records anywhere in the UI, which a
 real customer could mistake for their own data. Additive only.
 
 Revision ID: e2f3a4b5c6d7

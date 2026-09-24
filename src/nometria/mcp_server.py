@@ -12,7 +12,7 @@ enforce/observe, agents kill/quarantine/resume, seed, demo, db downgrade, auth
 issue/revoke, --submit, and no proposal decide/apply/rollback). An assistant that can read
 everything and change nothing is safe to hand to any client.
 
-Every CLI-backed tool runs the real `nometria` CLI in a subprocess, so an answer here is
+Every CLI-backed tool runs the real `agentfox` CLI in a subprocess, so an answer here is
 exactly what an operator would see in a terminal. argv is built only from validated,
 typed arguments: never a shell, and never a flag the caller supplied.
 """
@@ -710,7 +710,7 @@ def _tool_result(text: str, *, structured: Any = None, is_error: bool = False) -
 
 
 def _cli_result(tool: Tool, argv: list[str], outcome: CliOutcome) -> dict[str, Any]:
-    command = "nometria " + " ".join(argv)
+    command = "agentfox " + " ".join(argv)
     crashed = "Traceback (most recent call last)" in outcome.stdout + outcome.stderr
     meaning = "success" if outcome.exit_code == 0 else tool.exit_meanings.get(outcome.exit_code)
     if meaning is None or crashed:
@@ -824,12 +824,12 @@ def _prepare() -> None:
 
         init_db()
     except Exception as exc:  # the server still answers; DB-backed tools report their own errors
-        print(f"nometria mcp: database not initialised: {exc}", file=sys.stderr)
+        print(f"agentfox mcp: database not initialised: {exc}", file=sys.stderr)
     # After init_db, because Alembic's fileConfig disables loggers that already exist.
     log.disabled = False
     if not log.handlers:
         handler = logging.StreamHandler(sys.stderr)
-        handler.setFormatter(logging.Formatter("nometria mcp: %(levelname)s %(message)s"))
+        handler.setFormatter(logging.Formatter("agentfox mcp: %(levelname)s %(message)s"))
         log.addHandler(handler)
         log.propagate = False
     log.setLevel(os.environ.get("NOMETRIA_MCP_LOG_LEVEL", "WARNING").upper())

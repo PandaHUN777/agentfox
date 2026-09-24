@@ -4,7 +4,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/architsharm/guardrails/main/scripts/quickscan.sh | bash
 #
 # Installs Nometria into a throwaway virtualenv (removed on exit either way) and runs
-# `nometria quickscan` against the current directory. It's the same package
+# `agentfox quickscan` against the current directory. It's the same package
 # `pip install nometria` would give you — this script exists only to skip "clone,
 # create a venv, activate it, pip install" for a first look. No step here talks to
 # anything but PyPI/GitHub (to fetch the package itself) and your local filesystem.
@@ -49,4 +49,4 @@ if ! pip install --quiet --disable-pip-version-check "git+${REPO_URL}" >"$WORKDI
   exit 1
 fi
 
-exec nometria quickscan "$TARGET_DIR"
+exec agentfox quickscan "$TARGET_DIR"

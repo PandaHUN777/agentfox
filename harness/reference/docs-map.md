@@ -82,7 +82,7 @@ Everything under `harness/` is agent-facing by design and follows `harness/STRUC
 
 | Question | First stop | Then |
 |---|---|---|
-| How do I run X? | `harness/reference/cli.md` | `nometria X --help` |
+| How do I run X? | `harness/reference/cli.md` | `agentfox X --help` |
 | Which env var controls Y? | `harness/reference/config.md` | `src/nometria/config.py` |
 | What does this API route take? | `harness/reference/http-api.md` | `src/nometria/gateway/routes/` |
 | Why was this built / is it in scope? | `docs/PRD.md` | `docs/gap-analysis.md` |

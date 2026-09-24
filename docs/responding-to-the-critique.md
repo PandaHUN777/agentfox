@@ -76,7 +76,7 @@ encoded in the platform, which is what our [agent harness](../harness/README.md)
 | Published our own adaptive-attack success rate against ourselves (**73% at 50 attempts**), using the critique's own protocol — and fixed the three detector bugs it found | [`benchmarks/adaptive/`](../benchmarks/adaptive/README.md) |
 | Measured non-English parity instead of claiming multilingual support | [`benchmarks/multilingual/`](../benchmarks/multilingual/README.md) |
 | Measured gradual multi-turn (crescendo) attacks, which per-message detection cannot see | [`benchmarks/crescendo/`](../benchmarks/crescendo/README.md) |
-| Made containment readiness a first-class health check, ahead of detectors | `nometria doctor` |
+| Made containment readiness a first-class health check, ahead of detectors | `agentfox doctor` |
 | Led the README with what holds when detection fails, not with detection accuracy | [README](../README.md) |
 
 ## The claim, stated so it can be falsified
@@ -101,6 +101,6 @@ uv run python benchmarks/agentdojo_e2e/run_agentdojo_e2e.py
 - That a model cannot be fooled. Assume it will be.
 - That containment is free of assumptions: it is exactly as good as the declared tool impacts, grants,
   constraints, triggers and scopes behind it. An irreversible tool declared as `read` is one a tainted
-  argument can reach. `nometria doctor` now grades that readiness directly.
+  argument can reach. `agentfox doctor` now grades that readiness directly.
 - That our compliance mappings are legal advice. All of them ship marked
   `DRAFT — UNVERIFIED / NOT LEGAL ADVICE` until a qualified reviewer signs them.

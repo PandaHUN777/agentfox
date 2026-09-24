@@ -5,7 +5,7 @@ description: Guides writing or changing a Nometria policy safely. It drafts YAML
 
 # Author a policy
 
-> Commands below are written as `nometria …`. If `nometria` isn't on PATH, see
+> Commands below are written as `agentfox …`. If `agentfox` isn't on PATH, see
 > [Running the CLI](../../AGENTS.md#running-the-cli).
 
 Policies are declarative YAML compiled to Rego, and they are versioned and audited. The
@@ -19,8 +19,8 @@ packs in `src/nometria/policies_data/` are the best examples: `baseline`,
 ## 1. See what's in force now
 
 ```bash
-nometria policy list
-nometria policy effective --agent <slug> --environment production
+agentfox policy list
+agentfox policy effective --agent <slug> --environment production
 ```
 
 `effective` shows which rule wins and where it came from: org, team, agent or user level.
@@ -43,8 +43,8 @@ for example `governance/policies/<key>.yaml`, and edit it. Keep these rules:
 ## 3. Validate and lint (offline)
 
 ```bash
-nometria policy validate governance/policies/<key>.yaml
-nometria policy lint
+agentfox policy validate governance/policies/<key>.yaml
+agentfox policy lint
 ```
 
 `validate` exits 1 on schema errors and prints the compiled rule count. `lint` exits 1 on
@@ -53,7 +53,7 @@ critical/high findings across the whole hierarchy, such as shadowed or conflicti
 ## 4. Simulate against real traffic
 
 ```bash
-nometria policy simulate -f governance/policies/<key>.yaml --since-days 30
+agentfox policy simulate -f governance/policies/<key>.yaml --since-days 30
 ```
 
 It replays up to 1,000 recorded decisions. **Exit 1 means the candidate would newly block
@@ -75,7 +75,7 @@ Pick one path:
   `{"body": "<yaml text>", "notes": "<why>", "mode": "observe"}`. It's versioned and audited,
   and the dashboard's `/policies` page does the same.
 - **Local or offline:** put the file in a directory, point `NOMETRIA_POLICIES_DIR` at it, and
-  run `nometria init`. This loads every `*.yaml` in that directory, alongside the policies
+  run `agentfox init`. This loads every `*.yaml` in that directory, alongside the policies
   already in the database. It doesn't remove the shipped packs.
 
 Check it landed with `policy list`.
@@ -88,8 +88,8 @@ Offer the options, and wait for the user to pick:
 |---|---|
 | Stay in observe and watch `effective_verdict` for a week | default for anything customer-facing |
 | Canary: `POST /api/policies/{key}/canary/start`, then `…/advance` or `…/rollback` | a server is running and traffic is meaningful |
-| `nometria policy enforce <key>` | the user has seen the simulation and says "enforce it" |
+| `agentfox policy enforce <key>` | the user has seen the simulation and says "enforce it" |
 
 In-process `nometria.auto()` users also need `auto(mode="enforce")` to raise. Tell them.
 
-To roll back, run `nometria policy observe <key>`. It's immediate and audited.
+To roll back, run `agentfox policy observe <key>`. It's immediate and audited.

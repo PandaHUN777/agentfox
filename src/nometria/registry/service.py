@@ -133,8 +133,8 @@ def propose_from_scan(
     per detected framework, from a discovery scan's governable sites.
 
     Shared by every scan entry point that ends up here — the GitHub-connected repo
-    scan (``routes/integrations.py``) and a locally-run ``nometria check --submit`` /
-    ``nometria quickscan --submit`` (``routes/discovery.py``) — so a scan looks the
+    scan (``routes/integrations.py``) and a locally-run ``agentfox check --submit`` /
+    ``agentfox quickscan --submit`` (``routes/discovery.py``) — so a scan looks the
     same in the dashboard whichever door it came through. ``sites`` is intentionally
     the redacted shape (``{"kind", "top_dir", "provider"}``, see
     ``discovery.ScanReport.to_submission_payload``): this function never needs, and

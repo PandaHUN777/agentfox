@@ -129,7 +129,7 @@ def init_db(stamp: bool = True) -> None:
     """Create the schema directly.
 
     Convenience for tests and first-run local use. **Production upgrades go through
-    Alembic** (`nometria db upgrade`) — `create_all` cannot evolve an existing schema,
+    Alembic** (`agentfox db upgrade`) — `create_all` cannot evolve an existing schema,
     which is the defect PL-2 fixed.
 
     When ``stamp`` is set and Alembic is available, the fresh database is stamped at

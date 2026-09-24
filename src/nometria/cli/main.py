@@ -24,7 +24,7 @@ from .. import __version__
 from ._style import SEVERITY_COLOUR
 
 app = typer.Typer(
-    name="nometria",
+    name="agentfox",
     help="Agent-native, vendor-neutral governance for AI agents in production.",
     no_args_is_help=True,
     add_completion=False,
@@ -197,7 +197,7 @@ def seed(
     if credentials and not show_keys:
         console.print(
             "  [dim]keys masked. Only a hash is stored and each key is issued once — "
-            "`nometria seed --show-keys` on a fresh database is the only way to see "
+            "`agentfox seed --show-keys` on a fresh database is the only way to see "
             "them in full.[/]"
         )
 
@@ -205,10 +205,10 @@ def seed(
 
     _print_next_steps(
         [
-            ("nometria demo", "the end-to-end walkthrough against what was just seeded"),
-            ("nometria findings", "what the seeded traffic already raised"),
-            ("nometria capability list", "what each seeded agent is allowed to do"),
-            ("nometria doctor", "check the runtime configuration"),
+            ("agentfox demo", "the end-to-end walkthrough against what was just seeded"),
+            ("agentfox findings", "what the seeded traffic already raised"),
+            ("agentfox capability list", "what each seeded agent is allowed to do"),
+            ("agentfox doctor", "check the runtime configuration"),
         ]
     )
 
@@ -283,7 +283,7 @@ def db_current() -> None:
     from ..db import current_revision
 
     revision = current_revision()
-    console.print(f"schema revision: [bold]{revision or 'none — run `nometria db upgrade`'}[/]")
+    console.print(f"schema revision: [bold]{revision or 'none — run `agentfox db upgrade`'}[/]")
 
 
 # ---------------------------------------------------------------------------
@@ -649,10 +649,10 @@ def _set_mode(key: str, mode: str) -> None:
             console.print(f"[red]unknown policy '{key}'[/]")
             if known:
                 console.print(f"  known policies: {', '.join(known)}")
-                console.print("  [dim]`nometria policy list` shows each one's mode.[/]")
+                console.print("  [dim]`agentfox policy list` shows each one's mode.[/]")
             else:
                 console.print(
-                    "  no policies loaded yet. Run `nometria init` to load the shipped packs."
+                    "  no policies loaded yet. Run `agentfox init` to load the shipped packs."
                 )
             raise typer.Exit(1)
         chain.append(
@@ -816,7 +816,7 @@ def eval_drift(agent: str, scorer: str = "groundedness") -> None:
     with _session() as session:
         report = compute_drift(session, agent, scorer)
     if report is None:
-        console.print("[yellow]insufficient online samples[/] — run `nometria eval online` first")
+        console.print("[yellow]insufficient online samples[/] — run `agentfox eval online` first")
         return
     data = report.to_json()
     console.print(
@@ -1255,7 +1255,7 @@ def compliance_review_packet(
         f"{len(rows)} mapping(s), {len(drafts)} awaiting review.",
         "",
         "For each row: does this control, as implemented, support the clause claimed? Approve with",
-        "`nometria compliance review <control> --framework "
+        "`agentfox compliance review <control> --framework "
         f"{framework} --reviewer \"<your name>\"`, optionally `--reference` for a single clause.",
         "",
     ]
@@ -1679,7 +1679,7 @@ def tools_declare(
 
     Containment is declared, not detected: an irreversible tool recorded as `read` is one
     a tainted argument can reach. This is the command that makes least privilege real, and
-    it is deliberately the first thing `nometria init` points at.
+    it is deliberately the first thing `agentfox init` points at.
     """
     from ..registry.service import upsert_tool
 
@@ -1733,7 +1733,7 @@ def tools_list(as_json: bool = typer.Option(False, "--json")) -> None:
         _emit(rows, True)
         return
     if not rows:
-        console.print("[yellow]no tools declared[/] — `nometria tools declare <key> --impact ...`")
+        console.print("[yellow]no tools declared[/] — `agentfox tools declare <key> --impact ...`")
         return
     table = Table(box=None, padding=(0, 2))
     table.add_column("tool")
@@ -1769,7 +1769,7 @@ def tools_set_triggers(
         if tool is None:
             console.print(
                 f"[red]unknown tool '{key}' — register it first "
-                "(nometria scan mcp, or via seed data)[/]"
+                "(agentfox scan mcp, or via seed data)[/]"
             )
             raise typer.Exit(1)
         tool.triggers_json = declared

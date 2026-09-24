@@ -205,7 +205,7 @@ def test_a_job_carries_the_tenant_that_created_it():
 # --- Persisted queue (PL-5, jobs_db) ----------------------------------------
 #
 # jobs.py's JobQueue above is the in-process reference implementation — right
-# for `nometria demo`, the CLI, and the tests above. The two real production
+# for `agentfox demo`, the CLI, and the tests above. The two real production
 # callers (POST /api/evidence, POST /api/redteam/campaigns) go through
 # jobs_db instead, because a Vercel invocation's memory doesn't survive past
 # the response — a dead-lettered job living only in a `deque` that's about to

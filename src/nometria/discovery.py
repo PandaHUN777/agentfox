@@ -299,8 +299,8 @@ class ScanReport:
         }
 
     def to_submission_payload(self, *, source: str) -> dict[str, Any]:
-        """The redacted subset of this report that `nometria check --submit` /
-        `nometria quickscan --submit` are allowed to send to a control plane.
+        """The redacted subset of this report that `agentfox check --submit` /
+        `agentfox quickscan --submit` are allowed to send to a control plane.
 
         `to_json()` is for the local `--json` flag and keeps everything, including
         each site's file, line and `detail` — `detail` is the one field that can carry
@@ -367,7 +367,7 @@ class ScanReport:
                 "`import nometria; nometria.auto()` to your entry point — nothing else "
                 "in the codebase has to change."
             )
-        return "Every model call is governed. Run `nometria doctor` to check the runtime config."
+        return "Every model call is governed. Run `agentfox doctor` to check the runtime config."
 
 
 def _attribute_path(node: ast.AST) -> str:

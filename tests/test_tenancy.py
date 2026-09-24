@@ -299,7 +299,7 @@ def test_appending_inside_system_scope_still_targets_the_bound_tenants_own_chain
     `chain.append`'s own "what's the last entry" lookup used to inherit that same
     disabled filter instead of staying pinned to the tenant the new entry is actually
     joining. Give ACME a chain three entries deep, then bind a session to GLOBEX and
-    append from inside `system_scope` (exactly the shape `nometria auth issue` runs:
+    append from inside `system_scope` (exactly the shape `agentfox auth issue` runs:
     an unfiltered lookup to find the recipient, then a bound append) — the new entry
     must still open GLOBEX's chain at seq 1, not continue ACME's.
     """

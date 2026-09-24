@@ -263,7 +263,7 @@ def test_guardrails_compile_apply_saves_the_ladder(tmp_path):
 def test_entitlement_report_hint_names_a_real_command():
     result = runner.invoke(app, ["entitlement", "report"])
     output = flat(result.output)
-    assert "nometria entitlement principal" in output
+    assert "agentfox entitlement principal" in output
     assert "principal set" not in output
     assert runner.invoke(app, ["entitlement", "principal", "--help"]).exit_code == 0
 

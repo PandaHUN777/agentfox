@@ -29,7 +29,7 @@ Signature: `auto(agent=None, *, mode="policy", environment=None, session_id=None
 
 | `mode` | Raises `nometria.Blocked` when | Use it for |
 |---|---|---|
-| `"policy"` (default) | the gateway would have refused the call: an enforce-mode policy blocks, or the agent is killed, quarantined, over budget, or outside its knowledge boundary | normal use. With the shipped packs `baseline` observes, so adding the import blocks nothing new. `nometria policy enforce baseline` is then the one step that starts blocking |
+| `"policy"` (default) | the gateway would have refused the call: an enforce-mode policy blocks, or the agent is killed, quarantined, over budget, or outside its knowledge boundary | normal use. With the shipped packs `baseline` observes, so adding the import blocks nothing new. `agentfox policy enforce baseline` is then the one step that starts blocking |
 | `"observe"` | never, not even for the kill switch | a library-level safety valve |
 | `"enforce"` | the enforced verdict stops it, or the effective verdict is `block` even though the policy only observes | tests and CI |
 
@@ -109,7 +109,7 @@ client = OpenAI(base_url="http://localhost:8080/v1", api_key="nom_agt_…",
 
 ## Rollout rule (the product's own safety stance)
 
-1. Integrate. Policies start in observe (except `tool-containment`). 2. Read `nometria findings`
+1. Integrate. Policies start in observe (except `tool-containment`). 2. Read `agentfox findings`
 and tune. 3. `policy simulate` the enforce candidate against recorded traffic. 4. Only then
 `policy enforce`; `auto()` follows it with no code change. Never skip to step 4 on a user's
 behalf.

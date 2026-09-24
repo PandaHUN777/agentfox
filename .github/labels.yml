@@ -65,7 +65,7 @@ labels:
 
   - name: "area:cli"
     colour: "1d76db"
-    description: The nometria command line and its output.
+    description: The agentfox command line and its output.
 
   - name: "area:harness"
     colour: "1d76db"

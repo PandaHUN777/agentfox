@@ -121,7 +121,7 @@ def test_system_history_reads_newest_first(isolated_db):
 
 
 def test_listing_tokens_via_the_cli_records_to_the_system_chain(isolated_db):
-    """The one real call site this module is wired into: `nometria auth tokens` is a
+    """The one real call site this module is wired into: `agentfox auth tokens` is a
     read across every tenant, with no single tenant to attribute it to."""
     from nometria.cli.auth_cli import tokens as cli_tokens
 
@@ -139,7 +139,7 @@ def test_listing_tokens_via_the_cli_records_to_the_system_chain(isolated_db):
 
 
 def test_issuing_a_token_for_a_non_default_org_lands_in_that_orgs_own_chain(isolated_db):
-    """Regression: `nometria auth issue` runs the recipient lookup inside
+    """Regression: `agentfox auth issue` runs the recipient lookup inside
     `system_scope` and, before this fix, never bound the session to the recipient's
     own tenant before minting — so the resulting `operator.credential.issued` entry
     was attributed to whichever tenant the session defaulted to (never `org_other`

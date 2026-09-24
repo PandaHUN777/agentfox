@@ -31,7 +31,7 @@ its own verification state as you go.
 
 ```bash
 pip install git+https://github.com/architsharm/guardrails.git
-nometria init && nometria demo
+agentfox init && agentfox demo
 ```
 
 `init` creates a SQLite database, loads 43 controls and three policy packs, and finishes in about a
@@ -57,7 +57,7 @@ your own agent governed.
 
 ## What the demo actually prints
 
-Real output from `nometria init && nometria demo`, trimmed. The convincing part is step 3, and it
+Real output from `agentfox init && agentfox demo`, trimmed. The convincing part is step 3, and it
 arrives about six seconds in.
 
 **Step 2. An injection arrives inside a retrieved document, not in the user's message.** The
@@ -193,8 +193,8 @@ with.
   comparable campaign, not a pass rate, and it is configuration regression testing rather than a
   robustness certificate.
 - **Containment is exactly as good as your declarations.** If a destructive tool is declared
-  `read`, nothing downstream will treat it as destructive. `nometria doctor` grades this, and
-  `nometria check` finds the tools you have not declared yet.
+  `read`, nothing downstream will treat it as destructive. `agentfox doctor` grades this, and
+  `agentfox check` finds the tools you have not declared yet.
 
 > **Status: MVP v0.3.** Live coverage, computed by probe rather than asserted:
 > **[docs/status.md](docs/status.md)**.
@@ -277,8 +277,8 @@ process to never raising.
 Start the control plane, then call it. No Python in your application required.
 
 ```bash
-nometria serve                      # gateway + control-plane API on 127.0.0.1:8080
-nometria auth issue you@example.com # mint an API token; shown once
+agentfox serve                      # gateway + control-plane API on 127.0.0.1:8080
+agentfox auth issue you@example.com # mint an API token; shown once
 ```
 
 Point an existing OpenAI or Anthropic client at `http://localhost:8080/v1` and keep your code as it
@@ -317,9 +317,9 @@ LangGraph's own `interrupt()`, so there is one pause mechanism rather than two.
 
 ### Turning enforcement on
 
-`nometria policy enforce baseline` is the one step that starts blocking model traffic, and `auto()`
+`agentfox policy enforce baseline` is the one step that starts blocking model traffic, and `auto()`
 picks it up with no code change. Everything before it is safe to run. Demote again with
-`nometria policy observe baseline`.
+`agentfox policy observe baseline`.
 
 ## Commands
 
@@ -328,22 +328,22 @@ Grouped by what you are trying to do. Every command below was run to verify it w
 **Find out what you already have**
 
 ```bash
-nometria quickscan                     # zero-config first look, nothing leaves this machine
-nometria check                         # scan a repo: what talks to a model, and what is ungoverned
-nometria agents list                   # every agent, registered or shadow, and who owns it
-nometria agents discover               # sweep for shadow agents, drift and identity posture
-nometria agents lineage payments-ops   # what one agent reaches: its blast radius
-nometria scan mcp internal-tools --seed-fixture   # MCP tool hygiene; --file takes a real tools/list
+agentfox quickscan                     # zero-config first look, nothing leaves this machine
+agentfox check                         # scan a repo: what talks to a model, and what is ungoverned
+agentfox agents list                   # every agent, registered or shadow, and who owns it
+agentfox agents discover               # sweep for shadow agents, drift and identity posture
+agentfox agents lineage payments-ops   # what one agent reaches: its blast radius
+agentfox scan mcp internal-tools --seed-fixture   # MCP tool hygiene; --file takes a real tools/list
 ```
 
 **Bound what an agent is allowed to do**
 
 ```bash
-nometria tools declare billing.export --impact write   # none | read | write | irreversible
-nometria capability grant support-triage tickets.close \
+agentfox tools declare billing.export --impact write   # none | read | write | irreversible
+agentfox capability grant support-triage tickets.close \
     --limit priority:in=low,normal --max-taint user
-nometria capability list support-triage                # anything not listed is refused
-nometria capability revoke <capability-id>
+agentfox capability list support-triage                # anything not listed is refused
+agentfox capability revoke <capability-id>
 ```
 
 `--max-taint` is the worst provenance an argument may carry and still go through without an
@@ -354,10 +354,10 @@ the result in the audit chain. `--yes` skips the prompt in CI.
 **See what happened**
 
 ```bash
-nometria findings                      # what the platform found; --severity high to narrow
-nometria doctor                        # is the runtime configured the way you think it is?
-nometria audit verify                  # re-derive the chain; exits 1 if broken
-nometria evidence export --agent support-triage --from 2026-08-01 --to 2026-09-30
+agentfox findings                      # what the platform found; --severity high to narrow
+agentfox doctor                        # is the runtime configured the way you think it is?
+agentfox audit verify                  # re-derive the chain; exits 1 if broken
+agentfox evidence export --agent support-triage --from 2026-08-01 --to 2026-09-30
 ```
 
 `evidence export` accepts `--from`/`--to` as `YYYY-MM-DD` or full ISO-8601, and falls back to
@@ -366,12 +366,12 @@ nometria evidence export --agent support-triage --from 2026-08-01 --to 2026-09-3
 **Test before you trust**
 
 ```bash
-nometria eval run support-quality                   # score a suite
-nometria eval gate support-quality                  # CI regression gate; exits 1 on regression
-nometria redteam run support-triage                 # probe the deployed configuration
-nometria redteam probes                             # what the built-in suite contains
-nometria policy lint                                # exits 1 on critical or high findings
-nometria policy simulate --file candidate.yaml      # replay recorded traffic against a candidate
+agentfox eval run support-quality                   # score a suite
+agentfox eval gate support-quality                  # CI regression gate; exits 1 on regression
+agentfox redteam run support-triage                 # probe the deployed configuration
+agentfox redteam probes                             # what the built-in suite contains
+agentfox policy lint                                # exits 1 on critical or high findings
+agentfox policy simulate --file candidate.yaml      # replay recorded traffic against a candidate
 ```
 
 `eval gate` compares against the suite's latest recorded baseline; pass `--baseline <run-id>` to
@@ -380,14 +380,14 @@ pin a specific run.
 **Run it**
 
 ```bash
-nometria serve                         # gateway + control-plane API
-nometria auth issue you@example.com    # mint an API token
-nometria auth status                   # how this deployment authenticates
-nometria db upgrade                    # apply migrations
-nometria policy effective --agent support-triage    # what is in force, and where each rule came from
-nometria compliance status --framework eu-ai-act
-nometria agents quarantine support-triage --reason "investigating"   # kill switch, reversible
-nometria agents resume support-triage
+agentfox serve                         # gateway + control-plane API
+agentfox auth issue you@example.com    # mint an API token
+agentfox auth status                   # how this deployment authenticates
+agentfox db upgrade                    # apply migrations
+agentfox policy effective --agent support-triage    # what is in force, and where each rule came from
+agentfox compliance status --framework eu-ai-act
+agentfox agents quarantine support-triage --reason "investigating"   # kill switch, reversible
+agentfox agents resume support-triage
 ```
 
 ## Drive it from a coding agent
@@ -416,7 +416,7 @@ server, so any MCP client gets the same read-only analysis tools.
 
 ```bash
 python3 -m venv .venv && source .venv/bin/activate && pip install -e ".[dev]"
-nometria seed && nometria demo         # a demonstrable environment, then the walkthrough
+agentfox seed && agentfox demo         # a demonstrable environment, then the walkthrough
 ```
 
 Add real capability as configuration:

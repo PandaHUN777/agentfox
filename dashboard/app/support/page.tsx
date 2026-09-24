@@ -121,15 +121,15 @@ const ROUTES: [string, string, string][] = [
 
 const BEFORE: { cmd: string; why: string }[] = [
   {
-    cmd: "nometria doctor",
+    cmd: "agentfox doctor",
     why: "Grades the runtime configuration and the quality of your tool declarations. It explains a surprising verdict on its own often enough to be worth running first.",
   },
   {
-    cmd: "nometria version",
+    cmd: "agentfox version",
     why: "Every template asks for it. The first line is enough, or the commit SHA if you run from a clone.",
   },
   {
-    cmd: "nometria policy list",
+    cmd: "agentfox policy list",
     why: "Prints which packs are bound and whether each is in observe or enforce. A verdict report is hard to read without it.",
   },
 ];

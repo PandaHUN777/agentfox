@@ -81,7 +81,7 @@ are [§6.3](PRD.md#63-out-of-scope-for-mvp-v01).
 | FR | Status | Implementation | Control | Test |
 |---|---|---|---|---|
 | **P6-1** Policy-as-code engine | ✅ native + OPA | `policy/model.py`, `policy/engine.py`, `policy/opa.py`, `policy/store.py` | NOM-GOV-01 | `test_policy_and_identity.py::test_strongest_effect_wins`, `::test_policy_versions_are_immutable`, `::test_rego_compilation_produces_a_module` |
-| **P6-2** Control catalog & framework mapping | ✅ 43 controls × 7 frameworks | `compliance_data/controls.yaml`, `compliance/catalog.py`; `nometria compliance validate` | NOM-GOV-02 | `test_registry_and_compliance.py::test_catalog_syncs_all_controls`, `::test_review_status_survives_resync` |
+| **P6-2** Control catalog & framework mapping | ✅ 43 controls × 7 frameworks | `compliance_data/controls.yaml`, `compliance/catalog.py`; `agentfox compliance validate` | NOM-GOV-02 | `test_registry_and_compliance.py::test_catalog_syncs_all_controls`, `::test_review_status_survives_resync` |
 | **P6-3** Risk register & assessment | ✅ | `compliance/risk.py::classify, assess, register` | NOM-GOV-03 | `::test_classification_proposes_high_risk_for_hiring_agent`, `::test_ungated_irreversible_tool_raises_the_proposal` |
 | **P6-4** Continuous compliance monitoring | ✅ | `compliance/status.py` — nine rule kinds | NOM-GOV-04 | `::test_status_is_computed_not_attested`, `::test_broken_chain_makes_the_audit_control_fail_hard` |
 | **P6-5** Obligation calendar | ✅ | `compliance/obligations.yaml`, `compliance/risk.py::obligation_calendar` | NOM-GOV-05 | `::test_obligation_calendar_scopes_agents` |
@@ -98,7 +98,7 @@ are [§6.3](PRD.md#63-out-of-scope-for-mvp-v01).
 | **X-3** Offline-first | ✅ | `providers/echo.py`, every adapter's `available()` | whole suite runs with no key and no weights |
 | **X-4** Deterministic decisions | ✅ | `policy/engine.py`, `Decision.policy_version_ids` | `test_policy_and_identity.py::test_determinism`; `test_enforcement_and_api.py::test_decision_records_every_policy_version_in_force` |
 | **X-5** Everything through the API | ✅ | `dashboard/lib/api.ts` — no DB access from the UI process | dashboard renders solely from `/api` |
-| **X-6** Agent-native operation (harness + MCP) | ✅ | `harness/` (skills, commands, subagents, safety hook), `mcp_server.py` + `cli/mcp_cli.py` (`nometria mcp serve`, 24 read-only tools, stdlib JSON-RPC) | `test_mcp_server.py`; `test_harness.py` (harness ↔ live CLI drift, hook decisions) |
+| **X-6** Agent-native operation (harness + MCP) | ✅ | `harness/` (skills, commands, subagents, safety hook), `mcp_server.py` + `cli/mcp_cli.py` (`agentfox mcp serve`, 24 read-only tools, stdlib JSON-RPC) | `test_mcp_server.py`; `test_harness.py` (harness ↔ live CLI drift, hook decisions) |
 
 ## Non-functional
 
@@ -111,7 +111,7 @@ are [§6.3](PRD.md#63-out-of-scope-for-mvp-v01).
 | **NFR-5** Audit integrity | ✅ | four tamper modes individually tested |
 | **NFR-6** Retention | ◐ | policies modelled; no deletion daemon |
 | **NFR-7** Platform security posture | ◐ | argon2 credentials, redaction at capture, signing key external; no SOC 2 |
-| **NFR-8** < 10 min time to first value | ✅ | `nometria seed && nometria demo` — offline, ~30 s |
+| **NFR-8** < 10 min time to first value | ✅ | `agentfox seed && agentfox demo` — offline, ~30 s |
 | **NFR-9** Offline operation | ✅ | full suite passes with no network |
 | **NFR-10** Determinism & replay | ✅ | `test_determinism`, simulation replay |
 
@@ -120,8 +120,8 @@ are [§6.3](PRD.md#63-out-of-scope-for-mvp-v01).
 | ID | Requirement | Status | Implementation | Test |
 |---|---|---|---|---|
 | **PL-1** | Streaming (SSE) with inline enforcement | ✅ | `providers/base.py::StreamChunk`, `providers/echo.py::stream`, `providers/remote.py` (OpenAI + Anthropic SSE), `enforcement.py::run_completion_stream`, `gateway/routes/inline.py::_stream_openai/_stream_anthropic` | `test_tranche0.py` — 11 tests incl. `test_buffered_mode_never_forwards_blocked_output`, `test_streaming_and_non_streaming_agree_on_verdict`, `test_gateway_stream_block_emits_error_then_done` |
-| **PL-2** | Database migrations | ✅ | `alembic.ini`, `migrations/env.py` (URL from Settings, `render_as_batch` for SQLite), baseline revision, `db.py::upgrade_db/downgrade_db/current_revision`, `nometria db upgrade` | `test_migrations_round_trip`, `test_app_runs_on_a_migrated_schema` |
-| **PL-3** | Kill switch & quarantine | ✅ | `models.py::AgentControl`, `registry/control.py`, `enforcement.py::_control_verdict` (checked before taint/detectors/policy), API `/agents/{slug}/kill|quarantine|resume`, `GET /api/controls`, `nometria agents kill/quarantine/resume/controls` | 9 tests incl. `test_control_check_precedes_policy`, `test_kill_blocks_the_streaming_path_too`, `test_both_edges_are_audited` |
+| **PL-2** | Database migrations | ✅ | `alembic.ini`, `migrations/env.py` (URL from Settings, `render_as_batch` for SQLite), baseline revision, `db.py::upgrade_db/downgrade_db/current_revision`, `agentfox db upgrade` | `test_migrations_round_trip`, `test_app_runs_on_a_migrated_schema` |
+| **PL-3** | Kill switch & quarantine | ✅ | `models.py::AgentControl`, `registry/control.py`, `enforcement.py::_control_verdict` (checked before taint/detectors/policy), API `/agents/{slug}/kill|quarantine|resume`, `GET /api/controls`, `agentfox agents kill/quarantine/resume/controls` | 9 tests incl. `test_control_check_precedes_policy`, `test_kill_blocks_the_streaming_path_too`, `test_both_edges_are_audited` |
 | **I-1** | LangGraph-native SDK | ✅ | `integrations/langgraph.py::NometriaGuard` — `model_node`, `retrieval_node`, `tool_node`; trace id in graph state (survives checkpointing); escalation via LangGraph `interrupt()` when available | 8 tests incl. `test_tool_node_denies_before_the_body_runs`, `test_integration_imports_without_langgraph` |
 
 **Design notes recorded during the build:**

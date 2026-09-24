@@ -1,15 +1,15 @@
 ---
-title: nometria CLI reference
+title: agentfox CLI reference
 layer: reference
 audience: agents (and humans who want the dense version)
 source_of_truth: src/nometria/cli/ — the code wins if this file disagrees
 verified_against: branch claude/improvement-loop-phase0, 2026-09-20 (checked by harness/scripts/check_harness.py)
 ---
 
-# `nometria` CLI reference
+# `agentfox` CLI reference
 
 Entry point: `nometria = nometria.cli.main:app` (Typer). In a source checkout without an
-installed console script, use `uv run nometria …` or `python -m nometria.cli.main …`
+installed console script, use `uv run agentfox …` or `python -m nometria.cli.main …`
 (see `harness/scripts/nometria.sh`, which picks the right one).
 
 ## Side-effect legend
@@ -33,17 +33,17 @@ HTTP API (`reference/http-api.md`) when you need structure.
 
 | Command | Effect | Exit / notes |
 |---|---|---|
-| `nometria init [--path/-p .] [--env/-e development] [--demo]` | W, F | Idempotent. DB, the control catalog, and the 3 policy packs, each listed with its real mode (`tool-containment` enforces). Writes `nometria.toml`, which settings read from the working directory. |
-| `nometria check [PATH=.] [--json] [--limit/-n 15] [--fail] [--submit/--no-submit]` | R (static AST scan, never imports target code) | `--fail` → exit 1 if any model call is ungoverned. Use in CI. |
-| `nometria doctor [--json]` | R\* | Exit 1 if any check is bad, with or without `--json`. |
-| `nometria findings [--severity/-s S] [--limit/-n 20] [--json]` | R\* | Newest first. |
-| `nometria quickstart` | R | Prints the 5-step path. |
-| `nometria quickscan [PATH=.] [--json] [--skip-sessions] [--submit/--no-submit]` | R (reads `~/.claude/projects/**/*.jsonl` unless `--skip-sessions`) | Always exit 0. Pass `--skip-sessions` unless the user asked for the session scan. |
-| `nometria version` | R | Versions of every component that participates in a decision. |
-| `nometria seed [--show-keys]` | W | Demo agents, policies, controls, eval suite. Agent keys are masked unless `--show-keys`; they're only created on first seed. |
-| `nometria demo` | W, F, **BLK** | 13-step offline walkthrough. Promotes `baseline` to enforce for step 8, then restores its previous mode. Writes demo data, so use a scratch DB. |
-| `nometria serve [--host 127.0.0.1] [--port 8080] [--reload]` | FG | Gateway + API (`/v1/*`, `/api/*`, `/docs`). No `--workers`. |
-| `nometria analyse-action STATEMENT [--kind sql\|shell\|http] [--method GET] [--dialect postgres] [--environment production]` | R, offline | Exit 1 if critical. Blast radius / reversibility of a SQL/shell/HTTP artefact. |
+| `agentfox init [--path/-p .] [--env/-e development] [--demo]` | W, F | Idempotent. DB, the control catalog, and the 3 policy packs, each listed with its real mode (`tool-containment` enforces). Writes `nometria.toml`, which settings read from the working directory. |
+| `agentfox check [PATH=.] [--json] [--limit/-n 15] [--fail] [--submit/--no-submit]` | R (static AST scan, never imports target code) | `--fail` → exit 1 if any model call is ungoverned. Use in CI. |
+| `agentfox doctor [--json]` | R\* | Exit 1 if any check is bad, with or without `--json`. |
+| `agentfox findings [--severity/-s S] [--limit/-n 20] [--json]` | R\* | Newest first. |
+| `agentfox quickstart` | R | Prints the 5-step path. |
+| `agentfox quickscan [PATH=.] [--json] [--skip-sessions] [--submit/--no-submit]` | R (reads `~/.claude/projects/**/*.jsonl` unless `--skip-sessions`) | Always exit 0. Pass `--skip-sessions` unless the user asked for the session scan. |
+| `agentfox version` | R | Versions of every component that participates in a decision. |
+| `agentfox seed [--show-keys]` | W | Demo agents, policies, controls, eval suite. Agent keys are masked unless `--show-keys`; they're only created on first seed. |
+| `agentfox demo` | W, F, **BLK** | 13-step offline walkthrough. Promotes `baseline` to enforce for step 8, then restores its previous mode. Writes demo data, so use a scratch DB. |
+| `agentfox serve [--host 127.0.0.1] [--port 8080] [--reload]` | FG | Gateway + API (`/v1/*`, `/api/*`, `/docs`). No `--workers`. |
+| `agentfox analyse-action STATEMENT [--kind sql\|shell\|http] [--method GET] [--dialect postgres] [--environment production]` | R, offline | Exit 1 if critical. Blast radius / reversibility of a SQL/shell/HTTP artefact. |
 
 `--submit` POSTs a redacted summary to `$NOMETRIA_API_URL/api/discovery/submit`. Never
 pass it without the user's explicit consent — it is the only path that sends scan data

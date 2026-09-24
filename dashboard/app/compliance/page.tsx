@@ -448,7 +448,7 @@ export default async function Compliance({
             controls, and a draft framework mapping inside it is a starting point for a
             reviewer, not a legal conclusion. The same package can be built without the
             dashboard:{" "}
-            <code className="mono">nometria evidence export --since-days 30</code>, or{" "}
+            <code className="mono">agentfox evidence export --since-days 30</code>, or{" "}
             <span className="mono">POST /api/evidence</span>.
           </p>
 
@@ -633,7 +633,7 @@ async function BoardTab() {
           {v.seed_agents > 0 && (
             <>
               {" "}<span className="tag" style={{ marginLeft: 4 }}>
-                {v.seed_agents} of {inv.agents} agent(s) below {v.seed_agents === 1 ? "is" : "are"} sample data from `nometria seed`
+                {v.seed_agents} of {inv.agents} agent(s) below {v.seed_agents === 1 ? "is" : "are"} sample data from `agentfox seed`
               </span>
             </>
           )}

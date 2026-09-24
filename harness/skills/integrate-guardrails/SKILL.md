@@ -1,11 +1,11 @@
 ---
 name: integrate-guardrails
-description: Wires Nometria into specific application code beyond the one-liner. It declares tools with impact levels, marks retrieved and tool-returned content as untrusted so taint containment works, and integrates LangGraph nodes, FastAPI endpoints, MCP clients or the gateway proxy, with a test that proves a tainted irreversible call escalates. Use when an agent has side-effecting tools, uses LangGraph/FastAPI/MCP, uses async or streaming clients, or `nometria check` shows calls auto() can't govern.
+description: Wires Nometria into specific application code beyond the one-liner. It declares tools with impact levels, marks retrieved and tool-returned content as untrusted so taint containment works, and integrates LangGraph nodes, FastAPI endpoints, MCP clients or the gateway proxy, with a test that proves a tainted irreversible call escalates. Use when an agent has side-effecting tools, uses LangGraph/FastAPI/MCP, uses async or streaming clients, or `agentfox check` shows calls auto() can't govern.
 ---
 
 # Integrate guardrails
 
-> Commands below are written as `nometria …`. If `nometria` isn't on PATH, see
+> Commands below are written as `agentfox …`. If `agentfox` isn't on PATH, see
 > [Running the CLI](../../AGENTS.md#running-the-cli).
 
 The one-liner governs model *text*. The product's strongest guarantee is about *actions*.
@@ -73,9 +73,9 @@ Also check the negative case: the same call with a user-supplied value is allowe
 ## 6. Verify end to end
 
 ```bash
-nometria check . --json      # the call sites now show as governed
-nometria agents lineage <slug> # tools appear with their impact
-nometria findings --json
+agentfox check . --json      # the call sites now show as governed
+agentfox agents lineage <slug> # tools appear with their impact
+agentfox findings --json
 ```
 
 Report three things: the files changed, the new test and how to run it, and any calls

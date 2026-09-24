@@ -1,7 +1,7 @@
 """The agent harness (harness/) must not drift from the product it drives.
 
 Three guarantees, each cheap and offline:
-  * every `nometria …` command/flag, repo path and docs-map entry in the harness markdown
+  * every `agentfox …` command/flag, repo path and docs-map entry in the harness markdown
     is real (harness/scripts/check_harness.py);
   * the safety hook asks before exactly the commands that change what gets blocked, and
     never on look-alikes (harness/scripts/guard_blocking_commands.py);
@@ -51,24 +51,24 @@ def _decision(command: str) -> str:
 @pytest.mark.parametrize(
     "command",
     [
-        "nometria policy enforce baseline",
-        "uv run --project /r nometria policy observe baseline",
+        "agentfox policy enforce baseline",
+        "uv run --project /r agentfox policy observe baseline",
         "python -m nometria.cli.main agents kill payments-ops",
-        "cd /x && nometria agents quarantine s -r incident",
-        "NOMETRIA_DATABASE_URL=sqlite:////tmp/x.db nometria demo",
+        "cd /x && agentfox agents quarantine s -r incident",
+        "NOMETRIA_DATABASE_URL=sqlite:////tmp/x.db agentfox demo",
         "harness/scripts/nometria.sh seed",
-        "nometria db downgrade base",
-        "nometria guardrails apply rule.yaml --mode enforce",
-        "nometria boundary set support --mode=enforce",
-        "nometria auth issue a@b.c",
-        "nometria check . --json --submit",
+        "agentfox db downgrade base",
+        "agentfox guardrails apply rule.yaml --mode enforce",
+        "agentfox boundary set support --mode=enforce",
+        "agentfox auth issue a@b.c",
+        "agentfox check . --json --submit",
         "curl -X POST localhost:8080/api/policies/baseline/mode -d '{}'",
         # An automated change is still a change: applying or undoing a proposal moves
         # live enforcement, so it asks like every other blocking command.
-        "nometria proposals apply chp_01h2",
-        "nometria proposals rollback chp_01h2 --actor a@b.c --reason 'made it worse'",
+        "agentfox proposals apply chp_01h2",
+        "agentfox proposals rollback chp_01h2 --actor a@b.c --reason 'made it worse'",
         "curl -X POST localhost:8080/api/proposals/chp_01h2/apply",
-        "nometria proposals verify chp_01h2 --actor a@b.c --note worse --failed",
+        "agentfox proposals verify chp_01h2 --actor a@b.c --note worse --failed",
     ],
 )
 def test_blocking_commands_require_confirmation(command):
@@ -78,17 +78,17 @@ def test_blocking_commands_require_confirmation(command):
 @pytest.mark.parametrize(
     "command",
     [
-        "nometria findings --json",
-        "nometria policy list",
-        "nometria policy simulate -f p.yaml",
-        "nometria proposals list --status proposed",
-        "nometria proposals show chp_01h2",
-        "nometria proposals verify chp_01h2 --actor a@b.c --note held",
-        "nometria check . --fail",
-        "nometria escalation set --agent a --mode observe",
-        "nometria demo-notes.md",
-        "git commit -m 'nometria policy enforce baseline'",
-        "echo nometria seed",
+        "agentfox findings --json",
+        "agentfox policy list",
+        "agentfox policy simulate -f p.yaml",
+        "agentfox proposals list --status proposed",
+        "agentfox proposals show chp_01h2",
+        "agentfox proposals verify chp_01h2 --actor a@b.c --note held",
+        "agentfox check . --fail",
+        "agentfox escalation set --agent a --mode observe",
+        "agentfox demo-notes.md",
+        "git commit -m 'agentfox policy enforce baseline'",
+        "echo agentfox seed",
         "cat docs/nometria-policy-enforce.md",
     ],
 )

@@ -1,4 +1,4 @@
-"""`nometria mcp`: expose the observe half of the product to AI clients over MCP.
+"""`agentfox mcp`: expose the observe half of the product to AI clients over MCP.
 
 `serve` speaks the protocol on stdin/stdout, so it must print nothing else to stdout.
 `tools` is for people: which tools a connected assistant gets, and what each one does.

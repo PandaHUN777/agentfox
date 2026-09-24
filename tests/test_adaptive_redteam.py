@@ -5,7 +5,7 @@ quietly break:
 
 * **The static default is unchanged.** `adaptive` defaults to False and that path
   must behave exactly as it did before this module existed, because it is what CI
-  and `nometria redteam run` call today.
+  and `agentfox redteam run` call today.
 * **Adaptive genuinely adapts.** The bar is not "it ran more probes": it is that
   mutation finds at least one escape the static suite does not, on the real seeded
   configuration with policies enforcing.

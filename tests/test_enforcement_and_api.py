@@ -265,9 +265,9 @@ def test_seeded_demo_data_exercises_cascade_risk_without_manual_setup(seeded, en
     """The smoke test the plan called for: seed.py itself (not a hand-built test
     fixture, unlike the two tests above) now declares tickets.update ->
     email.send as a real trigger reaching a real irreversible tool, so a fresh
-    `nometria seed`/`nometria demo` environment exercises cascade_risk() out of
+    `agentfox seed`/`agentfox demo` environment exercises cascade_risk() out of
     the box instead of leaving it a permanent no-op until an operator runs
-    `nometria tools set-triggers` by hand."""
+    `agentfox tools set-triggers` by hand."""
     agent = seeded.query(Agent).filter_by(slug="support-triage").one()
     ensure_identity(seeded, agent)
 
@@ -936,7 +936,7 @@ def test_control_catalog_sync_populates_controls_and_is_idempotent(client):
     # A freshly seeded environment already syncs the catalog (see seed.py), so this
     # asserts idempotency — the real-world case is a deployment that seeded users and
     # agents via a different path (e.g. GitHub OAuth provisioning) without ever
-    # running `nometria compliance sync`, which is what /api/controls/sync exists to
+    # running `agentfox compliance sync`, which is what /api/controls/sync exists to
     # fix from the product itself instead of requiring shell access to the DB.
     before = client.get("/api/controls", headers=as_user("admin@example.com")).json()
     assert before["controls"], "seeded environment should already have a synced catalog"

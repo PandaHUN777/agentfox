@@ -28,12 +28,12 @@ make an attack, not of whether an attack is possible. It is possible. Read
 
 **Containment depends on declarations.** Tool impact tiers, capability grants, numeric constraints,
 trigger declarations and access scopes are all declared by an operator. An irreversible tool recorded as
-`read` is one a tainted argument can reach. `nometria doctor` grades that readiness directly, and it is
+`read` is one a tainted argument can reach. `agentfox doctor` grades that readiness directly, and it is
 the first thing to check before trusting any containment result in your own deployment.
 
 **Compliance mappings are drafts.** Every framework mapping ships marked
 `DRAFT — UNVERIFIED / NOT LEGAL ADVICE` until a named, qualified reviewer signs it
-(`nometria compliance review-packet`). Draft mappings are not legal conclusions.
+(`agentfox compliance review-packet`). Draft mappings are not legal conclusions.
 
 **A benchmark is not a deployment.** Seed fixtures use real shipped policies and grants, but your agents,
 tools and policies are different. Every script here runs against your own database if you point it there.

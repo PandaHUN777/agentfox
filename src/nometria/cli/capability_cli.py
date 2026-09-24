@@ -5,10 +5,10 @@ fooled: the tool is not on the agent's list, or the amount is over its limit, or
 argument came from a document nobody trusts. Until this module existed the only way
 to write one was ``POST /api/identities/{id}/capabilities``, which meant the half of
 the product that survives a successful injection was reachable only by hand-written
-HTTP. ``nometria doctor`` graded a deployment on it and could not name a command.
+HTTP. ``agentfox doctor`` graded a deployment on it and could not name a command.
 
 Granting widens what an agent may do, so every command here writes what it did to
-the audit chain, the same way ``nometria policy enforce`` and ``nometria agents
+the audit chain, the same way ``agentfox policy enforce`` and ``agentfox agents
 quarantine`` do.
 """
 
@@ -134,7 +134,7 @@ def _resolve_identity(session, agent: str):
     if known:
         console.print(f"  known agents: {', '.join(known)}")
     else:
-        console.print("  no agents registered yet — run `nometria seed` or register one.")
+        console.print("  no agents registered yet — run `agentfox seed` or register one.")
     raise typer.Exit(1)
 
 
@@ -156,7 +156,7 @@ def _find_capability(session, typed: str):
         return matches[0]
     if not matches:
         console.print(f"[red]unknown capability '{typed}'[/]")
-        console.print("  List the real ids with `nometria capability list`.")
+        console.print("  List the real ids with `agentfox capability list`.")
         raise typer.Exit(1)
     console.print(
         f"[red]'{typed}' matches {len(matches)} grants.[/] Name one of them in full:"
@@ -305,14 +305,14 @@ def capability_grant(
     _next_steps(
         [
             (
-                f"nometria capability list {agent}",
+                f"agentfox capability list {agent}",
                 "see everything this agent may now do",
             ),
             (
-                f"nometria capability revoke {capability_id}",
+                f"agentfox capability revoke {capability_id}",
                 "withdraw this grant again",
             ),
-            ("nometria doctor", "re-grade least privilege for this deployment"),
+            ("agentfox doctor", "re-grade least privilege for this deployment"),
         ]
     )
 
@@ -365,7 +365,7 @@ def capability_list(
         console.print(f"[yellow]no capability grants{scope}[/]")
         console.print(
             "  Every tool call is refused by default. Grant one with "
-            "`nometria capability grant <agent> <tool>`."
+            "`agentfox capability grant <agent> <tool>`."
         )
         return
 
@@ -412,7 +412,7 @@ def capability_list(
 @capability_app.command("revoke")
 def capability_revoke(
     capability_id: str = typer.Argument(
-        ..., help="Grant id from `nometria capability list`, e.g. cap_01h...."
+        ..., help="Grant id from `agentfox capability list`, e.g. cap_01h...."
     ),
     yes: bool = typer.Option(
         False, "--yes", "-y", help="Skip the confirmation prompt (for scripts and CI)."

@@ -48,7 +48,7 @@ These are load-bearing design commitments found consistently enforced in code, n
 1. **Additive, never a rewrite.** Three integration surfaces (SDK monkey-patch, inline
    proxy, OTel ingestion — §5) all sit *beside* an agent's existing code. `nometria.auto()`
    starts in **observe mode**: nothing is blocked until a human explicitly runs
-   `nometria policy enforce baseline`. A library that starts refusing production traffic
+   `agentfox policy enforce baseline`. A library that starts refusing production traffic
    because someone added an import is, in the product's own words, "indefensible."
 2. **Every wrapped OSS primitive sits behind one interface.** `Detector`, `PolicyEngine`,
    `EvalRunner`, `RedTeamRunner`, `ModelProvider`, `ActionAnalyser`, `EntitlementEngine`,
@@ -121,7 +121,7 @@ Four deployable units, one shared Python package:
         ▼
 ┌───────────────┐  ┌────────────────────┐  ┌──────────────────┐  ┌───────────────────┐
 │  CLI           │  │  Gateway process    │  │  Client library   │  │  Dashboard          │
-│  `nometria`    │  │  FastAPI app        │  │  nometria.auto()  │  │  (Next.js)          │
+│  `agentfox`    │  │  FastAPI app        │  │  nometria.auto()  │  │  (Next.js)          │
 │  binary        │  │  (gateway/app.py)   │  │  or NometriaGuard │  │                     │
 │  Typer, 1304   │  │  serves BOTH the    │  │  monkey-patches   │  │  Client of the API, │
 │  lines,        │  │  inline proxy       │  │  the agent's own  │  │  no privileged      │
@@ -282,7 +282,7 @@ compliance and self-host-vs-SaaS competitive claims are actually built for.
 
 **Secondary path — Vercel serverless (`api/`), for a hosted trial/demo:** `api/index.py`
 re-exports the gateway app; dependencies install from a **git-committed prebuilt wheel**
-(`api/vendor/nometria-0.1.0-py3-none-any.whl`) because Vercel's Root Directory for this
+(`api/vendor/nometria-0.3.0-py3-none-any.whl`) because Vercel's Root Directory for this
 function is `api/`, so a relative import against `../src` doesn't ship. **This is an
 architecturally significant risk, not a packaging footnote**: the wheel must be rebuilt
 and committed after every change to `src/nometria` that the hosted path should reflect.

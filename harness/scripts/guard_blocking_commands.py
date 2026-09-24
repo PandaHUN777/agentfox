@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""PreToolUse hook: make the agent ask before a nometria command changes what is blocked.
+"""PreToolUse hook: make the agent ask before an agentfox command changes what is blocked.
 
 The product's own safety stance is "observe first; enforcement is an explicit human act".
 An agent driving the CLI must not quietly break that, so every command below is turned
@@ -13,14 +13,17 @@ import json
 import re
 import sys
 
-# A nometria invocation at *command position* only — so a commit message or a filename
+# An agentfox invocation at *command position* only — so a commit message or a filename
 # that merely mentions "policy enforce" is not mistaken for running it.
-#   nometria …  |  uv run [--project X] nometria …  |  python -m nometria.cli.main …
+#   agentfox …  |  uv run [--project X] agentfox …  |  python -m nometria.cli.main …
 #   …/scripts/nometria.sh …   (optionally preceded by VAR=value assignments)
+# `nometria` is still matched as well: the console script keeps it as a compatibility
+# alias, so a blocking command must prompt whichever of the two names an agent types.
 _PREFIX = (
     r"^(?:\w+=\S*\s+)*"
-    r"(?:(?:uv\s+run(?:\s+--\S+(?:\s+(?!nometria\b)\S+)?)*\s+)|(?:\S*python[\d.]*\s+-m\s+))?"
-    r"(?:\S*/)?nometria(?:\.cli\.main|\.sh)?\s+"
+    r"(?:(?:uv\s+run(?:\s+--\S+(?:\s+(?!agentfox\b|nometria\b)\S+)?)*\s+)"
+    r"|(?:\S*python[\d.]*\s+-m\s+))?"
+    r"(?:\S*/)?(?:agentfox|nometria)(?:\.cli\.main|\.sh)?\s+"
 )
 _END = r"(?=\s|$)"
 

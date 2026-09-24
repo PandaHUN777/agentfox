@@ -141,7 +141,8 @@ export function Editions() {
                 {INSTALL_CMD}
               </pre>
               <p className="mk-fine" style={{ margin: 0 }}>
-                The package and the CLI are still named <code className="mk-mono">nometria</code>;
+                The command is <code className="mk-mono">agentfox</code>. The Python
+                package is still imported as <code className="mk-mono">nometria</code>;
                 that rename is in progress.
               </p>
               <a
@@ -248,7 +249,7 @@ const OSS_FACTS: { label: string; body: string; where: string }[] = [
   {
     label: "Offline",
     body: "No API key, no downloaded weights.",
-    where: "nometria init && nometria demo",
+    where: "agentfox init && agentfox demo",
   },
   {
     label: "No telemetry",

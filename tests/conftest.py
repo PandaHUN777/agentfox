@@ -21,7 +21,7 @@ def isolated_db(tmp_path, monkeypatch) -> Iterator[None]:
     monkeypatch.setenv("NOMETRIA_AUDIT_SIGNING_KEY", "test-key")
     monkeypatch.setenv("NOMETRIA_ALLOW_EGRESS", "false")
     # A developer's shell NOMETRIA_CONFIG, or a nometria.toml left in the cwd by
-    # `nometria init`, must never leak into a test. Tests of file loading delenv this.
+    # `agentfox init`, must never leak into a test. Tests of file loading delenv this.
     monkeypatch.setenv("NOMETRIA_CONFIG", "none")
 
     from nometria import db

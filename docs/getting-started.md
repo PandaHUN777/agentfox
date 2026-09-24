@@ -33,7 +33,7 @@ enforcement path demonstrable with nothing installed.
 ```bash
 python3 -m venv .venv && source .venv/bin/activate
 pip install git+https://github.com/architsharm/guardrails.git
-nometria --help
+agentfox --help
 ```
 
 Nometria is not on PyPI yet, so install from git. The core install is deliberately light: it pulls
@@ -48,7 +48,7 @@ third-party engines later, as configuration rather than as a prerequisite.
 ## Step 2. Initialise (1 minute)
 
 ```bash
-nometria init
+agentfox init
 ```
 
 ```
@@ -82,7 +82,7 @@ Point it at a codebase you actually work on.
 
 ```bash
 cd /path/to/your/project
-nometria check
+agentfox check
 ```
 
 ```
@@ -96,7 +96,7 @@ It is a static read of the source. It finds every place the code calls a model, 
 server definition, hard-coded credentials, and shell and SQL construction near model output. It
 writes nothing to your project and sends nothing anywhere.
 
-For a first look at a machine you have not installed anything on, `nometria quickscan` does the
+For a first look at a machine you have not installed anything on, `agentfox quickscan` does the
 same thing plus a scan of local AI-tool session transcripts, and runs a handful of known-adversarial
 prompts through the real detector pipeline in your terminal, so "we catch prompt injection" is
 something you watch happen rather than something we said.
@@ -109,7 +109,7 @@ of where their code talks to a model.
 ## Step 4. Watch the whole thing work (5 minutes)
 
 ```bash
-nometria demo
+agentfox demo
 ```
 
 Thirteen steps in about five seconds, against a seeded environment of three agents. The step to
@@ -132,7 +132,7 @@ else that can make an HTTP request.
 Start the control plane:
 
 ```bash
-nometria serve      # gateway + control-plane API on http://127.0.0.1:8080
+agentfox serve      # gateway + control-plane API on http://127.0.0.1:8080
 ```
 
 ### 5a. Ask about a tool call
@@ -164,7 +164,7 @@ exceptions. The sibling endpoints are `/v1/guard/input`, `/v1/guard/output`,
 Now look at what the call did to the registry:
 
 ```bash
-nometria agents list
+agentfox agents list
 ```
 
 ```
@@ -174,13 +174,13 @@ my-agent  production  limited  SHADOW      unowned  —
 ```
 
 The agent registered itself as **shadow** traffic, from the call, without anyone filling in a form.
-`nometria findings` shows the matching `shadow_agent` finding.
+`agentfox findings` shows the matching `shadow_agent` finding.
 
 ### 5b. Declare the tool and grant the capability
 
 ```bash
-nometria tools declare payments.transfer --impact irreversible
-nometria capability grant my-agent payments.transfer \
+agentfox tools declare payments.transfer --impact irreversible
+agentfox capability grant my-agent payments.transfer \
     --limit amount:lt=1000 --max-taint user
 ```
 
@@ -241,15 +241,15 @@ undeclared agent is refused before anybody writes a rule about it.
 The `/v1/guard/*` endpoints above read no credential. The control-plane API under `/api` does:
 
 ```bash
-nometria auth issue you@example.com --name "ci"
+agentfox auth issue you@example.com --name "ci"
 curl -H "Authorization: Bearer nom_api_..." http://localhost:8080/api/findings
 ```
 
 One honest caveat: `auth issue` mints a token for an operator that already exists, and a database
-created by `nometria init` alone has no operators in it. Today the first operator account comes
-from `nometria seed` (which creates `admin@example.com` and four other roles) or from signing in to
+created by `agentfox init` alone has no operators in it. Today the first operator account comes
+from `agentfox seed` (which creates `admin@example.com` and four other roles) or from signing in to
 the dashboard with GitHub. Token values are shown once, hashed at rest with argon2id, and carry an
-expiry. `nometria auth status` tells you whether this deployment is actually requiring them: in a
+expiry. `agentfox auth status` tells you whether this deployment is actually requiring them: in a
 development environment it accepts an `X-Nometria-User` header instead, which is fine locally and
 unacceptable anywhere else.
 
@@ -258,9 +258,9 @@ unacceptable anywhere else.
 ## Step 6. Read what it found (10 minutes)
 
 ```bash
-nometria findings
-nometria findings --severity high
-nometria doctor
+agentfox findings
+agentfox findings --severity high
+agentfox doctor
 ```
 
 `findings` is the list of things a person should look at: shadow agents, agents with no accountable
@@ -278,7 +278,7 @@ owner, stale identities, and every detection that led to a block or a redaction.
   ✓    detectors           8 available
   !    detector failure    fail-open: a detector that times out lets the request through
                            and records the gap
-  !    findings            9 open — run `nometria findings`
+  !    findings            9 open — run `agentfox findings`
 ```
 
 Note the two lines marked `!` that are not about your agents at all. Nometria tells you that it
@@ -287,9 +287,9 @@ fails open, and that your auth mode is a development mode, rather than leaving y
 Three commands worth knowing here:
 
 ```bash
-nometria agents lineage my-agent     # what this agent reaches: its blast radius
-nometria capability list my-agent    # what it may do; anything not listed is refused
-nometria audit verify                # re-derive the tamper-evident chain; exits 1 if broken
+agentfox agents lineage my-agent     # what this agent reaches: its blast radius
+agentfox capability list my-agent    # what it may do; anything not listed is refused
+agentfox audit verify                # re-derive the tamper-evident chain; exits 1 if broken
 ```
 
 **What this proves:** the platform reports its own gaps, including the ones that are inconvenient
@@ -302,7 +302,7 @@ for it.
 Two things worth running before you turn enforcement on.
 
 ```bash
-nometria redteam run my-agent
+agentfox redteam run my-agent
 ```
 
 Fires the built-in adversarial probe suite (mapped to OWASP LLM Top 10 and MITRE ATLAS) at this
@@ -312,13 +312,13 @@ perfectly. Read the result as configuration regression testing: it tells you whe
 deployment* got weaker, and it is not a robustness certificate.
 
 ```bash
-nometria policy simulate --file candidate.yaml
+agentfox policy simulate --file candidate.yaml
 ```
 
 Replays the traffic already recorded in your database against a candidate policy, so you can see
 what a rule change would have done before it does it.
 
-If you have an eval suite, `nometria eval gate <suite>` exits 1 on regression and is meant to run
+If you have an eval suite, `agentfox eval gate <suite>` exits 1 on regression and is meant to run
 in CI.
 
 **What this proves:** you can measure the change before you make it, against your own recorded
@@ -331,16 +331,16 @@ traffic.
 When the findings look right and `effective_verdict` is no longer surprising you:
 
 ```bash
-nometria policy list                    # current mode of each pack
-nometria policy effective --agent my-agent   # what is in force, and where each rule came from
-nometria policy enforce baseline        # the one step that starts blocking model traffic
+agentfox policy list                    # current mode of each pack
+agentfox policy effective --agent my-agent   # what is in force, and where each rule came from
+agentfox policy enforce baseline        # the one step that starts blocking model traffic
 ```
 
 This is the only command in this guide that changes what reaches production. `tool-containment`
 was already enforcing from step 2. Promoting `baseline` adds the detector-driven rules on top.
 
-If it goes wrong, `nometria policy observe baseline` demotes it again, and
-`nometria agents quarantine <agent> --reason "..."` stops one agent without touching the rest. Both
+If it goes wrong, `agentfox policy observe baseline` demotes it again, and
+`agentfox agents quarantine <agent> --reason "..."` stops one agent without touching the rest. Both
 are reversible and both are audited.
 
 **What this proves:** enforcement is one deliberate, reversible, audited step, taken after you have
@@ -364,7 +364,7 @@ seen what it will do.
 
 Two things to keep in mind as you go further. Containment is exactly as good as the declarations
 behind it: a destructive tool declared `read` will not be treated as destructive by anything
-downstream, which is why `nometria doctor` grades your declarations and `nometria check` finds the
+downstream, which is why `agentfox doctor` grades your declarations and `agentfox check` finds the
 tools you have not declared. And compliance mappings ship as engineering drafts, labelled
 `DRAFT — UNVERIFIED / NOT LEGAL ADVICE` inside evidence packages, until a qualified reviewer signs
 them off.

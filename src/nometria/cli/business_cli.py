@@ -1,8 +1,8 @@
 """Authoring and inspecting business guardrails from the command line.
 
 The catalogue commands exist for a specific workflow: someone arrives with a policy
-document and has to turn prose into enforcement. `nometria guardrails suggest` does the
-deterministic half of that mapping and `nometria guardrails catalogue` shows what can
+document and has to turn prose into enforcement. `agentfox guardrails suggest` does the
+deterministic half of that mapping and `agentfox guardrails catalogue` shows what can
 be expressed at all, which is the question nobody could answer before.
 
 `compile` goes the rest of the way: it reads the document and writes the rules, then
@@ -29,7 +29,7 @@ console = Console()
 
 def _session():
     """A session on an initialised database. `init_db` is idempotent, and without it
-    a command run before `nometria init` dies on "no such table"."""
+    a command run before `agentfox init` dies on "no such table"."""
     from ..db import init_db, session_scope
 
     init_db()
@@ -87,7 +87,7 @@ def rules_show(key: str | None = typer.Argument(None, help="Rule key; omit for a
         ladders = [lad for lad in all_ladders(session) if key is None or lad.key == key]
 
     if not ladders:
-        console.print("[dim]No business rules. Author one with `nometria guardrails apply`.[/]")
+        console.print("[dim]No business rules. Author one with `agentfox guardrails apply`.[/]")
         return
     for ladder in ladders:
         console.print(
@@ -202,7 +202,7 @@ def catalogue(
     console.print(table)
     console.print(
         f"\n  [dim]{len(kinds)} kind(s). "
-        "`nometria guardrails explain <kind>` for parameters and an example.[/]"
+        "`agentfox guardrails explain <kind>` for parameters and an example.[/]"
     )
 
 
@@ -259,7 +259,7 @@ def suggest_cmd(
     if not matches:
         console.print("[yellow]No guardrail kind matched that wording.[/]")
         console.print(
-            "  [dim]Browse them with `nometria guardrails catalogue`. "
+            "  [dim]Browse them with `agentfox guardrails catalogue`. "
             "A policy we cannot express is worth knowing about early.[/]"
         )
         return
@@ -267,7 +267,7 @@ def suggest_cmd(
     for kind, score in matches:
         console.print(f"  [bold cyan]{kind.id}[/]  [dim]{score:.2f} · {kind.decides}[/]")
     console.print(
-        f"\n  [dim]`nometria guardrails explain {matches[0][0].id}` "
+        f"\n  [dim]`agentfox guardrails explain {matches[0][0].id}` "
         "for parameters and an example.[/]"
     )
 
@@ -364,8 +364,8 @@ def compile_cmd(
         skipped = len(result.rules) - len(ladders)
         console.print(
             f"\n[green]Saved {len(ladders)} ladder(s) in observe mode.[/green] "
-            "Run [bold]nometria guardrails check[/bold], then promote with "
-            "[bold]nometria guardrails apply <ladder.yaml> --mode enforce[/bold]."
+            "Run [bold]agentfox guardrails check[/bold], then promote with "
+            "[bold]agentfox guardrails apply <ladder.yaml> --mode enforce[/bold]."
         )
         if skipped:
             console.print(

@@ -1,10 +1,10 @@
-"""`nometria quickscan` — the one command answer to "is this worth my time."
+"""`agentfox quickscan` — the one command answer to "is this worth my time."
 
 No account, no GitHub connection, no SDK integration, nothing leaves this machine —
 unless you explicitly ask it to. Three signals, all local:
 
 1. What's committed — `discovery.py`'s static AST scan of the current directory,
-   the same engine `nometria check` uses.
+   the same engine `agentfox check` uses.
 2. What's actually running — `session_scan.py`'s read of local AI-tool session
    transcripts, which sees ad hoc agent usage the repo scan can't (a notebook
    agent, an MCP server wired up an hour ago, nothing committed yet).
@@ -170,8 +170,8 @@ def quickscan(
         Panel(
             "\n".join(
                 [
-                    "[bold]nometria init[/]     [dim]set up local governance in this repo[/]",
-                    "[bold]nometria check[/]    [dim]full findings list, ranked by severity[/]",
+                    "[bold]agentfox init[/]     [dim]set up local governance in this repo[/]",
+                    "[bold]agentfox check[/]    [dim]full findings list, ranked by severity[/]",
                     "[dim]This was a snapshot, not monitoring — [/][cyan]import nometria; "
                     "nometria.auto()[/][dim] governs every call going forward.[/]",
                 ]

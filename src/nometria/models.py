@@ -115,7 +115,7 @@ class Agent(Base, TimestampMixin):
     data_classes: Mapped[list[str]] = mapped_column(JSON, default=list)
     first_seen_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
     last_seen_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
-    # Set only by `nometria seed` — a UX audit found seed/demo agents were
+    # Set only by `agentfox seed` — a UX audit found seed/demo agents were
     # indistinguishable from a real customer's own registrations anywhere in the UI.
     is_seed: Mapped[bool] = mapped_column(Boolean, default=False)
 
@@ -448,7 +448,7 @@ class ScanRun(Base, TimestampMixin):
         String(40), ForeignKey("github_connections.id"), index=True
     )
     # "github" (default, repo scan), "hosted_api" (OpenAPI spec scan), or "cli"
-    # (`nometria check --submit` / `nometria quickscan --submit` — a locally-run scan
+    # (`agentfox check --submit` / `agentfox quickscan --submit` — a locally-run scan
     # whose redacted summary, never its file contents, was submitted for review).
     source_kind: Mapped[str] = mapped_column(String(16), default="github")
     repo_full_name: Mapped[str] = mapped_column(String(300), default="")
@@ -641,7 +641,7 @@ class SourceRecord(Base, TimestampMixin):
     content_hash: Mapped[str | None] = mapped_column(String(64))
     last_validated_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
     last_validation_status: Mapped[str | None] = mapped_column(String(24))
-    #: Set only by `nometria seed` — see Agent.is_seed for why this exists.
+    #: Set only by `agentfox seed` — see Agent.is_seed for why this exists.
     is_seed: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
@@ -1246,7 +1246,7 @@ class Job(Base, TimestampMixin):
     """Deferred work (P4/PL-5), persisted so the dead letter is real public state
     across requests rather than in-process memory a serverless invocation throws
     away the moment it returns. Mirrors jobs.py's in-process Job/JobQueue shape —
-    that module stays the reference implementation for local/offline use (`nometria
+    that module stays the reference implementation for local/offline use (`agentfox
     demo`, tests); this is the swappable production backend behind the same
     enqueue/run/retry/dead-letter interface, the same seam pattern already used for
     the policy engine (native vs OPA) and entitlement (native vs OpenFGA).

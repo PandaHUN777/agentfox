@@ -269,7 +269,7 @@ export function Empty({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * True only where someone can actually act on "run `nometria serve`" — i.e. the
+ * True only where someone can actually act on "run `agentfox serve`" — i.e. the
  * control plane is a process on their own machine or in their own deployment.
  *
  * `NOMETRIA_SELF_HOSTED` is the explicit switch; with it unset we infer from
@@ -292,7 +292,7 @@ function isSelfHosted(): boolean {
 /**
  * What a page shows when its control-plane fetch came back not-ok.
  *
- * It used to say "API unreachable, start it with `nometria serve`" for every
+ * It used to say "API unreachable, start it with `agentfox serve`" for every
  * status, which is wrong twice over: an expired session is a 401 from a server
  * that is plainly running, and on the hosted deployment nobody has a server to
  * start. So the status picks the sentence, and the self-host hint is shown only
@@ -352,7 +352,7 @@ export function ApiDown({ error, status }: { error: string; status?: number }) {
         {isSelfHosted() && (
           <>
             {" "}
-            Start it with <code className="mono">nometria serve</code>, then reload. Set{" "}
+            Start it with <code className="mono">agentfox serve</code>, then reload. Set{" "}
             <code className="mono">NOMETRIA_API_URL</code> if it is not on{" "}
             <code className="mono">http://127.0.0.1:8080</code>.
           </>

@@ -5,7 +5,7 @@ description: Prepares audit-ready proof from Nometria. It verifies the tamper-ev
 
 # Audit evidence
 
-> Commands below are written as `nometria …`. If `nometria` isn't on PATH, see
+> Commands below are written as `agentfox …`. If `agentfox` isn't on PATH, see
 > [Running the CLI](../../AGENTS.md#running-the-cli).
 
 **Honesty rule.** Every framework mapping ships as `review_status: draft`. Present results as
@@ -15,7 +15,7 @@ description: Prepares audit-ready proof from Nometria. It verifies the tamper-ev
 ## 1. Is the record intact?
 
 ```bash
-nometria audit verify
+agentfox audit verify
 ```
 
 - **Exit 1:** the chain is broken, and the output names the first bad entry. **Stop.** This
@@ -23,7 +23,7 @@ nometria audit verify
 - **Exit 0:** write a signed checkpoint so later tampering is detectable back to this point:
 
 ```bash
-nometria audit checkpoint
+agentfox audit checkpoint
 ```
 
 In production, `NOMETRIA_AUDIT_SIGNING_KEY` must not be the dev default. Check this with
@@ -32,9 +32,9 @@ In production, `NOMETRIA_AUDIT_SIGNING_KEY` must not be the dev default. Check t
 ## 2. Bring control status up to date
 
 ```bash
-nometria compliance validate
-nometria compliance sync
-nometria compliance compute --window-days 90
+agentfox compliance validate
+agentfox compliance sync
+agentfox compliance compute --window-days 90
 ```
 
 Pick the window to match the audit period. `validate` exits 1 if the catalog itself is
@@ -43,10 +43,10 @@ inconsistent; fix that before quoting any posture.
 ## 3. Posture for the framework in question
 
 ```bash
-nometria compliance frameworks
-nometria compliance status --framework <eu-ai-act|nist-ai-rmf|iso-42001|soc2|owasp-llm|owasp-agentic|mitre-atlas>
-nometria compliance risk
-nometria compliance obligations
+agentfox compliance frameworks
+agentfox compliance status --framework <eu-ai-act|nist-ai-rmf|iso-42001|soc2|owasp-llm|owasp-agentic|mitre-atlas>
+agentfox compliance risk
+agentfox compliance obligations
 ```
 
 Summarise four things:
@@ -64,14 +64,14 @@ Every mapping ships `DRAFT — UNVERIFIED / NOT LEGAL ADVICE`, and an auditor wi
 There is now a reviewable artefact to hand a qualified reviewer, one row per decision:
 
 ```bash
-nometria compliance review-packet --framework eu-ai-act --out review-packet.md
+agentfox compliance review-packet --framework eu-ai-act --out review-packet.md
 ```
 
 When a named, accountable human signs off, record it. This is an attestation by that person,
 not something you decide on their behalf:
 
 ```bash
-nometria compliance review NOM-IAM-03 --framework eu-ai-act --reviewer "<their name>"
+agentfox compliance review NOM-IAM-03 --framework eu-ai-act --reviewer "<their name>"
 ```
 
 Never run the review command on your own judgement. Offer the packet, and say who has to sign it.
@@ -79,12 +79,12 @@ Never run the review command on your own judgement. Offer the packet, and say wh
 ## 4. Export the package
 
 ```bash
-nometria evidence export --agent <slug> --since-days 90 --requested-by "<user's name>"
+agentfox evidence export --agent <slug> --since-days 90 --requested-by "<user's name>"
 ```
 
 - Repeat `--agent` or `--control` to scope the export. Leave them out for everything.
 - For a fixed audit period, give the dates instead of a window:
-  `nometria evidence export --from 2026-01-01 --to 2026-03-31`. An end date given as
+  `agentfox evidence export --from 2026-01-01 --to 2026-03-31`. An end date given as
   `YYYY-MM-DD` covers that whole day.
 - The zip lands in `NOMETRIA_EVIDENCE_DIR` (default `var/evidence/`). Tell the user the path.
 
