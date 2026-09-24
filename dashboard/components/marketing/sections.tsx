@@ -305,8 +305,8 @@ const LIMITS: { title: string; body: React.ReactNode }[] = [
     body: (
       <>
         No single sign-on, so there is no live identity-provider integration yet. Multi-tenancy
-        is enforced at the session for one organisation, and text is the only modality: no
-        images, no audio, no video.
+        is enforced at the session for a single organisation, and this is not a managed
+        multi-region offering. Text is the only modality: no images, no audio, no video.
       </>
     ),
   },
