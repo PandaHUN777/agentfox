@@ -5,11 +5,7 @@ import { GrantMock, ChainMock } from "@/components/marketing/mocks";
 import {
   PillarGrid,
   DetectorPipeline,
-  RedactionMock,
   DiscoveryMock,
-  EvalMock,
-  RedteamMock,
-  CompliancePanel,
 } from "@/components/marketing/visuals";
 
 /**
@@ -167,19 +163,16 @@ export function Pillars() {
     <section id="pillars" className="mk-section">
       <div className="mk-wrap">
         <Head eyebrow="The whole product" title="What each area does" center>
-          Each pillar answers a question an organisation has to answer about its agents.
+          Each one answers a question an organisation has to answer about its agents.
         </Head>
 
         <div className="mk-up mk-d2" style={{ marginTop: 44 }}>
           <PillarGrid />
         </div>
 
-        <p
-          className="mk-fine mk-up mk-d3"
-          style={{ maxWidth: "var(--measure)", margin: "24px auto 0",}}
-        >
-          Pillars 1 to 3 and 5 run on the request itself.{" "}
-          <Link href="/how-it-works">The path one call takes</Link>
+        <p className="mk-fine mk-up mk-d3" style={{ maxWidth: "52ch", marginTop: 20 }}>
+          Areas 1, 2, 3 and 5 run on the request itself —{" "}
+          <Link href="/how-it-works">the path one call takes &rarr;</Link>
         </p>
       </div>
     </section>
@@ -222,7 +215,7 @@ export function Guardrails() {
       <div className="mk-wrap">
         <Split flip wide>
           <Half>
-            <Head eyebrow="Pillar 3 · Runtime guardrails" title="Detectors read the text. A policy decides">
+            <Head eyebrow="Area 3 · Runtime guardrails" title="Detectors read the text. A policy decides">
               Detectors read input, output, retrieved documents and tool results. Detection is
               the layer we trust least.
             </Head>
@@ -251,8 +244,6 @@ export function Guardrails() {
             <DetectorPipeline />
           </Half>
         </Split>
-
-          <RedactionMock />
       </div>
     </section>
   );
@@ -292,7 +283,7 @@ export function Containment() {
         <Split wide>
           <Half>
             <Head
-              eyebrow="Pillar 2 · Containment"
+              eyebrow="Area 2 · Containment"
               title="The layer that holds when detection fails"
             >
               Each tool has an impact tier, each agent explicit grants, each argument its
@@ -394,7 +385,7 @@ export function Discovery() {
         <Split flip wide>
           <Half>
             <Head
-              eyebrow="Pillar 1 · Discovery and registry"
+              eyebrow="Area 1 · Discovery and registry"
               title="Find the agents before you govern them"
             >
               It never imports or runs your code, and a scan that read no file it understands
@@ -417,34 +408,40 @@ export function Discovery() {
   );
 }
 
-/* --- 5. Evaluation and red-teaming --------------------------------------- */
+/* --- 5. Evaluation, audit and compliance --------------------------------- */
 
 const ASSURANCE_ITEMS: Item[] = [
   {
-    // README.md "Test before you trust".
+    // README.md "Test before you trust"; scorer keys in evaluation/scorers.py.
     label: "agentfox eval gate",
-    body: "Scores a suite against its recorded baseline and exits 1 on a regression.",
+    body: "Scores a suite against its recorded baseline and exits 1 on a regression. Groundedness, safety and tool_trajectory are registered scorers.",
   },
   {
-    // Scorer keys registered in src/agentfox/evaluation/scorers.py.
-    label: "groundedness · safety · tool_trajectory",
-    body: "Latency, cost, JSON schema and an LLM judge are registered too.",
-  },
-  {
+    // evaluation/adaptive.py is explicit that this is configuration regression
+    // testing and a dishonest thing to call adversarial robustness. So is this line.
     label: "agentfox redteam run",
-    body: "Probes fired at this agent's own grants in enforce mode, mapped to the OWASP LLM Top 10 and MITRE ATLAS.",
+    body: "Probes fired at your own agents' grants, then retried in mutated form. A posture delta, not a robustness certificate.",
   },
   {
-    // src/agentfox/evaluation/adaptive.py: offline, deterministic, no model called.
-    label: "adaptive campaigns",
-    body: "A blocked probe is retried in mutated form. No model and no network.",
+    // audit/chain.py.
+    label: "agentfox audit verify",
+    body: "Re-derives the hash chain and exits 1 if it is broken. There is no update or delete path for an audit entry.",
+  },
+  {
+    // compliance/status.py, compliance_data/controls.yaml.
+    label: "43 controls, seven frameworks",
+    body: "Status is computed from execution data, not a form. A control whose evidence source produces nothing reads not_implemented.",
   },
 ];
 
 /**
- * Pillar 4. adaptive.py is explicit that this is configuration regression testing and a
- * dishonest thing to call adversarial robustness, and it carries a scope statement into
- * every summary so the output cannot be read the second way. The copy here says the same.
+ * Pillars 4, 5 and 6 in one section.
+ *
+ * They were three, totalling 3,953px. They belong together and they belong short:
+ * evaluation, the audit chain and the compliance mapping are the three things a
+ * reader cannot judge from a marketing page, because judging them means running
+ * them against their own traffic. The page's job here is to say the claims
+ * precisely, carry the DRAFT caveat, and get out of the way.
  */
 export function Assurance() {
   return (
@@ -453,80 +450,16 @@ export function Assurance() {
         <Split wide>
           <Half>
             <Head
-              eyebrow="Pillar 4 · Evaluation and reliability"
-              title="Test this deployment, not a model in general"
+              eyebrow="Areas 4, 5 and 6"
+              title="Test it, record it, and show the record to an auditor"
             >
-              Eval suites gate CI. Red-team probes fire at your own agents&rsquo; grants.
+              Every decision lands in a hash chain, and the compliance status above it is
+              computed from that chain rather than from a questionnaire.
             </Head>
             <Items items={ASSURANCE_ITEMS} />
             <div
               className="mk-card"
-              style={{ marginTop: 26, background: "var(--mk-surface)", maxWidth: "46ch" }}
-            >
-              <span className="mk-label">What a campaign result is not</span>
-              <p className="mk-body" style={{ ...BODY, marginTop: 8, fontSize: "var(--t-small)" }}>
-                A posture delta, not a pass rate and not a robustness certificate.
-              </p>
-            </div>
-          </Half>
-
-          <Half className="mk-up mk-d2">
-            <EvalMock />
-          </Half>
-        </Split>
-
-          <RedteamMock />
-      </div>
-    </section>
-  );
-}
-
-/* --- 6. Audit, evidence and compliance ----------------------------------- */
-
-const AUDIT_ITEMS: Item[] = [
-  {
-    // src/agentfox/audit/chain.py.
-    label: "agentfox audit verify",
-    body: "Re-derives the chain and exits 1 if it is broken. Insertion, deletion, reordering and mutation are detected.",
-  },
-  {
-    label: "agentfox evidence export",
-    body: "An auditor package for one agent over a date range, with a stdlib-only verify_chain.py.",
-  },
-  {
-    // src/agentfox/compliance/status.py.
-    label: "status computed from telemetry",
-    body: "Status comes from execution data, not a form. A control whose evidence source produces nothing reads not_implemented.",
-  },
-  {
-    // src/agentfox/compliance_data/controls.yaml mapping keys.
-    label: "43 controls, seven frameworks",
-    body: "eu-ai-act, nist-ai-rmf, iso-42001, soc2, owasp-llm, owasp-agentic and mitre-atlas. Gaps are marked in the coverage table.",
-  },
-];
-
-/**
- * Pillars 5 and 6. They are one section because the compliance claim is only worth
- * anything on top of a record that can be verified without trusting us, and the draft
- * status of the mappings has to travel with them wherever they are shown.
- */
-export function Evidence2() {
-  return (
-    <section id="audit" className="mk-section">
-      <div className="mk-wrap">
-        <Split flip wide>
-          <Half>
-            <Head
-              eyebrow="Pillars 5 and 6 · Audit and compliance"
-              title="A record that shows when it was edited"
-            >
-              Every decision lands in a hash chain. There is no update or delete path for an
-              audit entry.
-            </Head>
-            <Items items={AUDIT_ITEMS} />
-            <div
-              className="mk-card"
-              style={{ marginTop: 26, background: "var(--mk-surface-2)", maxWidth: "46ch" }}
+              style={{ marginTop: 26, maxWidth: "46ch" }}
             >
               <div className="mk-row" style={{ gap: 8 }}>
                 <span className="mk-chip mk-chip-hold">Draft mappings</span>
@@ -542,9 +475,6 @@ export function Evidence2() {
             <ChainMock />
           </Half>
         </Split>
-
-
-          <CompliancePanel />
       </div>
     </section>
   );

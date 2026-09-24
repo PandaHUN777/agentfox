@@ -160,8 +160,8 @@
 .mk-narrow { max-width: 60ch; }
 /* Space is the main compositional device here, so sections are generous and scale
    with the viewport rather than sitting at one fixed value. */
-.mk-section { padding-block: clamp(56px, 7.5vw, 100px); }
-.mk-section-tight { padding-block: clamp(44px, 6vw, 72px); }
+.mk-section { padding-block: clamp(48px, 5vw, 72px); }
+.mk-section-tight { padding-block: clamp(36px, 4vw, 56px); }
 
 /* --- Type -------------------------------------------------------------- */
 
@@ -336,6 +336,21 @@
 }
 .mk-install code { color: var(--mk-text); white-space: pre; }
 .mk-install-2 { color: var(--mk-muted); }
+
+/* Six cells, hairline-separated, no chrome. A 1px grid gap over the border colour
+   draws every divider at once — six bordered cards would draw twelve. */
+.mk-map {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px;
+  background: var(--mk-border);
+  border: 1px solid var(--mk-border);
+  border-radius: var(--mk-r-md);
+  overflow: hidden;
+}
+@media (min-width: 620px) { .mk-map { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 940px) { .mk-map { grid-template-columns: repeat(3, 1fr); } }
+.mk-map-cell { background: var(--mk-bg); padding: 18px 20px 20px; }
 
 .mk-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .mk-grid { display: grid; gap: 20px; }
@@ -534,8 +549,31 @@
   display: grid; place-items: center;
   font-size: var(--t-small); font-weight: 600;
 }
-.mk-faq { border-top: 1px solid var(--mk-border); padding-block: 26px; }
+.mk-faq { border-top: 1px solid var(--mk-border); padding-block: 16px; }
 .mk-faq:last-child { border-bottom: 1px solid var(--mk-border); }
+.mk-faq > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.mk-faq > summary::-webkit-details-marker { display: none; }
+/* The marker is drawn rather than typed so it rotates, and it sits after the
+   question so the questions themselves line up on the left edge. */
+.mk-faq > summary::after {
+  content: "";
+  margin-left: auto;
+  flex: 0 0 auto;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid var(--mk-muted);
+  border-bottom: 1.5px solid var(--mk-muted);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform .18s ease;
+}
+.mk-faq[open] > summary::after { transform: translateY(1px) rotate(-135deg); }
+.mk-faq > summary:hover { color: var(--mk-accent); }
 .mk-footer {
   border-top: 1px solid var(--mk-border);
   background: var(--mk-bg);

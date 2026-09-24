@@ -8,7 +8,6 @@ import {
   Containment,
   Discovery,
   Assurance,
-  Evidence2,
 } from "@/components/marketing/pillars";
 import { Evidence, HowItWorks, FAQ, CTA, Footer } from "@/components/marketing/sections";
 
@@ -41,14 +40,11 @@ export default function Product() {
       <main>
         <section className="mk-section" style={{ paddingBottom: 0 }}>
           <div className="mk-wrap">
-            <span className="mk-eyebrow mk-up">The long version</span>
-            <h1 className="mk-h1 mk-up mk-d1" style={{ margin: "18px auto 0", maxWidth: "17ch" }}>
-              Every layer, on a <em>real screen</em>.
+            <h1 className="mk-h1 mk-up" style={{ maxWidth: "17ch" }}>
+              Every layer, on a <em>real screen</em>
             </h1>
-            <p className="mk-lede mk-up mk-d2" style={{ margin: "20px auto 0", maxWidth: "58ch" }}>
-              Six pillars, each with the part of the product that does the work.
-            </p>
-            <p className="mk-fine mk-up mk-d3" style={{ marginTop: 18 }}>
+            <p className="mk-lede mk-up mk-d1" style={{ marginTop: 18, maxWidth: "52ch" }}>
+              Six areas, each shown with the part of the product that does the work.{" "}
               <Link href="/playground">The playground</Link> needs no account.
             </p>
           </div>
@@ -58,7 +54,6 @@ export default function Product() {
         <Containment />
         <Discovery />
         <Assurance />
-        <Evidence2 />
         <Evidence />
         <HowItWorks />
         <FAQ />

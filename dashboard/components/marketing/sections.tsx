@@ -222,15 +222,16 @@ export function HowItWorks() {
       <div className="mk-wrap mk-split mk-split-wide">
         <div className="mk-up">
 
-          {/* This heading said "Nothing is blocked until you say so", which is not
-              true and is the worst kind of untrue on a security product: it
-              understates what is switched on. Three shipped packs, two modes.
+          {/* This heading said "Nothing is blocked until you say so", and then
+              "Nothing gets blocked until you say so", and both were contradicted by
+              the second paragraph under them. Three shipped packs, two modes.
               src/agentfox/policies_data/: baseline is `mode: observe`,
               eu-ai-act-high-risk is `mode: observe`, tool-containment is
               `mode: enforce`. So an agent is held to its grants from the first
-              request, and the detector rules watch until you promote them. */}
+              request and the detector rules watch until you promote them, which is
+              what the heading now says rather than what the body has to correct. */}
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
-            Nothing gets blocked until you say so</h2>
+            Detectors watch first. Grants hold from the first request</h2>
           <p className="mk-body" style={{ marginTop: 14, maxWidth: "48ch" }}>
             The rules that read model traffic ship in observe: they record what they
             would have done and let the call through. You tune against your own traffic,
@@ -376,11 +377,11 @@ const QUESTIONS: { q: string; a: React.ReactNode }[] = [
     q: "What happens if the control plane is slow or down?",
     a: (
       <>
-        You declare per service whether it fails open or fails closed, and the shipped default
-        is open. Fail open still serves the request but writes a degradation record, stamps the
-        response with a header naming the control that was down, and converts to closed once
-        the degradation outlasts its budget. Four controls can never be set to fail open at
-        all: tenant isolation, entitlement filtering, data access scope and the audit chain.
+        You declare per service whether it fails open or closed; the shipped default is open.
+        Fail open serves the request, writes a degradation record, stamps the response with a
+        header naming the control that was down, and converts to closed once the degradation
+        outlasts its budget. Four controls can never fail open: tenant isolation, entitlement
+        filtering, data access scope and the audit chain.
       </>
     ),
   },
@@ -388,11 +389,9 @@ const QUESTIONS: { q: string; a: React.ReactNode }[] = [
     q: "What happens on escalate?",
     a: (
       <>
-        The tool is not called. The caller gets an approval id back instead of a result, the
-        request lands on the Approvals screen for whoever holds the approver role, and it can
-        also be decided from the command line or polled over the API. Every request carries a
-        clock and the default action when it runs out is deny, so an approval nobody answers
-        ends in a refusal.
+        The tool is not called. The caller gets an approval id instead of a result and the
+        request lands on the Approvals screen, the CLI or the API. Every request carries a
+        clock, and the default when it runs out is deny.
       </>
     ),
   },
@@ -437,14 +436,14 @@ export function FAQ({ n, more }: { n?: number; more?: boolean } = {}) {
           title="Questions"
           center
         />
-        <div className="mk-narrow mk-up mk-d2" style={{ marginTop: 36 }}>
-          {shown.map((item) => (
-            <div key={item.q} className="mk-faq">
-              <h3 className="mk-h3">{item.q}</h3>
-              <p className="mk-body" style={{ margin: "8px 0 0", fontSize: "var(--t-small)" }}>
+        <div className="mk-narrow mk-up mk-d2" style={{ marginTop: 32 }}>
+          {shown.map((item, i) => (
+            <details key={item.q} className="mk-faq" open={i === 0}>
+              <summary className="mk-h3">{item.q}</summary>
+              <p className="mk-body" style={{ margin: "10px 0 0", fontSize: "var(--t-small)" }}>
                 {item.a}
               </p>
-            </div>
+            </details>
           ))}
           {more && (
             <p className="mk-fine" style={{ marginTop: 22,}}>
@@ -467,21 +466,14 @@ export function CTA() {
       <div className="mk-wrap">
         <div
           className="mk-card mk-card-raised mk-up"
-          style={{
-            padding: "48px 24px",
-            borderRadius: "var(--mk-r-xl)",
-            background:
-              "radial-gradient(70% 130% at 50% 0%, color-mix(in srgb, var(--mk-accent) 14%, var(--mk-surface)) 0%, var(--mk-surface) 72%)",
-          }}
+          style={{ padding: "36px 32px" }}
         >
           <div className="mk-narrow">
             <h2 className="mk-h2">Try to break it before you trust it</h2>
-            <p className="mk-lede" style={{ marginTop: 14 }}>
-              The playground needs no account and no install, and it runs the same enforcement
-              code as the product. If you would rather run it yourself, the demo is two commands
-              and finishes offline in about six seconds.
+            <p className="mk-lede" style={{ marginTop: 12 }}>
+              No account, no install, and the same enforcement code as the product.
             </p>
-            <div className="mk-row" style={{ justifyContent: "center", marginTop: 24, gap: 10 }}>
+            <div className="mk-row" style={{ marginTop: 20, gap: 10 }}>
               <Link href="/playground" className="mk-btn mk-btn-primary">
                 Open the playground
               </Link>
@@ -505,10 +497,7 @@ export function CTA() {
               {`pip install git+https://github.com/architsharm/agentfox.git\nagentfox init && agentfox demo`}
             </pre>
             <p className="mk-fine" style={{ marginTop: 12 }}>
-              <code className="mk-mono">init</code> creates a SQLite database and loads 43
-              controls and three policy packs. <code className="mk-mono">demo</code> runs a
-              thirteen-step walkthrough. Both are offline: no API key, no downloaded weights, no
-              network egress.
+              Offline: no API key, no downloaded weights, no network egress.
             </p>
           </div>
         </div>

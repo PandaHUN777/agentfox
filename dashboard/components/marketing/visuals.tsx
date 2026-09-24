@@ -279,40 +279,36 @@ const PILLARS: Pillar[] = [
  * The whole product on one screen: six pillars, the question each one answers, and an
  * honest line on which part is wrapped open source and which part is ours.
  */
+/**
+ * The coverage map: six areas, each one line, one screen.
+ *
+ * This was a Frame containing six Panels, each with a chip, a label, a heading, a
+ * sentence, a rule, a second label, a mono string and a note — eight elements per
+ * cell, 1,077px and 206 words for a section whose whole job is orientation. A
+ * reader gives an overview five seconds. What they need in five seconds is the
+ * question each area answers, and whether the thing under it is ours or wrapped.
+ *
+ * `builtOn` stays because it is the least flattering column: four of the six say
+ * a third-party engine does the hard part. README.md:460-465.
+ */
 export function PillarGrid({ className }: { className?: string }) {
   return (
-    <Frame title="agentfox · six pillars" className={className}>
-      <Cols min={230} cap={3}>
-        {PILLARS.map((p) => (
-          <Panel key={p.n}>
-            <div className="mk-row" style={{ gap: 8 }}>
-              <span className="mk-chip mk-chip-accent">{p.n}</span>
-              <span className="mk-label">pillar</span>
-            </div>
-            <h3 className="mk-h3" style={{ overflowWrap: "anywhere" }}>
-              {p.name}
-            </h3>
-            <p style={{ ...STRONG, fontSize: "var(--t-small)" }}>{p.answers}</p>
-            <Rule />
-            <div style={{ display: "grid", gap: 5 }}>
-              <span className="mk-label">built on</span>
-              <span
-                className="mk-mono"
-                style={{ color: "var(--mk-text)", overflowWrap: "anywhere" }}
-              >
-                {p.builtOn}
-              </span>
-              <p style={TIGHT}>{p.note}</p>
-            </div>
-          </Panel>
-        ))}
-      </Cols>
-
-      <p style={TIGHT}>
-        {/* README.md:469-470 */}
-        Every wrapped project sits behind a swappable adapter.
-      </p>
-    </Frame>
+    <div className={className ? `mk-map ${className}` : "mk-map"}>
+      {PILLARS.map((p) => (
+        <div key={p.n} className="mk-map-cell">
+          <span className="mk-label">{`0${p.n}`}</span>
+          <h3 className="mk-h3" style={{ marginTop: 6, overflowWrap: "anywhere" }}>
+            {p.name}
+          </h3>
+          <p className="mk-body" style={{ margin: "6px 0 0", fontSize: "var(--t-small)" }}>
+            {p.answers}
+          </p>
+          <span className="mk-mono" style={{ display: "block", marginTop: 10, color: "var(--mk-muted)" }}>
+            {p.builtOn}
+          </span>
+        </div>
+      ))}
+    </div>
   );
 }
 

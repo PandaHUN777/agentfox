@@ -3,6 +3,15 @@ import { publicPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { MarketingNav } from "@/components/marketing/nav";
 import { Footer } from "@/components/marketing/sections";
+import {
+  Figure,
+  Composition,
+  Bars,
+  AsrCurve,
+  Parity,
+  Method,
+  Limits,
+} from "@/components/marketing/charts";
 
 /**
  * Public, unauthenticated evidence page for the number the playground quotes.
@@ -152,31 +161,46 @@ export default function BenchmarkPage() {
       <div className="callout">
         <p>
           <strong>The short version.</strong> With every detector switched off,
-          8 of 8 attacks were still contained and 4 of 4 legitimate calls were
-          still allowed. Replaying AgentDojo end to end over 617 ground-truth
-          calls, 42 of 42 attacker calls that act were contained and 552 of 552
-          legitimate calls were allowed, identical with detectors disabled; 3 of
-          the 65 attacker calls escaped and all three are read-only. On
-          detection, the axis a text scanner competes on, a real installed{" "}
-          <code className="mono">llm-guard</code> is more precise than this
-          product on the same 20 cases: 81.8% against 66.7%, and an adaptive
-          attacker that reads our verdict and tries again gets 72.9% of the
-          attacks we do catch through within 50 attempts. All of those are
-          below, with the method and the limits for each.
+          8 of 8 attacks were contained and 4 of 4 legitimate calls were
+          allowed. Replaying AgentDojo over 617 ground-truth calls: 42 of 42
+          attacker calls that act contained, 552 of 552 legitimate calls
+          allowed, identical with detectors disabled. Three escaped, all
+          read-only. On detection, a real installed{" "}
+          <code className="mono">llm-guard</code> beats us on the same 20 cases,
+          81.8% against 66.7%, and an adaptive attacker gets 72.9% of what we do
+          catch through within 50 attempts.
         </p>
       </div>
 
       <h2 id="containment">1. Containment when detection has already failed</h2>
       <p>
-        This is the benchmark the product actually rests on, and it starts by
-        assuming the detectors lose.{" "}
-        <em>The Attacker Moves Second</em> (Nasr, Carlini, Schulhoff et al.,
-        2025, arXiv:2510.09023) reports over 90% attack success against twelve
-        published defences once the attacker is allowed to adapt. Our injection
-        detectors are not an exception to that, so measuring detection alone
-        answers the wrong question. The question is what happens after the model
-        has been convinced.
+        This is the benchmark the product rests on, and it starts by assuming
+        the detectors lose. <em>The Attacker Moves Second</em> (Nasr, Carlini,
+        Schulhoff et al., 2025, arXiv:2510.09023) reports over 90% attack
+        success against twelve published defences once the attacker can adapt.
+        Ours are not an exception, so the question is what happens after the
+        model has been convinced.
       </p>
+      <Figure
+        label="8 containment scenarios · detectors on vs off"
+        caption={
+          <>
+            <strong>Every row is identical except one.</strong> The entity count
+            falling to zero is the proof that the bypass was total rather than
+            weakened — and containment did not move.
+          </>
+        }
+      >
+        <Parity
+          rows={[
+            { label: "Attacks contained", on: "8/8", off: "8/8", same: true },
+            { label: "Detector entities raised", on: "10", off: "0", same: false },
+            { label: "Legitimate calls still allowed", on: "4/4", off: "4/4", same: true },
+          ]}
+        />
+      </Figure>
+
+      <Method>
       <p>
         Every scenario runs twice through the real{" "}
         <code className="mono">Enforcer.guard_tool_call</code> path, the same
@@ -197,41 +221,6 @@ export default function BenchmarkPage() {
         argument-provenance taint ceilings, declared numeric constraints,
         generated-statement analysis, cascade analysis, and the kill switch.
       </p>
-
-      <div className="scroll-x">
-        <table>
-          <thead>
-            <tr>
-              <th></th>
-              <th className="num">detectors on</th>
-              <th className="num">detectors off</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Attacks contained</td>
-              <td className="num">8/8</td>
-              <td className="num">
-                <strong>8/8</strong>
-              </td>
-            </tr>
-            <tr>
-              <td>Detector entities raised</td>
-              <td className="num">10</td>
-              <td className="num">
-                <strong>0</strong>
-              </td>
-            </tr>
-            <tr>
-              <td>Legitimate calls still allowed</td>
-              <td className="num">4/4</td>
-              <td className="num">
-                <strong>4/4</strong>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
       <Source>
         <code className="mono">benchmarks/containment/README.md</code>, results
         table. Raw per-scenario output is in{" "}
@@ -240,6 +229,7 @@ export default function BenchmarkPage() {
         </code>
         .
       </Source>
+      </Method>
 
       <h3>The eight scenarios, with detection fully disabled</h3>
       <div className="scroll-x">
@@ -286,51 +276,63 @@ export default function BenchmarkPage() {
         is scored as a failure of this benchmark rather than a success.
       </p>
 
-      <h3>What this containment result does not show</h3>
-      <ul>
-        <li>
-          <strong>It is not a claim that our detection is good.</strong> It is
-          the opposite. The benchmark is only meaningful because detection is
-          assumed to have failed completely. The detection numbers are in
-          sections 4 and 5 and they are considerably less flattering.
-        </li>
-        <li>
-          <strong>
-            It does not measure whether a model can be convinced.
-          </strong>{" "}
-          The compromised agent is a premise here, not a finding.
-        </li>
-        <li>
-          <strong>
-            Containment is exactly as good as the declarations behind it.
-          </strong>{" "}
-          Grants, tool impact tiers, numeric constraints, trigger declarations
-          and access scopes are all operator-declared. An irreversible tool
-          declared as <code className="mono">read</code>, or an undeclared
-          downstream trigger, is invisible by design. Scenario{" "}
-          <code className="mono">cb5</code> is contained partly because the seed
-          data declares that <code className="mono">tickets.update</code> fires
-          the helpdesk&apos;s <code className="mono">email.send</code> webhook.
-          An undeclared trigger would not be seen.
-        </li>
-        <li>
-          <strong>
-            A high-risk agent escalates every irreversible action, by policy.
-          </strong>{" "}
-          The shipped EU AI Act pack&apos;s{" "}
-          <code className="mono">eu.art14.human_oversight</code> rule sends any
-          irreversible action by a <code className="mono">risk_tier: high</code>{" "}
-          agent to a human regardless of provenance. That is why a legitimate
-          transfer by <code className="mono">payments-ops</code> is not used as a
-          negative control: it escalates by design, and scoring that as
-          over-blocking would be dishonest in the other direction.
-        </li>
-        <li>
-          <strong>Eight scenarios is a small set.</strong> It covers one instance
-          of each containment mechanism, chosen to be structurally different from
-          one another rather than to inflate a denominator.
-        </li>
-      </ul>
+      <Limits
+        title="What this containment result does not show"
+        items={[
+          {
+            lead: "It is not a claim that our detection is good.",
+            body: (
+              <>
+                It is the opposite: the benchmark is only meaningful because
+                detection is assumed to have failed completely. Sections 4 and 5
+                are considerably less flattering.
+              </>
+            ),
+          },
+          {
+            lead: "It does not measure whether a model can be convinced.",
+            body: <>The compromised agent is a premise here, not a finding.</>,
+          },
+          {
+            lead: "Containment is exactly as good as the declarations behind it.",
+            body: (
+              <>
+                Grants, impact tiers, numeric constraints and access scopes are
+                operator-declared. An irreversible tool declared{" "}
+                <code className="mono">read</code>, or an undeclared downstream
+                trigger, is invisible by design. Scenario{" "}
+                <code className="mono">cb5</code> is contained partly because the
+                seed data declares that{" "}
+                <code className="mono">tickets.update</code> fires a webhook.
+              </>
+            ),
+          },
+          {
+            lead: "A high-risk agent escalates every irreversible action, by policy.",
+            body: (
+              <>
+                The shipped EU AI Act pack&apos;s{" "}
+                <code className="mono">eu.art14.human_oversight</code> rule sends
+                any irreversible action by a{" "}
+                <code className="mono">risk_tier: high</code> agent to a human
+                regardless of provenance — which is why a legitimate transfer by{" "}
+                <code className="mono">payments-ops</code> is not used as a
+                negative control.
+              </>
+            ),
+          },
+          {
+            lead: "Eight scenarios is a small set.",
+            body: (
+              <>
+                One instance of each containment mechanism, chosen to be
+                structurally different rather than to inflate a denominator.
+              </>
+            ),
+          },
+        ]}
+      />
+
       <p>
         One more result worth keeping: the detectors-on entity count fell from 15
         to 10 on 2026-09-16, and the containment column did not move. The five
@@ -354,14 +356,43 @@ export default function BenchmarkPage() {
         >
           AgentDojo
         </a>{" "}
-        (MIT, ETH Zurich) is the reference dynamic benchmark for prompt
-        injection against tool-using agents, and it ships hand-authored
-        ground-truth call sequences for both halves of its scenarios. That means
-        no model is needed and the replay is deterministic and offline: 552
-        calls a correctly-behaving agent makes for its real assignment, and 65
-        calls a <em>successfully compromised</em> agent makes on the
-        attacker&apos;s behalf. 617 calls in total, each replayed through the
-        same <code className="mono">Enforcer.guard_tool_call</code> path as
+        (MIT, ETH Zurich) is the reference benchmark for injection against
+        tool-using agents, and it ships hand-authored ground-truth call
+        sequences. No model is needed, so the replay is deterministic and
+        offline: 552 calls a correctly-behaving agent makes, and 65 a{" "}
+        <em>successfully compromised</em> one makes on the attacker&apos;s
+        behalf.
+      </p>
+
+      <Figure
+        label="617 AgentDojo calls, to scale"
+        caption={
+          <>
+            <strong>
+              Every attacker call that acts was contained; the three that got
+              through only read.
+            </strong>{" "}
+            Identical with every detector switched off. The escapes are a sliver
+            — and a sliver is not zero, which is why section 2 does not stop
+            here.
+          </>
+        }
+      >
+        <Composition
+          unit="calls replayed, offline, deterministic"
+          segments={[
+            { n: 552, label: "legitimate, allowed", tone: "good" },
+            { n: 42, label: "attacker calls that act, contained", tone: "hold" },
+            { n: 20, label: "attacker reads, contained", tone: "quiet" },
+            { n: 3, label: "attacker reads, escaped", tone: "stop" },
+          ]}
+        />
+      </Figure>
+
+      <Method>
+      <p>
+        Each call is replayed through the same{" "}
+        <code className="mono">Enforcer.guard_tool_call</code> path as
         everything else on this page. User-task arguments are marked
         user-sourced; injection-task arguments are marked as arriving from tool
         output, which is AgentDojo&apos;s own threat model.
@@ -378,6 +409,7 @@ export default function BenchmarkPage() {
         provenance, which would have made containment complete for a reason
         unrelated to the attack.
       </p>
+      </Method>
 
       <div className="scroll-x">
         <table>
@@ -438,11 +470,10 @@ export default function BenchmarkPage() {
 
       <p>
         <strong>The two columns are identical, and that is the finding.</strong>{" "}
-        Detection contributed nothing here, because an injected{" "}
-        <code className="mono">send_money</code> call is syntactically ordinary
-        and there is no malicious string in its arguments to catch. Everything
-        that stopped these attacks was provenance, impact tier and grant logic.
-        The five rules that fired most often across the run were{" "}
+        An injected <code className="mono">send_money</code> call is
+        syntactically ordinary, so detection contributed nothing. Provenance,
+        impact tier and grant logic stopped all of it. The five rules that fired
+        most often were{" "}
         <code className="mono">capability.approval_required</code> (57),{" "}
         <code className="mono">taint.irreversible_tool</code> (37),{" "}
         <code className="mono">intent.undeclared_irreversible</code> (37),{" "}
@@ -452,16 +483,13 @@ export default function BenchmarkPage() {
 
       <h3>The 95.4% does not travel without its denominator</h3>
       <p>
-        All three escapes are <strong>read-only</strong> calls:{" "}
+        All three escapes are <strong>read-only</strong>:{" "}
         <code className="mono">get_scheduled_transactions</code> twice, and{" "}
-        <code className="mono">get_channels</code>, each of them allowed. The
-        compromised agent was told to read something it already held a
-        legitimate grant for, and it did. Nothing in impact-tier or taint logic
-        distinguishes that from ordinary work, by design, and a product that
-        blocked those reads would also block the agent doing its job, which is
-        what the 552/552 column measures. The harm in that attack shape arrives
-        later, when the data leaves, which is the irreversible-tool step this
-        run does contain.
+        <code className="mono">get_channels</code>. The compromised agent read
+        something it already held a grant for, and blocking that would block the
+        agent doing its job — which is what the 552/552 column measures. The
+        harm in that shape arrives later, when the data leaves, which is the
+        irreversible-tool step this run does contain.
       </p>
       <div className="callout">
         <p>
@@ -477,43 +505,57 @@ export default function BenchmarkPage() {
         </p>
       </div>
 
-      <h3>What this replay does not show</h3>
-      <ul>
-        <li>
-          <strong>
-            It is not AgentDojo&apos;s &quot;utility under attack&quot; metric.
-          </strong>{" "}
-          That requires driving a live model through the environment, which
-          needs a model and a network. The two halves that can be measured
-          exactly are measured; the one that cannot be done offline is skipped
-          rather than approximated.
-        </li>
-        <li>
-          <strong>The impact tiers are our judgement, not AgentDojo&apos;s.</strong>{" "}
-          AgentDojo has no impact model. Ours is applied mechanically by verb
-          (<code className="mono">send_money</code>,{" "}
-          <code className="mono">delete_*</code>,{" "}
-          <code className="mono">send_email</code>,{" "}
-          <code className="mono">reserve_*</code> and similar are irreversible,{" "}
-          <code className="mono">create_*</code> and{" "}
-          <code className="mono">update_*</code> are writes,{" "}
-          <code className="mono">get_*</code>,{" "}
-          <code className="mono">search_*</code> and{" "}
-          <code className="mono">read_*</code> are reads) so a reader can check
-          it. This is the most load-bearing assumption in the run: a tool
-          mis-declared as <code className="mono">read</code> is not contained.
-        </li>
-        <li>
-          <strong>No model was fooled to produce these calls.</strong> The
-          compromise is the premise, taken from AgentDojo&apos;s own answer key,
-          not something this run demonstrates.
-        </li>
-        <li>
-          <strong>552 user calls is a utility check, not a quality check.</strong>{" "}
-          It shows governance did not block legitimate work. It says nothing
-          about whether the agent&apos;s answers were any good.
-        </li>
-      </ul>
+      <Limits
+        title="What this replay does not show"
+        items={[
+          {
+            lead: "It is not AgentDojo's \u201cutility under attack\u201d metric.",
+            body: (
+              <>
+                That needs a live model and a network. The two halves that can be
+                measured exactly are measured; the one that cannot be done
+                offline is skipped rather than approximated.
+              </>
+            ),
+          },
+          {
+            lead: "The impact tiers are our judgement, not AgentDojo's.",
+            body: (
+              <>
+                AgentDojo has no impact model. Ours is applied mechanically by
+                verb — <code className="mono">send_money</code>,{" "}
+                <code className="mono">delete_*</code>,{" "}
+                <code className="mono">send_email</code> are irreversible;{" "}
+                <code className="mono">create_*</code> and{" "}
+                <code className="mono">update_*</code> are writes;{" "}
+                <code className="mono">get_*</code>,{" "}
+                <code className="mono">search_*</code> and{" "}
+                <code className="mono">read_*</code> are reads — so a reader can
+                check it. This is the most load-bearing assumption in the run.
+              </>
+            ),
+          },
+          {
+            lead: "No model was fooled to produce these calls.",
+            body: (
+              <>
+                The compromise is the premise, taken from AgentDojo&apos;s own
+                answer key.
+              </>
+            ),
+          },
+          {
+            lead: "552 user calls is a utility check, not a quality check.",
+            body: (
+              <>
+                It shows governance did not block legitimate work. It says
+                nothing about whether the agent&apos;s answers were any good.
+              </>
+            ),
+          },
+        ]}
+      />
+
       <Source>
         <code className="mono">benchmarks/agentdojo_e2e/README.md</code>,
         method, &quot;What escaped&quot; and &quot;What this benchmark does not
@@ -543,52 +585,34 @@ export default function BenchmarkPage() {
         note&quot; framing, a seeded poisoned MCP tool description) and 10 benign
         documents using the same trigger vocabulary.
       </p>
-      <div className="scroll-x">
-        <table>
-          <thead>
-            <tr>
-              <th></th>
-              <th className="num">precision</th>
-              <th className="num">recall</th>
-              <th className="num">FP</th>
-              <th className="num">FN</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>AgentFox, full detector stack</td>
-              <td className="num">66.7%</td>
-              <td className="num">
-                <strong>100.0%</strong>
-              </td>
-              <td className="num">5</td>
-              <td className="num">0</td>
-            </tr>
-            <tr>
-              <td>
-                llm-guard, <code className="mono">PromptInjection</code> scanner
-              </td>
-              <td className="num">
-                <strong>81.8%</strong>
-              </td>
-              <td className="num">90.0%</td>
-              <td className="num">2</td>
-              <td className="num">1</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
       <Source>
         <code className="mono">benchmarks/agent_security/README.md</code>, Tier B
         table.
       </Source>
-      <p>
-        <strong>llm-guard wins on precision here, by 15.1 points.</strong> It
-        raised 2 false positives on the benign half against our 5. That cost is
-        real and it comes from the round 4 ensemble backstop, which bought recall
-        everywhere and paid for it in false positives everywhere. Whether the
-        trade is worth making depends on what a deployment fears more.
-      </p>
+
+      <Figure
+        label="Tier B · indirect injection via tool output · 20 cases"
+        caption={
+          <>
+            <strong>llm-guard wins on precision by 15.1 points.</strong> It
+            raised 2 false positives on the benign half against our 5 — the cost
+            of the round 4 ensemble backstop, which bought recall everywhere and
+            paid for it everywhere. We catch every attack it was shown; it is
+            more careful about what it calls one. Full confusion matrix, 20
+            cases: AgentFox 10 TP / 5 FP / 5 TN / 0 FN, llm-guard 9 / 2 / 8 / 1,
+            with 0 examples degraded by a detector timeout on either side.
+          </>
+        }
+      >
+        <Bars
+          rows={[
+            { label: "AgentFox · recall", value: 100, display: "100%", tone: "good" },
+            { label: "llm-guard · recall", value: 90, display: "90.0%", tone: "good", rival: true },
+            { label: "AgentFox · precision", value: 66.7, display: "66.7%", tone: "hold" },
+            { label: "llm-guard · precision", value: 81.8, display: "81.8%", tone: "hold", rival: true },
+          ]}
+        />
+      </Figure>
 
       <h3>Tiers D, C and A</h3>
       <ul>
@@ -636,53 +660,103 @@ export default function BenchmarkPage() {
         C and D sections.
       </Source>
 
-      <h3>What this round did not attempt</h3>
-      <ul>
-        <li>
-          Tier B&apos;s precision cost was not addressed further. Raising the
-          ensemble&apos;s threshold based on this result would be tuning against
-          data the project deliberately treats as held out.
-        </li>
-        <li>
-          Tier A&apos;s conversation-window check is wired into the SDK
-          one-liner only, not the gateway&apos;s{" "}
-          <code className="mono">preflight</code> path.
-        </li>
-        <li>
-          No head-to-head cost or latency comparison. This suite measures
-          detection and enforcement correctness, not throughput.
-        </li>
-      </ul>
+      <Limits
+        title="What this round did not attempt"
+        items={[
+          {
+            lead: "Tier B's precision cost was not addressed.",
+            body: (
+              <>
+                Raising the ensemble&apos;s threshold on this result would be
+                tuning against data the project treats as held out.
+              </>
+            ),
+          },
+          {
+            lead: "Tier A's conversation-window check is SDK-only.",
+            body: (
+              <>
+                It is not wired into the gateway&apos;s{" "}
+                <code className="mono">preflight</code> path.
+              </>
+            ),
+          },
+          {
+            lead: "No head-to-head cost or latency comparison.",
+            body: <>This suite measures correctness, not throughput.</>,
+          },
+        ]}
+      />
 
       <h2 id="detection">4. Detection on its own, which is the least flattering number here</h2>
       <p>
-        On the primary dataset,{" "}
-        <code className="mono">deepset/prompt-injections</code> (662 labeled
-        examples), the full stack of heuristic plus classifier plus similarity
-        reaches <strong>66.7% recall at 100.0% precision</strong> on the held-out
-        split of 116, up from an unmodified regex detector&apos;s 0%. Held-out is
-        the number to trust, because the heuristic&apos;s patterns were tuned by
-        reading the train split&apos;s false negatives.
+        On <code className="mono">deepset/prompt-injections</code> (662 labeled
+        examples), heuristic plus classifier plus similarity reaches{" "}
+        <strong>66.7% recall at 100.0% precision</strong> on the held-out split
+        of 116, up from an unmodified regex detector&apos;s 0%. Held-out is the
+        number to trust: the heuristic&apos;s patterns were tuned by reading the
+        train split&apos;s false negatives.
       </p>
+
+      <Figure
+        label="Held-out injection recall, round by round · precision 100% throughout"
+        caption={
+          <>
+            <strong>A third of held-out positives still get through.</strong>{" "}
+            Four rounds of work took recall from 16.7% to 66.7% and it has not
+            moved since; the last round bought its gains on the training splits
+            and cost precision elsewhere. This is the number the rest of the
+            page assumes is lost.
+          </>
+        }
+      >
+        <Bars
+          rows={[
+            { label: "Heuristic only (round 1)", value: 16.7, display: "16.7%", tone: "quiet" },
+            { label: "+ patterns (round 2)", value: 26.7, display: "26.7%", tone: "quiet" },
+            { label: "+ classifier (round 2)", value: 45.0, display: "45.0%", tone: "quiet" },
+            { label: "+ similarity (round 2)", value: 48.3, display: "48.3%", tone: "quiet" },
+            { label: "+ PIGuard (round 3, ships)", value: 66.7, display: "66.7%", tone: "accent" },
+          ]}
+        />
+      </Figure>
       <p>
-        A third of the held-out positives still slip through. Two named groups:
-        genuinely missed attacks, including flattery-then-pivot social
+        The opt-in classifier ensemble is a measured trade, not a free win. On{" "}
+        <code className="mono">NotInject</code>, 339 prompts benign by
+        construction and built to trigger keyword-reactive guardrails, the
+        shipped ensemble raises <strong>140 false positives, 41.3%</strong>.
+        PIGuard alone raised 39, 11.5%. The secondary model can be switched off.
+      </p>
+
+      <Figure
+        label="NotInject · 339 prompts that are benign by construction"
+        caption={
+          <>
+            <strong>The worst number on this page.</strong> Two in five benign
+            prompts are flagged with the ensemble on. This is the cost of the
+            recall above, it is configurable, and it is the reason detection is
+            not the control this product asks you to rely on.
+          </>
+        }
+      >
+        <Bars
+          rows={[
+            { label: "Shipped ensemble", value: 41.3, display: "41.3%", tone: "stop" },
+            { label: "PIGuard alone", value: 11.5, display: "11.5%", tone: "hold" },
+          ]}
+        />
+      </Figure>
+      <Method>
+      <p>
+        A third of the held-out positives still slip through in two named
+        groups: genuinely missed attacks, including flattery-then-pivot social
         engineering and typo evasion such as{" "}
-        <code className="mono">&quot;igmre what I said before&quot;</code>, which
-        slipped past every detector; and a deliberate scope boundary, since a
-        large share of that dataset&apos;s positives are generic role-play framing
-        (&quot;act as a Linux terminal&quot;) with no bypass or exfiltration
-        signal attached. Matching that definition exactly would flood real
-        deployments with false positives on ordinary persona-based agents.
-      </p>
-      <p>
-        The opt-in classifier ensemble is a measured trade rather than a free
-        win. On <code className="mono">NotInject</code>, 339 prompts that are
-        entirely benign by construction and built to trigger keyword-reactive
-        guardrails, the shipped ensemble raises{" "}
-        <strong>140 false positives, 41.3%</strong>. PIGuard alone raised 39,
-        11.5%. The secondary model is configurable and can be switched off to get
-        the lower figure back.
+        <code className="mono">&quot;igmre what I said before&quot;</code>; and a
+        deliberate scope boundary, since a large share of that dataset&apos;s
+        positives are generic role-play framing (&quot;act as a Linux
+        terminal&quot;) with no bypass or exfiltration signal attached. Matching
+        that definition exactly would flood real deployments with false
+        positives on ordinary persona-based agents.
       </p>
       <p>
         Generalization, re-measured at the shipped 40ms per-detector timeout, for
@@ -700,6 +774,7 @@ export default function BenchmarkPage() {
         results table, &quot;What&apos;s still missed, honestly&quot;, &quot;The
         cost&quot; under the ensemble backstop, and the round 7 table.
       </Source>
+      </Method>
 
       <h2 id="adaptive">
         5. An adaptive attacker that reads our verdict and tries again
@@ -708,27 +783,57 @@ export default function BenchmarkPage() {
         Section 4 scores the detectors against text written once by someone who
         never saw our output. This one lets the attacker see the verdict{" "}
         <em>and the exact entity list</em> and revise the payload, which is the
-        protocol from the same paper section 1 cites. Each seed goes to a
-        search-based attacker that calls the real{" "}
-        <code className="mono">Enforcer.check_content</code> path, hill-climbs
-        on the best payload so far, and picks its next mutation from a library
-        of 33 composable operators using that feedback. Success is the strict
-        reading: an <code className="mono">allow</code> effective verdict with
-        zero entities raised. The budget is 50 attempts per search.
+        protocol from the same paper section 1 cites.
       </p>
+      <Method>
+        <p>
+          Each seed goes to a search-based attacker that calls the real{" "}
+          <code className="mono">Enforcer.check_content</code> path, hill-climbs
+          on the best payload so far, and picks its next mutation from a library
+          of 33 composable operators using that feedback. Success is the strict
+          reading: an <code className="mono">allow</code> effective verdict with
+          zero entities raised. The budget is 50 attempts per search.
+        </p>
+      </Method>
       <p>
-        Seeds the stack already misses are thrown away before the search
-        starts, because counting them would inflate this number for free. Of 81
-        candidates, 33 already reach <code className="mono">allow</code> with
-        zero entities on the retrieved surface and 34 on direct input, leaving{" "}
-        <strong>48</strong> and <strong>47</strong> seeds respectively: attacks
-        the shipped stack currently stops. That is the denominator below, and it
-        is why attempt 1 is 0% by construction. The two move sets are scored
-        separately, because base64, hex, rot13 and fragment reassembly evade a
-        text detector by removing the instruction from the text, while a
-        paraphrase or another language leaves it plainly readable.{" "}
-        <strong>Readable only is the number to quote.</strong>
+        Seeds the stack already misses are thrown away before the search starts,
+        because counting them would inflate the number for free. Of 81
+        candidates, 48 and 47 seeds remain on the retrieved and direct surfaces:
+        attacks the shipped stack currently stops. That is the denominator, and
+        it is why attempt 1 is 0% by construction.
       </p>
+
+      <Figure
+        label="Attack success against attempts allowed · readable mutations only"
+        caption={
+          <>
+            <strong>
+              A quarter of the attacks our detectors stop are through within
+              five adapted attempts, and roughly three in four within fifty.
+            </strong>{" "}
+            Using only mutations that leave the instruction plainly readable —
+            no base64, no hex, no fragment reassembly. With the full move set,
+            every seed falls on both surfaces within 25 attempts. The 73% quoted
+            on the home page is the 72.9% endpoint here.
+          </>
+        }
+      >
+        <AsrCurve
+          xs={[1, 5, 10, 25, 50]}
+          series={[
+            {
+              name: "indirect, via retrieved content (48 seeds)",
+              points: [0, 0.25, 0.396, 0.625, 0.729],
+              tone: "stop",
+            },
+            {
+              name: "direct, in the user message (47 seeds)",
+              points: [0, 0.319, 0.468, 0.723, 0.745],
+              tone: "hold",
+            },
+          ]}
+        />
+      </Figure>
 
       <div className="scroll-x">
         <table>
@@ -775,17 +880,11 @@ export default function BenchmarkPage() {
       </Source>
 
       <p>
-        Read that as: a quarter of the attacks our detectors stop are through
-        within five adapted attempts, and roughly three in four are through
-        within fifty, using only mutations that leave the instruction plainly
-        readable. With the full move set every single seed falls, on both
-        surfaces, within 25 attempts.{" "}
-        <strong>
-          The 73% figure quoted on the home page is the 72.9% cell in that
-          table
-        </strong>
-        : the retrieved surface, readable operators only, 50 attempts. The
-        paper&apos;s &gt;90% result is not something we are an exception to;
+        The two move sets are scored separately because base64, hex, rot13 and
+        fragment reassembly evade a text detector by removing the instruction
+        from the text, while a paraphrase or another language leaves it plainly
+        readable. <strong>Readable only is the number to quote.</strong> The
+        paper&apos;s &gt;90% result is not something we are an exception to:
         with the full move set we exceed it against ourselves.
       </p>
       <p>
@@ -843,52 +942,71 @@ export default function BenchmarkPage() {
         <code className="mono">results/adaptive_summary.json</code>.
       </Source>
 
-      <h3>What this adaptive result does not show</h3>
-      <ul>
-        <li>
-          <strong>It is search-based only.</strong> The paper&apos;s taxonomy
-          also covers gradient-based attacks, RL-based attacks and human
-          red-teaming, and found those strongest. None are implemented here, so
-          the real-world rate should be assumed higher than this. It is a lower
-          bound from the cheapest attacker class, not a worst case.
-        </li>
-        <li>
-          <strong>A bypass is not a working attack.</strong> Success means the
-          detector said <code className="mono">allow</code> and raised nothing.
-          It does not mean a model would then obey the payload. No model is in
-          the loop at all, so &quot;the instruction is still readable&quot; is
-          an argument rather than a measurement.
-        </li>
-        <li>
-          <strong>It measures the default stack only.</strong> The five
-          detectors enabled in the run are{" "}
-          <code className="mono">injection.heuristic</code>,{" "}
-          <code className="mono">pii.native</code>,{" "}
-          <code className="mono">secrets.native</code>,{" "}
-          <code className="mono">safety.lexicon</code> and{" "}
-          <code className="mono">schema.json</code>. The opt-in classifier
-          ensemble that produces the 66.7% held-out recall in section 4 is not
-          running, because it needs a model download and this benchmark is
-          offline by contract. This number is not evidence about how much harder
-          that ensemble would be to beat.
-        </li>
-        <li>
-          <strong>48 seeds is a small set and a biased one.</strong> It is
-          specifically the subset our detectors catch, so it answers &quot;how
-          robust is what we do catch&quot;, not &quot;how safe is the product
-          against this corpus&quot;. The second question is what section 4 and
-          section 1 are for.
-        </li>
-        <li>
-          <strong>
-            The containment column is invariant to the payload, by design.
-          </strong>{" "}
-          The action path never reads the attacker&apos;s text. So 38/38 is not
-          evidence that containment resists these particular bypasses, it is
-          evidence that containment does not depend on the bypass at all. Its
-          limits are the declaration limits listed in section 1.
-        </li>
-      </ul>
+      <Limits
+        title="What this adaptive result does not show"
+        items={[
+          {
+            lead: "It is search-based only.",
+            body: (
+              <>
+                The paper&apos;s taxonomy also covers gradient-based attacks,
+                RL-based attacks and human red-teaming, and found those
+                strongest. None are implemented here, so the real-world rate
+                should be assumed higher. This is a lower bound from the
+                cheapest attacker class, not a worst case.
+              </>
+            ),
+          },
+          {
+            lead: "A bypass is not a working attack.",
+            body: (
+              <>
+                Success means the detector said{" "}
+                <code className="mono">allow</code> and raised nothing, not that
+                a model would obey the payload. No model is in the loop, so
+                &quot;the instruction is still readable&quot; is an argument
+                rather than a measurement.
+              </>
+            ),
+          },
+          {
+            lead: "It measures the default stack only.",
+            body: (
+              <>
+                Five detectors:{" "}
+                <code className="mono">injection.heuristic</code>,{" "}
+                <code className="mono">pii.native</code>,{" "}
+                <code className="mono">secrets.native</code>,{" "}
+                <code className="mono">safety.lexicon</code> and{" "}
+                <code className="mono">schema.json</code>. The opt-in ensemble
+                behind section 4&apos;s 66.7% is not running, because it needs a
+                model download and this benchmark is offline by contract.
+              </>
+            ),
+          },
+          {
+            lead: "48 seeds is a small set and a biased one.",
+            body: (
+              <>
+                It is specifically the subset our detectors catch, so it answers
+                &quot;how robust is what we do catch&quot;, not &quot;how safe
+                is the product against this corpus&quot;.
+              </>
+            ),
+          },
+          {
+            lead: "The containment column is invariant to the payload, by design.",
+            body: (
+              <>
+                The action path never reads the attacker&apos;s text, so 38/38
+                is not evidence that containment resists these bypasses — it is
+                evidence that containment does not depend on the bypass at all.
+              </>
+            ),
+          },
+        ]}
+      />
+
       <Source>
         <code className="mono">benchmarks/adaptive/README.md</code>, method and
         &quot;What this benchmark does not show&quot;.
@@ -900,6 +1018,7 @@ export default function BenchmarkPage() {
         those things is &quot;nothing was, and it is not recorded&quot;. That is
         written out here rather than implied away.
       </p>
+      <Method>
       <p>
         <strong>What the result files do record.</strong> The adaptive run
         records its random seed (<code className="mono">20251009</code>), the
@@ -914,42 +1033,62 @@ export default function BenchmarkPage() {
         against 9, 2, 8 and 1 for llm-guard, along with a count of 0 examples
         degraded by a detector timeout on either side.
       </p>
-      <ul>
-        <li>
-          <strong>No run date.</strong> None of these result files carries a
-          timestamp. The only date on this page is 2026-09-16, which is when the
-          three detector fixes landed and the containment entity count and the
-          generalization table were re-measured. The date each of the other runs
-          was produced is not recorded anywhere, so this page does not state
-          one.
-        </li>
-        <li>
-          <strong>No llm-guard version.</strong> The Tier B result records only
-          that llm-guard was installed in a separate interpreter and that its{" "}
-          <code className="mono">PromptInjection</code> scanner was really
-          called. Neither the llm-guard version nor the model it loads is
-          written down, and the 81.8% and 90.0% figures would move with either.
-          The only version fact recorded is the conflict that forces the
-          separate interpreter, llm-guard&apos;s pin of{" "}
-          <code className="mono">transformers==4.51.3</code>.
-        </li>
-        <li>
-          <strong>No hardware.</strong> No CPU, memory or machine description
-          appears in any of these files. That is not cosmetic here: detectors
-          run under the shipped 40ms per-detector timeout, and a detector that
-          times out is scored as raising nothing. The adaptive run recorded 9
-          such degraded attempts out of 5,593, 0.16%, touching 5 searches, on
-          whatever machine produced it. A slower machine would record more, and
-          would move cells in the direction that flatters the attacker.
-        </li>
-        <li>
-          <strong>One run each, so no variance.</strong> Every figure on this
-          page is a single run. None is a mean, none has an error bar, and no
-          repeat-run spread was measured. The adaptive README is the only file
-          that says anything about stability, and what it says is that re-running
-          can move a cell by a couple of points because of those timeouts.
-        </li>
-      </ul>
+      </Method>
+      <Limits
+        title="What these runs do not record"
+        items={[
+          {
+            lead: "No run date.",
+            body: (
+              <>
+                None of these result files carries a timestamp. The only date on
+                this page is 2026-09-16, when three detector fixes landed and
+                two tables were re-measured. The date each other run was
+                produced is not recorded anywhere, so this page does not state
+                one.
+              </>
+            ),
+          },
+          {
+            lead: "No llm-guard version.",
+            body: (
+              <>
+                The Tier B result records only that llm-guard was installed in a
+                separate interpreter and that its{" "}
+                <code className="mono">PromptInjection</code> scanner was really
+                called. Neither its version nor the model it loads is written
+                down, and 81.8% and 90.0% would move with either. The one
+                version fact recorded is the pin that forces the separate
+                interpreter, <code className="mono">transformers==4.51.3</code>.
+              </>
+            ),
+          },
+          {
+            lead: "No hardware.",
+            body: (
+              <>
+                Not cosmetic here: detectors run under a 40ms timeout and a
+                detector that times out is scored as raising nothing. The
+                adaptive run recorded 9 degraded attempts out of 5,593 (0.16%)
+                on whatever machine produced it. A slower machine would record
+                more, and would move cells in the direction that flatters the
+                attacker.
+              </>
+            ),
+          },
+          {
+            lead: "One run each, so no variance.",
+            body: (
+              <>
+                Every figure is a single run. None is a mean, none has an error
+                bar, and no repeat-run spread was measured. The adaptive README
+                says re-running can move a cell by a couple of points because of
+                those timeouts.
+              </>
+            ),
+          },
+        ]}
+      />
       <Source>
         <code className="mono">benchmarks/adaptive/results/adaptive_summary.json</code>{" "}
         (<code className="mono">config</code>,{" "}
