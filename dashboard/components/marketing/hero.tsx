@@ -10,9 +10,11 @@ import { REPO } from "@/components/marketing/nav";
  * two actions, a trust line, and then the product doing the job rather than a
  * description of it. The mockup sits high on purpose.
  *
- * The headline names the mechanism and the noun, because an audit found the previous
- * one stacked three negations and never said "tool call", which is the unit of
- * protection and the thing the panel underneath shows.
+ * The headline covers the whole product rather than one layer of it. An earlier
+ * version led with capability grants alone, which is the differentiator but not the
+ * thing: someone arriving here needs to learn that this scans model traffic, bounds
+ * tool calls and records the result, before they are told which of those is novel.
+ * The panel underneath then shows the layer the rest of the page argues for.
  */
 export function Hero() {
   return (
@@ -22,17 +24,18 @@ export function Hero() {
       <div className="mk-wrap" style={{ position: "relative", paddingTop: 62, textAlign: "center" }}>
         <span className="mk-eyebrow mk-up">Open source, Apache-2.0</span>
 
-        <h1 className="mk-h1 mk-up mk-d1" style={{ margin: "18px auto 0", maxWidth: "19ch" }}>
-          Your agent can only do <em>what it was granted</em>.
+        <h1 className="mk-h1 mk-up mk-d1" style={{ margin: "18px auto 0", maxWidth: "21ch" }}>
+          Every call your agent makes, <em>checked and recorded</em>.
         </h1>
 
         <p
           className="mk-lede mk-up mk-d2"
           style={{ margin: "20px auto 0", maxWidth: "62ch" }}
         >
-          Nometria checks every tool call your agent makes against what that agent actually
-          holds, and refuses the rest. It works after the model has been convinced, because
-          the refusal never depended on recognising the attack.
+          A control plane between your agents and the models, tools and data they reach.
+          Guardrails on the way in and out, tool calls bounded by what each agent was
+          actually granted, and a tamper-evident record mapped to the frameworks you
+          answer to.
         </p>
 
         <div
@@ -42,8 +45,8 @@ export function Hero() {
           <Link href="/playground" className="mk-btn mk-btn-primary">
             Try it, no account
           </Link>
-          <Link href="/how-it-works" className="mk-btn mk-btn-outline">
-            How it works
+          <Link href="/#pillars" className="mk-btn mk-btn-outline">
+            See the product
           </Link>
         </div>
 
@@ -61,7 +64,8 @@ export function Hero() {
       >
         <ToolCallMock />
         <p className="mk-fine" style={{ textAlign: "center", marginTop: 14 }}>
-          A real response from the hosted sandbox. Reproduce it yourself in the{" "}
+          The layer that is ours: a refusal that never read the attack. A real response from
+          the hosted sandbox, reproducible in the{" "}
           <Link href="/playground">playground</Link>.
         </p>
       </div>
