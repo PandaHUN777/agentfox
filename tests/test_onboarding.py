@@ -478,7 +478,7 @@ def test_a_finding_alert_links_to_its_own_detail_page_not_the_general_queue(clie
 
     body = client.get("/api/attention", headers=as_user("admin@example.com")).json()
     item = next(i for i in body["items"] if i["type"] == "a")
-    assert item["href"] == f"/findings/{finding_id}"
+    assert item["href"] == f"/app/findings/{finding_id}"
 
 
 def test_me_returns_the_signed_in_identity(client):

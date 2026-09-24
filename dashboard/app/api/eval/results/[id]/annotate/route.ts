@@ -11,7 +11,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const form = await req.formData();
   const verdict = ((form.get("verdict") as string) || "agree").trim();
   const note = ((form.get("note") as string) || "").trim();
-  const redirectTo = (form.get("redirect_to") as string) || "/evals";
+  const redirectTo = (form.get("redirect_to") as string) || "/app/evals";
 
   return proxyCustomBody(
     req,

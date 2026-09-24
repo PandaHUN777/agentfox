@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const form = await req.formData();
   const key = String(form.get("key") || "");
   if (!key) {
-    const target = new URL("/sources", req.nextUrl.origin);
+    const target = new URL("/app/sources", req.nextUrl.origin);
     target.searchParams.set("review_error", "missing source key");
     return NextResponse.redirect(target);
   }
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     req,
     "DELETE",
     `/api/sources/${key.split("/").map(encodeURIComponent).join("/")}`,
-    "/sources",
+    "/app/sources",
     undefined,
   );
 }

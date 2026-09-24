@@ -9,7 +9,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     req,
     "POST",
     `/api/approvals/${encodeURIComponent(id)}/approve`,
-    "/approvals",
+    "/app/approvals",
     { rationale },
     { successNotice: "approved" },
   );

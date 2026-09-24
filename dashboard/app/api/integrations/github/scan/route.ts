@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const ref = String(form.get("ref") || "");
 
   if (!repo_full_name) {
-    const target = new URL("/start?tab=connect", req.nextUrl.origin);
+    const target = new URL("/app/start?tab=connect", req.nextUrl.origin);
     target.searchParams.set("scan_error", "missing repository or session");
     return NextResponse.redirect(target);
   }
@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
     req,
     "POST",
     "/api/integrations/github/scan",
-    "/start?tab=connect",
+    "/app/start?tab=connect",
     { repo_full_name, ref },
     (res, body) =>
       res.ok

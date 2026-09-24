@@ -163,7 +163,7 @@ export function Evidence() {
         </div>
         <p
           className="mk-fine mk-up mk-d3"
-          style={{ maxWidth: "70ch", margin: "24px auto 0", textAlign: "center" }}
+          style={{ maxWidth: "var(--measure)", margin: "24px auto 0", textAlign: "center" }}
         >
           The three calls that escaped the AgentDojo replay are all read-only, and the
           benchmark page names them one by one. The weakest figure is in the set on purpose.
@@ -201,7 +201,7 @@ const STEPS: { title: string; body: React.ReactNode }[] = [
     ),
   },
   {
-    title: "Watch in observe mode, where nothing is blocked",
+    title: "Watch in observe mode, where no model traffic is blocked",
     body: "The policy that governs model traffic starts in observe: it records what it would have done and lets the call through. You read what gets flagged against your own traffic and tune the detectors per policy before anything is refused.",
   },
   {
@@ -222,14 +222,21 @@ export function HowItWorks() {
       <div className="mk-wrap mk-split mk-split-wide">
         <div className="mk-up">
           <span className="mk-eyebrow">Rollout</span>
-          {/* The old heading ran to four ragged lines in this column and described a
-              process. This one states the promise the four steps exist to keep. */}
+          {/* This heading said "Nothing is blocked until you say so", which is not
+              true and is the worst kind of untrue on a security product: it
+              understates what is switched on. Three shipped packs, two modes.
+              src/agentfox/policies_data/: baseline is `mode: observe`,
+              eu-ai-act-high-risk is `mode: observe`, tool-containment is
+              `mode: enforce`. So an agent is held to its grants from the first
+              request, and the detector rules watch until you promote them. */}
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
-            Nothing is blocked until you say so.
+            Tool permissions enforce on day one. Detectors watch first.
           </h2>
           <p className="mk-body" style={{ marginTop: 14, maxWidth: "48ch" }}>
-            Nothing in the first three steps refuses a call. A library that starts rejecting
-            production traffic because someone added an import gets switched off within a day.
+            The rules that read model traffic start in observe, because a library that
+            begins rejecting production traffic the day someone adds an import gets
+            switched off the day after. The grants are the exception and ship
+            enforcing: an agent can call what it was given, and nothing else.
           </p>
         </div>
         <ol className="mk-steps mk-up mk-d2" style={{ listStyle: "none", margin: 0, padding: 0 }}>

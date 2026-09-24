@@ -36,7 +36,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Verdict } from "./ui";
-import { MarketingNav } from "./marketing/nav";
 
 /**
  * The offline `echo` provider tags its deterministic replies with
@@ -463,11 +462,11 @@ export function Playground({ apiBase }: { apiBase: string }) {
     void say(text);
   }
 
+  // The page chrome is rendered by app/playground/page.tsx, which is a Server
+  // Component. It has to be: the nav reads the session cookie, and a client
+  // component cannot import `next/headers`.
   return (
-    <div className="mk">
-      <MarketingNav />
-      <main className="pg">
-        <div className="mk-wrap">
+    <div className="mk-wrap">
           <h1 className="pg-h1">Try to break a real agent.</h1>
           <p className="pg-lede">
             Pick an agent and send it something. Every verdict is the real one.
@@ -660,9 +659,7 @@ export function Playground({ apiBase }: { apiBase: string }) {
             </div>
           )}
 
-          {!sessionId && !bootstrapError && <p className="pg-lede">Setting up your sandbox…</p>}
-        </div>
-      </main>
+      {!sessionId && !bootstrapError && <p className="pg-lede">Setting up your sandbox…</p>}
     </div>
   );
 }

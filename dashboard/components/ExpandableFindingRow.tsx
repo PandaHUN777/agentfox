@@ -72,7 +72,7 @@ export function ExpandableFindingRow({
             >
               <span className="expand-caret" aria-hidden="true">{open ? "▾" : "▸"}</span>
             </button>
-            <Link href={`/findings/${finding.id}`} onClick={(e) => e.stopPropagation()}>
+            <Link href={`/app/findings/${finding.id}`} onClick={(e) => e.stopPropagation()}>
               {finding.title}
             </Link>
           </span>
@@ -90,7 +90,7 @@ export function ExpandableFindingRow({
           <td colSpan={6} style={{ padding: "4px 14px 18px" }}>
             <FindingEvidence finding={finding} />
             <div style={{ marginTop: 10 }}>
-              <Link href={`/findings/${finding.id}`} onClick={(e) => e.stopPropagation()}>
+              <Link href={`/app/findings/${finding.id}`} onClick={(e) => e.stopPropagation()}>
                 Open full finding →
               </Link>
             </div>

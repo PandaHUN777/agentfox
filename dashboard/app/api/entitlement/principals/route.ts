@@ -21,5 +21,5 @@ export async function POST(req: NextRequest) {
     clearances: split("clearances"),
   };
 
-  return proxyCustomBody(req, "PUT", "/api/entitlement/principals", "/entitlement", body);
+  return proxyCustomBody(req, "PUT", "/api/entitlement/principals", "/app/entitlement", body);
 }

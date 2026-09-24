@@ -1,5 +1,8 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { BrandLockup } from "@/components/marketing/brand";
+import { SESSION_COOKIE } from "@/lib/api";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 /**
  * The public navigation bar.
@@ -22,7 +25,16 @@ const LINKS: [string, string][] = [
 
 export const REPO = "https://github.com/architsharm/guardrails";
 
-export function MarketingNav() {
+/**
+ * Reads the session cookie, which makes this async and keeps it a Server
+ * Component. The reason is item one of a list of things wrong with the old
+ * structure: a signed-in visitor who reached the public site had a "Sign in"
+ * button in front of them and no way back to their own dashboard. It is a UX
+ * branch, not a security one — the nav renders nothing that is not already
+ * public either way.
+ */
+export async function MarketingNav() {
+  const signedIn = Boolean((await cookies()).get(SESSION_COOKIE)?.value);
   return (
     <header className="mk-nav">
       <div className="mk-wrap mk-nav-inner">
@@ -40,11 +52,19 @@ export function MarketingNav() {
           </a>
         </nav>
         <div className="mk-nav-cta">
+          {/* The theme control belongs here, not only behind a sign-in: the public
+              pages are the ones a visitor meets first, and the choice they make
+              here is the one they keep after signing in — same key, same control. */}
+          <ThemeToggle compact />
           <Link href="/playground" className="mk-btn mk-btn-ghost">
             Try it
           </Link>
-          <Link href="/login" className="mk-btn mk-btn-primary" style={{ padding: "8px 14px" }}>
-            Sign in
+          <Link
+            href={signedIn ? "/app" : "/login"}
+            className="mk-btn mk-btn-primary"
+            style={{ padding: "8px 14px" }}
+          >
+            {signedIn ? "Dashboard" : "Sign in"}
           </Link>
         </div>
       </div>

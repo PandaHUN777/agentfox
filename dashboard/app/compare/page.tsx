@@ -307,7 +307,7 @@ export default function Compare() {
             </div>
             <p
               className="mk-fine mk-up mk-d3"
-              style={{ maxWidth: "70ch", margin: "24px auto 0", textAlign: "center" }}
+              style={{ maxWidth: "var(--measure)", margin: "24px auto 0", textAlign: "center" }}
             >
               The analysis also names the alternative that wins most often, and it is neither
               camp: 6 of 11 vetted senior engineers had already hand-built a guardrail layer

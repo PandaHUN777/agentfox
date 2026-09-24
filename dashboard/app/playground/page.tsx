@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { publicPageMetadata } from "@/lib/site";
 import { Playground } from "@/components/Playground";
+import { MarketingNav } from "@/components/marketing/nav";
 
 export const dynamic = "force-dynamic";
 
@@ -29,5 +30,12 @@ export default function PlaygroundPage() {
     process.env.NOMETRIA_API_URL ||
     "http://127.0.0.1:8080";
 
-  return <Playground apiBase={apiBase} />;
+  return (
+    <div className="mk">
+      <MarketingNav />
+      <main className="pg">
+        <Playground apiBase={apiBase} />
+      </main>
+    </div>
+  );
 }

@@ -46,7 +46,7 @@ export function CommandSearch({ nav }: { nav: NavItem[] }) {
       ? [
           {
             label: `Jump to ${trimmed}`,
-            href: trimmed.startsWith("trc_") ? `/traces/${trimmed}` : `/findings/${trimmed}`,
+            href: trimmed.startsWith("trc_") ? `/app/traces/${trimmed}` : `/app/findings/${trimmed}`,
             group: "Jump to ID",
           },
         ]

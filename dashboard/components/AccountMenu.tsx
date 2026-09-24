@@ -41,11 +41,17 @@ export function AccountMenu({
             <span className="small">{role}</span>
           </div>
         )}
-        <Link href="/start?tab=connect" className="account-menu-row" style={{ display: "block" }}>
+        <Link href="/app/start?tab=connect" className="account-menu-row" style={{ display: "block" }}>
           Connect a source
         </Link>
-        <Link href="/start?tab=tokens" className="account-menu-row" style={{ display: "block" }}>
+        <Link href="/app/start?tab=tokens" className="account-menu-row" style={{ display: "block" }}>
           API tokens
+        </Link>
+        {/* The way back out to the public site. A signed-in visitor had no route to
+            it at all while the dashboard lived at "/": every URL that served the
+            marketing page also served them the app. */}
+        <Link href="/" className="account-menu-row" style={{ display: "block" }}>
+          Public site
         </Link>
         <form action="/api/auth/logout" method="POST">
           <button type="submit" className="account-menu-signout">

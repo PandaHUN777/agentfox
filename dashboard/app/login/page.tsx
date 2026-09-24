@@ -71,7 +71,7 @@ export default async function Login({
   // Middleware clears the stale cookie on its way here (see middleware.ts), so
   // by this point an expired session has no cookie left to redirect on.
   if (!expired && (await cookies()).get(SESSION_COOKIE)?.value) {
-    redirect("/start");
+    redirect("/app/start");
   }
 
   return (

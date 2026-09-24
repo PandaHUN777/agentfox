@@ -96,10 +96,8 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "done": connections > 0 or hosted_api_scans > 0,
             "command": "Connect → repo or hosted API → Scan",
             "detail": (
-                "A repo is scanned statically (no import, no execution) for LangChain/"
-                "LangGraph/CrewAI/AutoGen usage; a hosted API is read from its OpenAPI spec "
-                "document only — never called. Either proposes draft agents and policies for "
-                "review — nothing is created live until you approve it."
+                "Read only: source is parsed, never run; a hosted API is read from its "
+                "OpenAPI document, never called. Nothing goes live until you approve it."
             ),
         },
         {
@@ -108,11 +106,9 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "done": traces > 0,
             "command": "POST /v1/guard/input  (or: import agentfox; agentfox.auto())",
             "detail": (
-                "From any language, call the guard endpoints with a token from the API "
-                "tokens tab: your agent keeps making its own model calls and asks this "
-                "service for a verdict. In Python you can instead add one line in your "
-                "entry point. Either way nothing is blocked to begin with, because "
-                "policies start in observe mode."
+                "Your agent keeps making its own model calls and asks this service for a "
+                "verdict. In Python, one line in your entry point does it. Content "
+                "policies watch without blocking; tool grants apply from the first call."
             ),
         },
         {
@@ -121,10 +117,8 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "done": agents > 0,
             "command": "pip install agentfox && agentfox init",
             "detail": (
-                "Optional. Everything above works from this browser and from any language "
-                "over HTTP, so nothing here blocks you. Install it when you want the "
-                "command line, the Python one-liner, or the whole control plane in your "
-                "own infrastructure."
+                "Optional. Everything above already works over HTTP. Install it for the "
+                "command line, the Python one-liner, or your own control plane."
             ),
         },
         {
@@ -160,10 +154,8 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             "done": enforcing > 0,
             "command": "agentfox policy enforce baseline",
             "detail": (
-                "Promotes the content-based policies (prompt injection, PII, safety) from "
-                "observe to enforce — do it when the findings look right, not before. Tool "
-                "containment (least-privilege action control) is a separate, structural "
-                "policy that already enforces from step 1; see the note below the checklist."
+                "Promotes prompt injection, PII and safety from observe to enforce. Do it "
+                "when the findings look right. Tool containment already enforces."
             ),
         },
     ]
@@ -201,6 +193,12 @@ def attention(
     open it to ask "is anything wrong right now", and a screen that leads with counts
     makes them do the ranking themselves.
     """
+    # Where the dashboard lives. The gateway hands back links the UI renders
+    # directly, which couples the API to the UI's routing — stated here rather
+    # than spread across three f-strings, so a move is one edit and not a hunt.
+    # Every private route sits under this prefix (dashboard/middleware.ts).
+    UI = "/app"
+
     since = utcnow() - dt.timedelta(hours=hours)
     order = {"critical": 0, "high": 1, "medium": 2, "low": 3}
 
@@ -224,7 +222,7 @@ def attention(
                 "type": finding.type,
                 "subject": agents.get(finding.subject_id or "", finding.subject_type),
                 "at": finding.created_at.isoformat(),
-                "href": f"/findings/{finding.id}",
+                "href": f"{UI}/findings/{finding.id}",
             }
         )
 
@@ -238,7 +236,7 @@ def attention(
                 "type": "handoff_sla_breach",
                 "subject": agents.get(handoff.agent_id or "", "agent"),
                 "at": handoff.created_at.isoformat(),
-                "href": "/escalation",
+                "href": f"{UI}/approvals?tab=escalation",
             }
         )
 
@@ -252,7 +250,7 @@ def attention(
                 "type": "shadow_agent",
                 "subject": agent.slug,
                 "at": agent.first_seen_at.isoformat() if agent.first_seen_at else "",
-                "href": "/agents",
+                "href": f"{UI}/agents",
             }
         )
 

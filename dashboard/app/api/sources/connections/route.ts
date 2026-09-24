@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   const credential = str("credential");
   if (credential) body.credential = credential;
 
-  return proxyCustomBody(req, "POST", "/api/sources/connections", "/sources", body, {
+  return proxyCustomBody(req, "POST", "/api/sources/connections", "/app/sources", body, {
     successNotice: `${key}: connected (${kind})`,
   });
 }

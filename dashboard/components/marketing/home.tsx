@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { DecisionCard } from "@/components/marketing/decisions";
+import { DecisionPair } from "@/components/marketing/decisions";
 import { REPO } from "@/components/marketing/nav";
 
 /*
@@ -169,7 +169,7 @@ export function Hero() {
           className="mk-lede mk-up mk-d2"
           style={{ margin: "20px auto 0", maxWidth: "54ch" }}
         >
-          AgentFox checks every action your agent takes and refuses the ones it was never
+          AgentFox checks the actions your agent takes and refuses the ones it was never
           given permission for, even after the model has been tricked.
         </p>
         <div className="mk-row mk-up mk-d3" style={{ justifyContent: "center", marginTop: 30 }}>
@@ -248,7 +248,7 @@ export function Benefits() {
           "Enforces limits on the arguments, like amounts and recipients",
           "Knows whether a value came from a person or from a document",
         ]}
-        visual={<DecisionCard />}
+        visual={<DecisionPair />}
       />
 
       <BenefitWide
@@ -328,7 +328,17 @@ export function Proof() {
           ))}
         </div>
 
-        <p className="mk-row mk-up mk-d4" style={{ justifyContent: "center", marginTop: 30 }}>
+        {/* The denominator, beside the numbers rather than one click away. "42 of
+            42" invites "out of what?", and a proof section that makes the reader
+            follow a link to find out is doing the opposite of its job. All four
+            figures are from the same run, written up in section 2 of /benchmark. */}
+        <p className="mk-fine mk-up mk-d4" style={{ margin: "20px auto 0", maxWidth: "60ch" }}>
+          617 calls: 552 legitimate, and 65 from an agent the attacker had already
+          convinced. 42 of those 65 act; the other 23 only read. Three escaped, and
+          all three are read-only.
+        </p>
+
+        <p className="mk-row mk-up mk-d5" style={{ justifyContent: "center", marginTop: 26 }}>
           <Link href="/benchmark" className="mk-btn mk-btn-outline">
             Every number, and how to reproduce it
           </Link>

@@ -6,7 +6,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ key
   const form = await req.formData();
   const traceId = ((form.get("trace_id") as string) || "").trim();
   if (!traceId) {
-    const target = new URL(`/evals/${key}`, req.nextUrl.origin);
+    const target = new URL(`/app/evals/${key}`, req.nextUrl.origin);
     target.searchParams.set("review_error", "trace id is required");
     return NextResponse.redirect(target);
   }
@@ -14,6 +14,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ key
   return proxyReviewAction(
     req,
     `/api/eval/suites/${key}/cases/from-trace?trace_id=${encodeURIComponent(traceId)}`,
-    `/evals/${key}`,
+    `/app/evals/${key}`,
   );
 }

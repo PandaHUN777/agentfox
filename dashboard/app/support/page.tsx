@@ -158,7 +158,7 @@ const DOCS: { title: string; body: React.ReactNode }[] = [
     title: "The vocabulary",
     body: (
       <>
-        The <Link href="/glossary">glossary</Link> defines provenance, impact tiers, grants and
+        The <Link href="/app/glossary">glossary</Link> defines provenance, impact tiers, grants and
         the rest. It lives inside the dashboard, so it asks you to sign in.
       </>
     ),

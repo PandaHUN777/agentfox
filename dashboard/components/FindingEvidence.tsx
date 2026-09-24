@@ -79,7 +79,7 @@ export function GuardrailDetectionEvidence({ evidence }: { evidence: any }) {
         <span><span className="muted">verdict </span><span className={`tag ${evidence.verdict === "block" ? "bad" : "warn"}`}>{evidence.verdict}</span></span>
         {evidence.trace_id && (
           <span>
-            <Link href={`/traces/${evidence.trace_id}`}>See full detector activity on this trace →</Link>
+            <Link href={`/app/traces/${evidence.trace_id}`}>See full detector activity on this trace →</Link>
           </span>
         )}
       </div>

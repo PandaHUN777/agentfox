@@ -62,7 +62,7 @@ export function ExpandableTraceRow({ trace, agents }: { trace: any; agents: any[
           >
             <span className="expand-caret" aria-hidden="true">{open ? "▾" : "▸"}</span>
           </button>
-          <Link href={`/traces/${trace.id}`} onClick={(e) => e.stopPropagation()}>
+          <Link href={`/app/traces/${trace.id}`} onClick={(e) => e.stopPropagation()}>
             {trace.id}
           </Link>
         </td>
@@ -84,7 +84,7 @@ export function ExpandableTraceRow({ trace, agents }: { trace: any; agents: any[
             {error && <p className="small error">{error}</p>}
             {detail && <TraceExpansion detail={detail} />}
             <div style={{ marginTop: 10 }}>
-              <Link href={`/traces/${trace.id}`} onClick={(e) => e.stopPropagation()}>
+              <Link href={`/app/traces/${trace.id}`} onClick={(e) => e.stopPropagation()}>
                 Open full trace →
               </Link>
             </div>

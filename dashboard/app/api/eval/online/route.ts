@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     req,
     "POST",
     "/api/eval/online",
-    "/evals",
+    "/app/evals",
     { agent, since_days, rate },
     (res, body) => {
       if (!res.ok) return { error: body.detail || res.statusText };

@@ -21,5 +21,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ key
     split: "test",
   };
 
-  return proxyCustomBody(req, "POST", `/api/eval/suites/${key}/cases`, `/evals/${key}`, body);
+  return proxyCustomBody(req, "POST", `/api/eval/suites/${key}/cases`, `/app/evals/${key}`, body);
 }

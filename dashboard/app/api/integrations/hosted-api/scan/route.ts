@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const purpose = String(form.get("purpose") || "");
 
   if (!endpoint_url) {
-    const target = new URL("/start?tab=connect", req.nextUrl.origin);
+    const target = new URL("/app/start?tab=connect", req.nextUrl.origin);
     target.searchParams.set("scan_error", "missing endpoint URL or session");
     return NextResponse.redirect(target);
   }
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     req,
     "POST",
     "/api/integrations/hosted-api/scan",
-    "/start?tab=connect",
+    "/app/start?tab=connect",
     { endpoint_url, docs_url: docs_url || null, openapi_spec_url: openapi_spec_url || null, purpose },
     (res, body) =>
       res.ok

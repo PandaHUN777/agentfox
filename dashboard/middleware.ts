@@ -49,28 +49,49 @@ import { SESSION_COOKIE } from "@/lib/api";
 // /opengraph-image, /twitter-image, /icon and /apple-icon have no extension, so
 // without these entries Reddit, Slack, X and Discord would all be served a redirect
 // to /login where they asked for a PNG, and the unfurl would stay blank.
-const PUBLIC_PATHS = [
-  "/",
-  "/product",
-  "/how-it-works",
-  "/compare",
-  "/support",
-  "/pricing",
-  "/privacy",
-  "/terms",
-  "/security",
-  "/legal",
-  "/login",
-  "/api/auth",
-  "/playground",
-  "/benchmark",
-  "/robots.txt",
-  "/sitemap.xml",
-  "/opengraph-image",
-  "/twitter-image",
-  "/icon",
-  "/apple-icon",
+/**
+ * What needs a session, expressed as a prefix.
+ *
+ * This replaced a list. Every private route now lives under `/app` and every API
+ * route except the auth handshake under `/api`, so the question "is this page
+ * private" is two `startsWith` calls rather than a twenty-entry allow-list that
+ * had to be kept in step with `app/layout.tsx`'s chromeless list and
+ * `app/robots.ts`'s crawl list. The three drifted, and the way they drifted was
+ * always the same: a new public page was added and one of the three was missed,
+ * so a page meant for signed-out visitors redirected them to a sign-in form.
+ *
+ * The matcher below already excludes static files by extension. That is load
+ * bearing: without it a signed-out visitor's request for a marketing screenshot
+ * has no session cookie, gets redirected to /login, and the browser receives HTML
+ * where it asked for an image — every picture on the public home page broken, and
+ * only for the signed-out visitors the page exists for.
+ */
+const PRIVATE_PREFIXES = ["/app", "/api"];
+
+/**
+ * Where the private routes used to live, before they moved under `/app`.
+ *
+ * A bookmark to /agents or a link in somebody's runbook would 404 without this,
+ * and a 404 is the worst of the options: the page exists, it is one segment away,
+ * and the visitor has no way to know that. 308 rather than 302 because the move is
+ * permanent and the method must be preserved — a 302 on a POST would turn a form
+ * submission into a GET.
+ *
+ * This list is allowed to go stale in one direction only. A segment removed from
+ * it stops redirecting, which is a dead link; a segment left in it that no longer
+ * exists redirects to a 404 under /app, which is the same 404 the visitor would
+ * have got anyway. Neither leaks anything, because /app is behind the session
+ * check below either way.
+ */
+const MOVED_TO_APP = [
+  "/start", "/agents", "/sources", "/findings", "/traces", "/evals",
+  "/policies", "/entitlement", "/approvals", "/compliance", "/glossary",
+  "/escalation", "/board", "/guardrails", "/settings",
 ];
+
+/** The one exception under `/api`: the GitHub OAuth handshake, which by
+ *  definition happens before there is a session to check. */
+const PUBLIC_API_PREFIX = "/api/auth";
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -91,10 +112,19 @@ export function middleware(req: NextRequest) {
     return res;
   }
 
-  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+  const underPrefix = (p: string) => pathname === p || pathname.startsWith(`${p}/`);
+
+  const moved = MOVED_TO_APP.find(underPrefix);
+  if (moved) {
+    const url = new URL(`/app${pathname}${req.nextUrl.search}`, req.url);
+    return NextResponse.redirect(url, 308);
+  }
+
+  const isPrivate =
+    PRIVATE_PREFIXES.some(underPrefix) && !underPrefix(PUBLIC_API_PREFIX);
   const signedIn = Boolean(req.cookies.get(SESSION_COOKIE)?.value);
 
-  if (!isPublic && !signedIn) {
+  if (isPrivate && !signedIn) {
     const url = new URL("/login", req.url);
     return NextResponse.redirect(url);
   }

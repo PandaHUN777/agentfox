@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import { Albert_Sans } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
@@ -134,49 +135,48 @@ export const metadata: Metadata = {
  * governance, not a separate top-level stage, and a group with a single row
  * was just an extra click for no organizing benefit.
  *
- * Guardrail tuning and Escalation get their own (indented, `sub: true`) rows
- * rather than living only as tabs a user has to already know to click into —
- * both are substantial pages in their own right (per-detector precision/
- * latency/suppressions data; the missed-escalation and hand-off queue) that
- * were previously reachable only after landing on Policies/Approvals first.
+ * Guardrail tuning and Escalation are NOT rows. They are tabs on Policies and on
+ * Approvals, and they were also listed here as indented children of those two
+ * rows — the same destination in the sidebar twice, drawn in a weaker style the
+ * second time. A sidebar row and a tab on the page it opens are two controls for
+ * one thing, and the reader has to work out that they agree. They are in
+ * NAV_SEARCH_ONLY below instead, so typing the name still finds them.
  */
 const NAV: { group: string; items: NavItem[] }[] = [
   {
     group: "",
     items: [
-      ["Overview", "/"],
-      ["Start here", "/start"],
+      ["Overview", "/app"],
+      ["Start here", "/app/start"],
     ],
   },
   {
     group: "Discover",
     items: [
-      ["Agents", "/agents"],
-      ["Verified sources", "/sources"],
+      ["Agents", "/app/agents"],
+      ["Verified sources", "/app/sources"],
     ],
   },
   {
     group: "Monitor",
     items: [
-      ["Findings", "/findings"],
-      ["Traces", "/traces"],
+      ["Findings", "/app/findings"],
+      ["Traces", "/app/traces"],
     ],
   },
   {
     group: "Test",
     items: [
-      ["Evaluation", "/evals"],
+      ["Evaluation", "/app/evals"],
     ],
   },
   {
     group: "Govern",
     items: [
-      ["Policies", "/policies"],
-      ["Guardrail tuning", "/policies?tab=guardrails", true],
-      ["Access Control", "/entitlement"],
-      ["Approvals", "/approvals"],
-      ["Escalation", "/approvals?tab=escalation", true],
-      ["Compliance", "/compliance"],
+      ["Policies", "/app/policies"],
+      ["Access control", "/app/entitlement"],
+      ["Approvals", "/app/approvals"],
+      ["Compliance", "/app/compliance"],
     ],
   },
 ];
@@ -188,11 +188,13 @@ const NAV: { group: string; items: NavItem[] }[] = [
  * the same as losing the ability to find the thing by typing its name.
  */
 const NAV_SEARCH_ONLY: { label: string; href: string; group: string }[] = [
-  { label: "Connect GitHub", href: "/start?tab=connect", group: "Start here" },
-  { label: "Connect a hosted API", href: "/start?tab=connect", group: "Start here" },
-  { label: "API tokens", href: "/start?tab=tokens", group: "Start here" },
-  { label: "Board view", href: "/compliance?tab=board", group: "Compliance" },
-  { label: "Glossary", href: "/glossary", group: "Reference" },
+  { label: "Connect GitHub", href: "/app/start?tab=connect", group: "Start here" },
+  { label: "Connect a hosted API", href: "/app/start?tab=connect", group: "Start here" },
+  { label: "API tokens", href: "/app/start?tab=tokens", group: "Start here" },
+  { label: "Guardrail tuning", href: "/app/policies?tab=guardrails", group: "Policies" },
+  { label: "Escalation", href: "/app/approvals?tab=escalation", group: "Approvals" },
+  { label: "Board view", href: "/app/compliance?tab=board", group: "Compliance" },
+  { label: "Glossary", href: "/app/glossary", group: "Reference" },
 ];
 
 const NAV_FLAT = NAV.flatMap(({ group, items }) =>
@@ -205,46 +207,26 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // middleware didn't run (e.g. some dev edge cases), and hiding the whole app by
   // default on an edge case is the wrong failure direction.
   const pathname = (await headers()).get("x-pathname") || "";
-  const isLoginPage = pathname === "/login";
-  // The public playground (/playground) is unauthenticated by design (see
-  // middleware.ts) and has its own minimal header — the authenticated sidebar/
-  // topbar chrome would be both wrong (nothing here is signed in) and a giveaway
-  // of internal nav to an anonymous visitor.
-  // /benchmark is public and is linked from the playground, so a signed-out visitor
-  // reaches it. Wrapping it in the app chrome would hand them a sidebar whose every
-  // row bounces to sign-in.
-  //
-  // The same reasoning covers the two pages added for signed-out visitors:
-  // /how-it-works is public explanation and carries its own header, and "/" is the
-  // public landing page *only when there is no session*. A signed-in user asking for
-  // "/" still gets Overview inside the full app chrome, exactly as before, which is
-  // why the root check is the one entry here that depends on `signedIn`.
-  const isPublicHome = pathname === "/" && !signedIn;
-  const isChromelessPage =
-    isLoginPage ||
-    isPublicHome ||
-    pathname.startsWith("/how-it-works") ||
-    pathname.startsWith("/playground") ||
-    pathname.startsWith("/benchmark") ||
-    pathname.startsWith("/compare") ||
-    pathname.startsWith("/support") ||
-    pathname.startsWith("/pricing") ||
-    // /product is the long version of the landing page and renders its own
-    // MarketingNav and Footer. Without this it came out with the marketing nav
-    // nested inside the app sidebar, which is two navigations for one page, and
-    // a signed-out visitor could not open it at all (see middleware.ts).
-    pathname.startsWith("/product") ||
-    // The legal pages, for the same two reasons: each renders its own MarketingNav
-    // and Footer, and each has to be readable by someone with no account, since
-    // that is precisely the reader deciding whether to get one.
-    pathname.startsWith("/privacy") ||
-    pathname.startsWith("/terms") ||
-    pathname.startsWith("/security") ||
-    pathname.startsWith("/legal");
+  /**
+   * The app chrome — sidebar, topbar — belongs to the app, and the app is
+   * everything under `/app`.
+   *
+   * This used to be a fourteen-entry list of public prefixes, one of which ("/")
+   * depended on whether there was a session, because `/` served the marketing page
+   * to signed-out visitors and the dashboard to signed-in ones. Both are gone. The
+   * dashboard has its own URL, so `/` is the marketing page for everybody, and a
+   * signed-in visitor can read the public site without signing out — which they
+   * could not do before, because no URL served it to them.
+   *
+   * The list was also the wrong shape: it grew every time a public page was added
+   * and shrank never, and a page whose prefix was forgotten came out with the
+   * marketing nav nested inside the app sidebar.
+   */
+  const isAppPage = pathname === "/app" || pathname.startsWith("/app/");
 
   let me: any = null;
   let attention: any = null;
-  if (signedIn && !isChromelessPage) {
+  if (signedIn && isAppPage) {
     [me, attention] = await Promise.all([
       safeApi("/api/me", null),
       safeApi("/api/attention", { items: [], total: 0 }),
@@ -273,15 +255,19 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
       <body>
-        {isChromelessPage ? (
+        {!isAppPage ? (
           <main className="login-main">{children}</main>
         ) : (
           <div className="shell">
             <nav className="side">
-              <div className="brand">
+              {/* The mark and the name only. "by Nometria" sat under both of them
+                  as a block, which put it under the fox rather than under the
+                  word, and at 11px in a 224px rail it read as a stray caption.
+                  The parent brand belongs where there is room for it: the public
+                  footer and the sign-in page both carry it. */}
+              <Link href="/app" className="brand" aria-label="Overview">
                 <Wordmark />
-                <small>by Nometria</small>
-              </div>
+              </Link>
               <SideNav nav={NAV} />
               <ThemeToggle />
             </nav>

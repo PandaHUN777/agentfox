@@ -14,5 +14,5 @@ export async function POST(req: NextRequest) {
     classes: form.getAll("classes").map(String),
   };
 
-  return proxyCustomBody(req, "POST", "/api/entitlement/grants", "/entitlement", body);
+  return proxyCustomBody(req, "POST", "/api/entitlement/grants", "/app/entitlement", body);
 }

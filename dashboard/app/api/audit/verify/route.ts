@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     req,
     "POST",
     "/api/audit/verify",
-    "/compliance?tab=evidence",
+    "/app/compliance?tab=evidence",
     undefined,
     (res, body) => {
       if (!res.ok) return { error: body.detail || res.statusText };

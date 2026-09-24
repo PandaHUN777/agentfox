@@ -4,5 +4,5 @@ import { proxyFormPost } from "@/lib/proxy";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
-  return proxyFormPost(req, "/api/eval/slos", "/evals");
+  return proxyFormPost(req, "/api/eval/slos", "/app/evals");
 }

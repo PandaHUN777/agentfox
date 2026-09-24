@@ -20,5 +20,5 @@ export async function POST(req: NextRequest) {
     scorers: scorers.length ? scorers : null,
   };
 
-  return proxyCustomBody(req, "POST", "/api/eval/runs", `/evals/${suite}`, body);
+  return proxyCustomBody(req, "POST", "/api/eval/runs", `/app/evals/${suite}`, body);
 }

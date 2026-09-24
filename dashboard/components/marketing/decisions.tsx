@@ -147,6 +147,43 @@ const BLOCK: Decision = {
   verdict: "block", // enforcement.py:648
 };
 
+/**
+ * The same agent, doing its job.
+ *
+ * A page that only ever shows a refusal reads as a product whose answer is always
+ * no, and "it blocks things" is not the hard part — blocking everything is
+ * trivial. The pair is the claim: this call is allowed and that one is not, from
+ * the same grant, with nothing having read a word of either.
+ *
+ * Both verdicts were run against the playground sandbox rather than reasoned out:
+ * `kb.search` on support-triage returns `allow` with no rule fired, and
+ * `payments.transfer` returns `block` on `capability.denied`.
+ */
+const HERO_ALLOW: Decision = {
+  key: "hero-allow",
+  outcome: "Allow",
+  tone: "go",
+  gist: "A call it holds, with an argument nothing objects to.",
+  rows: [
+    { label: "Agent", value: "support-triage", mono: true },
+    { label: "Tool", value: "kb.search", mono: true }, // seed.py, kb.search grant
+    { label: "Argument", value: "q: refund policy", mono: true },
+    { label: "Rule", value: "none", mono: true },
+    { label: "Reason", value: "no policy rule matched" },
+  ],
+  verdict: "allow",
+};
+
+/** The pair, for the containment section: one allowed, one refused. */
+export function DecisionPair() {
+  return (
+    <div style={{ display: "grid", gap: 12 }}>
+      <DecisionCard decision={HERO_ALLOW} heading />
+      <DecisionCard heading />
+    </div>
+  );
+}
+
 /*
  * 4. Recorded. Not a verdict: it is what happened to the decision above once it was
  *    made. The digests are the ones in mocks.tsx, which were computed with

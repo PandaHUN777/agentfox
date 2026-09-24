@@ -245,7 +245,7 @@ export function Pillars() {
 
         <p
           className="mk-fine mk-up mk-d3"
-          style={{ maxWidth: "70ch", margin: "24px auto 0", textAlign: "center" }}
+          style={{ maxWidth: "var(--measure)", margin: "24px auto 0", textAlign: "center" }}
         >
           Pillars 1 to 3 and 5 run on the request itself. Pillars 4 and 6 are what you run
           before you ship and what you show an auditor afterwards.{" "}

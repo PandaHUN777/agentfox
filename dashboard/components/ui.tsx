@@ -36,7 +36,7 @@ export function AgentLink({
 }) {
   const name = agents.find((a) => a.slug === slug)?.name;
   return (
-    <Link href={`/agents/${slug}`} className={className} title={name ? slug : undefined}>
+    <Link href={`/app/agents/${slug}`} className={className} title={name ? slug : undefined}>
       {name || slug}
     </Link>
   );
@@ -157,7 +157,7 @@ export function ControlChip({ code, titles }: { code: string; titles: Record<str
   const title = titles[code];
   return (
     <Link
-      href={`/compliance#${code}`}
+      href={`/app/compliance#${code}`}
       title={title}
       style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 3, maxWidth: 260 }}
     >
