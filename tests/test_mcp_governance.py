@@ -9,16 +9,16 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.identity import ensure_identity, grant_capability
-from nometria.integrations.mcp import (
+from agentfox.identity import ensure_identity, grant_capability
+from agentfox.integrations.mcp import (
     McpCallBlocked,
     McpGovernor,
     infer_impact,
     tool_digest,
     tool_key,
 )
-from nometria.models import Agent, Finding, Tool
-from nometria.registry.service import scan_mcp_server
+from agentfox.models import Agent, Finding, Tool
+from agentfox.registry.service import scan_mcp_server
 
 from .conftest import INDIRECT_INJECTION, as_user
 
@@ -89,7 +89,7 @@ def test_an_authorised_call_passes_through(seeded, governor):
 
 
 def test_the_call_is_recorded_as_lineage(seeded, governor):
-    from nometria.models import LineageEdge
+    from agentfox.models import LineageEdge
 
     governor.call("search_docs", {"q": "x"}, transport=lambda t, a: "ok")
     edges = {(e.src_type, e.dst_type, e.relation) for e in seeded.query(LineageEdge).all()}
@@ -363,5 +363,5 @@ def test_governed_mcp_call_over_the_gateway(client):
     # correct default and proves the route is governed rather than a passthrough.
     assert response.status_code == 403
     body = response.json()["error"]
-    assert body["type"] == "nometria_policy_violation"
+    assert body["type"] == "agentfox_policy_violation"
     assert body["explanation"]["summary"]

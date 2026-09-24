@@ -11,8 +11,8 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.business.compile import compile_document
-from nometria.business.ladder import Ladder, evaluate
+from agentfox.business.compile import compile_document
+from agentfox.business.ladder import Ladder, evaluate
 
 
 def _ladder(compilation):

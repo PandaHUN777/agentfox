@@ -1,8 +1,8 @@
 ---
 title: Python SDK and integrations
 layer: reference
-audience: agents wiring nometria into a user's codebase
-source_of_truth: src/nometria/__init__.py, autoguard.py, sdk/, integrations/
+audience: agents wiring AgentFox into a user's codebase
+source_of_truth: src/agentfox/__init__.py, autoguard.py, sdk/, integrations/
 verified_against: commit 6863b8b, 2026-09-15
 ---
 
@@ -10,40 +10,40 @@ verified_against: commit 6863b8b, 2026-09-15
 
 | Surface | Code change | Governs | Choose when |
 |---|---|---|---|
-| `nometria.auto()` | 1 line | OpenAI / Anthropic / LiteLLM / LangChain calls, sync and async, streamed or not | First integration, any framework. |
+| `agentfox.auto()` | 1 line | OpenAI / Anthropic / LiteLLM / LangChain calls, sync and async, streamed or not | First integration, any framework. |
 | Gateway proxy (`/v1/chat/completions`, `/v1/messages`) | change `base_url` | every model call over HTTP, any language, with mid-stream (windowed) enforcement | Non-Python, streaming that must be cut mid-response, or a platform team owns the gateway. |
-| `Nometria` SDK | decorators + session | model calls **and tool calls with argument provenance** | The agent calls tools with real side effects (payments, SQL, email). |
-| LangGraph `NometriaGuard` | wrap nodes | retrieval, model, tool nodes; escalation → `interrupt()` | The agent is a LangGraph graph (primary adoption path). |
+| `AgentFox` SDK | decorators + session | model calls **and tool calls with argument provenance** | The agent calls tools with real side effects (payments, SQL, email). |
+| LangGraph `AgentFoxGuard` | wrap nodes | retrieval, model, tool nodes; escalation → `interrupt()` | The agent is a LangGraph graph (primary adoption path). |
 | FastAPI `install()` / `guard()` | middleware / dependency | HTTP endpoints that take prompts | The agent is exposed as a FastAPI service. |
 | `McpGovernor` | wrap MCP client calls | MCP tool calls, schema drift ("rug pull"), undeclared tools | The agent uses MCP servers. |
 
-## 1. `nometria.auto()` — the one-liner
+## 1. `agentfox.auto()` — the one-liner
 
 ```python
-import nometria
-nometria.auto()                                   # follows each policy's own mode
-# nometria.auto(agent="support-triage", session_id=conv_id)
+import agentfox
+agentfox.auto()                                   # follows each policy's own mode
+# agentfox.auto(agent="support-triage", session_id=conv_id)
 ```
 
 Signature: `auto(agent=None, *, mode="policy", environment=None, session_id=None, register=True, quiet=False) -> AutoState`.
 
-| `mode` | Raises `nometria.Blocked` when | Use it for |
+| `mode` | Raises `agentfox.Blocked` when | Use it for |
 |---|---|---|
 | `"policy"` (default) | the gateway would have refused the call: an enforce-mode policy blocks, or the agent is killed, quarantined, over budget, or outside its knowledge boundary | normal use. With the shipped packs `baseline` observes, so adding the import blocks nothing new. `agentfox policy enforce baseline` is then the one step that starts blocking |
 | `"observe"` | never, not even for the kill switch | a library-level safety valve |
 | `"enforce"` | the enforced verdict stops it, or the effective verdict is `block` even though the policy only observes | tests and CI |
 
-Also `nometria.state()` (`calls_governed`, `calls_blocked`, `would_have_blocked`,
-`framework_routes()`), `nometria.off()`, and the exception `nometria.Blocked`. Extra kwargs accepted by patched calls and stripped before the provider sees
-them: `nometria_principal`, `nometria_chunks`, `nometria_purpose`.
-Limits: see `reference/known-issues.md` → "`nometria.auto()` limits".
+Also `agentfox.state()` (`calls_governed`, `calls_blocked`, `would_have_blocked`,
+`framework_routes()`), `agentfox.off()`, and the exception `agentfox.Blocked`. Extra kwargs accepted by patched calls and stripped before the provider sees
+them: `agentfox_principal`, `agentfox_chunks`, `agentfox_purpose`.
+Limits: see `reference/known-issues.md` → "`agentfox.auto()` limits".
 
 ## 2. SDK — tools with provenance
 
 ```python
-from nometria import Nometria, PolicyViolation, ApprovalRequired
+from agentfox import AgentFox, PolicyViolation, ApprovalRequired
 
-nom = Nometria(agent="support-triage")            # in-process; add base_url=, api_key= for remote
+nom = AgentFox(agent="support-triage")            # in-process; add base_url=, api_key= for remote
 
 @nom.tool("payments.transfer", impact="irreversible")   # impact: read | write | high_impact | irreversible
 def transfer(amount, currency, to): ...
@@ -66,9 +66,9 @@ Other `AgentSession` methods: `tool_result(text, tool=)`, `subagent_output(text)
 ## 3. LangGraph
 
 ```python
-from nometria.integrations.langgraph import NometriaGuard   # needs the [langgraph] extra
+from agentfox.integrations.langgraph import AgentFoxGuard   # needs the [langgraph] extra
 
-guard = NometriaGuard(agent="support-triage", intent="answer a refund question")
+guard = AgentFoxGuard(agent="support-triage", intent="answer a refund question")
 builder.add_node("retrieve", guard.retrieval_node(fetch_docs))
 builder.add_node("model",    guard.model_node(call_model))
 builder.add_node("pay",      guard.tool_node(transfer, tool="payments.transfer"))
@@ -81,9 +81,9 @@ Escalation calls LangGraph's `interrupt()`; blocks raise `PolicyViolation`.
 
 ```python
 from fastapi import Depends
-from nometria.integrations.fastapi import install, guard
+from agentfox.integrations.fastapi import install, guard
 
-install(app, service="support-api")               # observe-only middleware + /nometria/health
+install(app, service="support-api")               # observe-only middleware + /agentfox/health
 
 @app.post("/ask")
 def ask(payload: dict, result=Depends(guard(agent="support-triage", field="prompt"))): ...
@@ -92,7 +92,7 @@ def ask(payload: dict, result=Depends(guard(agent="support-triage", field="promp
 ## 5. MCP client governor
 
 ```python
-from nometria.integrations import McpGovernor
+from agentfox.integrations import McpGovernor
 
 gov = McpGovernor(session=db_session, agent_slug="support-triage", server_name="billing")
 gov.register_tools(tools_list)                    # snapshot; later drift is detected

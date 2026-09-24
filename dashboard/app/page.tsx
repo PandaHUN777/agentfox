@@ -149,7 +149,7 @@ async function Overview() {
             That is not the same as nothing being wrong. Add one line to your entry point
             and this page fills in from real requests:
           </p>
-          <code className="hero-code">import nometria; nometria.auto()</code>
+          <code className="hero-code">import agentfox; agentfox.auto()</code>
           <p className="small muted">
             Governs every model call in the process — traced, evaluated, audited, and
             blocking nothing until you say so.

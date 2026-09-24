@@ -29,10 +29,10 @@ harness/
 │   ├── glossary.md               modes, terms, ID prefixes, commit conventions
 │   └── docs-map.md               classifies every repo .md: canonical / generated / drifted / task / human-only
 ├── skills/                   L2  PROCEDURES — one folder per job-to-be-done
-│   ├── using-nometria/SKILL.md   entry skill: sends the agent to AGENTS.md (plugins load skills, not root files)
+│   ├── using-agentfox/SKILL.md   entry skill: sends the agent to AGENTS.md (plugins load skills, not root files)
 │   └── <job>/SKILL.md            steps, decision points, safety gates; links to L1 for facts
 │       └── templates/ | references/   material only this skill needs
-├── commands/                 L3  ENTRY POINTS — what a user types (/nometria:<name>), thin, call a skill
+├── commands/                 L3  ENTRY POINTS — what a user types (/agentfox:<name>), thin, call a skill
 ├── agents/                   L3  ROLES — subagents with scoped tools (read-only auditor, policy author, …)
 ├── hooks/hooks.json          L4  GUARDRAILS FOR THE HARNESS — confirmation gate on blocking commands
 └── scripts/                  L4  launcher, hook implementation, drift checker
@@ -61,7 +61,7 @@ never copies them.
    explicit confirm step in every skill that reaches it. All three change together.
 6. **Generated docs are regenerated, never edited.** `docs/status.md` and
    `docs/coverage-map.md` have commands in `reference/docs-map.md`.
-7. **Same-commit rule.** A change to `src/nometria/cli/`, `config.py`, `gateway/routes/`,
+7. **Same-commit rule.** A change to `src/agentfox/cli/`, `config.py`, `gateway/routes/`,
    `policy/model.py` or `policies_data/` updates the matching `reference/` file in the same
    commit. Fixing a bug in `known-issues.md` deletes its entry in the same commit.
 8. **Every repo `.md` is classified.** A new doc anywhere in the repo gets a row in
@@ -69,7 +69,7 @@ never copies them.
 
 **Why no `CLAUDE.md` in the harness.** A plugin-root `CLAUDE.md` isn't loaded by Claude
 Code, and `claude plugin validate` warns about it. The rules live in `AGENTS.md`, which any
-agent runtime can read. The `using-nometria` skill is how a plugin runtime reaches them.
+agent runtime can read. The `using-agentfox` skill is how a plugin runtime reaches them.
 
 **Commands in skills are written `agentfox …`.** The harness may be installed anywhere, so
 skills never hard-code a path to the launcher. `AGENTS.md` → "Running the CLI" is the one
@@ -85,7 +85,7 @@ place that explains the fallbacks.
 | `agents/*.md` | `name`, `description`, `tools` (least privilege) |
 
 **The MCP server is read-only by construction.** It exposes analysis and inspection tools
-only (`src/nometria/mcp_server.py`). Anything that changes enforcement, stops an agent,
+only (`src/agentfox/mcp_server.py`). Anything that changes enforcement, stops an agent,
 decides or applies a change proposal, or sends data goes through the CLI, where the hook
 asks first. Adding a state-changing MCP tool would bypass that gate, so don't. When you add
 or remove a tool, update the count in `README.md`, `reference/cli.md` and this file.

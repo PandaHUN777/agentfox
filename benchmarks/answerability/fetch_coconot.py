@@ -12,7 +12,7 @@ Config: contrast, split test — 379 rows, `{id, category, subcategory, prompt,
 
 None of CoCoNot's categories are about a knowledge boundary (F1's actual
 scope) — they're about safety, request completeness, and modality limits, all
-governed elsewhere in Nometria or not at all. That's exactly why this is a
+governed elsewhere in AgentFox or not at all. That's exactly why this is a
 useful *negative* control for `answerability.py`: it's real-world-shaped
 prompt text with zero connection to prediction/opinion/coverage/entity/topic
 boundaries, so any of them getting an `answerable=False` verdict is a clean

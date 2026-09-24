@@ -1,6 +1,6 @@
 # PII detection, benchmarked
 
-**Sequential dataset-sourcing build-out** (see `docs/dataset-sourcing.md`) — all three sourced PII datasets built, then a second round of fixes applied against what the numbers actually showed (see "Fixes applied" below). Scores both PII detectors that ship in `src/nometria/guardrails/`:
+**Sequential dataset-sourcing build-out** (see `docs/dataset-sourcing.md`) — all three sourced PII datasets built, then a second round of fixes applied against what the numbers actually showed (see "Fixes applied" below). Scores both PII detectors that ship in `src/agentfox/guardrails/`:
 
 - `pii.native` (`detectors/pii.py`) — regex-only, jurisdiction packs (US/UK/EU/India), no NER.
 - `pii.presidio` (`adapters/presidio.py`) — wraps Microsoft Presidio; `PERSON`/`LOCATION`/`DATE_TIME`/`US_DRIVER_LICENSE`/`US_PASSPORT` excluded by policy default (`DEFAULT_EXCLUDED`) as "noisy in agent traffic."
@@ -100,7 +100,7 @@ The remaining 79 genuine (non-address) false positives show two real, unfixed pa
 ### Methodology notes
 
 - **Scoring**: character-span overlap (any overlap between a predicted span and a ground-truth span of the same canonical type counts as a match), greedy one-to-one per document — standard for PII/NER evaluation, where finding the right entity matters more than matching its exact character boundaries. Not exact-boundary match.
-- **Scope**: this dataset labels several entity types Nometria's detectors never claim to cover at all — `STREET_ADDRESS`, `ORGANIZATION`, `TITLE`, `AGE`, `NRP`, `ZIP_CODE`, `DOMAIN_NAME`. Those spans are dropped from ground truth entirely (`GT_ENTITY_MAP` in the run script); scoring a detector as wrong for not detecting a category it was never built for would misrepresent it, not evaluate it. `STREET_ADDRESS` gets one further, narrower treatment — see the containment-exclusion fix above.
+- **Scope**: this dataset labels several entity types AgentFox's detectors never claim to cover at all — `STREET_ADDRESS`, `ORGANIZATION`, `TITLE`, `AGE`, `NRP`, `ZIP_CODE`, `DOMAIN_NAME`. Those spans are dropped from ground truth entirely (`GT_ENTITY_MAP` in the run script); scoring a detector as wrong for not detecting a category it was never built for would misrepresent it, not evaluate it. `STREET_ADDRESS` gets one further, narrower treatment — see the containment-exclusion fix above.
 - **One deliberate proxy**: presidio-research labels country/city mentions `GPE` rather than `LOCATION`. Mapped 1:1 onto `PII.LOCATION` since it's the closest match and the dataset has no separate `LOCATION` label — a disclosed scope decision, not a hidden one.
 - **Direct detector calls, not via `DetectorPipeline`**: calling `pii.presidio` through the pipeline marks it "degraded" (timed out) on its first call even after `warm_all()` — the same latency-ceiling measurement artifact `benchmarks/REPORT.md` documents for the injection classifier (a shared timeout budget silently drops a slow-but-correct first call). Calling `.detect()` directly on the detector object avoids it: the underlying spaCy/Presidio model loads once (~3s) on the very first call in a process, then every subsequent call is single-digit-to-low-double-digit milliseconds.
 - **Dataset is synthetic**, not real personal data — Presidio's own template-based generator. Doesn't test real-world formatting noise the way Dataset 3 (real text) does.
@@ -171,7 +171,7 @@ Fixing the three biggest problems in round 1 made the next tier of issues visibl
 
 ## Dataset 3 — Text Anonymization Benchmark (TAB), real ECHR case law
 
-127 real European Court of Human Rights judgments (`echr_test.json`), the only dataset in this suite built from real text rather than synthetic or templated generation. Multiple human annotators per document (1-10); ground truth is the union across annotators, deduplicated on exact span boundaries — a disclosed simplification of TAB's own weighted evaluation protocol, not a reproduction of it. In-scope types here are `PERSON`, `LOC` (→ `PII.LOCATION`), and `DATETIME` (→ `PII.DATE_TIME`, matching the taxonomy fix — see "Fixes applied") — `ORG`, `DEM`, `CODE`, `MISC`, `QUANTITY` have no corresponding Nometria detector and are dropped from ground truth.
+127 real European Court of Human Rights judgments (`echr_test.json`), the only dataset in this suite built from real text rather than synthetic or templated generation. Multiple human annotators per document (1-10); ground truth is the union across annotators, deduplicated on exact span boundaries — a disclosed simplification of TAB's own weighted evaluation protocol, not a reproduction of it. In-scope types here are `PERSON`, `LOC` (→ `PII.LOCATION`), and `DATETIME` (→ `PII.DATE_TIME`, matching the taxonomy fix — see "Fixes applied") — `ORG`, `DEM`, `CODE`, `MISC`, `QUANTITY` have no corresponding AgentFox detector and are dropped from ground truth.
 
 ### Results, all 127 rows
 

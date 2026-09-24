@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Drift checker for the Nometria harness.
+"""Drift checker for the AgentFox harness.
 
 Fails (exit 1) when the harness markdown has drifted from the product:
   * an `agentfox <group> <command> --flag` in any harness .md that the real CLI rejects
@@ -26,7 +26,7 @@ try:
     import click
     import typer.main
 
-    from nometria.cli.main import app
+    from agentfox.cli.main import app
 except Exception as exc:  # pragma: no cover - environment problem, not drift
     print(
         f"cannot import the agentfox CLI ({exc}). "
@@ -126,7 +126,7 @@ def cli_md_rows(md: Path, text: str) -> None:
             continue
         first_cell = line.split("|")[1]
         for span in CODE_SPAN.findall(first_cell):
-            spec = span if span.startswith(("agentfox", "nometria")) else "agentfox " + span
+            spec = span if span.startswith(("agentfox", "agentfox")) else "agentfox " + span
             _check_fragment(md, spec)
 
 

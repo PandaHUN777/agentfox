@@ -1,45 +1,62 @@
-"""Nometria — agent-native, vendor-neutral governance for AI agents in production.
+"""Compatibility shim: the package is now ``agentfox``.
 
-The whole product, from a developer's point of view, is one line:
+Nometria was renamed to AgentFox. The website, the CLI and the documentation all say
+``agentfox``, but ``import nometria``, ``nometria.auto()`` and
+``from nometria.integrations.langgraph import ...`` were the documented entry points
+until that rename, so anyone who followed the docs before it has one of those lines
+in their own code. Breaking them on upgrade turns a rename into an outage in someone
+else's process, which is not a trade this project gets to make for them.
 
-    import nometria
-    nometria.auto()
+Every ``nometria`` name resolves to the identical ``agentfox`` module object, not to
+a second copy loaded under a different name. That distinction is the whole point of
+the finder below: two copies would mean two settings caches and two audit-chain
+states, which is a real bug rather than a cosmetic one.
 
-Every model call in the process is then traced, evaluated against policy, and written
-to a tamper-evident audit log — in **observe mode**, blocking nothing, until someone
-decides otherwise. Nothing else in the codebase changes.
-
-Everything below that is depth for teams that want it: an SDK with explicit sessions
-and taint tracking, a LangGraph-native guard, a gateway for non-Python stacks, and a
-control plane. The one-liner exists because the sum of small integration asks is why
-governance tooling sits in a proof-of-concept for six months.
+Deprecated. It warns once on first import and will be removed in a future release.
 """
 
-__version__ = "0.3.0"
+from __future__ import annotations
 
-# Lazily re-exported so `import nometria` stays fast and side-effect free — importing
-# the package must never open a database or touch a client library.
-_LAZY = {
-    "auto": ("nometria.autoguard", "auto"),
-    "off": ("nometria.autoguard", "off"),
-    "state": ("nometria.autoguard", "state"),
-    "Blocked": ("nometria.autoguard", "Blocked"),
-    "Nometria": ("nometria.sdk", "Nometria"),
-    "PolicyViolation": ("nometria.sdk", "PolicyViolation"),
-    "ApprovalRequired": ("nometria.sdk", "ApprovalRequired"),
-}
+import importlib
+import sys
+import warnings
+from importlib.abc import MetaPathFinder
 
-__all__ = ["__version__", *sorted(_LAZY)]
+import agentfox as _agentfox
+
+_OLD = "nometria"
+_NEW = "agentfox"
 
 
-def __getattr__(name: str):
-    if name in _LAZY:
-        import importlib
+class _RenamedPackageFinder(MetaPathFinder):
+    """Resolve ``nometria.x.y`` to the already-imported ``agentfox.x.y``.
 
-        module, attribute = _LAZY[name]
-        return getattr(importlib.import_module(module), attribute)
-    raise AttributeError(f"module 'nometria' has no attribute {name!r}")
+    Swapping ``sys.modules["nometria"]`` alone is not enough: it redirects
+    ``import nometria`` but leaves ``from nometria.config import x`` to load
+    ``src/agentfox/config.py`` a second time under the name ``nometria.config``,
+    producing a distinct module with its own module-level state.
+    """
+
+    def find_spec(self, fullname: str, path=None, target=None):  # noqa: ANN001, ANN202
+        if fullname != _OLD and not fullname.startswith(f"{_OLD}."):
+            return None
+        renamed = _NEW + fullname[len(_OLD) :]
+        module = importlib.import_module(renamed)
+        # Registering under both names is what makes the two spellings the same
+        # object. The import machinery then finds it in sys.modules and does not
+        # execute anything further.
+        sys.modules[fullname] = module
+        return module.__spec__
 
 
-def __dir__() -> list[str]:
-    return sorted(__all__)
+if not any(isinstance(f, _RenamedPackageFinder) for f in sys.meta_path):
+    sys.meta_path.insert(0, _RenamedPackageFinder())
+
+warnings.warn(
+    "The `nometria` package has been renamed to `agentfox`. Import `agentfox` "
+    "instead; `import nometria` will stop working in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+sys.modules[__name__] = _agentfox

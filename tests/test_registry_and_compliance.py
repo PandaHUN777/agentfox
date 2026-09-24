@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from nometria.compliance import (
+from agentfox.compliance import (
     classify,
     compute_all,
     framework_coverage,
@@ -12,9 +12,9 @@ from nometria.compliance import (
     register,
     sync_catalog,
 )
-from nometria.compliance.catalog import review_mapping
-from nometria.models import Agent, AuditEntry, Finding, FrameworkMapping
-from nometria.registry.service import (
+from agentfox.compliance.catalog import review_mapping
+from agentfox.models import Agent, AuditEntry, Finding, FrameworkMapping
+from agentfox.registry.service import (
     assess_delegation,
     attest_registry,
     derive_lineage,
@@ -231,7 +231,7 @@ def test_framework_coverage_declares_gaps(seeded):
 
 
 def test_every_framework_has_a_gap_list(seeded):
-    from nometria.compliance import all_frameworks
+    from agentfox.compliance import all_frameworks
 
     for framework in all_frameworks(seeded):
         assert framework["declared_gaps"], framework["framework"]
@@ -267,7 +267,7 @@ def test_control_with_no_evidence_is_not_implemented(session):
 
 def test_broken_chain_makes_the_audit_control_fail_hard(seeded):
     """A chain that "mostly" verifies has no evidentiary value at all."""
-    from nometria.audit import chain
+    from agentfox.audit import chain
 
     chain.append(seeded, "test.event", payload={"a": 1})
     chain.append(seeded, "test.event", payload={"b": 2})
@@ -324,8 +324,8 @@ def test_classification_is_advisory_only(seeded):
 
 
 def test_ungated_irreversible_tool_raises_the_proposal(session):
-    from nometria.identity import ensure_identity, grant_capability
-    from nometria.registry.service import upsert_tool
+    from agentfox.identity import ensure_identity, grant_capability
+    from agentfox.registry.service import upsert_tool
 
     upsert_tool(session, "payments.transfer", impact="irreversible")
     agent = register_agent(
@@ -363,7 +363,7 @@ def test_obligations_have_a_readiness_target(seeded):
 
 
 def test_board_view_carries_its_caveat(seeded):
-    from nometria.compliance import board_view
+    from agentfox.compliance import board_view
 
     view = board_view(seeded)
     assert "DRAFT" in view["caveat"]
@@ -375,7 +375,7 @@ def test_control_keys_are_unique():
     one short, and the shadowed control is simply never evaluated."""
     import collections
 
-    from nometria.compliance.catalog import load_catalog
+    from agentfox.compliance.catalog import load_catalog
 
     keys = [control["key"] for control in load_catalog()["controls"]]
     duplicates = [key for key, n in collections.Counter(keys).items() if n > 1]

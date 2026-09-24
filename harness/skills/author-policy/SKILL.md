@@ -1,6 +1,6 @@
 ---
 name: author-policy
-description: Guides writing or changing a Nometria policy safely. It drafts YAML, validates and lints it, simulates it against recorded production decisions to see exactly what would newly block, saves it, and promotes to enforce only on the user's explicit approval (optionally via canary). Use for "block X", "allow Y", "why was this blocked", "make the policy stricter", or /nometria:policy.
+description: Guides writing or changing an AgentFox policy safely. It drafts YAML, validates and lints it, simulates it against recorded production decisions to see exactly what would newly block, saves it, and promotes to enforce only on the user's explicit approval (optionally via canary). Use for "block X", "allow Y", "why was this blocked", "make the policy stricter", or /agentfox:policy.
 ---
 
 # Author a policy
@@ -10,7 +10,7 @@ description: Guides writing or changing a Nometria policy safely. It drafts YAML
 
 Policies are declarative YAML compiled to Rego, and they are versioned and audited. The
 schema is in [reference/policy-schema.md](../../reference/policy-schema.md). The three shipped
-packs in `src/nometria/policies_data/` are the best examples: `baseline`,
+packs in `src/agentfox/policies_data/` are the best examples: `baseline`,
 `tool-containment` and `eu-ai-act-high-risk`.
 
 **For a business threshold** (amount bands, approvals by value, spend budgets), use the
@@ -90,6 +90,6 @@ Offer the options, and wait for the user to pick:
 | Canary: `POST /api/policies/{key}/canary/start`, then `…/advance` or `…/rollback` | a server is running and traffic is meaningful |
 | `agentfox policy enforce <key>` | the user has seen the simulation and says "enforce it" |
 
-In-process `nometria.auto()` users also need `auto(mode="enforce")` to raise. Tell them.
+In-process `agentfox.auto()` users also need `auto(mode="enforce")` to raise. Tell them.
 
 To roll back, run `agentfox policy observe <key>`. It's immediate and audited.

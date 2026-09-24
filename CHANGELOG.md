@@ -17,7 +17,7 @@ Nothing yet.
 
 The MVP described in the README. The package was declared `0.1.0` while every document
 said `MVP v0.3`; they now agree on `0.3.0`, which is what `pyproject.toml`,
-`src/nometria/__init__.py`, `agentfox version` and the API's `/health` all report.
+`src/agentfox/__init__.py`, `agentfox version` and the API's `/health` all report.
 
 > Note for the maintainer: replace this heading with a release date when you tag
 > `v0.3.0`. `.github/workflows/release.yml` refuses to publish unless the tag, the

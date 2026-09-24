@@ -3,7 +3,7 @@
 /**
  * The public playground. Unauthenticated, talks straight to the gateway's own
  * unauthenticated `/api/playground/*` routes (see
- * `src/nometria/gateway/routes/playground.py`) — no session cookie, no
+ * `src/agentfox/gateway/routes/playground.py`) — no session cookie, no
  * `lib/api.ts`. Every visitor gets their own throwaway sandbox on mount; nothing
  * here is shared between visitors and nothing here is real (no real money, no
  * real email, no real model call — see the backend module's own docstring).
@@ -22,7 +22,7 @@ import { Panel, Verdict } from "./ui";
  * infer a literal, so the two `=== "/login"` checks below stay legal TypeScript
  * whatever this is pointed at next.
  */
-const CONTACT_HREF: string = "mailto:support@nometria.com";
+const CONTACT_HREF: string = "mailto:support@agentfox.com";
 
 /**
  * The one public channel that actually reaches a maintainer today. The closing
@@ -41,7 +41,7 @@ const BENCHMARK_HREF = "/benchmark";
 
 /**
  * The offline `echo` provider tags its deterministic replies with
- * `[echo:<digest>] ` (src/nometria/providers/echo.py). That is a test-substrate
+ * `[echo:<digest>] ` (src/agentfox/providers/echo.py). That is a test-substrate
  * detail, not something a visitor should have to read past.
  */
 const ECHO_TAG = /^\[echo:[0-9a-f]+\]\s*/;

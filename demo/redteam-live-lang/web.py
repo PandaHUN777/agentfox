@@ -19,7 +19,7 @@ from __future__ import annotations
 import json
 import os
 
-import _env  # noqa: F401  -- must run before anything imports nometria settings
+import _env  # noqa: F401  -- must run before anything imports agentfox settings
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
@@ -28,8 +28,8 @@ from pydantic import BaseModel
 import seed_demo_agent
 from agent import MissingApiKey, SessionState, run_turn
 from langchain_core.messages import AIMessage, HumanMessage
-from nometria.autoguard import Blocked
-from nometria.db import init_db, session_scope
+from agentfox.autoguard import Blocked
+from agentfox.db import init_db, session_scope
 from recorded_scenarios import (
     ALLOW_TURNS,
     BLOCK_TURNS,
@@ -38,7 +38,7 @@ from recorded_scenarios import (
     ESCALATE_TURNS,
 )
 
-app = FastAPI(title="Nometria red-team live demo (LangChain)")
+app = FastAPI(title="AgentFox red-team live demo (LangChain)")
 
 _seeded = False
 
@@ -88,7 +88,7 @@ def chat(req: ChatRequest) -> dict:
     try:
         return run_turn(req.message, state)
     except Blocked as exc:
-        # This demo agent runs in enforce mode (agent.py's `nometria.auto(...,
+        # This demo agent runs in enforce mode (agent.py's `agentfox.auto(...,
         # mode="enforce")`), so a pre-flight verdict on the raw text going INTO the
         # model — a prompt-injection or jailbreak attempt typed straight into the
         # chat box, not a tool call — actually stops the call here, rather than
@@ -142,7 +142,7 @@ def redteam() -> dict:
     """Runs the same built-in probe suite `agentfox redteam run` does, against this
     demo's seeded agent, and returns the campaign summary as JSON."""
     _ensure_seeded()
-    from nometria.evaluation.redteam import BUILTIN_PROBES, run_campaign
+    from agentfox.evaluation.redteam import BUILTIN_PROBES, run_campaign
     from support_tools import AGENT_SLUG
 
     init_db()
@@ -176,7 +176,7 @@ _PAGE = """<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Nometria — live governed support agent</title>
+<title>AgentFox — live governed support agent</title>
 <style>
   :root {
     color-scheme: light dark;
@@ -330,7 +330,7 @@ _PAGE = """<!doctype html>
     <div class="brand-row">
       <div class="mark">N</div>
       <div>
-        <h1>Nometria — live governed support agent</h1>
+        <h1>AgentFox — live governed support agent</h1>
         <p class="tagline">LangChain agent · McpGovernor · F3.8 composed-escalation</p>
       </div>
     </div>

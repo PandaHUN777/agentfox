@@ -19,10 +19,10 @@ import sqlalchemy as sa
 from sqlalchemy import String, delete, func, select, update
 from sqlalchemy.orm import Mapped, mapped_column
 
-from nometria.audit import chain
-from nometria.db import session_scope
-from nometria.models import Agent, AuditEntry, Base, Finding, TenantScoped, Trace, User
-from nometria.tenancy import (
+from agentfox.audit import chain
+from agentfox.db import session_scope
+from agentfox.models import Agent, AuditEntry, Base, Finding, TenantScoped, Trace, User
+from agentfox.tenancy import (
     CrossTenantWrite,
     assert_tenant_safe,
     bind_session,
@@ -67,7 +67,7 @@ def test_every_model_is_tenant_scoped():
 def test_a_model_that_escapes_the_mixin_fails_at_import():
     """The realistic failure is someone adding a table next year who has never read the
     tenancy module. That must be an import error, not a data leak found by a customer."""
-    from nometria.models import _assert_every_model_is_tenant_scoped
+    from agentfox.models import _assert_every_model_is_tenant_scoped
 
     class Escapee(Base):
         __tablename__ = "escapee_probe"
@@ -89,7 +89,7 @@ def test_a_model_added_later_is_filtered_without_its_author_knowing(isolated_db)
         id: Mapped[str] = mapped_column(String(40), primary_key=True)
         note: Mapped[str] = mapped_column(String(80), default="")
 
-    from nometria.db import get_engine
+    from agentfox.db import get_engine
 
     Base.metadata.create_all(get_engine(), tables=[LateArrival.__table__])
     try:
@@ -226,7 +226,7 @@ def test_system_scope_sees_everything_and_says_so(two_tenants):
         def emit(self, record: logging.LogRecord) -> None:
             records.append(record.getMessage())
 
-    logger = logging.getLogger("nometria.tenancy")
+    logger = logging.getLogger("agentfox.tenancy")
     handler = Capture(level=logging.WARNING)
     logger.addHandler(handler)
     previous = logger.level
@@ -344,7 +344,7 @@ def test_interleaved_tenants_do_not_collide_on_sequence(isolated_db):
 
 
 def test_the_api_isolates_tenants(two_tenants):
-    from nometria.gateway.app import create_app
+    from agentfox.gateway.app import create_app
 
     client = TestClient(create_app())
     for org, mine, theirs in ((ACME, "acme-bot", "globex-bot"), (GLOBEX, "globex-bot", "acme-bot")):
@@ -399,8 +399,8 @@ def test_shared_reference_catalog_syncs_independently_per_org(isolated_db):
     catalog that silently refused to load, not a modeling bug; this proves two
     tenants can each hold their own synced copy of the same catalog content.
     """
-    from nometria.compliance.catalog import sync_catalog
-    from nometria.models import Control
+    from agentfox.compliance.catalog import sync_catalog
+    from agentfox.models import Control
 
     for org in (ACME, GLOBEX):
         with tenant(org), session_scope() as session:
@@ -447,7 +447,7 @@ def test_no_tenant_scoped_model_has_a_globally_unique_column(isolated_db):
     platform-wide login lookup key, used to resolve which org a request belongs to
     before any org is known.
     """
-    from nometria.models import Base, TenantScoped, User
+    from agentfox.models import Base, TenantScoped, User
 
     exempt_columns = {(User.__tablename__, "email")}
     # (table, column) pairs that hold a globally-unique id by convention, without a
@@ -498,14 +498,14 @@ def test_migrations_do_not_switch_off_platform_logging(isolated_db):
     """Regression: Alembic's `fileConfig` defaults to disabling every existing logger.
 
     Because `init_db` stamps through Alembic, that default silently killed *all*
-    Nometria logging on startup — provider degradation, fail-open decisions and
+    AgentFox logging on startup — provider degradation, fail-open decisions and
     tenancy bypasses included. A governance product whose warnings stop reaching
     anyone is the failure mode this whole codebase argues against, and it was live.
     """
     import logging
 
-    from nometria.db import init_db
+    from agentfox.db import init_db
 
     init_db()
-    for name in ("nometria.tenancy", "nometria.enforcement", "nometria.reliability"):
+    for name in ("agentfox.tenancy", "agentfox.enforcement", "agentfox.reliability"):
         assert not logging.getLogger(name).disabled, f"{name} was silenced by Alembic"

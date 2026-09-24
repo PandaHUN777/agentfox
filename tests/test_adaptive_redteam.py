@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.evaluation.adaptive import (
+from agentfox.evaluation.adaptive import (
     NOT_ESTABLISHED,
     OPERATORS,
     SCOPE_STATEMENT,
@@ -33,7 +33,7 @@ from nometria.evaluation.adaptive import (
     next_mutation,
     rank_classes,
 )
-from nometria.evaluation.redteam import BUILTIN_PROBES, ProbeOutcome, run_campaign
+from agentfox.evaluation.redteam import BUILTIN_PROBES, ProbeOutcome, run_campaign
 
 
 @pytest.fixture
@@ -42,7 +42,7 @@ def enforcing(seeded):
     seed agents with the shipped policy packs actually enforcing. Running adaptive
     against observe-mode policies would let almost everything through and prove
     nothing about mutation."""
-    from nometria.policy import set_mode
+    from agentfox.policy import set_mode
 
     set_mode(seeded, "baseline", "enforce")
     set_mode(seeded, "tool-containment", "enforce")
@@ -121,7 +121,7 @@ def test_adaptive_finds_escapes_the_static_suite_misses(enforcing):
 def test_a_working_mutation_class_is_surfaced_as_a_finding(enforcing):
     """"Encoding defeats this deployment" is an actionable sentence; "escape rate 4%"
     is the shape that lets a real gap ship as a KPI. It must be a Finding."""
-    from nometria.models import Finding
+    from agentfox.models import Finding
 
     campaign = run_campaign(enforcing, "support-triage", adaptive=True, budget=4)
     worked = campaign.summary_json["adaptive"]["mutation_classes_that_worked"]
@@ -165,7 +165,7 @@ def test_mutations_are_chosen_from_the_failure_feedback(enforcing):
 
 @pytest.mark.parametrize("budget", [1, 2, 3])
 def test_attempt_budget_is_respected_per_probe(enforcing, budget):
-    from nometria.models import RedTeamFinding
+    from agentfox.models import RedTeamFinding
 
     campaign = run_campaign(
         enforcing, "support-triage", adaptive=True, budget=budget, name=f"b{budget}"
@@ -202,7 +202,7 @@ def no_timing_flake(monkeypatch):
     hidden. What *this* module promises is that the mutation search is deterministic,
     so the timeout is raised out of the way here to test that claim rather than the
     pipeline's clock."""
-    from nometria.config import reset_settings_cache
+    from agentfox.config import reset_settings_cache
 
     monkeypatch.setenv("NOMETRIA_DETECTOR_TIMEOUT_MS", "60000")
     monkeypatch.setenv("NOMETRIA_ENFORCEMENT_BUDGET_MS", "60000")
@@ -214,7 +214,7 @@ def no_timing_flake(monkeypatch):
 def test_the_mutation_program_is_deterministic_under_a_fixed_seed(enforcing):
     """The part the seed actually controls: which probe is tried, mutated how, in
     what order. This holds regardless of what the enforcement pipeline's clock does."""
-    from nometria.models import RedTeamFinding
+    from agentfox.models import RedTeamFinding
 
     def program(campaign):
         # Sorted, not insertion-ordered: finding ids are random, and what is being
@@ -330,7 +330,7 @@ def enforcing_ungranted(session, slug) -> set[str]:
 
 def test_generated_probes_never_provision_anything(enforcing):
     """A campaign that creates a grant or a tool row is measuring itself."""
-    from nometria.models import Capability, Tool
+    from agentfox.models import Capability, Tool
 
     probes = generate_deployment_probes(enforcing, "support-triage")
     assert probes and all(p.provision is False for p in probes)
@@ -366,7 +366,7 @@ def test_benign_controls_are_never_mutated(enforcing):
     """Mutating a probe that is supposed to be allowed produces something that is no
     longer a benign control — the precision number would quietly stop meaning
     anything."""
-    from nometria.models import RedTeamFinding
+    from agentfox.models import RedTeamFinding
 
     campaign = run_campaign(enforcing, "support-triage", adaptive=True, budget=4)
     benign_keys = {
@@ -415,7 +415,7 @@ def _widen_the_refund_ceiling(session, constraints):
     """The regression this feature exists to catch, applied for real: somebody edits
     a capability grant and removes the argument ceiling on it. No policy changes, no
     detector changes — only the deployment's own configuration."""
-    from nometria.models import Capability
+    from agentfox.models import Capability
 
     cap = session.query(Capability).filter(Capability.tool_key == CEILING_TOOL).one()
     cap.constraints_json = constraints
@@ -427,7 +427,7 @@ def test_posture_reports_weaker_when_the_configuration_regresses(enforcing):
     $50,000 refund against a grant capped at $1,000. Between the two campaigns the
     cap is removed — a one-line configuration change that no static prompt suite
     would notice, because the *prompt* is identical in both runs."""
-    from nometria.models import Finding
+    from agentfox.models import Finding
 
     kwargs = dict(adaptive=True, budget=1, probes=CEILING_PROBE, include_deployment_probes=False)
     tight = run_campaign(enforcing, "support-triage", name="tight", **kwargs)
@@ -463,8 +463,8 @@ def test_an_observe_mode_binding_is_disclosed_next_to_the_counts(enforcing):
     a policy demoted to observe mode moves no number in a campaign even though the
     deployment has stopped blocking anything. Every campaign therefore has to publish
     each bound policy's mode next to its blocked counts."""
-    from nometria.evaluation.adaptive import NOT_ESTABLISHED
-    from nometria.policy import set_mode
+    from agentfox.evaluation.adaptive import NOT_ESTABLISHED
+    from agentfox.policy import set_mode
 
     set_mode(enforcing, "baseline", "observe")
     campaign = run_campaign(enforcing, "support-triage", adaptive=True, budget=1)
@@ -567,7 +567,7 @@ def test_operator_library_is_well_formed():
 
 
 def test_an_operator_is_never_applied_twice_to_the_same_probe(enforcing):
-    from nometria.models import RedTeamFinding
+    from agentfox.models import RedTeamFinding
 
     campaign = run_campaign(enforcing, "support-triage", adaptive=True, budget=5)
     rows = enforcing.query(RedTeamFinding).filter_by(campaign_id=campaign.id).all()
@@ -581,7 +581,7 @@ def test_mutation_returns_none_at_an_honest_dead_end():
     say so rather than return the probe unchanged and burn the budget on repeats."""
     import random
 
-    from nometria.evaluation.redteam import Probe
+    from agentfox.evaluation.redteam import Probe
 
     empty = Probe("empty.probe", "prompt_injection", payload="")
     outcome = ProbeOutcome(probe=empty, blocked=True, verdict="block")

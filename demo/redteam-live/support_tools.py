@@ -6,7 +6,7 @@ capability-ceiling probes need real tool *output* to propagate taint through, an
 real mutation (an order actually flips to "refunded") to prove a block actually
 stopped something rather than just returning a denial string nobody checked.
 
-Every call goes through `nometria.integrations.mcp.McpGovernor` — the same governed
+Every call goes through `agentfox.integrations.mcp.McpGovernor` — the same governed
 call path `tests/test_composition.py`'s `_governor` fixture exercises, reused as-is
 rather than inventing a parallel one. Treating these four Python functions as an
 "MCP server" (`support-tools`) is a convenience, not a protocol claim: `McpGovernor`
@@ -27,9 +27,9 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from nometria.audit.trace import start_trace
-from nometria.enforcement import Enforcer
-from nometria.integrations.mcp import McpCallOutcome, McpGovernor, tool_key
+from agentfox.audit.trace import start_trace
+from agentfox.enforcement import Enforcer
+from agentfox.integrations.mcp import McpCallOutcome, McpGovernor, tool_key
 
 AGENT_SLUG = "support-crew-live"
 SERVER_NAME = "support-tools"
@@ -135,9 +135,9 @@ TOOL_DESCRIPTORS: list[dict[str, Any]] = [
 ]
 
 #: Least-privilege grants for the demo agent's identity — mirrors the shape of
-#: `nometria.seed`'s own `payments-ops` agent (refund capped below a ceiling, email
+#: `agentfox.seed`'s own `payments-ops` agent (refund capped below a ceiling, email
 #: gated behind approval) rather than inventing a new pattern. See
-#: `seed_demo_agent.py` for how these are applied via `nometria.identity.grant_capability`.
+#: `seed_demo_agent.py` for how these are applied via `agentfox.identity.grant_capability`.
 CAPABILITY_GRANTS: list[dict[str, Any]] = [
     {"tool": "lookup_customer", "max_taint": "user"},
     {"tool": "search_orders", "max_taint": "user"},
@@ -243,7 +243,7 @@ def _render(outcome: McpCallOutcome) -> str:
     """What the calling agent (and the demo audience) sees for one tool call.
 
     A block is rendered as a normal tool result the LLM can read and react to —
-    "BLOCKED_BY_NOMETRIA" plus the rules that fired — rather than as a Python
+    "BLOCKED_BY_AGENTFOX" plus the rules that fired — rather than as a Python
     exception, so a live CrewAI run degrades to "I wasn't able to do that" instead
     of crashing the crew.
 
@@ -268,7 +268,7 @@ def _render(outcome: McpCallOutcome) -> str:
         rules_fired = [r.get("rule_id") for r in decision.rules_fired]
         return json.dumps(
             {
-                "status": "BLOCKED_BY_NOMETRIA",
+                "status": "BLOCKED_BY_AGENTFOX",
                 "reason": decision.reason,
                 "rules_fired": rules_fired,
                 "verdict": decision.verdict,
@@ -276,7 +276,7 @@ def _render(outcome: McpCallOutcome) -> str:
         )
     if decision is None and not outcome.allowed:  # the MCP schema-drift path
         reason = (outcome.drift or {}).get("detail", "blocked by policy")
-        return json.dumps({"status": "BLOCKED_BY_NOMETRIA", "reason": reason, "rules_fired": []})
+        return json.dumps({"status": "BLOCKED_BY_AGENTFOX", "reason": reason, "rules_fired": []})
     return json.dumps(outcome.result, default=str)
 
 

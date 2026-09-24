@@ -1,12 +1,12 @@
-# This demo is a consumer of the nometria package, not part of it — install both
+# This demo is a consumer of the agentfox package, not part of it — install both
 # into whatever environment (venv/uv/conda) you'll run the demo from:
 #
-#   pip install -e /path/to/guardrails   # nometria itself, editable
+#   pip install -e /path/to/guardrails   # agentfox itself, editable
 #   pip install -r requirements.txt      # this file
 #
 # Do NOT `uv sync --all-extras` or `pip install crewai` into the main repo's
 # tracked `.venv` — crewai pulls in litellm/anthropic/langchain as transitive
-# dependencies, and several nometria tests (tests/test_autoguard.py) assert those
+# dependencies, and several agentfox tests (tests/test_autoguard.py) assert those
 # libraries are *absent* to prove auto() reports a missing library honestly rather
 # than hiding it. Use a separate virtualenv for this demo. See README.md.
 
@@ -14,7 +14,7 @@ crewai>=1.15,<2
 
 # crewai's `LLM` class routes to a per-provider "native" client by default and
 # only falls back to litellm when asked (`crew.py` passes `is_litellm=True` for
-# exactly this reason: litellm is the one path nometria.auto() actually patches).
+# exactly this reason: litellm is the one path agentfox.auto() actually patches).
 # Both litellm itself, and the underlying `anthropic` package crewai's native-
 # provider *routing* still imports as a side effect even when litellm is what
 # ultimately gets called, need to be present -- confirmed empirically while

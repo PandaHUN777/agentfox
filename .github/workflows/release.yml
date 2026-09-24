@@ -97,14 +97,14 @@ jobs:
 
           dunder = re.search(
               r'^__version__\s*=\s*"([^"]+)"',
-              pathlib.Path("src/nometria/__init__.py").read_text(),
+              pathlib.Path("src/agentfox/__init__.py").read_text(),
               re.MULTILINE,
           )
           if not dunder:
-              problems.append("could not find `__version__ = ` in src/nometria/__init__.py")
+              problems.append("could not find `__version__ = ` in src/agentfox/__init__.py")
           elif dunder.group(1) != version:
               problems.append(
-                  f"src/nometria/__init__.py declares {dunder.group(1)}, "
+                  f"src/agentfox/__init__.py declares {dunder.group(1)}, "
                   f"but the tag says {version}"
               )
 
@@ -113,7 +113,7 @@ jobs:
                   print(f"error: {problem}", file=sys.stderr)
               sys.exit(1)
           print(f"version {version} agrees across the tag, pyproject.toml, "
-                f"src/nometria/__init__.py and dist/")
+                f"src/agentfox/__init__.py and dist/")
           PY
 
       - name: Take the release notes from CHANGELOG.md

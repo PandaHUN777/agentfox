@@ -1,6 +1,6 @@
 ---
 name: red-team
-description: Runs Nometria's adversarial probe suite (22 OWASP-LLM and MITRE-ATLAS-mapped probes) against an agent's real capability grants and policy bindings. It explains recall and precision, turns misses into policy fixes and re-runs to prove them. Use for "red-team my agent", "pentest the agent", "is it vulnerable to prompt injection", or /nometria:redteam.
+description: Runs AgentFox's adversarial probe suite (22 OWASP-LLM and MITRE-ATLAS-mapped probes) against an agent's real capability grants and policy bindings. It explains recall and precision, turns misses into policy fixes and re-runs to prove them. Use for "red-team my agent", "pentest the agent", "is it vulnerable to prompt injection", or /agentfox:redteam.
 ---
 
 # Red team

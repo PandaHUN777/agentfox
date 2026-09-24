@@ -2,7 +2,7 @@
 title: Glossary and ID conventions
 layer: reference
 audience: agents reading docs, code comments and commit messages
-source_of_truth: docs/PRD.md, docs/traceability.md, docs/failure-modes.md, docs/appendix-b-control-catalog.md, src/nometria/improvement/contract.py
+source_of_truth: docs/PRD.md, docs/traceability.md, docs/failure-modes.md, docs/appendix-b-control-catalog.md, src/agentfox/improvement/contract.py
 verified_against: branch claude/improvement-loop-phase0, 2026-09-20
 ---
 
@@ -37,7 +37,7 @@ verified_against: branch claude/improvement-loop-phase0, 2026-09-20
 | `X-<n>` | Cross-cutting principles (X-3 offline install, X-5 dashboard is only an API client) | `docs/PRD.md` |
 | `NFR-<n>` | Non-functional requirements (NFR-1 latency, NFR-9 offline) | `docs/PRD.md` |
 | `F<fam>.<mode>` | Failure modes F1.1–F9.5 (F1 answerability … F8 context integrity) | `docs/failure-modes.md` |
-| `NOM-<FAM>-NN` | Controls: DSC, IAM, RTG, EVL, AUD, GOV | `src/nometria/compliance_data/controls.yaml`, Appendix B |
+| `NOM-<FAM>-NN` | Controls: DSC, IAM, RTG, EVL, AUD, GOV | `src/agentfox/compliance_data/controls.yaml`, Appendix B |
 | `R<n>` | PRD risks | `docs/PRD.md` §10 |
 | Tier 0–3, Tranche 0–4 | Gap-analysis severity tiers, roadmap tranches | `docs/gap-analysis.md`, `docs/PRD.md` §9 |
 

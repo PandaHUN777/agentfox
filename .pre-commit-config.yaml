@@ -4,8 +4,8 @@ repos:
   - repo: local
     hooks:
       - id: rebuild-vendored-wheels
-        name: rebuild vendored wheels if src/nometria changed
+        name: rebuild vendored wheels if src/agentfox changed
         entry: python3 scripts/rebuild_vendored_wheels.py
         language: system
-        files: ^src/nometria/.*\.py$
+        files: ^src/agentfox/.*\.py$
         pass_filenames: false

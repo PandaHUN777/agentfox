@@ -1,6 +1,6 @@
 ---
 name: business-guardrails
-description: Turns a written business rule or policy document ("refunds over $500 need a manager", a spend limit, a tenant-isolation rule) into an executable Nometria business guardrail in observe mode, tests it with concrete values, and checks it for conflicts with other teams' rules. Use when a non-engineer's rule needs to become enforcement, or for /nometria:guardrail.
+description: Turns a written business rule or policy document ("refunds over $500 need a manager", a spend limit, a tenant-isolation rule) into an executable AgentFox business guardrail in observe mode, tests it with concrete values, and checks it for conflicts with other teams' rules. Use when a non-engineer's rule needs to become enforcement, or for /agentfox:guardrail.
 ---
 
 # Business guardrails

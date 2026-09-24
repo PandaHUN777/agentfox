@@ -24,7 +24,7 @@ def scan(texts: list[str]) -> list[dict]:
     """Run `texts` through llm-guard's real `PromptInjection` scanner.
 
     Returns `[{"text": ..., "is_injection": bool, "risk_score": float}, ...]`,
-    llm-guard's own verdict — nothing here is a nometria threshold.
+    llm-guard's own verdict — nothing here is a agentfox threshold.
     """
     python = os.environ.get("LLM_GUARD_VENV_PYTHON")
     if not python or not Path(python).exists():

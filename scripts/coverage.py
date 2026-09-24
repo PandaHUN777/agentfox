@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SRC = ROOT / "src" / "nometria"
+SRC = ROOT / "src" / "agentfox"
 TESTS = ROOT / "tests"
 
 BUILT, PARTIAL, ABSENT = "built", "partial", "absent"
@@ -571,7 +571,7 @@ PROBES: list[Probe] = [
         "I-1",
         "LangGraph-native SDK",
         "Integration",
-        ["class NometriaGuard"],
+        ["class AgentFoxGuard"],
         [],
         "langgraph|guard_",
     ),
@@ -587,7 +587,7 @@ PROBES: list[Probe] = [
         "I-3",
         "FastAPI middleware and dependency",
         "Integration",
-        ["class NometriaMiddleware", "def guard", "def install"],
+        ["class AgentFoxMiddleware", "def guard", "def install"],
         [],
         "fastapi|middleware|dependency_governs|one_line_install|governed_route",
     ),
@@ -662,8 +662,8 @@ def evasion_score_line() -> str:
     """
     try:
         sys.path.insert(0, str(ROOT))
-        from nometria.guardrails import all_detectors
-        from nometria.guardrails.base import DetectionContext
+        from agentfox.guardrails import all_detectors
+        from agentfox.guardrails.base import DetectionContext
         from tests.corpus.injection import ATTACKS, BENIGN
 
         detector = all_detectors()["injection.heuristic"]

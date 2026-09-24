@@ -13,8 +13,8 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from nometria.cli.main import app
-from nometria.discovery import ScanReport, Site, scan, scan_file
+from agentfox.cli.main import app
+from agentfox.discovery import ScanReport, Site, scan, scan_file
 
 from .conftest import as_user
 
@@ -79,8 +79,8 @@ def test_shell_calls_are_flagged(project):
 
 def test_a_governed_file_is_marked_as_such(tmp_path):
     (tmp_path / "main.py").write_text(
-        "import nometria\n"
-        "nometria.auto()\n"
+        "import agentfox\n"
+        "agentfox.auto()\n"
         "from openai import OpenAI\n"
         "client = OpenAI()\n"
         "client.chat.completions.create(model='gpt-4o', messages=[])\n"
@@ -158,12 +158,12 @@ def test_findings_are_ranked_by_what_to_look_at_first():
 def test_the_report_ends_with_a_next_action(project):
     """A report that ends without one makes the reader do the synthesis, and most
     readers will not."""
-    assert "nometria.auto()" in scan(project).next_step()
+    assert "agentfox.auto()" in scan(project).next_step()
 
 
 def test_a_fully_governed_repo_says_so(tmp_path):
     (tmp_path / "m.py").write_text(
-        "import nometria\nnometria.auto()\nc.messages.create(model='x', messages=[])\n"
+        "import agentfox\nnometria.auto()\nc.messages.create(model='x', messages=[])\n"
     )
     assert "doctor" in scan(tmp_path).next_step()
 
@@ -192,14 +192,14 @@ def test_init_is_idempotent(isolated_db, tmp_path):
     second = runner.invoke(app, ["init", "--path", str(tmp_path)])
     assert first.exit_code == 0, first.output
     assert second.exit_code == 0, second.output
-    assert (tmp_path / "nometria.toml").exists()
+    assert (tmp_path / "agentfox.toml").exists()
     assert "already exists" in flat(second.output)
 
 
 def test_init_leaves_an_existing_config_alone(isolated_db, tmp_path):
-    (tmp_path / "nometria.toml").write_text("# hand-edited\n")
+    (tmp_path / "agentfox.toml").write_text("# hand-edited\n")
     runner.invoke(app, ["init", "--path", str(tmp_path)])
-    assert (tmp_path / "nometria.toml").read_text() == "# hand-edited\n"
+    assert (tmp_path / "agentfox.toml").read_text() == "# hand-edited\n"
 
 
 def test_init_loads_controls_and_policies_in_their_declared_modes(isolated_db, tmp_path):
@@ -216,7 +216,7 @@ def test_init_loads_controls_and_policies_in_their_declared_modes(isolated_db, t
 def test_init_ends_by_telling_you_what_to_do_next(isolated_db, tmp_path):
     result = runner.invoke(app, ["init", "--path", str(tmp_path)])
     assert "agentfox check" in flat(result.output)
-    assert "nometria.auto()" in flat(result.output)
+    assert "agentfox.auto()" in flat(result.output)
 
 
 def test_check_highlights_the_ungoverned_calls(isolated_db, project):
@@ -234,7 +234,7 @@ def test_check_can_gate_ci(isolated_db, project):
 
 def test_check_passes_ci_when_everything_is_governed(isolated_db, tmp_path):
     (tmp_path / "m.py").write_text(
-        "import nometria\nnometria.auto()\nc.messages.create(model='x', messages=[])\n"
+        "import agentfox\nnometria.auto()\nc.messages.create(model='x', messages=[])\n"
     )
     assert runner.invoke(app, ["check", str(tmp_path), "--fail"]).exit_code == 0
 
@@ -252,7 +252,7 @@ def test_check_no_submit_never_touches_the_network(isolated_db, project, monkeyp
     def _boom(*a, **k):
         raise AssertionError("httpx.post must not be called when --no-submit is passed")
 
-    monkeypatch.setattr("nometria.cli.submit.httpx.post", _boom)
+    monkeypatch.setattr("agentfox.cli.submit.httpx.post", _boom)
     result = runner.invoke(app, ["check", str(project), "--no-submit"])
     assert result.exit_code == 0, result.output
 
@@ -261,7 +261,7 @@ def test_check_default_run_does_not_prompt_on_a_non_tty(isolated_db, project, mo
     def _boom(*a, **k):
         raise AssertionError("nothing should be submitted with no flag on a non-tty run")
 
-    monkeypatch.setattr("nometria.cli.submit.httpx.post", _boom)
+    monkeypatch.setattr("agentfox.cli.submit.httpx.post", _boom)
     result = runner.invoke(app, ["check", str(project)])
     assert result.exit_code == 0, result.output
     assert "Submit to the dashboard?" not in result.output
@@ -283,7 +283,7 @@ def test_check_submit_sends_the_redacted_payload(isolated_db, project, monkeypat
         captured["json"] = json
         return _FakeResponse()
 
-    monkeypatch.setattr("nometria.cli.submit.httpx.post", _fake_post)
+    monkeypatch.setattr("agentfox.cli.submit.httpx.post", _fake_post)
     result = runner.invoke(app, ["check", str(project), "--submit"])
     assert result.exit_code == 0, result.output
     assert "Submitted." in flat(result.output)
@@ -314,9 +314,9 @@ def test_doctor_reports_the_enforce_observe_split_honestly(isolated_db):
     doctor says so rather than reporting a green tick."""
     # Committed and closed: `doctor` opens its own session, so an uncommitted fixture
     # session would leave it looking at an empty database.
-    from nometria.db import session_scope
-    from nometria.enforcement import Enforcer
-    from nometria.seed import seed
+    from agentfox.db import session_scope
+    from agentfox.enforcement import Enforcer
+    from agentfox.seed import seed
 
     with session_scope() as session:
         seed(session)
@@ -339,8 +339,8 @@ def test_findings_says_so_when_there_are_none(isolated_db):
 
 
 def test_findings_lists_what_the_platform_found(isolated_db):
-    from nometria.db import session_scope
-    from nometria.models import Finding
+    from agentfox.db import session_scope
+    from agentfox.models import Finding
 
     with session_scope() as session:
         session.add(
@@ -358,7 +358,7 @@ def test_findings_lists_what_the_platform_found(isolated_db):
 def test_quickstart_is_five_steps_and_names_the_only_blocking_one(isolated_db):
     result = runner.invoke(app, ["quickstart"])
     assert "agentfox init" in flat(result.output)
-    assert "nometria.auto()" in flat(result.output)
+    assert "agentfox.auto()" in flat(result.output)
     assert "only step that blocks" in flat(result.output)
 
 
@@ -392,8 +392,8 @@ def test_not_connected_and_nothing_wrong_are_distinguishable(client):
     body = client.get("/api/onboarding", headers=as_user("admin@example.com")).json()
     assert body["connected"] is False
 
-    from nometria.db import session_scope
-    from nometria.enforcement import Enforcer
+    from agentfox.db import session_scope
+    from agentfox.enforcement import Enforcer
 
     with session_scope() as session:
         Enforcer(session).run_completion(
@@ -425,8 +425,8 @@ def test_attention_is_quiet_when_there_is_nothing_to_do(client):
 
 
 def test_attention_ranks_by_severity(client):
-    from nometria.db import session_scope
-    from nometria.models import Finding
+    from agentfox.db import session_scope
+    from agentfox.models import Finding
 
     with session_scope() as session:
         session.add(
@@ -443,8 +443,8 @@ def test_attention_ranks_by_severity(client):
 
 def test_a_breached_handoff_outranks_most_findings(client):
     """A hand-off past its SLA is a person waiting."""
-    from nometria.db import session_scope
-    from nometria.models import Handoff
+    from agentfox.db import session_scope
+    from agentfox.models import Handoff
 
     with session_scope() as session:
         session.add(Handoff(session_id="s-1", status="breached", owner_role="support", reason="x"))
@@ -454,8 +454,8 @@ def test_a_breached_handoff_outranks_most_findings(client):
 
 
 def test_every_attention_item_links_somewhere(client):
-    from nometria.db import session_scope
-    from nometria.models import Finding
+    from agentfox.db import session_scope
+    from agentfox.models import Finding
 
     with session_scope() as session:
         session.add(Finding(type="a", severity="high", title="t", subject_type="agent"))
@@ -467,8 +467,8 @@ def test_every_attention_item_links_somewhere(client):
 def test_a_finding_alert_links_to_its_own_detail_page_not_the_general_queue(client):
     """A homepage alert that links to the generic list makes the reader re-find the
     exact thing they just clicked on among identical-looking rows."""
-    from nometria.db import session_scope
-    from nometria.models import Finding
+    from agentfox.db import session_scope
+    from agentfox.models import Finding
 
     with session_scope() as session:
         finding = Finding(type="a", severity="critical", title="t", subject_type="agent")

@@ -1,7 +1,7 @@
 {
   "benchmark": "cross-lingual parity (F9.3 / coverage-map L0.10)",
   "question": "Do the same deterministic checks reach the same verdict on the same content when that content is written in another language or locale?",
-  "method": "Three sections. (1) Per-language injection recall through the real Enforcer.check_content path over 1,034 known injection phrasings, plus benign pools so that flagging all non-English text cannot score as success. (2) Matched localisation pairs through the F7 integrity checkers in src/nometria/integrity.py \u2014 identical logical content, one English-formatted and one localised, where the checker must reach the same verdict. (3) Matched questions in seven languages through the model-free answerability/abstention path. No LLM judge, no network, no subjective quality grading \u2014 F9.3's explicit reframe of L0.10 from a quality problem into a parity problem.",
+  "method": "Three sections. (1) Per-language injection recall through the real Enforcer.check_content path over 1,034 known injection phrasings, plus benign pools so that flagging all non-English text cannot score as success. (2) Matched localisation pairs through the F7 integrity checkers in src/agentfox/integrity.py \u2014 identical logical content, one English-formatted and one localised, where the checker must reach the same verdict. (3) Matched questions in seven languages through the model-free answerability/abstention path. No LLM judge, no network, no subjective quality grading \u2014 F9.3's explicit reframe of L0.10 from a quality problem into a parity problem.",
   "language_scorer_validation": {
     "usable": true,
     "sample_size": 70,

@@ -20,13 +20,13 @@ def isolated_db(tmp_path, monkeypatch) -> Iterator[None]:
     monkeypatch.setenv("NOMETRIA_EVIDENCE_DIR", str(tmp_path / "evidence"))
     monkeypatch.setenv("NOMETRIA_AUDIT_SIGNING_KEY", "test-key")
     monkeypatch.setenv("NOMETRIA_ALLOW_EGRESS", "false")
-    # A developer's shell NOMETRIA_CONFIG, or a nometria.toml left in the cwd by
+    # A developer's shell NOMETRIA_CONFIG, or a agentfox.toml left in the cwd by
     # `agentfox init`, must never leak into a test. Tests of file loading delenv this.
     monkeypatch.setenv("NOMETRIA_CONFIG", "none")
 
-    from nometria import db
-    from nometria.availability import reset_admission_controller
-    from nometria.config import get_settings, reset_settings_cache
+    from agentfox import db
+    from agentfox.availability import reset_admission_controller
+    from agentfox.config import get_settings, reset_settings_cache
 
     reset_settings_cache()
     db.reset_engine()
@@ -41,7 +41,7 @@ def isolated_db(tmp_path, monkeypatch) -> Iterator[None]:
 
 @pytest.fixture
 def session() -> Iterator[Session]:
-    from nometria.db import session_scope
+    from agentfox.db import session_scope
 
     with session_scope() as s:
         yield s
@@ -50,7 +50,7 @@ def session() -> Iterator[Session]:
 @pytest.fixture
 def seeded(session) -> Session:
     """A seeded environment: agents, identities, capabilities, policies, controls."""
-    from nometria.seed import seed
+    from agentfox.seed import seed
 
     seed(session)
     return session
@@ -58,7 +58,7 @@ def seeded(session) -> Session:
 
 @pytest.fixture
 def enforcer(seeded):
-    from nometria.enforcement import Enforcer
+    from agentfox.enforcement import Enforcer
 
     return Enforcer(seeded)
 
@@ -68,9 +68,9 @@ def client(tmp_path):
     """FastAPI test client sharing the isolated database."""
     from fastapi.testclient import TestClient
 
-    from nometria.db import session_scope
-    from nometria.gateway.app import create_app
-    from nometria.seed import seed
+    from agentfox.db import session_scope
+    from agentfox.gateway.app import create_app
+    from agentfox.seed import seed
 
     with session_scope() as s:
         seed(s)

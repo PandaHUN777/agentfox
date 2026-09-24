@@ -23,7 +23,7 @@ Each entry: what breaks, how to work around it, where the fix belongs. When you 
    `--show-keys` is passed. Never paste a full key back to the user or into a file.
 
 Fixed on 2026-09-15 and removed from this list: the misleading `init` message,
-`nometria.toml` never being read, crashes on a fresh DB, `doctor --json` exit codes,
+`agentfox.toml` never being read, crashes on a fresh DB, `doctor --json` exit codes,
 `scan mcp` silently scanning the fixture, `guardrails compile --apply`, the
 `entitlement report` hint, the `compliance status --verbose` filter, the `policy effective`
 environment default, and Ctrl-C handling.
@@ -43,7 +43,7 @@ environment default, and Ctrl-C handling.
 5. **Undoing a tightening needs a person.** `proposals rollback --automated` is refused for a
    change that tightened a control, because reverting it would loosen one.
 
-## `nometria.auto()` limits
+## `agentfox.auto()` limits
 
 What it governs: OpenAI, Anthropic, LiteLLM and LangChain `invoke` calls, sync and async,
 streamed or not. The default mode follows each policy's own mode (`reference/sdk.md`). What
@@ -64,12 +64,12 @@ it still doesn't do:
 - **Async paths block briefly.** Database work there is synchronous and blocks the event loop
   for a moment.
 - **Opt-in model detectors time out until warm in your own process.** The gateway calls
-  `warm_all()` at startup. An in-process `nometria.auto()` or SDK user who enables
-  `injection.classifier` should call `nometria.guardrails.warm_all()` once at startup, or the first
+  `warm_all()` at startup. An in-process `agentfox.auto()` or SDK user who enables
+  `injection.classifier` should call `agentfox.guardrails.warm_all()` once at startup, or the first
   calls time out while the model loads. Warm, it costs about 43ms per short prompt; long prompts
   still time out.
 - **Frameworks are covered through their clients.** CrewAI, LlamaIndex, AutoGen and LangGraph
-  are governed only through the clients they call. `nometria.state().framework_routes()` shows
+  are governed only through the clients they call. `agentfox.state().framework_routes()` shows
   which are covered.
 
 ## Docs that disagree with the code (code wins)

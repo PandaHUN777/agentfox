@@ -1,4 +1,4 @@
-"""`nometria.auto()` on async clients and streamed responses.
+"""`agentfox.auto()` on async clients and streamed responses.
 
 The sync `create`/`completion`/`invoke` entry points were the only ones patched, so an
 app built on `AsyncOpenAI`, `AsyncAnthropic`, `litellm.acompletion` or LangChain's
@@ -15,8 +15,8 @@ import types
 
 import pytest
 
-from nometria.autoguard import Blocked, auto, off, state
-from nometria.models import Span
+from agentfox.autoguard import Blocked, auto, off, state
+from agentfox.models import Span
 
 # ---------------------------------------------------------------------------
 # Fakes with the real shapes
@@ -300,8 +300,8 @@ def fake_langchain():
 
 @pytest.fixture
 def app_db(isolated_db):
-    from nometria.db import session_scope
-    from nometria.seed import seed
+    from agentfox.db import session_scope
+    from agentfox.seed import seed
 
     with session_scope() as session:
         seed(session)
@@ -315,18 +315,18 @@ def _reset():
 
 
 def _llm_outputs() -> list[str]:
-    from nometria.db import session_scope
+    from agentfox.db import session_scope
 
     with session_scope() as session:
         return [
-            s.attributes_json.get("nometria.output")
+            s.attributes_json.get("agentfox.output")
             for s in session.query(Span).filter(Span.kind == "llm").all()
         ]
 
 
 def _enforce_baseline():
-    from nometria.db import session_scope
-    from nometria.policy import set_mode
+    from agentfox.db import session_scope
+    from agentfox.policy import set_mode
 
     with session_scope() as session:
         set_mode(session, "baseline", "enforce")
@@ -376,10 +376,10 @@ async def test_litellm_acompletion_is_patched_and_governed(app_db, fake_litellm)
 async def test_langchain_ainvoke_is_patched_and_governed(app_db, fake_langchain):
     model_cls, calls = fake_langchain
     auto(agent="support-triage", quiet=True)
-    result = await model_cls().ainvoke("hi", {"tags": ["x"]}, nometria_purpose="support")
+    result = await model_cls().ainvoke("hi", {"tags": ["x"]}, agentfox_purpose="support")
     assert result.content == "hello back from langchain"
     assert calls[0]["config"] == {"tags": ["x"]}
-    assert "nometria_purpose" not in calls[0], "reserved kwargs never reach the model"
+    assert "agentfox_purpose" not in calls[0], "reserved kwargs never reach the model"
     assert state().calls_governed == 1
 
 
@@ -531,7 +531,7 @@ def test_a_litellm_stream_is_governed(app_db, fake_litellm):
 
 
 def test_stream_usage_is_charged_to_the_budget(app_db, fake_openai, monkeypatch):
-    import nometria.enforcement as enforcement
+    import agentfox.enforcement as enforcement
 
     charged = []
     monkeypatch.setattr(

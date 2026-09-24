@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.context_integrity import (
+from agentfox.context_integrity import (
     DEGRADED,
     REJECT,
     Assembly,

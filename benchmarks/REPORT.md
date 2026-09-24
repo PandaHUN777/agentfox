@@ -25,7 +25,7 @@ uv run python benchmarks/run_generalization_benchmark.py
 ```
 
 The first reproduces the `heuristic` config fully offline; the classifier/similarity
-configs additionally need `pip install nometria[classifiers]` and one-time model
+configs additionally need `pip install agentfox[classifiers]` and one-time model
 downloads (~350MB `leolee99/PIGuard`, ~350MB `protectai/deberta-v3-base-prompt-injection-v2`
 for the round-4 ensemble backstop, ~90MB `sentence-transformers/all-MiniLM-L6-v2`).
 Both scripts detect what's available and skip configs they can't run. The primary
@@ -60,7 +60,7 @@ either cost.
 ## What's being measured
 
 - **Detector, config `heuristic`**: `InjectionHeuristicDetector` alone — regex and
-  structural signals, `src/nometria/guardrails/detectors/injection.py`. Zero extra
+  structural signals, `src/agentfox/guardrails/detectors/injection.py`. Zero extra
   dependencies, sub-millisecond, and what ships **enabled by default**.
 - **Detector, config `heuristic_classifier`**: the same heuristic plus
   `injection.classifier` — as of round 4, an **ensemble of two models**, not one.
@@ -459,8 +459,8 @@ to fix this. Tested the same way (isolated, no contention):
 Better on **both** axes at once on the datasets this project weighs most — more
 than double the recall on the primary benchmark, at less than a third the
 false-positive rate on the purpose-built precision stress test. That's the basis
-for the swap (`src/nometria/guardrails/adapters/classifiers.py`,
-`PromptInjectionClassifierDetector`; `src/nometria/config.py`,
+for the swap (`src/agentfox/guardrails/adapters/classifiers.py`,
+`PromptInjectionClassifierDetector`; `src/agentfox/config.py`,
 `prompt_injection_classifier_model`), alongside the honest generalization-dataset
 cost documented above. PIGuard ships custom modeling code rather than a stock
 transformers architecture, so this is the one detector with `trust_remote_code =
@@ -531,7 +531,7 @@ that trade is worth making depends on what a deployment fears more: a novel
 attack phrasing PIGuard alone would miss, or a support bot that starts treating
 "can I ignore this compiler warning" as an attack four times in ten. The
 secondary backstop is a real, opt-out-able config
-(`prompt_injection_classifier_secondary_model` in `src/nometria/config.py` — set
+(`prompt_injection_classifier_secondary_model` in `src/agentfox/config.py` — set
 to `None`/`""` to run PIGuard alone, reverting to round 3's numbers exactly), not
 a forced default a deployment can't see or change.
 
@@ -539,7 +539,7 @@ a forced default a deployment can't see or change.
 
 The very first re-run of Tier B in `benchmarks/agent_security/` (indirect
 injection via tool output — see that directory's `README.md`) reported 20%
-recall for Nometria against llm-guard's 90%, alarmingly far behind. Reading
+recall for AgentFox against llm-guard's 90%, alarmingly far behind. Reading
 `post.degraded` on each case (rather than trusting the headline number) showed
 why: most of the malicious cases had `injection.classifier` and
 `injection.similarity` marked degraded, including — on several cases —
@@ -589,7 +589,7 @@ would reasonably expect to fire, made invisible by a request-level number nobody
 had reconciled against the per-detector numbers it was supposed to bound.
 
 **Fix**: `enforcement_budget_ms` raised from 100ms to 200ms
-(`src/nometria/config.py`) — enough margin over the measured worst case while
+(`src/agentfox/config.py`) — enough margin over the measured worst case while
 staying under the existing 250ms request-level ceiling (`request_budget_ms`, P3-13,
 unchanged). Re-measuring the full real dataset sequentially after the fix:
 degraded rate on the same run dropped from 100% to 1.96%. The benchmark table above
@@ -728,13 +728,13 @@ doesn't get taken at face value just because it's favorable.
   aggregate.
 - `results_generalization/{config}_{dataset}_predictions.json` — every
   generalization example scored individually.
-- `../src/nometria/guardrails/data/injection_corpus.json` — the synthetic anchor
+- `../src/agentfox/guardrails/data/injection_corpus.json` — the synthetic anchor
   corpus `injection.similarity` matches against. Growing this file (and
   re-running) is the whole improvement path for that detector — no retraining.
-- `../src/nometria/guardrails/adapters/classifiers.py` —
+- `../src/agentfox/guardrails/adapters/classifiers.py` —
   `PromptInjectionClassifierDetector`, including the round-4 ensemble backstop
   and the reasoning for its threshold.
-- `../src/nometria/config.py` — `prompt_injection_classifier_secondary_model`,
+- `../src/agentfox/config.py` — `prompt_injection_classifier_secondary_model`,
   the config knob that turns the ensemble backstop off (set to `None`/`""` to
   run PIGuard alone, round 3's exact behavior).
 - `../benchmarks/agent_security/` — the four-tier agent-runtime-security
@@ -780,4 +780,4 @@ fixed detector, same datasets, same script, **at the shipped 40ms per-detector t
    On `trustairlab`'s long prompts (mean 2,156 characters) it times out on 99.9% of calls, and the
    similarity detector times out on 100% of everything. A **cold** process that never calls `warm_all()`
    times out on every call until the model loads — the gateway warms at startup, but an in-process
-   `nometria.auto()` user who enables the classifier does not get that for free.
+   `agentfox.auto()` user who enables the classifier does not get that for free.

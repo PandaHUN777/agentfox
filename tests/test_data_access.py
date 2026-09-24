@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.data_access import (
+from agentfox.data_access import (
     ReferenceTable,
     ScopeRule,
     analyse_access,

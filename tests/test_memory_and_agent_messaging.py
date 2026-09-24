@@ -5,9 +5,9 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.agent_messaging import mint_signing_key, sign_message
-from nometria.models import Agent, AgentMessageLog, MemoryEntry
-from nometria.policy import set_mode
+from agentfox.agent_messaging import mint_signing_key, sign_message
+from agentfox.models import Agent, AgentMessageLog, MemoryEntry
+from agentfox.policy import set_mode
 
 from .conftest import INDIRECT_INJECTION, PII_TEXT, SECRET_TEXT, as_user
 
@@ -16,7 +16,7 @@ from .conftest import INDIRECT_INJECTION, PII_TEXT, SECRET_TEXT, as_user
 def encryption_key(monkeypatch):
     from cryptography.fernet import Fernet
 
-    from nometria.config import reset_settings_cache
+    from agentfox.config import reset_settings_cache
 
     monkeypatch.setenv("NOMETRIA_TOKEN_ENCRYPTION_KEY", Fernet.generate_key().decode())
     reset_settings_cache()

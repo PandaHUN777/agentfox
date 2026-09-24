@@ -9,7 +9,7 @@ re-run the same `wc -l` / `grep` pass rather than trust this document blindly.
 
 ---
 
-## 1. Module inventory — `src/nometria/`
+## 1. Module inventory — `src/agentfox/`
 
 The package is 14,895 lines split between ~40 flat root modules and 14 subpackages. It is
 *not* organized with everything nested under subpackages — several of the largest, most
@@ -22,7 +22,7 @@ central modules live at the package root.
 | `enforcement.py` | 2440 | The `Enforcer` class — every governed surface (gateway, SDK, LangGraph guard) calls into this. See §3. |
 | `models.py` | 1490 | SQLAlchemy 2.0 ORM — every persisted entity in the system. See §5. |
 | `escalation.py` | 821 | Human hand-off: approval requests, timeout policy, owner/SLA routing (Pillar 11). |
-| `autoguard.py` | 793 | `nometria.auto()` monkey-patch machinery. See §7. |
+| `autoguard.py` | 793 | `agentfox.auto()` monkey-patch machinery. See §7. |
 | `seed.py` | 648 | Demo/offline seed data — agents, policies, controls, obligations, scripted provider replies. |
 | `context_integrity.py` | 609 | Pillar 14 — chunk-boundary and retrieval-corruption detection. Wired into `finding.py` and `gateway/routes/provenance.py`. |
 | `answerability.py` | 603 | Pillar 7 — knowledge-boundary declaration and pre-generation abstention gate. |
@@ -62,7 +62,7 @@ central modules live at the package root.
 | **`policy/`** | 1999 | `hierarchy.py` 354, `canary.py` 294, `engine.py` 291, `store.py` 287, `opa.py` 231, `model.py` 256, `simulate.py` 185 | Pillar 6/12 — policy authoring, evaluation, versioning, canary rollout. See §9. |
 | **`providers/`** | 1046 | `enterprise.py` 366, `remote.py` 299, `base.py` 192, `echo.py` 146 | The `ModelProvider` seam. |
 | **`registry/`** | 961 | `service.py` 779, `control.py` 139 | Pillar 1 — agent registry, observed lineage, kill switch/quarantine. |
-| **`sdk/`** | 481 | `__init__.py` 481 | The `Nometria` client class (local + remote modes). |
+| **`sdk/`** | 481 | `__init__.py` 481 | The `AgentFox` client class (local + remote modes). |
 | `compliance_data/`, `policies_data/` | — | `controls.yaml`, `obligations.yaml`, `baseline.yaml`, `eu-ai-act-high-risk.yaml`, `tool-containment.yaml` | Static data, not code — read by `compliance/catalog.py` and `policy/store.py` respectively. |
 
 ---
@@ -93,7 +93,7 @@ Per `docs/status.md`: **1,236 tests total, 62,152 lines** across `src/` + `tests
 
 ---
 
-## 3. The `Enforcer` class — `src/nometria/enforcement.py` (2440 lines)
+## 3. The `Enforcer` class — `src/agentfox/enforcement.py` (2440 lines)
 
 This is the single code path every integration surface converges on (HLD §5). Class and
 method signatures, by call order:
@@ -127,7 +127,7 @@ gate logic locally.
 
 ---
 
-## 4. Detector pipeline — `src/nometria/guardrails/`
+## 4. Detector pipeline — `src/agentfox/guardrails/`
 
 `pipeline.py` composes a list of `Detector` implementations (the seam from HLD §2) and runs
 them per surface (`input`, `output`, `retrieved`, `tool_result`). Key pieces:
@@ -161,7 +161,7 @@ detector that silently fails to run is a recorded, queryable event, not an invis
 
 ## 5. Data model — key entities
 
-Full detail: [Appendix D](appendix-d-data-model.md). SQLAlchemy 2.0, `src/nometria/models.py`
+Full detail: [Appendix D](appendix-d-data-model.md). SQLAlchemy 2.0, `src/agentfox/models.py`
 (1490 lines). Every table carries `id`, `created_at`, `updated_at`, `org_id` — multi-tenancy
 is enforced structurally at the session level via `with_loader_criteria` (`tenancy.py`), not
 by remembering to filter every query by `org_id`.
@@ -177,7 +177,7 @@ by remembering to filter every query by `org_id`.
 
 ---
 
-## 6. Audit chain internals — `src/nometria/audit/chain.py` (399 lines)
+## 6. Audit chain internals — `src/agentfox/audit/chain.py` (399 lines)
 
 The tamper-evident hash chain, the mechanism behind the "prove what happened" claim:
 
@@ -210,10 +210,10 @@ altered."
 
 ---
 
-## 7. `nometria.auto()` — monkey-patch mechanism
+## 7. `agentfox.auto()` — monkey-patch mechanism
 
-`src/nometria/__init__.py` (45 lines) lazily re-exports `auto`, `off`, `state`, `Blocked`
-from `nometria.autoguard` via module `__getattr__`, so a bare `import nometria` touches no
+`src/agentfox/__init__.py` (45 lines) lazily re-exports `auto`, `off`, `state`, `Blocked`
+from `agentfox.autoguard` via module `__getattr__`, so a bare `import agentfox` touches no
 DB and makes no client calls — side-effect-free until `auto()` is actually called.
 
 `autoguard.py` (793 lines), `auto(agent=None, *, mode="observe", environment=None,
@@ -231,7 +231,7 @@ session_id=None, register=True, quiet=False)` at line 674:
    `langchain_core....BaseChatModel.invoke`), wrapping the original in `_govern()` (line 326),
    which calls the **same** `Enforcer.preflight()` the gateway uses (§3) — not a parallel
    reimplementation.
-5. A `contextvars.ContextVar` `_IN_NOMETRIA` (line 54) prevents the platform's own internal
+5. A `contextvars.ContextVar` `_IN_AGENTFOX` (line 54) prevents the platform's own internal
    LLM calls (e.g. an LLM-judge scorer inside the eval subsystem) from recursively governing
    themselves — without this, an eval run would try to enforce policy on its own scoring
    calls.
@@ -242,7 +242,7 @@ reverses every patch (used primarily by the test suite).
 
 ---
 
-## 8. LangGraph integration — `src/nometria/integrations/langgraph.py` (393 lines)
+## 8. LangGraph integration — `src/agentfox/integrations/langgraph.py` (393 lines)
 
 Module docstring states the design commitments directly: LangGraph is an optional import
 (the module loads without it installed); trace identity lives **in graph state**
@@ -251,7 +251,7 @@ escalation maps to LangGraph's own `interrupt()` primitive where available rathe
 inventing a second pause mechanism; enforcement failures always raise, never return a
 silently-ignorable sentinel.
 
-`class NometriaGuard` (line 89) — constructed with `agent`, `environment`, `intent`, an
+`class AgentFoxGuard` (line 89) — constructed with `agent`, `environment`, `intent`, an
 optional shared `session`, `raise_on_escalate`:
 
 | Method | Line | Behaviour |
@@ -263,7 +263,7 @@ optional shared `session`, `raise_on_escalate`:
 | `_stop(result)` | 287 | If `result.escalated` and `raise_on_escalate`: calls LangGraph's `interrupt()` if importable, else raises `ApprovalRequired`. If `result.blocked`: raises `PolicyViolation` |
 
 Both `PolicyViolation` (line 49) and `ApprovalRequired` (line 61) are also re-exported from
-`nometria.sdk`, not from this module — worth checking for a single canonical import path if
+`agentfox.sdk`, not from this module — worth checking for a single canonical import path if
 this is ever cleaned up.
 
 State-shape helper functions (`_read`, `_normalise`, `_stringify`, `_extract_text`,
@@ -272,7 +272,7 @@ dataclass, or Pydantic-model graph state, and of LangChain message objects vs. p
 
 ---
 
-## 9. Policy engine — `src/nometria/policy/`
+## 9. Policy engine — `src/agentfox/policy/`
 
 | File | Lines | Role |
 |---|---|---|
@@ -284,13 +284,13 @@ dataclass, or Pydantic-model graph state, and of LangChain message objects vs. p
 | `model.py` | 256 | Pydantic models for policy documents |
 | `simulate.py` | 185 | `POST /api/policies/simulate` — runs a candidate policy against recent traffic and returns `{newly_blocked, newly_allowed, newly_escalated, unchanged}` without actually enforcing it |
 
-Policy documents themselves are static YAML under `src/nometria/policies_data/`
+Policy documents themselves are static YAML under `src/agentfox/policies_data/`
 (`baseline.yaml`, `eu-ai-act-high-risk.yaml`, `tool-containment.yaml`), loaded by
 `policy/store.py` and turned into versioned, bindable `Policy`/`PolicyVersion` rows.
 
 ---
 
-## 10. Gateway composition — `src/nometria/gateway/`
+## 10. Gateway composition — `src/agentfox/gateway/`
 
 `app.py` (402 lines), `create_app()`:
 
@@ -323,10 +323,10 @@ unauthenticated demo sessions.
 
 ---
 
-## 11. CLI command tree — `src/nometria/cli/main.py` (1304 lines)
+## 11. CLI command tree — `src/agentfox/cli/main.py` (1304 lines)
 
 `app = typer.Typer(name="agentfox", ...)`. Top-level verbs (`main.py:93-173`): `version`,
-`seed`, `demo`, `serve` (runs `uvicorn.run("nometria.gateway.app:app", ...)` — **the exact
+`seed`, `demo`, `serve` (runs `uvicorn.run("agentfox.gateway.app:app", ...)` — **the exact
 same app object `api/index.py` re-exports**, HLD §9).
 
 Subcommand groups (`app.add_typer`, plus `_register_*` calls from their own modules,
@@ -407,7 +407,7 @@ Three files only, no Kubernetes manifests anywhere in the repo.
   `NOMETRIA_AUDIT_SIGNING_KEY: change-me-before-any-real-deployment` with an explicit
   change-this comment.
 - **`Dockerfile`** (gateway) — `python:3.12-slim`, installs
-  `nometria[postgres,otel,classifiers]`, bakes in ML detector weights at build time
+  `agentfox[postgres,otel,classifiers]`, bakes in ML detector weights at build time
   (Granite Guardian, PIGuard, protectai deberta injection classifier, sentence-transformers
   MiniLM) plus an optional gated tier (Llama Guard 3-8B, requires an `HF_TOKEN` build secret,
   runtime-gated behind `NOMETRIA_ACCEPT_RESTRICTED_MODEL_LICENSES=1`). **Contains two `COPY`
@@ -415,7 +415,7 @@ Three files only, no Kubernetes manifests anywhere in the repo.
   ./compliance` and `COPY policies ./policies` — verified directly against the filesystem
   on 2026-09-04, neither `compliance/` nor `policies/` exists at the repo root; the actual
   YAML data already ships via the preceding `COPY src ./src` at
-  `src/nometria/compliance_data/` and `src/nometria/policies_data/`. As written, this build
+  `src/agentfox/compliance_data/` and `src/agentfox/policies_data/`. As written, this build
   step targets a path that doesn't exist in the current tree — flagged in detail in
   [production-readiness-review.md](production-readiness-review.md).
 - **`Dockerfile.dashboard`** — `node:22-alpine`, standard Next.js standalone-output

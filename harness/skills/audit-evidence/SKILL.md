@@ -1,6 +1,6 @@
 ---
 name: audit-evidence
-description: Prepares audit-ready proof from Nometria. It verifies the tamper-evident audit chain, checkpoints it, recomputes control status, reports framework posture (EU AI Act, NIST AI RMF, ISO 42001, SOC 2, OWASP, MITRE ATLAS) and exports an evidence package an auditor can verify independently. Use for "we have an audit", "export evidence", "are we EU AI Act ready", compliance status, or /nometria:evidence.
+description: Prepares audit-ready proof from AgentFox. It verifies the tamper-evident audit chain, checkpoints it, recomputes control status, reports framework posture (EU AI Act, NIST AI RMF, ISO 42001, SOC 2, OWASP, MITRE ATLAS) and exports an evidence package an auditor can verify independently. Use for "we have an audit", "export evidence", "are we EU AI Act ready", compliance status, or /agentfox:evidence.
 ---
 
 # Audit evidence

@@ -2,7 +2,7 @@
 title: Gateway and control-plane HTTP API
 layer: reference
 audience: agents, integrators
-source_of_truth: src/nometria/gateway/ (routes/) — live OpenAPI at http://<host>:8080/docs
+source_of_truth: src/agentfox/gateway/ (routes/) — live OpenAPI at http://<host>:8080/docs
 verified_against: commit 6863b8b, 2026-09-15
 note: docs/appendix-c-api-spec.md has drifted from the code; prefer this file or /docs
 ---
@@ -44,7 +44,7 @@ Proxy request headers: `X-Nometria-Agent`, `-Session`, `-Environment`, `-Intent`
 `-Effective-Verdict`, `-Decision`, `-Mode`, `-Latency-Ms`.
 
 Outcomes: **200** allowed (content may be redacted) · **403**
-`{error:{type:"nometria_policy_violation", verdict, trace_id, rules_fired, entities, explanation, …}}`
+`{error:{type:"agentfox_policy_violation", verdict, trace_id, rules_fired, entities, explanation, …}}`
 blocked · **202** `{approval_id}` escalated to a human · **429** load shed (honour `Retry-After`).
 
 ```bash

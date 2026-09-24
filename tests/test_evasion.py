@@ -20,9 +20,9 @@ import time
 
 import pytest
 
-from nometria.guardrails import all_detectors
-from nometria.guardrails.base import DetectionContext
-from nometria.guardrails.normalize import (
+from agentfox.guardrails import all_detectors
+from agentfox.guardrails.base import DetectionContext
+from agentfox.guardrails.normalize import (
     _is_plain,
     evasion_score,
     normalize,

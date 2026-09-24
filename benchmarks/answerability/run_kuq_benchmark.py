@@ -1,4 +1,4 @@
-"""Scores `src/nometria/answerability.py` against KUQ (`data/kuq.json`, 4,782
+"""Scores `src/agentfox/answerability.py` against KUQ (`data/kuq.json`, 4,782
 rows, MIT).
 
     uv run python benchmarks/answerability/run_kuq_benchmark.py
@@ -39,8 +39,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from nometria.answerability import AGGREGATE, FACT, PROCEDURE, classify_answerability, question_type
-from nometria.models import KnowledgeBoundary
+from agentfox.answerability import AGGREGATE, FACT, PROCEDURE, classify_answerability, question_type
+from agentfox.models import KnowledgeBoundary
 
 DATA_DIR = Path(__file__).parent / "data"
 RESULTS_DIR = Path(__file__).parent / "results"

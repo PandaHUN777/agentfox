@@ -13,11 +13,11 @@ import datetime as dt
 import pytest
 from sqlalchemy import select
 
-from nometria.config import get_settings
-from nometria.guardrails.tuning import apply_suppression, record_feedback
-from nometria.improvement import contract
-from nometria.improvement.appliers import min_score_direction
-from nometria.improvement.proposals import (
+from agentfox.config import get_settings
+from agentfox.guardrails.tuning import apply_suppression, record_feedback
+from agentfox.improvement import contract
+from agentfox.improvement.appliers import min_score_direction
+from agentfox.improvement.proposals import (
     AutomationRefused,
     IllegalTransition,
     ProposalError,
@@ -30,7 +30,7 @@ from nometria.improvement.proposals import (
     rollback_rate,
     verify_proposal,
 )
-from nometria.models import (
+from agentfox.models import (
     Agent,
     AuditEntry,
     ChangeProposal,
@@ -41,8 +41,8 @@ from nometria.models import (
     Suppression,
     as_aware,
 )
-from nometria.operator_log import PRIVILEGED, unaudited
-from nometria.policy import PolicyDocument, save_policy
+from agentfox.operator_log import PRIVILEGED, unaudited
+from agentfox.policy import PolicyDocument, save_policy
 
 from .conftest import PII_TEXT, as_user
 
@@ -171,7 +171,7 @@ def test_the_same_problem_is_one_open_proposal(seeded, enforcer):
 
 def test_losing_a_filing_race_merges_instead_of_duplicating(seeded, enforcer, monkeypatch):
     """Simulate a concurrent filing: the look-up misses, the database index catches it."""
-    from nometria.improvement import proposals as module
+    from agentfox.improvement import proposals as module
 
     suppression = _suppression(seeded, enforcer)
     first = _file_revoke(seeded, suppression, fingerprint="fp-race", evidence={"hits": 0})
@@ -479,7 +479,7 @@ def test_policy_change_can_be_staged_through_the_canary(seeded):
 
 
 def test_a_completed_canary_settles_the_proposal_as_applied(seeded):
-    from nometria.policy.canary import _rebind
+    from agentfox.policy.canary import _rebind
 
     _policy(seeded)
     proposal = _file_min_score(seeded, 0.6, scope_level="team", stage="canary")
@@ -540,10 +540,10 @@ def test_every_step_is_on_the_chain_with_the_right_actor(seeded, enforcer):
 
 def test_proposal_operations_are_registered_privileged_and_record():
     targets = {e.target: e.action for e in PRIVILEGED}
-    assert targets["nometria.improvement.proposals.decide"] == "operator.proposal.decided"
-    assert targets["nometria.improvement.proposals.apply_proposal"] == "operator.proposal.applied"
+    assert targets["agentfox.improvement.proposals.decide"] == "operator.proposal.decided"
+    assert targets["agentfox.improvement.proposals.apply_proposal"] == "operator.proposal.applied"
     assert (
-        targets["nometria.improvement.proposals.rollback_proposal"]
+        targets["agentfox.improvement.proposals.rollback_proposal"]
         == "operator.proposal.rolled_back"
     )
     assert unaudited() == []
@@ -553,7 +553,7 @@ def test_proposal_operations_are_registered_privileged_and_record():
 
 
 def _api_proposal(to: float = 0.6, scope_level: str = "team") -> str:
-    from nometria.db import session_scope
+    from agentfox.db import session_scope
 
     with session_scope() as s:
         if s.scalar(select(Policy).where(Policy.key == "proposal-test")) is None:
@@ -612,7 +612,7 @@ def test_api_lifecycle_end_to_end(client):
     assert client.post(f"/api/proposals/{pid}/rollback", json={"reason": "again"},
                        headers=sec).status_code == 409
 
-    from nometria.db import session_scope
+    from agentfox.db import session_scope
 
     with session_scope() as s:
         trail = [
@@ -647,7 +647,7 @@ def test_cli_proposals_group(client):
     """`client` only for its seeded database; the CLI shares it."""
     from typer.testing import CliRunner
 
-    from nometria.cli.main import app
+    from agentfox.cli.main import app
 
     runner = CliRunner()
     pid = _api_proposal(to=0.95, scope_level="org")

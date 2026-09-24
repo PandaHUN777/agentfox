@@ -16,7 +16,7 @@ import datetime as dt
 
 import pytest
 
-from nometria.answerability import (
+from agentfox.answerability import (
     AGGREGATE,
     FACT,
     OPINION,
@@ -35,7 +35,7 @@ from nometria.answerability import (
     question_type,
     verify_boundary,
 )
-from nometria.models import Agent, Finding
+from agentfox.models import Agent, Finding
 
 from .conftest import as_user
 
@@ -164,7 +164,7 @@ def test_a_gateway_completion_abstains_without_calling_the_model(seeded, enforce
 
 
 def test_the_abstention_is_recorded_in_the_audit_chain(seeded, enforcer, boundary):
-    from nometria.models import AuditEntry
+    from agentfox.models import AuditEntry
 
     enforcer.run_completion(
         agent_slug="support-triage",

@@ -1,6 +1,6 @@
-# Nometria harness
+# AgentFox harness
 
-An agent harness for the Nometria control plane. It packages the product's knowledge as
+An agent harness for the AgentFox control plane. It packages the product's knowledge as
 **skills, commands, subagents and safety hooks**, so a person can say "get my support agent
 governed" or "get me ready for the SOC 2 audit" and a coding agent can do it correctly.
 Without it, they'd have to learn 17 CLI groups, 150+ API routes and 43 docs first.
@@ -14,7 +14,7 @@ claude plugin marketplace add architsharm/guardrails
 ```
 
 ```bash
-claude plugin install nometria@nometria
+claude plugin install agentfox@agentfox
 ```
 
 **Claude Code, from a local clone (no install, for trying it or developing it):**
@@ -38,18 +38,18 @@ pip install "git+https://github.com/architsharm/guardrails.git"
 
 | Type the command | What happens |
 |---|---|
-| `/nometria:tour` | Safe, offline tour of the product in a scratch database |
-| `/nometria:start [path]` | Scan your code, add `nometria.auto()` in observe mode, show what it sees |
-| `/nometria:status` | Read-only posture: doctor, open findings, policy modes, agent states |
-| `/nometria:findings [severity]` | Grouped triage with a recommended action for each finding |
-| `/nometria:policy <what you want>` | Draft, validate, lint and simulate a policy; promotion only on your say-so |
-| `/nometria:guardrail "<business rule>"` | Plain English → an executable business guardrail, in observe mode |
-| `/nometria:gate [suite]` | Eval regression gate and a CI workflow for your repo |
-| `/nometria:redteam <agent>` | Adversarial probes, results explained, fixes proposed |
-| `/nometria:evidence [agent]` | Verify the audit chain and export an auditor-ready package |
-| `/nometria:contain <agent> [reason]` | Incident response: quarantine (with confirmation), blast radius, evidence |
-| `/nometria:proposals [id or status]` | Review what the improvement loop wants to change; applying anything needs your say-so |
-| `/nometria:harness-check` | Check the harness against the live CLI and repo (for maintainers) |
+| `/agentfox:tour` | Safe, offline tour of the product in a scratch database |
+| `/agentfox:start [path]` | Scan your code, add `agentfox.auto()` in observe mode, show what it sees |
+| `/agentfox:status` | Read-only posture: doctor, open findings, policy modes, agent states |
+| `/agentfox:findings [severity]` | Grouped triage with a recommended action for each finding |
+| `/agentfox:policy <what you want>` | Draft, validate, lint and simulate a policy; promotion only on your say-so |
+| `/agentfox:guardrail "<business rule>"` | Plain English → an executable business guardrail, in observe mode |
+| `/agentfox:gate [suite]` | Eval regression gate and a CI workflow for your repo |
+| `/agentfox:redteam <agent>` | Adversarial probes, results explained, fixes proposed |
+| `/agentfox:evidence [agent]` | Verify the audit chain and export an auditor-ready package |
+| `/agentfox:contain <agent> [reason]` | Incident response: quarantine (with confirmation), blast radius, evidence |
+| `/agentfox:proposals [id or status]` | Review what the improvement loop wants to change; applying anything needs your say-so |
+| `/agentfox:harness-check` | Check the harness against the live CLI and repo (for maintainers) |
 
 **MCP server.** The plugin also starts `agentfox mcp serve`, which gives any MCP client 27
 read-only tools: posture, findings and how often each one has recurred, the improvement

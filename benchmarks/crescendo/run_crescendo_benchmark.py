@@ -30,7 +30,7 @@ Every conversation is scored three ways:
 * **Windowed** — `Enforcer.check_conversation_window` re-run at every turn index, with
   only the turns before it in the conversation store, so the *first* turn at which the
   trajectory is caught is a measured number rather than a yes/no.
-* **Trajectory** — `CRESCENDO.TRAJECTORY_DRIFT` (F9.4, `src/nometria/trajectory.py`),
+* **Trajectory** — `CRESCENDO.TRAJECTORY_DRIFT` (F9.4, `src/agentfox/trajectory.py`),
   which rides on the same `check_conversation_window` call and reads the same window as
   a *sequence* rather than a join. Added after the first run of this benchmark returned
   0/13 and confirmed the gap; it is scored here as a third column rather than replacing
@@ -56,7 +56,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).parent.parent / "agent_security"))
 
 RESULTS_DIR = Path(__file__).parent / "results"
-DB_PATH = Path("/tmp/nometria_crescendo_benchmark.db")
+DB_PATH = Path("/tmp/agentfox_crescendo_benchmark.db")
 
 #: `check_conversation_window`'s own default, and inside F9.4's prescribed 5–8 turn
 #: rolling window. Not tuned for this benchmark.
@@ -478,7 +478,7 @@ def score_conversation(
     enforcer: Any, session: Any, convo: dict[str, Any], is_attack: bool
 ) -> dict[str, Any]:
     """Score one conversation per-message and, at every turn, over the window."""
-    from nometria.models import ConversationTurn
+    from agentfox.models import ConversationTurn
 
     session_id = f"crescendo-{convo['id']}"
     per_turn: list[dict[str, Any]] = []
@@ -592,9 +592,9 @@ def measure_trajectory_latency(repeats: int = 40) -> dict[str, Any]:
     import statistics
     import time
 
-    from nometria.guardrails.base import DetectionContext
-    from nometria.guardrails.pipeline import DetectorPipeline
-    from nometria.trajectory import assess
+    from agentfox.guardrails.base import DetectionContext
+    from agentfox.guardrails.pipeline import DetectorPipeline
+    from agentfox.trajectory import assess
 
     pipeline = DetectorPipeline()
     context = DetectionContext(surface="input", taint_source="user")
@@ -634,15 +634,15 @@ def measure_trajectory_latency(repeats: int = 40) -> dict[str, Any]:
 def main() -> None:
     from _util import wipe_db
 
-    from nometria import db
-    from nometria.config import get_settings, reset_settings_cache
-    from nometria.enforcement import Enforcer
-    from nometria.seed import seed
+    from agentfox import db
+    from agentfox.config import get_settings, reset_settings_cache
+    from agentfox.enforcement import Enforcer
+    from agentfox.seed import seed
 
     # `NOMETRIA_DATABASE_URL` is the setting that actually exists. An earlier version
     # of this script set `NOMETRIA_DB_PATH`, which is not a setting at all — Settings
     # is `extra="ignore"`, so it was accepted silently and every run wrote to the
-    # repo's shared `nometria.db` instead, while `wipe_db` faithfully deleted a /tmp
+    # repo's shared `agentfox.db` instead, while `wipe_db` faithfully deleted a /tmp
     # file that was never created.
     #
     # That is not a cosmetic bug. `check_conversation_window` selects stored turns by

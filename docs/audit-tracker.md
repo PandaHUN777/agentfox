@@ -27,10 +27,10 @@ Legend: `[ ]` open · `[~]` in progress · `[x]` done · `[-]` intentionally def
   no turns were recorded for that session — `dashboard/app/escalation/conversations/[sessionId]/page.tsx`.
   Two-part fix: (a) Part 0's 404 handling, (b) seed a real turn history for `seed-refund-dispute-1`
   so the page has something real to show, not just a clean error.
-  Done: `src/nometria/seed.py` now records 3 real `ConversationTurn`s for
+  Done: `src/agentfox/seed.py` now records 3 real `ConversationTurn`s for
   `seed-refund-dispute-1` matching the hand-off's own context. Also found and fixed a real bug
   surfaced only by live-testing this: `_handoff_json(handoff)` was missing the `session` arg at
-  one call site in `src/nometria/gateway/routes/escalation.py`'s `conversation()` route (stale
+  one call site in `src/agentfox/gateway/routes/escalation.py`'s `conversation()` route (stale
   from an earlier signature change). Adding real turns also inflated seed-baseline counts that
   three existing tests hardcoded (`test_a_qualifying_conversation_that_never_escalated_is_detected`,
   `test_the_missed_rate_is_measured_against_qualifying_conversations`,
@@ -52,7 +52,7 @@ Legend: `[ ]` open · `[~]` in progress · `[x]` done · `[-]` intentionally def
   Done: built the whole loop, not just the empty-state fix (this doubles as most of Part 3's
   "Guardrail feedback + suppression CRUD" item). A "was this right?" feedback form now sits on
   every detector run in Trace detail (`dashboard/app/traces/[id]/page.tsx`) — required threading a
-  new `decision_id` field onto each `detector_runs` entry in `src/nometria/audit/trace.py::full_trace`
+  new `decision_id` field onto each `detector_runs` entry in `src/agentfox/audit/trace.py::full_trace`
   since no FK existed from a detector run back to the decision it fed. Guardrails page gained a
   "Feedback log" section (`GET /api/guardrails/feedback`) with a one-click "suppress 30d" action on
   open false positives, and a "revoke" action on active suppressions. New proxy routes:
@@ -73,7 +73,7 @@ Legend: `[ ]` open · `[~]` in progress · `[x]` done · `[-]` intentionally def
   Investigated, does not reproduce: `dashboard/app/agents/[slug]/page.tsx`'s boundary form already
   wires every field's `defaultValue`/`defaultChecked` off the fetched `boundary` object, and the
   fetch (`b.agent === a.slug`) and backend shape (`_boundary_json` in
-  `src/nometria/gateway/routes/answerability.py`) already agree on field names. Verified live
+  `src/agentfox/gateway/routes/answerability.py`) already agree on field names. Verified live
   against the seeded `support-triage` boundary: every field (systems_of_record, coverage_months,
   freshness_hours, out_of_scope_topics, answerable_types checkboxes) rendered pre-filled with the
   real saved values, not blank. This looks like a false positive in the original audit rather than
@@ -200,7 +200,7 @@ Legend: `[ ]` open · `[~]` in progress · `[x]` done · `[-]` intentionally def
 - [x] No in-app glossary anywhere for the `P#-#` / `NOM-XXX-##` / OWASP / MITRE ATLAS coding
   schemes used constantly across Policies, Guardrails, Compliance, Board.
   Done: new `/glossary` page (pillar list sourced from `docs/PRD.md`, NOM-XXX
-  prefixes sourced from `src/nometria/compliance_data/controls.yaml` rather than guessed),
+  prefixes sourced from `src/agentfox/compliance_data/controls.yaml` rather than guessed),
   reachable from a persistent sidebar footer link plus explicit call-outs on Policies and
   Compliance (the two densest pages). `/guardrails`'s dense jargon (library names) is covered on
   the same page rather than a separate pass, since it's the same underlying problem.

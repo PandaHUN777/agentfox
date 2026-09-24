@@ -1,5 +1,5 @@
 [project]
-name = "nometria"
+name = "agentfox"
 version = "0.3.0"
 description = "Agent-native, vendor-neutral governance, security and compliance control plane for AI agents in production."
 readme = "README.md"
@@ -7,7 +7,7 @@ requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 
 # Core runtime deps only. Everything that wraps a third-party OSS primitive is an
-# optional extra so that `pip install nometria` stays offline-capable (X-3 / NFR-9).
+# optional extra so that `pip install agentfox` stays offline-capable (X-3 / NFR-9).
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.32",
@@ -35,7 +35,7 @@ classifiers = ["transformers>=4.44", "torch>=2.4"]      # Granite Guardian (Apac
 rails = ["nemoguardrails>=0.11"]                        # NVIDIA NeMo Guardrails
 validators = ["guardrails-ai>=0.5"]                     # Guardrails AI core
 redteam = ["garak>=0.10", "pyrit>=0.5"]                 # NVIDIA Garak + Microsoft PyRIT
-# I-1: the primary adoption path. Optional so `pip install nometria` stays light —
+# I-1: the primary adoption path. Optional so `pip install agentfox` stays light —
 # the integration module imports and degrades cleanly without it.
 langgraph = ["langgraph>=0.2.60"]
 # P9: sqlglot is MIT, zero-dependency and pure Python, so this extra adds no
@@ -60,7 +60,7 @@ postgres = ["psycopg[binary]>=3.2"]
 dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "ruff>=0.7", "mypy>=1.13"]
 
 # Everything permissive, in one shot.
-all = ["nometria[pii,classifiers,rails,validators,redteam,otel,postgres,langgraph,sql]"]
+all = ["agentfox[pii,classifiers,rails,validators,redteam,otel,postgres,langgraph,sql]"]
 # Cloud provider SDKs are excluded from `all` on purpose: they are large, and most
 # deployments need exactly one of them.
 
@@ -70,18 +70,18 @@ all = ["nometria[pii,classifiers,rails,validators,redteam,otel,postgres,langgrap
 restricted-classifiers = ["transformers>=4.44", "torch>=2.4"]
 
 [project.scripts]
-agentfox = "nometria.cli.main:main"
+agentfox = "agentfox.cli.main:main"
 # Kept so an existing install does not lose its command on upgrade. The docs, the
 # harness and the product's own output all say `agentfox`; this is compatibility,
 # not a second name we advertise.
-nometria = "nometria.cli.main:main"
+nometria = "agentfox.cli.main:main"
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/nometria"]
+packages = ["src/agentfox", "src/nometria"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

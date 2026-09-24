@@ -45,19 +45,19 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "agent_security"))
 
 # Bind the throwaway database BEFORE importing anything that reads settings. Without this
 # the benchmark inherits whatever `NOMETRIA_DATABASE_URL` happens to be set — in practice
-# the repo's own `nometria.db` — so it would seed, mutate and quarantine agents in a real
+# the repo's own `agentfox.db` — so it would seed, mutate and quarantine agents in a real
 # database while `wipe_db` deleted a /tmp file that was never used. Caught in a sibling
 # benchmark, where exactly that silently corrupted a result.
 DB_PATH = Path(tempfile.gettempdir()) / "nometria_agentdojo_e2e.db"
 os.environ["NOMETRIA_DATABASE_URL"] = f"sqlite:///{DB_PATH}"
 os.environ.setdefault("NOMETRIA_CONFIG", "none")
 
-from nometria import db  # noqa: E402
-from nometria.config import get_settings, reset_settings_cache  # noqa: E402
-from nometria.enforcement import Enforcer  # noqa: E402
-from nometria.identity.service import ensure_identity, grant_capability  # noqa: E402
-from nometria.policy import load_from_dir, save_policy  # noqa: E402
-from nometria.registry.service import register_agent, upsert_tool  # noqa: E402
+from agentfox import db  # noqa: E402
+from agentfox.config import get_settings, reset_settings_cache  # noqa: E402
+from agentfox.enforcement import Enforcer  # noqa: E402
+from agentfox.identity.service import ensure_identity, grant_capability  # noqa: E402
+from agentfox.policy import load_from_dir, save_policy  # noqa: E402
+from agentfox.registry.service import register_agent, upsert_tool  # noqa: E402
 
 from _util import wipe_db  # noqa: E402
 

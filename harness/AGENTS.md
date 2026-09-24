@@ -1,6 +1,6 @@
-# Nometria harness — start here
+# AgentFox harness — start here
 
-You are operating the **Nometria control plane**: governance, security and compliance for AI
+You are operating the **AgentFox control plane**: governance, security and compliance for AI
 agents in production. It discovers agents, enforces policy on their model and tool calls,
 evaluates them, keeps a tamper-evident audit log and exports compliance evidence.
 
@@ -18,7 +18,7 @@ reference files only when a skill points you there. The layout is explained in
 
 | The user wants to… | Load skill |
 |---|---|
-| (plugin runtimes) anything Nometria — the entry skill that points back here | [skills/using-nometria](skills/using-nometria/SKILL.md) |
+| (plugin runtimes) anything AgentFox — the entry skill that points back here | [skills/using-agentfox](skills/using-agentfox/SKILL.md) |
 | see what this product does, quickly and safely | [skills/tour-product](skills/tour-product/SKILL.md) |
 | start governing their own agent codebase | [skills/onboard-codebase](skills/onboard-codebase/SKILL.md) |
 | wire guardrails into specific code (tools, LangGraph, FastAPI, MCP, proxy) | [skills/integrate-guardrails](skills/integrate-guardrails/SKILL.md) |
@@ -32,7 +32,7 @@ reference files only when a skill points you there. The layout is explained in
 | respond to an agent misbehaving right now | [skills/incident-response](skills/incident-response/SKILL.md) |
 | review what the improvement loop wants to change, and decide it | [skills/operate-improvement-loop](skills/operate-improvement-loop/SKILL.md) |
 | run it as a service: serve, deploy, harden auth, upgrade | [skills/operate-deployment](skills/operate-deployment/SKILL.md) |
-| change the Nometria codebase itself | [skills/develop-nometria](skills/develop-nometria/SKILL.md) |
+| change the AgentFox codebase itself | [skills/develop-agentfox](skills/develop-agentfox/SKILL.md) |
 
 If nothing fits, answer from [reference/](reference/). If the question is about *why* the
 product is shaped the way it is, [reference/docs-map.md](reference/docs-map.md) says which
@@ -55,7 +55,7 @@ doc to open.
    UNVERIFIED / NOT LEGAL ADVICE` caveat, never as legal conclusions.
 6. **Never quote a benchmark number without its limit.** Detection numbers are not robustness
    claims, containment depends on declarations, and compliance mappings are drafts. The standing
-   rules are in `docs/evidence-standards.md` in the Nometria repository; the one-line version is
+   rules are in `docs/evidence-standards.md` in the AgentFox repository; the one-line version is
    that we do not claim adversarial robustness and nobody should.
 7. **Code wins.** If a doc and the code disagree, trust the code and check
    [reference/known-issues.md](reference/known-issues.md) before assuming a bug is yours.
@@ -63,7 +63,7 @@ doc to open.
    is filed as a proposal. Applying or rolling one back is **BLK**, and a change that
    loosens a control is never applied automatically, whatever the evidence says.
    `NOMETRIA_IMPROVEMENT_FROZEN=true` stops automated applies without losing proposals.
-9. **Prefer the `nometria_*` MCP tools for reading and analysis** when they're available;
+9. **Prefer the `agentfox_*` MCP tools for reading and analysis** when they're available;
    they return structured results. Otherwise prefer `--json` where it exists, or the HTTP API
    when a server is running. State changes always go through the CLI.
 
@@ -71,11 +71,11 @@ doc to open.
 
 Skills write commands as `agentfox <args>`. If `agentfox` isn't on PATH:
 
-- In a source checkout of the Nometria repo, use `uv run agentfox <args>`.
-- Anywhere, use the launcher `scripts/nometria.sh <args>` in this harness folder. With the
-  Claude Code plugin, that's `${CLAUDE_PLUGIN_ROOT}/scripts/nometria.sh`. It finds an
+- In a source checkout of the AgentFox repo, use `uv run agentfox <args>`.
+- Anywhere, use the launcher `scripts/agentfox.sh <args>` in this harness folder. With the
+  Claude Code plugin, that's `${CLAUDE_PLUGIN_ROOT}/scripts/agentfox.sh`. It finds an
   installed CLI or a checkout, or prints the install line.
 
-Paths such as `src/…` and `docs/…` refer to the Nometria repository
+Paths such as `src/…` and `docs/…` refer to the AgentFox repository
 (https://github.com/architsharm/guardrails). They are local only when you're working inside
 a checkout of it.

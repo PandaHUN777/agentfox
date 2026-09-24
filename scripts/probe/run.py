@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
-_TMP = tempfile.mkdtemp(prefix="nometria-probe-")
+_TMP = tempfile.mkdtemp(prefix="agentfox-probe-")
 import os  # noqa: E402
 
 os.environ.setdefault("NOMETRIA_DATABASE_URL", f"sqlite:///{_TMP}/probe.db")
@@ -41,13 +41,13 @@ Result = tuple[bool, str]
 
 
 def _ctx(surface="output", taint="none"):
-    from nometria.guardrails.base import DetectionContext
+    from agentfox.guardrails.base import DetectionContext
 
     return DetectionContext(surface=surface, taint_source=taint)
 
 
 def _detector(key):
-    from nometria.guardrails import all_detectors
+    from agentfox.guardrails import all_detectors
 
     return all_detectors()[key]
 
@@ -58,16 +58,16 @@ def _fires(key, text, surface="output", taint="none") -> Result:
 
 
 def _session():
-    from nometria.db import init_db, session_scope
+    from agentfox.db import init_db, session_scope
 
     init_db()
     return session_scope()
 
 
 def _seeded_session():
-    from nometria.db import init_db, session_scope
-    from nometria.models import Agent
-    from nometria.seed import seed
+    from agentfox.db import init_db, session_scope
+    from agentfox.models import Agent
+    from agentfox.seed import seed
 
     init_db()
     with session_scope() as s:
@@ -82,7 +82,7 @@ def _seeded_session():
 
 
 def probe_ungrounded_claim() -> Result:
-    from nometria.provenance import uncited_claims
+    from agentfox.provenance import uncited_claims
 
     claims = uncited_claims(
         "The refund window is 90 days and covers shipping.",
@@ -92,21 +92,21 @@ def probe_ungrounded_claim() -> Result:
 
 
 def probe_arithmetic() -> Result:
-    from nometria.integrity import check_arithmetic
+    from agentfox.integrity import check_arithmetic
 
     issues = check_arithmetic("Revenue rose: 5 + 3 = 9 in total.")
     return bool(issues), issues[0]["reason"] if issues else "nothing"
 
 
 def probe_aggregation_sum() -> Result:
-    from nometria.integrity import check_arithmetic
+    from agentfox.integrity import check_arithmetic
 
     issues = check_arithmetic("The total is 120", components=[50.0, 55.0])
     return bool(issues), issues[0]["reason"] if issues else "nothing"
 
 
 def probe_schema_violation() -> Result:
-    from nometria.guardrails.base import DetectionContext
+    from agentfox.guardrails.base import DetectionContext
 
     schema = {
         "type": "object",
@@ -121,7 +121,7 @@ def probe_schema_violation() -> Result:
 def probe_coverage_window() -> Result:
     import datetime as dt
 
-    from nometria.answerability import classify_answerability
+    from agentfox.answerability import classify_answerability
 
     class B:
         systems_of_record = ["CRM"]
@@ -137,7 +137,7 @@ def probe_coverage_window() -> Result:
 
 
 def probe_self_consistency() -> Result:
-    from nometria.evaluation.silent_failure import self_consistency
+    from agentfox.evaluation.silent_failure import self_consistency
 
     consistent, _ = self_consistency(
         [
@@ -215,7 +215,7 @@ def probe_multilingual_injection() -> Result:
 
 def probe_sycophancy_premise() -> Result:
     """L0.7 — a false premise the user asserted, adopted rather than corrected."""
-    from nometria.sycophancy import check_premises
+    from agentfox.sycophancy import check_premises
 
     findings = check_premises(
         "As you know, the balance is 900 — can I withdraw 500?",
@@ -236,7 +236,7 @@ def probe_sycophancy_premise() -> Result:
 
 def probe_crescendo_trajectory() -> Result:
     """L1.6 — every turn innocuous, the trajectory is not."""
-    from nometria.trajectory import assess
+    from agentfox.trajectory import assess
 
     escalating = [
         "Hi, I'm writing a novel about a security team.",
@@ -262,7 +262,7 @@ def probe_crescendo_trajectory() -> Result:
 
 def probe_localised_number_parity() -> Result:
     """L0.10 — the same wrong sum, in a locale that writes numbers differently."""
-    from nometria.integrity import check_arithmetic
+    from agentfox.integrity import check_arithmetic
 
     english = check_arithmetic("The total is 1,234.56 + 1,000.00 = 3,500.00")
     german = check_arithmetic("Die Gesamtsumme ist 1.234,56 + 1.000,00 = 3.500,00", locale="de")
@@ -286,7 +286,7 @@ def probe_secret_in_input() -> Result:
 
 
 def probe_pii_redaction() -> Result:
-    from nometria.guardrails import redact_content
+    from agentfox.guardrails import redact_content
 
     text = "Contact jane.doe@example.com, SSN 123-45-6789."
     found = _detector("pii.native").detect(text, _ctx("input", "user")).detections
@@ -300,7 +300,7 @@ def probe_pii_redaction() -> Result:
 
 
 def probe_source_tier() -> Result:
-    from nometria.provenance import UNVERIFIED, assess_provenance, register_source
+    from agentfox.provenance import UNVERIFIED, assess_provenance, register_source
 
     with _session() as s:
         register_source(s, "price-book", tier="system_of_record")
@@ -316,8 +316,8 @@ def probe_source_tier() -> Result:
 def probe_stale_source() -> Result:
     import datetime as dt
 
-    from nometria.models import utcnow
-    from nometria.provenance import freshness_breach, register_source
+    from agentfox.models import utcnow
+    from agentfox.provenance import freshness_breach, register_source
 
     with _session() as s:
         record = register_source(
@@ -331,7 +331,7 @@ def probe_stale_source() -> Result:
 
 
 def probe_deprecated_source() -> Result:
-    from nometria.provenance import assess_provenance, register_source
+    from agentfox.provenance import assess_provenance, register_source
 
     with _session() as s:
         register_source(s, "wiki-2019", tier="approved", deprecated=True)
@@ -345,7 +345,7 @@ def probe_deprecated_source() -> Result:
 
 
 def probe_fabricated_citation() -> Result:
-    from nometria.provenance import detect_fabricated_citations
+    from agentfox.provenance import detect_fabricated_citations
 
     found = detect_fabricated_citations(
         "The limit is 900 [policy-v3].", [{"source": "policy-v3", "text": "the limit is 500"}]
@@ -354,7 +354,7 @@ def probe_fabricated_citation() -> Result:
 
 
 def probe_source_conflict() -> Result:
-    from nometria.provenance import detect_source_conflict
+    from agentfox.provenance import detect_source_conflict
 
     found = detect_source_conflict(
         [
@@ -366,7 +366,7 @@ def probe_source_conflict() -> Result:
 
 
 def probe_completeness() -> Result:
-    from nometria.answerability import completeness_signal
+    from agentfox.answerability import completeness_signal
 
     signal = completeness_signal("Here are the results.", retrieved=3, available=50)
     return bool(signal.get("misleading")), signal.get("suggested_caveat", "")
@@ -378,8 +378,8 @@ def probe_completeness() -> Result:
 
 
 def probe_loop_budget() -> Result:
-    from nometria.enforcement import Enforcer
-    from nometria.models import Agent
+    from agentfox.enforcement import Enforcer
+    from agentfox.models import Agent
 
     with _seeded_session() as s:
         agent = s.query(Agent).filter_by(slug="support-triage").one()
@@ -399,7 +399,7 @@ def probe_loop_budget() -> Result:
 
 
 def probe_destructive_sql() -> Result:
-    from nometria.guardrails.actions import analyse_sql
+    from agentfox.guardrails.actions import analyse_sql
 
     a = analyse_sql("DELETE FROM users")
     b = analyse_sql("DROP TABLE users")
@@ -407,21 +407,21 @@ def probe_destructive_sql() -> Result:
 
 
 def probe_tautology() -> Result:
-    from nometria.guardrails.actions import analyse_sql
+    from agentfox.guardrails.actions import analyse_sql
 
     a = analyse_sql("DELETE FROM users WHERE 1=1")
     return a.blocked, str([r.code for r in a.risks])
 
 
 def probe_stacked_sql() -> Result:
-    from nometria.guardrails.actions import analyse_sql
+    from agentfox.guardrails.actions import analyse_sql
 
     a = analyse_sql("SELECT 1; DROP TABLE users")
     return "sql.stacked_statements" in [r.code for r in a.risks], str([r.code for r in a.risks])
 
 
 def probe_environment() -> Result:
-    from nometria.guardrails.actions import analyse_sql, environment_risk
+    from agentfox.guardrails.actions import analyse_sql, environment_risk
 
     a = analyse_sql("DELETE FROM users")
     prod = environment_risk(a, "production")
@@ -430,9 +430,9 @@ def probe_environment() -> Result:
 
 
 def probe_verified_state() -> Result:
-    from nometria.enforcement import Enforcer
-    from nometria.identity import ensure_identity, grant_capability
-    from nometria.models import Agent
+    from agentfox.enforcement import Enforcer
+    from agentfox.identity import ensure_identity, grant_capability
+    from agentfox.models import Agent
 
     with _seeded_session() as s:
         agent = s.query(Agent).filter_by(slug="support-triage").one()
@@ -448,8 +448,8 @@ def probe_verified_state() -> Result:
 
 
 def probe_capability_deny() -> Result:
-    from nometria.enforcement import Enforcer
-    from nometria.models import Agent
+    from agentfox.enforcement import Enforcer
+    from agentfox.models import Agent
 
     with _seeded_session() as s:
         s.query(Agent).filter_by(slug="support-triage").one()
@@ -462,8 +462,8 @@ def probe_capability_deny() -> Result:
 
 
 def probe_taint_ceiling() -> Result:
-    from nometria.enforcement import Enforcer
-    from nometria.models import Agent
+    from agentfox.enforcement import Enforcer
+    from agentfox.models import Agent
 
     with _seeded_session() as s:
         s.query(Agent).filter_by(slug="payments-ops").one()
@@ -480,14 +480,14 @@ def probe_taint_ceiling() -> Result:
 
 
 def probe_privilege_change() -> Result:
-    from nometria.guardrails.actions import analyse_sql
+    from agentfox.guardrails.actions import analyse_sql
 
     a = analyse_sql("GRANT ALL ON users TO agent")
     return "sql.privilege_change" in [r.code for r in a.risks], str([r.code for r in a.risks])
 
 
 def probe_shell() -> Result:
-    from nometria.guardrails.actions import analyse_shell
+    from agentfox.guardrails.actions import analyse_shell
 
     caught = [
         c
@@ -499,8 +499,8 @@ def probe_shell() -> Result:
 
 
 def probe_mcp_drift() -> Result:
-    from nometria.integrations.mcp import McpGovernor
-    from nometria.registry.service import scan_mcp_server
+    from agentfox.integrations.mcp import McpGovernor
+    from agentfox.registry.service import scan_mcp_server
 
     tools = [{"name": "search", "description": "Search.", "inputSchema": {"type": "object"}}]
     with _seeded_session() as s:
@@ -513,7 +513,7 @@ def probe_mcp_drift() -> Result:
 
 
 def probe_mcp_undeclared() -> Result:
-    from nometria.integrations.mcp import McpGovernor
+    from agentfox.integrations.mcp import McpGovernor
 
     with _seeded_session() as s:
         gov = McpGovernor(session=s, agent_slug="support-triage", server_name="probe-server-2")
@@ -543,7 +543,7 @@ def probe_encoded_secret() -> Result:
 
 
 def probe_entitlement() -> Result:
-    from nometria.entitlement import filter_retrieval, grant, upsert_principal
+    from agentfox.entitlement import filter_retrieval, grant, upsert_principal
 
     with _session() as s:
         grant(s, "kb/*", principal="all-staff")
@@ -560,21 +560,21 @@ def probe_entitlement() -> Result:
 
 
 def probe_k_anonymity() -> Result:
-    from nometria.entitlement import aggregation_risk
+    from agentfox.entitlement import aggregation_risk
 
     risk = aggregation_risk("Average salary is 180k", contributors=2)
     return risk is not None, risk["reason"] if risk else "nothing"
 
 
 def probe_inference() -> Result:
-    from nometria.entitlement import inference_risk
+    from agentfox.entitlement import inference_risk
 
     risk = inference_risk("She is likely pregnant based on leave patterns.", "leave records")
     return risk is not None, str(risk["attributes"]) if risk else "nothing"
 
 
 def probe_unknowable() -> Result:
-    from nometria.answerability import classify_answerability
+    from agentfox.answerability import classify_answerability
 
     class B:
         systems_of_record = ["CRM"]
@@ -590,7 +590,7 @@ def probe_unknowable() -> Result:
 
 
 def probe_entity_confusion() -> Result:
-    from nometria.integrity import detect_entity_confusion
+    from agentfox.integrity import detect_entity_confusion
 
     found = detect_entity_confusion(
         "how is Acme Corp doing?",
@@ -601,28 +601,28 @@ def probe_entity_confusion() -> Result:
 
 
 def probe_period() -> Result:
-    from nometria.integrity import detect_period_mismatch
+    from agentfox.integrity import detect_period_mismatch
 
     found = detect_period_mismatch("what was FY2024 revenue?", "In calendar year 2024, £4m.")
     return bool(found), found[0]["kind"] if found else "nothing"
 
 
 def probe_units() -> Result:
-    from nometria.integrity import detect_unit_mismatch
+    from agentfox.integrity import detect_unit_mismatch
 
     found = detect_unit_mismatch("Revenue was $4m", "Revenue was €4m")
     return bool(found), found[0]["kind"] if found else "nothing"
 
 
 def probe_hallucinated_record() -> Result:
-    from nometria.integrity import detect_unmatched_records
+    from agentfox.integrity import detect_unmatched_records
 
     found = detect_unmatched_records("Matched to ORD-99999.", [{"id": "ORD-11111"}])
     return bool(found), found[0]["identifier"] if found else "nothing"
 
 
 def probe_timezone() -> Result:
-    from nometria.integrity import detect_timezone_ambiguity
+    from agentfox.integrity import detect_timezone_ambiguity
 
     found = detect_timezone_ambiguity("Your appeal is due by 5:00 pm")
     clean = detect_timezone_ambiguity("Your appeal is due by 5:00 pm UTC")
@@ -635,8 +635,8 @@ def probe_timezone() -> Result:
 
 
 def probe_delegation_narrowing() -> Result:
-    from nometria.identity import delegate, ensure_identity, grant_capability
-    from nometria.models import Agent
+    from agentfox.identity import delegate, ensure_identity, grant_capability
+    from agentfox.models import Agent
 
     with _seeded_session() as s:
         parent_agent = s.query(Agent).filter_by(slug="support-triage").one()
@@ -655,7 +655,7 @@ def probe_delegation_narrowing() -> Result:
 
 
 def probe_subagent_taint() -> Result:
-    from nometria.guardrails.base import taint_rank
+    from agentfox.guardrails.base import taint_rank
 
     return taint_rank("subagent") >= 2, f"subagent rank {taint_rank('subagent')} (>=2 untrusted)"
 
@@ -666,7 +666,7 @@ def probe_subagent_taint() -> Result:
 
 
 def probe_missed_escalation() -> Result:
-    from nometria.escalation import detect_missed_escalation, record_turn
+    from agentfox.escalation import detect_missed_escalation, record_turn
 
     with _session() as s:
         record_turn(
@@ -680,14 +680,14 @@ def probe_missed_escalation() -> Result:
 
 
 def probe_handoff_context() -> Result:
-    from nometria.escalation import handoff_completeness
+    from agentfox.escalation import handoff_completeness
 
     poor = handoff_completeness({"user_request": "refund"})
     return not poor["complete"], f"missing {poor['missing']}"
 
 
 def probe_loop_no_handoff() -> Result:
-    from nometria.escalation import _loop_without_handoff, record_turn
+    from agentfox.escalation import _loop_without_handoff, record_turn
 
     with _session() as s:
         for _ in range(3):
@@ -702,7 +702,7 @@ def probe_loop_no_handoff() -> Result:
 
 
 def probe_false_resolution() -> Result:
-    from nometria.escalation import detect_false_resolution, record_turn
+    from agentfox.escalation import detect_false_resolution, record_turn
 
     with _session() as s:
         record_turn(
@@ -721,8 +721,8 @@ def probe_false_resolution() -> Result:
 def probe_sla_breach() -> Result:
     import datetime as dt
 
-    from nometria.escalation import breached_handoffs, raise_handoff
-    from nometria.models import utcnow
+    from agentfox.escalation import breached_handoffs, raise_handoff
+    from agentfox.models import utcnow
 
     with _session() as s:
         handoff = raise_handoff(
@@ -735,7 +735,7 @@ def probe_sla_breach() -> Result:
 
 
 def probe_distress() -> Result:
-    from nometria.escalation import sentiment_signal
+    from agentfox.escalation import sentiment_signal
 
     harm = sentiment_signal("I want to hurt myself")
     legal = sentiment_signal("I am calling my lawyer")
@@ -745,7 +745,7 @@ def probe_distress() -> Result:
 
 
 def probe_over_refusal() -> Result:
-    from nometria.answerability import classify_answerability, detect_over_refusal
+    from agentfox.answerability import classify_answerability, detect_over_refusal
 
     class B:
         systems_of_record = ["CRM"]
@@ -770,7 +770,7 @@ def probe_over_refusal() -> Result:
 
 
 def probe_circuit_breaker() -> Result:
-    from nometria.reliability import CircuitBreaker
+    from agentfox.reliability import CircuitBreaker
 
     breaker = CircuitBreaker(failure_threshold=2)
     breaker.record_failure("p")
@@ -779,7 +779,7 @@ def probe_circuit_breaker() -> Result:
 
 
 def probe_fallback_recorded() -> Result:
-    from nometria.config import get_settings
+    from agentfox.config import get_settings
 
     return get_settings().fallback_chain == [], (
         "default ladder is empty — fail rather than serve from an unevaluated model"
@@ -787,8 +787,8 @@ def probe_fallback_recorded() -> Result:
 
 
 def probe_budget_cap() -> Result:
-    from nometria.enforcement import Enforcer
-    from nometria.models import Agent, Budget
+    from agentfox.enforcement import Enforcer
+    from agentfox.models import Agent, Budget
 
     with _seeded_session() as s:
         agent = s.query(Agent).filter_by(slug="support-triage").one()
@@ -806,7 +806,7 @@ def probe_budget_cap() -> Result:
 
 
 def probe_detector_degradation() -> Result:
-    from nometria.guardrails.pipeline import DetectorPipeline
+    from agentfox.guardrails.pipeline import DetectorPipeline
 
     pipeline = DetectorPipeline(budget_ms=0)
     result = pipeline.run("some content", _ctx("output"))
@@ -820,8 +820,8 @@ def probe_eval_gate() -> Result:
     probe builds real ones — a summary alone gates on nothing, which is itself worth
     knowing about the API.
     """
-    from nometria.evaluation.gating import gate
-    from nometria.models import EvalResult, EvalRun
+    from agentfox.evaluation.gating import gate
+    from agentfox.models import EvalResult, EvalRun
 
     with _seeded_session() as s:
         run = EvalRun(suite_id="probe-suite", status="complete")
@@ -845,8 +845,8 @@ def probe_eval_gate() -> Result:
 
 
 def probe_shadow_agent() -> Result:
-    from nometria.models import Agent
-    from nometria.registry.service import detect_shadow_agents, observe_agent
+    from agentfox.models import Agent
+    from agentfox.registry.service import detect_shadow_agents, observe_agent
 
     with _seeded_session() as s:
         observe_agent(s, "never-registered-probe", environment="production")
@@ -871,7 +871,7 @@ def probe_latency_budget() -> Result:
 
 
 def probe_policy_lint() -> Result:
-    from nometria.policy import PolicyDocument, PolicyLayer, lint_policy
+    from agentfox.policy import PolicyDocument, PolicyLayer, lint_policy
 
     doc = PolicyDocument.model_validate(
         {
@@ -898,9 +898,9 @@ def probe_policy_lint() -> Result:
 def probe_cross_tenant() -> Result:
     from sqlalchemy import select
 
-    from nometria.db import session_scope
-    from nometria.models import Agent
-    from nometria.tenancy import tenant
+    from agentfox.db import session_scope
+    from agentfox.models import Agent
+    from agentfox.tenancy import tenant
 
     for org, slug in (("probe_a", "probe-a-bot"), ("probe_b", "probe-b-bot")):
         with tenant(org), session_scope() as s:
@@ -912,7 +912,7 @@ def probe_cross_tenant() -> Result:
 
 
 def probe_residency() -> Result:
-    from nometria.entitlement import filter_retrieval, grant, upsert_principal
+    from agentfox.entitlement import filter_retrieval, grant, upsert_principal
 
     with _session() as s:
         grant(s, "eu/*", principal="staff-res", residency="eu")
@@ -930,7 +930,7 @@ def probe_residency() -> Result:
 
 
 def probe_purpose() -> Result:
-    from nometria.entitlement import filter_retrieval, grant, upsert_principal
+    from agentfox.entitlement import filter_retrieval, grant, upsert_principal
 
     with _session() as s:
         grant(s, "tickets/*", principal="staff-purpose", purposes=["support"])
@@ -942,8 +942,8 @@ def probe_purpose() -> Result:
 
 
 def probe_audit_chain() -> Result:
-    from nometria.audit import chain
-    from nometria.models import AuditEntry
+    from agentfox.audit import chain
+    from agentfox.models import AuditEntry
 
     with _session() as s:
         for i in range(3):
@@ -967,20 +967,20 @@ def probe_audit_chain() -> Result:
 
 
 def probe_audit_redaction() -> Result:
-    from nometria.guardrails.base import redact_sample
+    from agentfox.guardrails.base import redact_sample
 
     sample = redact_sample("sk-proj-AbCdEfGhIjKlMnOpQrStUvWxYz012345")
     return "AbCdEfGh" not in sample, f"stored as {sample!r}"
 
 
 def probe_policy_version_recorded() -> Result:
-    from nometria.enforcement import Enforcer
-    from nometria.models import Agent
+    from agentfox.enforcement import Enforcer
+    from agentfox.models import Agent
 
     with _seeded_session() as s:
         agent = s.query(Agent).filter_by(slug="support-triage").one()
         result = Enforcer(s).evaluate(agent=agent, identity=None, content="hello", surface="output")
-        from nometria.models import Decision
+        from agentfox.models import Decision
 
         decision = s.query(Decision).filter_by(id=result.decision_id).one()
         versions = decision.policy_version_ids
@@ -997,7 +997,7 @@ def probe_policy_version_recorded() -> Result:
 
 
 def probe_corrupt_document() -> Result:
-    from nometria.context_integrity import document_quality
+    from agentfox.context_integrity import document_quality
 
     corrupt = document_quality("The vendorâ€™s cafÃ© charge was Â£5.00 on the third.")
     clean = document_quality(
@@ -1011,7 +1011,7 @@ def probe_corrupt_document() -> Result:
 
 
 def probe_encoding_damage() -> Result:
-    from nometria.context_integrity import document_quality
+    from agentfox.context_integrity import document_quality
 
     damaged = document_quality("The customer name is ��� and the total is [UNK].")
     languages = {
@@ -1027,7 +1027,7 @@ def probe_encoding_damage() -> Result:
 
 
 def probe_chunk_coherence() -> Result:
-    from nometria.context_integrity import chunk_quality
+    from agentfox.context_integrity import chunk_quality
 
     split = chunk_quality([
         "Refunds are approved automatically unless the amount",
@@ -1044,7 +1044,7 @@ def probe_chunk_coherence() -> Result:
 
 
 def probe_truncated_evidence() -> Result:
-    from nometria.context_integrity import assemble_context
+    from agentfox.context_integrity import assemble_context
 
     chunks = [{"text": "x" * 400} for _ in range(8)]
     starved = assemble_context(chunks, budget_tokens=50, required=[7])
@@ -1057,7 +1057,7 @@ def probe_truncated_evidence() -> Result:
 
 
 def probe_lost_in_middle() -> Result:
-    from nometria.context_integrity import assemble_context
+    from agentfox.context_integrity import assemble_context
 
     chunks = [{"text": f"passage {i}. " * 5} for i in range(6)]
     result = assemble_context(chunks, budget_tokens=10_000)
@@ -1069,7 +1069,7 @@ def probe_lost_in_middle() -> Result:
 
 
 def probe_retrieval_drift() -> Result:
-    from nometria.context_integrity import evaluate_retrieval, retrieval_drift
+    from agentfox.context_integrity import evaluate_retrieval, retrieval_drift
 
     baseline = evaluate_retrieval([(["t", "a", "b"], {"t"}), (["t", "c", "d"], {"t"})])
     regressed = evaluate_retrieval([(["a", "b", "t"], {"t"}), (["c", "d", "t"], {"t"})])
@@ -1082,7 +1082,7 @@ def probe_retrieval_drift() -> Result:
 
 
 def probe_memory_binding() -> Result:
-    from nometria.context_integrity import memory_binding_breach
+    from agentfox.context_integrity import memory_binding_breach
 
     leaked = memory_binding_breach([{"key": "pref", "subject": "bob"}], principal="alice")
     unbound = memory_binding_breach([{"key": "note"}], principal="alice")
@@ -1097,9 +1097,9 @@ def probe_memory_binding() -> Result:
 
 def probe_memory_write_governance() -> Result:
     """NOM-RTG-13 — a poisoned write never reaches the memory table once enforced."""
-    from nometria.enforcement import Enforcer
-    from nometria.models import Agent, MemoryEntry
-    from nometria.policy import set_mode
+    from agentfox.enforcement import Enforcer
+    from agentfox.models import Agent, MemoryEntry
+    from agentfox.policy import set_mode
 
     with _seeded_session() as s:
         set_mode(s, "baseline", "enforce")
@@ -1149,7 +1149,7 @@ _TRACE = [
 
 
 def probe_handoff_fidelity() -> Result:
-    from nometria.attribution import handoff_fidelity
+    from agentfox.attribution import handoff_fidelity
 
     lossy = handoff_fidelity(_BRIEF, "Process this refund.")
     faithful = handoff_fidelity(_BRIEF, _BRIEF)
@@ -1160,7 +1160,7 @@ def probe_handoff_fidelity() -> Result:
 
 
 def probe_handoff_semantics() -> Result:
-    from nometria.attribution import handoff_fidelity
+    from agentfox.attribution import handoff_fidelity
 
     reworded = handoff_fidelity("Refund under £500", "Keep it under 500 pounds")
     invented = handoff_fidelity("Refund the order.", "Refund the order, under $50.")
@@ -1171,7 +1171,7 @@ def probe_handoff_semantics() -> Result:
 
 
 def probe_goal_drift() -> Result:
-    from nometria.attribution import goal_drift
+    from agentfox.attribution import goal_drift
 
     wandered = goal_drift(
         "Refund under £500 urgently, and do not contact the customer.",
@@ -1189,7 +1189,7 @@ def probe_goal_drift() -> Result:
 
 
 def probe_compounding_error() -> Result:
-    from nometria.attribution import attribute
+    from agentfox.attribution import attribute
 
     result = attribute(_TRACE, value="4500", failed_step="8")
     return result.origin_step == "3" and result.origin_step != result.failed_step, (
@@ -1198,7 +1198,7 @@ def probe_compounding_error() -> Result:
 
 
 def probe_blame_attribution() -> Result:
-    from nometria.attribution import attribute
+    from agentfox.attribution import attribute
 
     named = attribute(_TRACE, value="4500", failed_step="8")
     external = attribute(
@@ -1214,7 +1214,7 @@ def probe_blame_attribution() -> Result:
 
 
 def probe_delegation_cycle() -> Result:
-    from nometria.attribution import delegation_graph
+    from agentfox.attribution import delegation_graph
 
     cyclic = delegation_graph([("A", "B"), ("B", "C"), ("C", "A")])
     deep = delegation_graph([(f"a{i}", f"a{i + 1}") for i in range(8)], depth_limit=5)
@@ -1232,10 +1232,10 @@ def probe_agent_message_security() -> Result:
 
     from cryptography.fernet import Fernet
 
-    from nometria.agent_messaging import mint_signing_key, sign_message
-    from nometria.config import reset_settings_cache
-    from nometria.enforcement import Enforcer
-    from nometria.models import Agent
+    from agentfox.agent_messaging import mint_signing_key, sign_message
+    from agentfox.config import reset_settings_cache
+    from agentfox.enforcement import Enforcer
+    from agentfox.models import Agent
 
     os.environ.setdefault("NOMETRIA_TOKEN_ENCRYPTION_KEY", Fernet.generate_key().decode())
     reset_settings_cache()
@@ -1274,7 +1274,7 @@ def probe_agent_message_security() -> Result:
 
 
 def probe_binding_commitment() -> Result:
-    from nometria.commitments import detect_commitments
+    from agentfox.commitments import detect_commitments
 
     binding = detect_commitments("Your refund has been approved and we'll credit you today.")
     hedged = detect_commitments("Refunds are usually approved within two days.")
@@ -1289,7 +1289,7 @@ def probe_binding_commitment() -> Result:
 
 
 def probe_ai_disclosure() -> Result:
-    from nometria.commitments import check_disclosure, disclosure_required
+    from agentfox.commitments import check_disclosure, disclosure_required
 
     silent = check_disclosure("Hi! How can I help?", channel="chat")
     stated = check_disclosure("Hi, I'm an AI assistant — how can I help?", channel="chat")
@@ -1301,7 +1301,7 @@ def probe_ai_disclosure() -> Result:
 
 
 def probe_adverse_action() -> Result:
-    from nometria.commitments import adverse_action_risk
+    from agentfox.commitments import adverse_action_risk
 
     silent = adverse_action_risk("declined", reasons=[], domain="lending")
     boilerplate = adverse_action_risk(
@@ -1321,7 +1321,7 @@ def probe_adverse_action() -> Result:
 
 
 def probe_fairness() -> Result:
-    from nometria.commitments import fairness_probe
+    from agentfox.commitments import fairness_probe
 
     disparate = fairness_probe({"a": (80, 100), "b": (40, 100)})
     comparable = fairness_probe({"a": (80, 100), "b": (75, 100)})
@@ -1343,7 +1343,7 @@ def probe_fairness() -> Result:
 
 
 def probe_duplicate_execution() -> Result:
-    from nometria.effects import EffectLedger
+    from agentfox.effects import EffectLedger
 
     ledger = EffectLedger()
     args = {"order": "A-1", "amount": 50, "request_id": "r1", "timestamp": "2026-01-01"}
@@ -1364,7 +1364,7 @@ def probe_duplicate_execution() -> Result:
 
 
 def probe_compensation() -> Result:
-    from nometria.effects import Step, compensation_plan
+    from agentfox.effects import Step, compensation_plan
 
     sequence = [
         Step("email.send", irreversible=True),
@@ -1392,7 +1392,7 @@ def probe_compensation() -> Result:
 
 
 def probe_cascade() -> Result:
-    from nometria.effects import cascade_risk
+    from agentfox.effects import cascade_risk
 
     triggers = {
         "orders.update": ["events.publish"],
@@ -1419,10 +1419,10 @@ def probe_cascade() -> Result:
 
 def probe_operator_log() -> Result:
     """Every control watches the agent; the operator is who can turn them off."""
-    from nometria.business.ladder import Ladder
-    from nometria.business.store import save_ladder, set_mode
-    from nometria.db import session_scope
-    from nometria.operator_log import PRIVILEGED, operator_history, unaudited
+    from agentfox.business.ladder import Ladder
+    from agentfox.business.store import save_ladder, set_mode
+    from agentfox.db import session_scope
+    from agentfox.operator_log import PRIVILEGED, operator_history, unaudited
 
     gaps = unaudited()
     ladder = {
@@ -1461,7 +1461,7 @@ _RULES = None
 
 
 def _access_fixtures():
-    from nometria.data_access import ReferenceTable, ScopeRule
+    from agentfox.data_access import ReferenceTable, ScopeRule
 
     return (
         [ScopeRule("orders", "customer_id", "customer_id",
@@ -1473,7 +1473,7 @@ def _access_fixtures():
 
 
 def probe_unscoped_read() -> Result:
-    from nometria.data_access import analyse_access
+    from agentfox.data_access import analyse_access
 
     rules, reference, me = _access_fixtures()
     unscoped = analyse_access("SELECT id, total FROM orders", principal=me,
@@ -1492,7 +1492,7 @@ def probe_unscoped_read() -> Result:
 
 
 def probe_scope_bound_to_literal() -> Result:
-    from nometria.data_access import analyse_access
+    from agentfox.data_access import analyse_access
 
     rules, reference, me = _access_fixtures()
     escalation = analyse_access("SELECT id FROM orders WHERE customer_id = 'C-4471'",
@@ -1515,7 +1515,7 @@ def probe_scope_bound_to_literal() -> Result:
 
 
 def probe_subject_mismatch() -> Result:
-    from nometria.tool_contract import answers_request
+    from agentfox.tool_contract import answers_request
 
     wrong = answers_request("What is the status of order A-1182?",
                             {"order": "A-1183", "status": "shipped"})
@@ -1529,7 +1529,7 @@ def probe_subject_mismatch() -> Result:
 
 
 def probe_silent_tool_failure() -> Result:
-    from nometria.tool_contract import answers_request
+    from agentfox.tool_contract import answers_request
 
     errored = answers_request("What is the balance for order A-1182?",
                               {"order": "A-1182", "error": "upstream timeout"})
@@ -1549,7 +1549,7 @@ def probe_silent_tool_failure() -> Result:
 
 
 def probe_answer_register() -> Result:
-    from nometria.register import check_register
+    from agentfox.register import check_register
 
     dose = check_register("Take 400mg every six hours with food.",
                           request="What dose of ibuprofen should I take?")
@@ -1575,7 +1575,7 @@ def probe_answer_register() -> Result:
 
 
 def probe_source_bypassed() -> Result:
-    from nometria.arbitration import Reading, SourceAuthority, arbitrate
+    from agentfox.arbitration import Reading, SourceAuthority, arbitrate
 
     sources = [
         SourceAuthority("ledger", "system_of_record", ("balance",), max_age_seconds=60),
@@ -1593,7 +1593,7 @@ def probe_source_bypassed() -> Result:
 
 
 def probe_source_disagreement() -> Result:
-    from nometria.arbitration import Reading, SourceAuthority, arbitrate
+    from agentfox.arbitration import Reading, SourceAuthority, arbitrate
 
     sources = [
         SourceAuthority("ledger", "system_of_record", ("balance",)),
@@ -1624,7 +1624,7 @@ def probe_fail_open_bounded() -> Result:
     """A control failing open silently is indistinguishable from one that works."""
     import datetime as dt
 
-    from nometria.availability import (
+    from agentfox.availability import (
         CLOSED,
         OPEN,
         DegradationLedger,
@@ -1674,7 +1674,7 @@ def probe_fail_open_bounded() -> Result:
 def probe_backpressure() -> Result:
     import datetime as dt
 
-    from nometria.availability import AdmissionController
+    from agentfox.availability import AdmissionController
 
     t0 = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
     controller = AdmissionController(rate_per_second=1, burst=1, max_concurrent=1)
@@ -1699,7 +1699,7 @@ def probe_backpressure() -> Result:
 
 
 def probe_loop_shape() -> Result:
-    from nometria.agent_loop import govern_loop
+    from agentfox.agent_loop import govern_loop
 
     def run(seq):
         return govern_loop([{"tool": t, "arguments": a, "observation": o}

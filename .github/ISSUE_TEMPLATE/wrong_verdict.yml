@@ -142,7 +142,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: Nometria version
+      label: AgentFox version
       description: Output of `agentfox version`, or the commit SHA if you run from a clone.
       placeholder: "0.1.0, or commit 1b91e2c"
     validations:

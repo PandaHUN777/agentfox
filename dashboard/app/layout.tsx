@@ -18,7 +18,7 @@ import "./globals.css";
 import "./marketing.css";
 
 // Runs before paint so a stored theme choice never flashes the wrong colors on load.
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("nometria-theme");if(t&&t!=="system")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("agentfox-theme");if(t&&t!=="system")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
 /**
  * Root metadata. Everything here is inherited by every route, so it holds only

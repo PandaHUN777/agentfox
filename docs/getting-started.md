@@ -1,6 +1,6 @@
 # Getting started
 
-A linear first hour with Nometria, from an empty directory to one of your own agents under
+A linear first hour with AgentFox, from an empty directory to one of your own agents under
 enforcement. Every command here was run before it was written down. Each step says what it proves,
 because a governance tool that you cannot check is a governance tool you should not trust.
 
@@ -13,7 +13,7 @@ enforcement path demonstrable with nothing installed.
 
 **Vocabulary used throughout:**
 
-- **Agent**: a program that calls a model and can take actions. Nometria identifies each one by a
+- **Agent**: a program that calls a model and can take actions. AgentFox identifies each one by a
   slug such as `support-triage`.
 - **Tool**: something an agent can call that is not the model: a function, an API, an MCP server
   method. Each tool is declared with an **impact** of `none`, `read`, `write` or `irreversible`.
@@ -36,7 +36,7 @@ pip install git+https://github.com/architsharm/guardrails.git
 agentfox --help
 ```
 
-Nometria is not on PyPI yet, so install from git. The core install is deliberately light: it pulls
+AgentFox is not on PyPI yet, so install from git. The core install is deliberately light: it pulls
 no model weights and no detector frameworks. Optional extras (`[pii]`, `[classifiers]`, `[redteam]`,
 `[langgraph]`, `[sql]`, `[otel]`, `[postgres]`, or `[all]` for everything permissive) add wrapped
 third-party engines later, as configuration rather than as a prerequisite.
@@ -61,7 +61,7 @@ agentfox init
 ```
 
 This creates a SQLite database in the current directory, loads the control catalogue and three
-policy packs, and writes a `nometria.toml` if there isn't one. It is idempotent and offline, so it
+policy packs, and writes a `agentfox.toml` if there isn't one. It is idempotent and offline, so it
 is safe to run again.
 
 Read the mode column carefully, because it is the whole shape of the product. The two
@@ -229,8 +229,8 @@ and `X-Nometria-Trust` (a JSON map marking message indices as untrusted, e.g.
 **If you are in Python instead**, the whole of 5c is one line at your entry point:
 
 ```python
-import nometria
-nometria.auto()
+import agentfox
+agentfox.auto()
 ```
 
 **What this proves:** enforcement is a property of the deployment, not of your codebase, and an
@@ -281,7 +281,7 @@ owner, stale identities, and every detection that led to a block or a redaction.
   !    findings            9 open — run `agentfox findings`
 ```
 
-Note the two lines marked `!` that are not about your agents at all. Nometria tells you that it
+Note the two lines marked `!` that are not about your agents at all. AgentFox tells you that it
 fails open, and that your auth mode is a development mode, rather than leaving you to discover it.
 
 Three commands worth knowing here:
@@ -359,7 +359,7 @@ seen what it will do.
   result anywhere.
 - **[`harness/`](../harness/README.md)**: drive all of the above from Claude Code or another coding
   agent, if you would rather not learn the command list.
-- **[Appendix E](appendix-e-threat-model.md)**: the threat model, including threats to Nometria
+- **[Appendix E](appendix-e-threat-model.md)**: the threat model, including threats to AgentFox
   itself.
 
 Two things to keep in mind as you go further. Containment is exactly as good as the declarations

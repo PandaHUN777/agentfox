@@ -48,7 +48,7 @@ agentfox entitlement report --days 7
 
 The report shows how much more the agent can reach than its callers are entitled to. That
 gap is the over-sharing risk. The agent must pass the end user through, using
-`nometria_principal=` on `auto()`-patched calls or `principal` on the gateway body.
+`agentfox_principal=` on `auto()`-patched calls or `principal` on the gateway body.
 Otherwise there is nothing to check against.
 
 ## F5 — missed human handoffs (escalation)

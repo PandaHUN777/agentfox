@@ -1,6 +1,6 @@
 ---
 name: eval-gate
-description: Sets up Nometria's evaluation regression gate. It runs a suite, pins a baseline, and fails CI when quality regresses, and it adds a governance CI workflow that also fails on ungoverned model calls, conflicting guardrails, risky policy lint findings and a broken audit chain. Use for "block regressions in CI", "add an eval gate", drift monitoring, or /nometria:gate.
+description: Sets up AgentFox's evaluation regression gate. It runs a suite, pins a baseline, and fails CI when quality regresses, and it adds a governance CI workflow that also fails on ungoverned model calls, conflicting guardrails, risky policy lint findings and a broken audit chain. Use for "block regressions in CI", "add an eval gate", drift monitoring, or /agentfox:gate.
 ---
 
 # Eval gate

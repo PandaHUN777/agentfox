@@ -1,6 +1,6 @@
 ---
 name: triage-findings
-description: Turns Nometria's open findings into a prioritised, grouped action list with a recommended move for each, and applies suppress/resolve decisions only with the user's agreement. Use when the user asks "what did it find", "what should I fix", "go through the findings", or runs /nometria:findings.
+description: Turns AgentFox's open findings into a prioritised, grouped action list with a recommended move for each, and applies suppress/resolve decisions only with the user's agreement. Use when the user asks "what did it find", "what should I fix", "go through the findings", or runs /agentfox:findings.
 ---
 
 # Triage findings
@@ -23,7 +23,7 @@ Group by `type`, then by `subject_id` (the agent, server or tool). Twenty
 `guardrail_detection` findings on one agent are one problem, not twenty. The same
 underlying problem recurring is already one row with an `occurrences` count rather than a
 new finding each time, so read that count before calling something rare. The
-`nometria_finding_occurrences` MCP tool ranks findings by it; the `findings` CLI does not
+`agentfox_finding_occurrences` MCP tool ranks findings by it; the `findings` CLI does not
 show it. Order the groups by:
 
 1. **critical/high on a production agent**

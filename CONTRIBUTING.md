@@ -30,7 +30,7 @@ command line. If one fails, the document is wrong, not the check.
 ## Two things that will surprise you
 
 **Vendored wheels.** `api/` and `demo/redteam-live-lang/` deploy a prebuilt wheel rather
-than an editable install, so a change to `src/nometria/` that skips the rebuild ships stale
+than an editable install, so a change to `src/agentfox/` that skips the rebuild ships stale
 code. A pre-commit hook rebuilds both wheels, and CI fails a push that changed the source
 without them:
 

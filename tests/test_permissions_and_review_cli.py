@@ -14,7 +14,7 @@ import json
 
 from typer.testing import CliRunner
 
-from nometria.cli.main import app
+from agentfox.cli.main import app
 
 runner = CliRunner()
 
@@ -85,8 +85,8 @@ def test_sign_off_moves_a_mapping_out_of_draft_and_names_the_reviewer(isolated_d
 
     from sqlalchemy import select
 
-    from nometria.db import session_scope
-    from nometria.models import FrameworkMapping
+    from agentfox.db import session_scope
+    from agentfox.models import FrameworkMapping
 
     with session_scope() as session:
         mappings = list(

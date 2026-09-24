@@ -12,7 +12,7 @@ import re
 import pytest
 from typer.testing import CliRunner
 
-from nometria.cli.main import app
+from agentfox.cli.main import app
 
 runner = CliRunner()
 
@@ -27,8 +27,8 @@ def _json(output: str):
 
 
 def _seed() -> dict:
-    from nometria.db import session_scope
-    from nometria.seed import seed
+    from agentfox.db import session_scope
+    from agentfox.seed import seed
 
     with session_scope() as session:
         return seed(session)
@@ -44,9 +44,9 @@ def test_capability_grant_writes_a_grant_the_engine_then_honours():
     reads. A command that only wrote a row would be worse than no command."""
     from sqlalchemy import select
 
-    from nometria.db import session_scope
-    from nometria.identity import check_capability, ensure_identity
-    from nometria.models import Agent
+    from agentfox.db import session_scope
+    from agentfox.identity import check_capability, ensure_identity
+    from agentfox.models import Agent
 
     _seed()
     result = runner.invoke(
@@ -96,9 +96,9 @@ def test_capability_grant_is_recorded_in_the_audit_chain():
     widens authority, so it is the last one that should be exempt."""
     from sqlalchemy import select
 
-    from nometria.audit import chain
-    from nometria.db import session_scope
-    from nometria.models import AuditEntry
+    from agentfox.audit import chain
+    from agentfox.db import session_scope
+    from agentfox.models import AuditEntry
 
     _seed()
     runner.invoke(
@@ -115,9 +115,9 @@ def test_capability_grant_expiry_stops_the_grant_matching():
 
     from sqlalchemy import select
 
-    from nometria.db import session_scope
-    from nometria.identity import check_capability, ensure_identity
-    from nometria.models import Agent, Capability, utcnow
+    from agentfox.db import session_scope
+    from agentfox.identity import check_capability, ensure_identity
+    from agentfox.models import Agent, Capability, utcnow
 
     _seed()
     runner.invoke(
@@ -144,9 +144,9 @@ def test_capability_grant_expiry_stops_the_grant_matching():
 def test_capability_revoke_takes_the_permission_away_and_audits_it():
     from sqlalchemy import select
 
-    from nometria.db import session_scope
-    from nometria.identity import check_capability, ensure_identity
-    from nometria.models import Agent, AuditEntry
+    from agentfox.db import session_scope
+    from agentfox.identity import check_capability, ensure_identity
+    from agentfox.models import Agent, AuditEntry
 
     _seed()
     runner.invoke(
@@ -166,7 +166,7 @@ def test_capability_revoke_takes_the_permission_away_and_audits_it():
 
 
 def test_capability_revoke_accepts_the_short_id_the_table_prints():
-    from nometria.cli._style import short_id
+    from agentfox.cli._style import short_id
 
     _seed()
     runner.invoke(
@@ -213,9 +213,9 @@ def test_capability_list_on_an_empty_set_names_the_command_that_fills_it():
 def test_doctor_names_the_capability_command_when_least_privilege_is_unconfigured():
     """doctor graded a deployment on capability grants while every sibling branch
     named a command and this one named none, because none existed."""
-    from nometria.db import session_scope
-    from nometria.models import Capability
-    from nometria.registry.service import upsert_tool
+    from agentfox.db import session_scope
+    from agentfox.models import Capability
+    from agentfox.registry.service import upsert_tool
 
     with session_scope() as session:
         upsert_tool(session, "payments.transfer", impact="irreversible")
@@ -235,8 +235,8 @@ def test_doctor_names_the_capability_command_when_least_privilege_is_unconfigure
 
 
 def _raise_findings() -> None:
-    from nometria.db import session_scope
-    from nometria.findings import raise_finding
+    from agentfox.db import session_scope
+    from agentfox.findings import raise_finding
 
     with session_scope() as session:
         raise_finding(
@@ -273,8 +273,8 @@ def test_findings_is_ordered_worst_first():
 def test_findings_ranks_before_it_limits():
     """Sorting a page the database happened to return would show the worst of twenty
     rows rather than the worst twenty rows."""
-    from nometria.db import session_scope
-    from nometria.findings import raise_finding
+    from agentfox.db import session_scope
+    from agentfox.findings import raise_finding
 
     with session_scope() as session:
         for index in range(12):
@@ -306,8 +306,8 @@ def test_findings_shows_an_id_a_count_and_no_truncated_type():
 
 def test_findings_surfaces_the_recurrence_count():
     """One problem seen forty times is not forty problems."""
-    from nometria.db import session_scope
-    from nometria.findings import raise_finding
+    from agentfox.db import session_scope
+    from agentfox.findings import raise_finding
 
     with session_scope() as session:
         for _ in range(3):
@@ -401,7 +401,7 @@ def test_check_overflow_hint_is_a_command_that_runs(tmp_path):
 def test_check_does_not_cut_a_finding_mid_word(tmp_path):
     """A row ending "(I-2 rug p" reads as a rendering fault, not as a finding."""
     (tmp_path / ".mcp.json").write_text(
-        json.dumps({"mcpServers": {"nometria": {"command": "nometria", "args": ["mcp"]}}})
+        json.dumps({"mcpServers": {"agentfox": {"command": "agentfox", "args": ["mcp"]}}})
     )
     output = flat(runner.invoke(app, ["check", str(tmp_path), "--no-submit"]).output)
     assert "rug pull" in output
@@ -414,7 +414,7 @@ def test_check_still_promises_exactly_what_it_did_before(tmp_path):
     )
     output = flat(runner.invoke(app, ["check", str(tmp_path), "--no-submit"]).output)
     assert "model call sites are ungoverned" in output
-    assert "nometria.auto()" in output
+    assert "agentfox.auto()" in output
 
 
 # ---------------------------------------------------------------------------
@@ -424,8 +424,8 @@ def test_check_still_promises_exactly_what_it_did_before(tmp_path):
 
 @pytest.fixture
 def walkthrough_output(capsys):
-    from nometria.cli import demo
-    from nometria.seed import register_scripts
+    from agentfox.cli import demo
+    from agentfox.seed import register_scripts
 
     _seed()
     register_scripts()
@@ -445,7 +445,7 @@ def test_demo_prints_the_mode_of_the_rule_that_fired(walkthrough_output):
 def test_demo_labels_the_cold_start_and_prints_a_warm_number():
     """Section 01 printed ~3ms and section 09 ~2900ms for the same call, because the
     second included a one-time detector warm-up and said nothing about it."""
-    from nometria.cli.demo import _span_line
+    from agentfox.cli.demo import _span_line
 
     steady = {"guard.input": 3.1, "guard.output": 2.9}
     cold_text, cold = _span_line(
@@ -464,7 +464,7 @@ def test_demo_labels_the_cold_start_and_prints_a_warm_number():
 
 
 def test_demo_does_not_cry_cold_start_over_ordinary_variance():
-    from nometria.cli.demo import _span_line
+    from agentfox.cli.demo import _span_line
 
     _text, cold = _span_line(
         {"kind": "guardrail", "name": "guard.input", "duration_ms": 6.0},
@@ -476,8 +476,8 @@ def test_demo_does_not_cry_cold_start_over_ordinary_variance():
 def test_demo_measures_the_warm_figure_from_the_other_calls_in_the_run(walkthrough_output):
     """The claim "one-time warm-up" needs the same span on the calls that did not pay
     for it, not a constant."""
-    from nometria.cli.demo import _steady_state_spans
-    from nometria.db import session_scope
+    from agentfox.cli.demo import _steady_state_spans
+    from agentfox.db import session_scope
 
     with session_scope() as session:
         steady = _steady_state_spans(session, exclude_trace="no-such-trace")
@@ -500,9 +500,9 @@ def test_demo_only_explains_matching_rows_when_they_really_do_match():
     """The explanation is checked against the mappings, not asserted."""
     from sqlalchemy import select
 
-    from nometria.cli.demo import _shared_control_count
-    from nometria.db import session_scope
-    from nometria.models import FrameworkMapping
+    from agentfox.cli.demo import _shared_control_count
+    from agentfox.db import session_scope
+    from agentfox.models import FrameworkMapping
 
     _seed()
     with session_scope() as session:
@@ -544,7 +544,7 @@ def test_policy_enforce_lists_the_valid_keys():
 
 
 def test_policy_enforce_still_promotes_a_real_policy():
-    from nometria.cli.demo import _current_mode
+    from agentfox.cli.demo import _current_mode
 
     _seed()
     assert runner.invoke(app, ["policy", "enforce", "baseline"]).exit_code == 0

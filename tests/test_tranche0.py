@@ -12,17 +12,17 @@ import sys
 
 import pytest
 
-from nometria.enforcement import Enforcer
-from nometria.integrations.langgraph import (
+from agentfox.enforcement import Enforcer
+from agentfox.integrations.langgraph import (
     STATE_KEY,
     ApprovalRequired,
-    NometriaGuard,
+    AgentFoxGuard,
     PolicyViolation,
 )
-from nometria.models import AgentControl, AuditEntry, Finding
-from nometria.policy import set_mode
-from nometria.providers import CompletionRequest, get_provider, script
-from nometria.registry.control import UnknownAgent, kill, quarantine, resume, state_of
+from agentfox.models import AgentControl, AuditEntry, Finding
+from agentfox.policy import set_mode
+from agentfox.providers import CompletionRequest, get_provider, script
+from agentfox.registry.control import UnknownAgent, kill, quarantine, resume, state_of
 
 from .conftest import INDIRECT_INJECTION, SECRET_TEXT, as_user
 
@@ -49,7 +49,7 @@ def test_stream_reassembles_to_the_same_text_as_complete():
 
 
 def test_stream_from_complete_fallback_produces_a_valid_stream():
-    from nometria.providers.base import StreamChunk, stream_from_complete
+    from agentfox.providers.base import StreamChunk, stream_from_complete
 
     class NoStream:
         key = "nostream"
@@ -58,7 +58,7 @@ def test_stream_from_complete_fallback_produces_a_valid_stream():
             return True
 
         def complete(self, request):
-            from nometria.providers import CompletionResponse
+            from agentfox.providers import CompletionResponse
 
             return CompletionResponse(text="one shot", usage={"output_tokens": 2})
 
@@ -163,7 +163,7 @@ def test_gateway_honours_stream_flag(client):
     payloads = [json.loads(line[6:]) for line in lines if line.startswith("data: {")]
     assert any(p.get("object") == "chat.completion.chunk" for p in payloads)
     # The verdict is only knowable at the end, so it rides a trailing event.
-    assert any("nometria" in p for p in payloads)
+    assert any("agentfox" in p for p in payloads)
 
 
 def test_gateway_stream_block_emits_error_then_done(client):
@@ -193,7 +193,7 @@ def test_gateway_stream_block_emits_error_then_done(client):
         if line.startswith("data: {") and "error" in json.loads(line[6:])
     ]
     assert errors, "a blocked stream must say why, not just close"
-    assert errors[0]["type"] == "nometria_policy_violation"
+    assert errors[0]["type"] == "agentfox_policy_violation"
     assert errors[0]["rules_fired"]
     assert lines[-1] == "data: [DONE]", "clients need a clean terminator"
 
@@ -266,7 +266,7 @@ def test_control_check_precedes_policy(seeded, enforcer):
 
 def test_quarantine_blocks_tool_calls_not_just_completions(seeded, enforcer):
     """`guard_tool_call` is the path MCP/SDK integrations use to gate an actual tool
-    execution — `McpGovernor.call` and `NometriaGuard.tool_node` both call it
+    execution — `McpGovernor.call` and `AgentFoxGuard.tool_node` both call it
     directly, without going through `preflight` first. Found via benchmarking: an
     otherwise-valid, in-budget tool call from a quarantined agent went straight
     through, because `_control_verdict` was only wired into `preflight`. The kill
@@ -405,15 +405,15 @@ def test_app_runs_on_a_migrated_schema(tmp_path, monkeypatch):
         == 0
     )
 
-    from nometria import db as dbmod
-    from nometria.config import get_settings, reset_settings_cache
+    from agentfox import db as dbmod
+    from agentfox.config import get_settings, reset_settings_cache
 
     reset_settings_cache()
     dbmod.reset_engine()
     get_settings()
     # Deliberately no init_db(): the schema came from migrations alone.
-    from nometria.db import session_scope
-    from nometria.seed import seed
+    from agentfox.db import session_scope
+    from agentfox.seed import seed
 
     with session_scope() as session:
         seed(session)
@@ -435,15 +435,15 @@ def test_app_runs_on_a_migrated_schema(tmp_path, monkeypatch):
 
 
 def test_integration_imports_without_langgraph():
-    """`pip install nometria` must stay light — the module loads regardless."""
-    from nometria.integrations import langgraph as integration
+    """`pip install agentfox` must stay light — the module loads regardless."""
+    from agentfox.integrations import langgraph as integration
 
-    assert hasattr(integration, "NometriaGuard")
+    assert hasattr(integration, "AgentFoxGuard")
 
 
 def test_model_node_writes_trace_into_graph_state(seeded):
     """Trace identity must survive checkpointing, so it lives in graph state."""
-    guard = NometriaGuard(agent="support-triage", session=seeded)
+    guard = AgentFoxGuard(agent="support-triage", session=seeded)
 
     @guard.model_node
     def call_model(state):
@@ -456,7 +456,7 @@ def test_model_node_writes_trace_into_graph_state(seeded):
 
 def test_retrieval_node_blocks_indirect_injection(seeded):
     set_mode(seeded, "baseline", "enforce")
-    guard = NometriaGuard(agent="support-triage", session=seeded)
+    guard = AgentFoxGuard(agent="support-triage", session=seeded)
 
     @guard.retrieval_node
     def fetch(state):
@@ -469,7 +469,7 @@ def test_retrieval_node_blocks_indirect_injection(seeded):
 
 def test_tool_node_denies_before_the_body_runs(seeded):
     """A denied call must not execute — checking after the fact is not a control."""
-    guard = NometriaGuard(agent="payments-ops", session=seeded)
+    guard = AgentFoxGuard(agent="payments-ops", session=seeded)
     executed: list[dict] = []
 
     @guard.tool_node(tool="payments.transfer")
@@ -484,7 +484,7 @@ def test_tool_node_denies_before_the_body_runs(seeded):
 
 def test_tool_node_allows_a_compliant_call(seeded):
     """A within-limits call on a non-irreversible tool proceeds."""
-    guard = NometriaGuard(agent="payments-ops", intent="refund a duplicate charge", session=seeded)
+    guard = AgentFoxGuard(agent="payments-ops", intent="refund a duplicate charge", session=seeded)
 
     @guard.tool_node(tool="payments.refund")
     def refund(state, **kwargs):
@@ -515,7 +515,7 @@ def test_eu_pack_records_art14_without_blocking_while_in_observe(seeded, enforce
 def test_undeclared_intent_escalates_an_irreversible_tool(seeded):
     """`tool-containment` *is* enforcing: an irreversible action with no declared
     intent cannot be judged against the task, so it goes to a human."""
-    guard = NometriaGuard(agent="payments-ops", session=seeded)  # no intent
+    guard = AgentFoxGuard(agent="payments-ops", session=seeded)  # no intent
 
     @guard.tool_node(tool="payments.transfer")
     def transfer(state, **kwargs):
@@ -529,7 +529,7 @@ def test_undeclared_intent_escalates_an_irreversible_tool(seeded):
 
 
 def test_tool_node_escalates_on_tainted_argument(seeded):
-    guard = NometriaGuard(agent="payments-ops", session=seeded)
+    guard = AgentFoxGuard(agent="payments-ops", session=seeded)
 
     @guard.tool_node(tool="payments.transfer", provenance={"to": "tool_result"})
     def transfer(state, **kwargs):
@@ -542,7 +542,7 @@ def test_tool_node_escalates_on_tainted_argument(seeded):
 
 def test_tool_node_records_call_sequence(seeded):
     """Prior tools feed loop and composed-privilege detection."""
-    guard = NometriaGuard(agent="support-triage", session=seeded)
+    guard = AgentFoxGuard(agent="support-triage", session=seeded)
 
     @guard.tool_node(tool="kb.search")
     def search(state, **kwargs):
@@ -558,7 +558,7 @@ def test_tool_node_alternating_cycle_trips_the_real_loop_governor(seeded):
     trips the real LoopGovernor here too — the same shape test_mcp_governance.py's
     McpGovernor tests already prove for its own `_prior_steps` tracking. Per-tool
     counting alone would miss this, since neither tool repeats consecutively."""
-    guard = NometriaGuard(agent="support-triage", session=seeded)
+    guard = AgentFoxGuard(agent="support-triage", session=seeded)
 
     @guard.tool_node(tool="kb.search")
     def search(state, **kwargs):
@@ -579,7 +579,7 @@ def test_tool_node_alternating_cycle_trips_the_real_loop_governor(seeded):
 
 
 def test_langchain_message_objects_are_normalised():
-    from nometria.integrations.langgraph import _normalise
+    from agentfox.integrations.langgraph import _normalise
 
     class FakeHumanMessage:
         type = "human"

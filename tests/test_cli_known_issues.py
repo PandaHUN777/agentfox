@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
-from nometria.cli.main import app
+from agentfox.cli.main import app
 
 runner = CliRunner()
 REPO = Path(__file__).resolve().parents[1]
@@ -37,15 +37,15 @@ def _json(output: str):
 
 
 def _seed() -> dict:
-    from nometria.db import session_scope
-    from nometria.seed import seed
+    from agentfox.db import session_scope
+    from agentfox.seed import seed
 
     with session_scope() as session:
         return seed(session)
 
 
 def _policy_mode(key: str) -> str | None:
-    from nometria.cli.demo import _current_mode
+    from agentfox.cli.demo import _current_mode
 
     return _current_mode(key)
 
@@ -65,10 +65,10 @@ def test_init_reports_each_pack_in_its_declared_mode(tmp_path):
 
 
 def test_init_config_template_matches_the_settings_defaults(tmp_path):
-    from nometria.config import Settings
+    from agentfox.config import Settings
 
     runner.invoke(app, ["init", "--path", str(tmp_path), "--env", "staging"])
-    table = tomllib.loads((tmp_path / "nometria.toml").read_text())["nometria"]
+    table = tomllib.loads((tmp_path / "agentfox.toml").read_text())["agentfox"]
     assert table["environment"] == "staging"
     for key, value in table.items():
         assert key in Settings.model_fields, f"{key} is not a Settings field"
@@ -82,7 +82,7 @@ def test_init_config_template_matches_the_settings_defaults(tmp_path):
 
 
 def test_demo_restores_the_promoted_policy_when_a_step_fails(monkeypatch):
-    from nometria.cli import demo
+    from agentfox.cli import demo
 
     _seed()
     assert _policy_mode("baseline") == "observe"
@@ -99,7 +99,7 @@ def test_demo_restores_the_promoted_policy_when_a_step_fails(monkeypatch):
 
 
 def test_demo_command_restores_the_policy_and_says_so(monkeypatch):
-    from nometria.cli import demo
+    from agentfox.cli import demo
 
     _seed()
 
@@ -143,8 +143,8 @@ def test_seed_show_keys_prints_them_in_full():
 def tableless_db(tmp_path, monkeypatch):
     from sqlalchemy import inspect
 
-    from nometria import db
-    from nometria.config import reset_settings_cache
+    from agentfox import db
+    from agentfox.config import reset_settings_cache
 
     monkeypatch.setenv("NOMETRIA_DATABASE_URL", f"sqlite:///{tmp_path / 'fresh.db'}")
     reset_settings_cache()
@@ -188,7 +188,7 @@ def test_db_backed_groups_work_on_a_fresh_database(tableless_db, args, exit_code
 
 
 def test_doctor_json_exits_nonzero_on_a_bad_check(monkeypatch):
-    monkeypatch.setattr("nometria.guardrails.available_detectors", lambda: {})
+    monkeypatch.setattr("agentfox.guardrails.available_detectors", lambda: {})
     result = runner.invoke(app, ["doctor", "--json"])
     assert result.exit_code == 1, result.output
     checks = _json(result.output)
@@ -221,7 +221,7 @@ def test_scan_mcp_seed_fixture_must_be_asked_for():
 
 
 def test_scan_mcp_scans_the_given_file(tmp_path):
-    from nometria.seed import MCP_TOOLS
+    from agentfox.seed import MCP_TOOLS
 
     _seed()
     path = tmp_path / "tools.json"
@@ -237,8 +237,8 @@ def test_scan_mcp_scans_the_given_file(tmp_path):
 
 
 def test_guardrails_compile_apply_saves_the_ladder(tmp_path):
-    from nometria.business import all_ladders
-    from nometria.db import session_scope
+    from agentfox.business import all_ladders
+    from agentfox.db import session_scope
 
     path = tmp_path / "refunds.txt"
     path.write_text(REFUND_POLICY)
@@ -274,9 +274,9 @@ def test_entitlement_report_hint_names_a_real_command():
 
 
 def test_compliance_status_verbose_honours_the_framework():
-    from nometria.compliance import controls_for_framework, latest_statuses
-    from nometria.compliance.catalog import load_catalog
-    from nometria.db import session_scope
+    from agentfox.compliance import controls_for_framework, latest_statuses
+    from agentfox.compliance.catalog import load_catalog
+    from agentfox.db import session_scope
 
     _seed()
     assert runner.invoke(app, ["compliance", "compute"]).exit_code == 0
@@ -307,7 +307,7 @@ def test_compliance_status_verbose_honours_the_framework():
 
 
 def test_policy_effective_defaults_to_the_configured_environment(monkeypatch):
-    from nometria.config import reset_settings_cache
+    from agentfox.config import reset_settings_cache
 
     _seed()
     default = runner.invoke(app, ["policy", "effective"])
@@ -330,14 +330,14 @@ def test_policy_effective_defaults_to_the_configured_environment(monkeypatch):
 
 def test_console_script_points_at_main():
     project = tomllib.loads((REPO / "pyproject.toml").read_text())
-    assert project["project"]["scripts"]["nometria"] == "nometria.cli.main:main"
+    assert project["project"]["scripts"]["agentfox"] == "agentfox.cli.main:main"
 
 
 def test_main_maps_keyboard_interrupt_to_130(monkeypatch):
     import importlib
 
-    # `nometria.cli` re-exports the `main` function, so import the module by path.
-    cli_main = importlib.import_module("nometria.cli.main")
+    # `agentfox.cli` re-exports the `main` function, so import the module by path.
+    cli_main = importlib.import_module("agentfox.cli.main")
 
     def interrupted():
         raise KeyboardInterrupt
@@ -393,7 +393,7 @@ obligations:
 
 @pytest.fixture
 def compliance_dir(tmp_path, monkeypatch):
-    from nometria.config import reset_settings_cache
+    from agentfox.config import reset_settings_cache
 
     monkeypatch.setenv("NOMETRIA_COMPLIANCE_DIR", str(tmp_path))
     reset_settings_cache()

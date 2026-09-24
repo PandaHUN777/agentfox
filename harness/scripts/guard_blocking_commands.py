@@ -15,8 +15,8 @@ import sys
 
 # An agentfox invocation at *command position* only — so a commit message or a filename
 # that merely mentions "policy enforce" is not mistaken for running it.
-#   agentfox …  |  uv run [--project X] agentfox …  |  python -m nometria.cli.main …
-#   …/scripts/nometria.sh …   (optionally preceded by VAR=value assignments)
+#   agentfox …  |  uv run [--project X] agentfox …  |  python -m agentfox.cli.main …
+#   …/scripts/agentfox.sh …   (optionally preceded by VAR=value assignments)
 # `nometria` is still matched as well: the console script keeps it as a compatibility
 # alias, so a blocking command must prompt whichever of the two names an agent types.
 _PREFIX = (
@@ -74,7 +74,7 @@ CLI_RULES: list[tuple[re.Pattern[str], str]] = [
     ),
     (
         r"(?:check|quickscan)\s.*--submit" + _END,
-        "uploads a redacted scan summary to a remote Nometria API.",
+        "uploads a redacted scan summary to a remote AgentFox API.",
     ),
 ]
 CLI_RULES = [(re.compile(_PREFIX + pat), why) for pat, why in CLI_RULES]  # type: ignore[misc]
@@ -114,7 +114,7 @@ def main() -> int:
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "permissionDecision": "ask",
-                "permissionDecisionReason": "Nometria harness: this command "
+                "permissionDecisionReason": "AgentFox harness: this command "
                 + " Also: ".join(reasons)
                 + " Confirm the user asked for exactly this.",
             }

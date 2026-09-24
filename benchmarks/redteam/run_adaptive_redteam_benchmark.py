@@ -53,13 +53,13 @@ def main() -> None:
     os.environ["NOMETRIA_AUDIT_SIGNING_KEY"] = "bench-key"
     os.environ["NOMETRIA_ALLOW_EGRESS"] = "false"
 
-    from nometria import db
-    from nometria.config import reset_settings_cache
-    from nometria.evaluation.adaptive import OPERATORS, SCOPE_STATEMENT, mutation_classes
-    from nometria.evaluation.redteam import BUILTIN_PROBES, run_campaign
-    from nometria.models import Agent, Capability, Identity
-    from nometria.policy import set_mode
-    from nometria.seed import seed as run_seed
+    from agentfox import db
+    from agentfox.config import reset_settings_cache
+    from agentfox.evaluation.adaptive import OPERATORS, SCOPE_STATEMENT, mutation_classes
+    from agentfox.evaluation.redteam import BUILTIN_PROBES, run_campaign
+    from agentfox.models import Agent, Capability, Identity
+    from agentfox.policy import set_mode
+    from agentfox.seed import seed as run_seed
 
     reset_settings_cache()
     db.reset_engine()

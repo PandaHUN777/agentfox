@@ -15,9 +15,9 @@ import zipfile
 
 import pytest
 
-from nometria.audit import chain, evidence
-from nometria.audit.chain import GENESIS, entry_to_row, verify, verify_range
-from nometria.models import AuditEntry
+from agentfox.audit import chain, evidence
+from agentfox.audit.chain import GENESIS, entry_to_row, verify, verify_range
+from agentfox.models import AuditEntry
 
 
 @pytest.fixture
@@ -165,7 +165,7 @@ def test_long_strings_truncated(session):
 
 def test_no_orm_update_path_for_entries():
     """The absence of a mutation API is the control (P5-2)."""
-    from nometria.gateway.routes import governance
+    from agentfox.gateway.routes import governance
 
     audit_routes = [
         (r.path, m)
@@ -220,7 +220,7 @@ def test_draft_mappings_included_with_chip(seeded):
 
 
 def test_reviewed_mappings_are_included(seeded):
-    from nometria.compliance.catalog import review_mapping
+    from agentfox.compliance.catalog import review_mapping
 
     review_mapping(seeded, "NOM-RTG-01", "eu-ai-act", "dana@example.com")
     package = evidence.build(seeded, agents=["*"], requested_by="dana@example.com")

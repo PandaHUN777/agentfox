@@ -1,6 +1,6 @@
 ---
 name: incident-response
-description: Guides responding to an AI agent misbehaving in production with Nometria. It establishes what happened from traces and findings, contains the agent with quarantine or kill (confirmation required), maps the blast radius, preserves evidence, and restores service deliberately. Use when an agent is doing something harmful right now, a breach or data leak is suspected, the audit chain fails verification, or for /nometria:contain.
+description: Guides responding to an AI agent misbehaving in production with AgentFox. It establishes what happened from traces and findings, contains the agent with quarantine or kill (confirmation required), maps the blast radius, preserves evidence, and restores service deliberately. Use when an agent is doing something harmful right now, a breach or data leak is suspected, the audit chain fails verification, or for /agentfox:contain.
 ---
 
 # Incident response

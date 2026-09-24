@@ -1,4 +1,4 @@
-"""Scores Nometria's PII detectors against gretelai/synthetic_pii_finance_multilingual
+"""Scores AgentFox's PII detectors against gretelai/synthetic_pii_finance_multilingual
 (`data/gretel_multilingual_pii.json`, 5,594 rows, 7 languages, Apache-2.0).
 
     uv run python benchmarks/pii/run_gretel_multilingual_benchmark.py
@@ -39,14 +39,14 @@ import json
 from collections import Counter, defaultdict
 from pathlib import Path
 
-from nometria.guardrails.adapters.presidio import DEFAULT_EXCLUDED, PresidioPiiDetector
-from nometria.guardrails.base import DetectionContext
-from nometria.guardrails.detectors.pii import NativePiiDetector
+from agentfox.guardrails.adapters.presidio import DEFAULT_EXCLUDED, PresidioPiiDetector
+from agentfox.guardrails.base import DetectionContext
+from agentfox.guardrails.detectors.pii import NativePiiDetector
 
 DATA_DIR = Path(__file__).parent / "data"
 RESULTS_DIR = Path(__file__).parent / "results"
 
-# gretelai label -> Nometria PII.* canonical type. Only types Nometria's
+# gretelai label -> AgentFox PII.* canonical type. Only types AgentFox's
 # detectors actually declare are included; everything else (street_address,
 # company, generic date/time, swift_bic_code, customer_id, employee_id, bban,
 # account_pin, credit_card_security_code, bank_routing_number, password,
@@ -87,7 +87,7 @@ def gt_spans_for_row(row: dict) -> list[tuple[int, int, str]]:
 
 
 def street_address_spans_for_row(row: dict) -> list[tuple[int, int]]:
-    """street_address ground-truth spans — out of scope (no Nometria address
+    """street_address ground-truth spans — out of scope (no AgentFox address
     detector) but often *contain* a real, separately-real city/country mention
     a LOCATION recognizer correctly finds. Same containment-exclusion rule as
     `run_presidio_research_benchmark.py`, verified there (66.5% of raw

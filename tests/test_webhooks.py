@@ -14,10 +14,10 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from nometria import webhooks
-from nometria.config import Settings, reset_settings_cache
-from nometria.db import get_sessionmaker, session_scope
-from nometria.models import Finding
+from agentfox import webhooks
+from agentfox.config import Settings, reset_settings_cache
+from agentfox.db import get_sessionmaker, session_scope
+from agentfox.models import Finding
 
 SECRET = "whsec-test"
 
@@ -47,7 +47,7 @@ def receiver():
     server.delay = 0.0
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    server.url = f"http://127.0.0.1:{server.server_address[1]}/hooks/nometria"
+    server.url = f"http://127.0.0.1:{server.server_address[1]}/hooks/agentfox"
     yield server
     server.shutdown()
     server.server_close()
@@ -106,7 +106,7 @@ def test_committed_high_finding_is_delivered_once_and_signed(monkeypatch, receiv
     assert body["finding"]["evidence"] == {"detector": "injection.heuristic"}
 
     assert headers["content-type"] == "application/json"
-    assert headers["user-agent"].startswith("nometria/")
+    assert headers["user-agent"].startswith("agentfox/")
     assert headers["x-nometria-timestamp"].isdigit()
     expected = hmac.new(SECRET.encode(), request["raw"], hashlib.sha256).hexdigest()
     assert headers["x-nometria-signature"] == f"sha256={expected}"
@@ -169,7 +169,7 @@ def test_savepoint_rollback_drops_only_its_own_findings(monkeypatch, receiver):
 
 def test_egress_disabled_sends_nothing(monkeypatch, receiver, caplog):
     configure(monkeypatch, receiver.url, egress=False)
-    with caplog.at_level(logging.INFO, logger="nometria.webhooks"):
+    with caplog.at_level(logging.INFO, logger="agentfox.webhooks"):
         for _ in range(2):
             with session_scope() as s:
                 s.add(make_finding(severity="critical"))
@@ -185,7 +185,7 @@ def test_unreachable_url_never_raises_into_the_caller(monkeypatch, caplog):
         sock.bind(("127.0.0.1", 0))
         port = sock.getsockname()[1]
     configure(monkeypatch, f"http://127.0.0.1:{port}/hook")
-    with caplog.at_level(logging.WARNING, logger="nometria.webhooks"):
+    with caplog.at_level(logging.WARNING, logger="agentfox.webhooks"):
         with session_scope() as s:
             s.add(make_finding())
         assert webhooks.wait_for_delivery(10)

@@ -11,27 +11,27 @@ import type { CSSProperties, ReactNode } from "react";
  * Every string below is real output from this product. The sources, so a later editor
  * can re-check them rather than guess:
  *
- *   - grants, agents, limits ........ src/nometria/seed.py  (CAPABILITIES, AGENTS)
+ *   - grants, agents, limits ........ src/agentfox/seed.py  (CAPABILITIES, AGENTS)
  *   - the refused transfer .......... dashboard/app/page.tsx Proof(), and
  *                                     Playground.tsx TOOL_PRESETS
  *   - capability.denied reason ...... dashboard/app/page.tsx Proof()
- *   - constraint_violated reason .... src/nometria/identity/service.py
+ *   - constraint_violated reason .... src/agentfox/identity/service.py
  *                                     check_capability() + _describe_violation()
- *   - synthetic rule ids ............ src/nometria/enforcement.py (~line 650)
- *   - grant record layout ........... src/nometria/cli/capability_cli.py grant()
- *   - finding types and titles ...... src/nometria/evaluation/redteam.py,
- *                                     src/nometria/provenance.py,
- *                                     src/nometria/escalation.py,
- *                                     src/nometria/answerability.py
+ *   - synthetic rule ids ............ src/agentfox/enforcement.py (~line 650)
+ *   - grant record layout ........... src/agentfox/cli/capability_cli.py grant()
+ *   - finding types and titles ...... src/agentfox/evaluation/redteam.py,
+ *                                     src/agentfox/provenance.py,
+ *                                     src/agentfox/escalation.py,
+ *                                     src/agentfox/answerability.py
  *   - chain wording ................. Playground.tsx audit panel
- *   - chain break reasons ........... src/nometria/audit/chain.py verify()
+ *   - chain break reasons ........... src/agentfox/audit/chain.py verify()
  *   - the digests in ChainMock ...... computed with chain.py's own
  *                                     compute_digest / compute_payload_digest over
  *                                     the payload shape enforcement.py writes, so
  *                                     they chain correctly rather than being filler
  *   - observe / enforce verdicts .... Playground.tsx turn rendering + agentReply()
- *   - the scripted reply ............ src/nometria/providers/echo.py _synthesise()
- *   - injection.direct reason ....... src/nometria/policies_data/baseline.yaml
+ *   - the scripted reply ............ src/agentfox/providers/echo.py _synthesise()
+ *   - injection.direct reason ....... src/agentfox/policies_data/baseline.yaml
  *
  * Only marketing.css classes and its tokens are used. No colour is hardcoded, so
  * light and dark both work without a second palette.
@@ -175,7 +175,7 @@ function Verdict({
  * The flagship visual: a tool call refused by the capability check, with the grants
  * that refused it sitting next to it.
  *
- * Verified against src/nometria/seed.py — CAPABILITIES["support-triage"] holds exactly
+ * Verified against src/agentfox/seed.py — CAPABILITIES["support-triage"] holds exactly
  * kb.search, crm.lookup and tickets.*, and payments.transfer belongs to payments-ops.
  * If that seed changes, change this.
  */
@@ -367,7 +367,7 @@ type ChainRow = {
 };
 
 /*
- * Real digests. Each was produced by src/nometria/audit/chain.py's own functions
+ * Real digests. Each was produced by src/agentfox/audit/chain.py's own functions
  *
  *   payload_digest = SHA-256(canonical_json(payload))
  *   digest         = SHA-256(seq | occurred_at | action | payload_digest | prev_digest)

@@ -10,9 +10,9 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.config import get_settings, reset_settings_cache
+from agentfox.config import get_settings, reset_settings_cache
 
-VERCEL = "https://guardrails-nometria.vercel.app"
+VERCEL = "https://guardrails-agentfox.vercel.app"
 VERCEL_OLD = "https://guardrails-dashboard-eight.vercel.app"
 RENDER = "https://nometria-dashboard.onrender.com"
 
@@ -60,7 +60,7 @@ def test_the_app_allows_localhost_plus_every_configured_origin():
     os.environ["NOMETRIA_PLAYGROUND_CORS_ORIGIN"] = f"{VERCEL},{RENDER}"
     reset_settings_cache()
     try:
-        from nometria.gateway.app import create_app
+        from agentfox.gateway.app import create_app
 
         app = create_app()
         allowed: list[str] = []

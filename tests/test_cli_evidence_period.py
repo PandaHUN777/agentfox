@@ -13,7 +13,7 @@ import datetime as dt
 import pytest
 import typer
 
-from nometria.cli.main import _evidence_period
+from agentfox.cli.main import _evidence_period
 
 
 def test_no_range_falls_back_to_the_lookback():

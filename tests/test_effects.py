@@ -13,7 +13,7 @@ import datetime as dt
 
 import pytest
 
-from nometria.effects import (
+from agentfox.effects import (
     EffectLedger,
     Step,
     assess_effects,

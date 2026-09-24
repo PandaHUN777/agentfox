@@ -1,6 +1,6 @@
 ---
 name: operate-deployment
-description: Covers running Nometria as a service. It starts the gateway and dashboard locally, deploys with Docker Compose, hardens authentication and secrets for production, issues operator tokens, applies database migrations in the right order, and checks runtime health. Use for "run the server", "open the dashboard", "deploy nometria", "production checklist", "upgrade the database", or auth/token questions.
+description: Covers running AgentFox as a service. It starts the gateway and dashboard locally, deploys with Docker Compose, hardens authentication and secrets for production, issues operator tokens, applies database migrations in the right order, and checks runtime health. Use for "run the server", "open the dashboard", "deploy agentfox", "production checklist", "upgrade the database", or auth/token questions.
 ---
 
 # Operate a deployment

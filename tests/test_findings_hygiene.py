@@ -15,16 +15,16 @@ from types import SimpleNamespace
 import pytest
 from sqlalchemy import select
 
-from nometria import findings as findings_mod
-from nometria import webhooks
-from nometria.db import session_scope
-from nometria.findings import (
+from agentfox import findings as findings_mod
+from agentfox import webhooks
+from agentfox.db import session_scope
+from agentfox.findings import (
     fingerprint,
     raise_finding,
     record_detector_health,
     resolve_finding,
 )
-from nometria.models import Agent, AuditEntry, Budget, Finding
+from agentfox.models import Agent, AuditEntry, Budget, Finding
 
 from .conftest import as_user
 from .test_webhooks import configure, receiver  # noqa: F401 - the shared harness
@@ -148,7 +148,7 @@ def test_once_findings_are_not_recounted_by_a_rescan(session):
 
 def test_resolution_is_audited_and_marks_automation(session):
     finding, _ = _raise(session)
-    resolve_finding(session, finding, actor="nometria.test", note="cleared", automated=True)
+    resolve_finding(session, finding, actor="agentfox.test", note="cleared", automated=True)
     entry = session.scalar(select(AuditEntry).where(AuditEntry.action == "finding.resolved"))
     assert entry.actor_type == "automation"
     assert entry.payload_json["automated"] is True
@@ -213,7 +213,7 @@ def test_recovery_checks_are_throttled_on_the_request_path(session, monkeypatch)
 
 
 def test_budget_exhaustion_counts_then_closes_when_the_window_rolls(seeded, enforcer):
-    from nometria.reliability import check_budget
+    from agentfox.reliability import check_budget
 
     agent = seeded.scalar(select(Agent).where(Agent.slug == "support-triage"))
     budget = seeded.scalar(select(Budget).where(Budget.scope_id == agent.id))
@@ -250,7 +250,7 @@ def test_budget_exhaustion_counts_then_closes_when_the_window_rolls(seeded, enfo
 def test_drift_is_one_finding_per_scorer_and_closes_when_the_window_is_clean(
     session, monkeypatch
 ):
-    from nometria.evaluation import drift
+    from agentfox.evaluation import drift
 
     series = {"current": [0.9, 0.92, 0.95, 0.91], "baseline": [0.1, 0.12, 0.15, 0.11]}
     calls = {"n": 0}
@@ -271,7 +271,7 @@ def test_drift_is_one_finding_per_scorer_and_closes_when_the_window_is_clean(
 
 
 def test_a_false_resolution_rescan_does_not_refile(seeded):
-    from nometria.escalation import detect_false_resolution, record_turn
+    from agentfox.escalation import detect_false_resolution, record_turn
 
     agent = seeded.scalar(select(Agent).where(Agent.slug == "support-triage"))
     record_turn(
@@ -290,7 +290,7 @@ def test_a_false_resolution_rescan_does_not_refile(seeded):
 
 
 def test_a_repeatedly_stopped_loop_is_one_finding_per_session(seeded):
-    from nometria.gateway.routes.inline import _record_loop_stop
+    from agentfox.gateway.routes.inline import _record_loop_stop
 
     verdict = SimpleNamespace(decision="stop", reason="same call repeated", step=4, evidence={})
     steps = [SimpleNamespace(tool="search")] * 4
@@ -306,7 +306,7 @@ def test_a_repeatedly_stopped_loop_is_one_finding_per_session(seeded):
 
 
 def test_a_rerun_red_team_campaign_counts_then_closes_once_retested_clean(seeded, monkeypatch):
-    from nometria.evaluation import redteam
+    from agentfox.evaluation import redteam
 
     attacks = [p.key for p in redteam.BUILTIN_PROBES if p.expect_blocked]
     gap = set(attacks[:2])
@@ -342,7 +342,7 @@ def test_a_rerun_red_team_campaign_counts_then_closes_once_retested_clean(seeded
 
 
 def test_resuming_an_agent_closes_its_stop_finding_and_a_new_stop_reopens_it(seeded):
-    from nometria.registry.control import quarantine, resume
+    from agentfox.registry.control import quarantine, resume
 
     quarantine(seeded, "support-triage", reason="odd tool use", actor="marcus@example.com")
     finding = _rows(seeded, "agent_stopped")[0]
@@ -428,7 +428,7 @@ def test_automated_resolution_and_recurrence_emit_events(monkeypatch, receiver):
     finding_id = _committed_finding()
     with session_scope() as s:
         finding = s.get(Finding, finding_id)
-        resolve_finding(s, finding, actor="nometria.test", note="cleared", automated=True)
+        resolve_finding(s, finding, actor="agentfox.test", note="cleared", automated=True)
     with session_scope() as s:
         _raise(s, type="unit_problem", title="Needs a human", severity="high",
                subject_id="agent_1", fingerprint_parts=None)

@@ -9,11 +9,11 @@ from __future__ import annotations
 
 import pytest
 
-from nometria import jobs_db
-from nometria.agent_loop import CONTINUE, ESCALATE, STOP, LoopBudget, Step, govern_loop
-from nometria.db import configure_pool
-from nometria.jobs import DEFERRABLE, JobQueue
-from nometria.models import Job
+from agentfox import jobs_db
+from agentfox.agent_loop import CONTINUE, ESCALATE, STOP, LoopBudget, Step, govern_loop
+from agentfox.db import configure_pool
+from agentfox.jobs import DEFERRABLE, JobQueue
+from agentfox.models import Job
 
 
 def run(tools_and_observations, budget=None):
@@ -323,7 +323,7 @@ def test_db_queue_binds_the_jobs_own_tenant_before_running_the_handler(session):
     seen_org = {}
 
     def handler(s, payload):
-        from nometria.tenancy import session_org
+        from agentfox.tenancy import session_org
 
         seen_org["value"] = session_org(s)
         return {}
@@ -354,6 +354,6 @@ def test_sqlite_remains_the_single_process_default():
 def test_postgres_is_pooled_and_pre_pings():
     """The connection this layer needs is the one it needs during an incident, and a
     stale handle then costs a request that mattered."""
-    pool = configure_pool("postgresql://localhost/nometria", workers=4)
+    pool = configure_pool("postgresql://localhost/agentfox", workers=4)
     assert pool["pool_pre_ping"] is True
     assert pool["pool_size"] >= 5

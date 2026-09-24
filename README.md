@@ -262,8 +262,8 @@ Raw methodology per benchmark: [containment](benchmarks/containment/README.md),
 ### Python, one line
 
 ```python
-import nometria
-nometria.auto()
+import agentfox
+agentfox.auto()
 ```
 
 Every model call in the process (OpenAI, Anthropic, LiteLLM or LangChain, sync or async, streamed
@@ -303,9 +303,9 @@ Flip `"to"` to `"user"` and the same call returns `allow`. Full surface:
 ### LangGraph
 
 ```python
-from nometria.integrations.langgraph import NometriaGuard
+from agentfox.integrations.langgraph import AgentFoxGuard
 
-guard = NometriaGuard(agent="support-triage", intent="answer a refund question")
+guard = AgentFoxGuard(agent="support-triage", intent="answer a refund question")
 
 builder.add_node("retrieve", guard.retrieval_node(fetch_docs))     # indirect injection blocked
 builder.add_node("model",    guard.model_node(call_model))          # in + out enforced, traced
@@ -398,7 +398,7 @@ learning every command first. Install it as a Claude Code plugin:
 
 ```bash
 claude plugin marketplace add architsharm/guardrails
-claude plugin install nometria@nometria
+claude plugin install agentfox@agentfox
 ```
 
 From a clone, point the marketplace at the checkout instead: `claude plugin marketplace add .`
@@ -431,7 +431,7 @@ Or bring up the full stack (gateway, OPA sidecar, Postgres, dashboard):
 docker compose -f deploy/docker-compose.yml up
 ```
 
-If you're touching `src/nometria/`, install the pre-commit hook once so the wheels vendored into
+If you're touching `src/agentfox/`, install the pre-commit hook once so the wheels vendored into
 `api/` and `demo/redteam-live-lang/` can't silently drift from source (the failure mode behind two
 real production incidents):
 

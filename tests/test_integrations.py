@@ -12,8 +12,8 @@ import pytest
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 
-from nometria.config import get_settings
-from nometria.evaluation.ragas_adapter import (
+from agentfox.config import get_settings
+from agentfox.evaluation.ragas_adapter import (
     RAGAS_METRICS,
     RagasSample,
     native_scores,
@@ -21,14 +21,14 @@ from nometria.evaluation.ragas_adapter import (
     score_dataset,
     score_sample,
 )
-from nometria.integrations.fastapi import (
-    NometriaMiddleware,
+from agentfox.integrations.fastapi import (
+    AgentFoxMiddleware,
     context,
     guard,
     install,
 )
-from nometria.integrations.prometheus import render_metrics
-from nometria.providers import all_providers, available_providers, get_provider
+from agentfox.integrations.prometheus import render_metrics
+from agentfox.providers import all_providers, available_providers, get_provider
 
 from .conftest import PII_TEXT
 
@@ -71,7 +71,7 @@ def test_the_azure_url_carries_the_deployment_and_api_version(monkeypatch):
 def test_azure_inherits_the_openai_wire_format():
     """The inheritance is the point: a bug fixed in the OpenAI path is fixed here too,
     which is not true of a copy-pasted adapter."""
-    from nometria.providers.remote import OpenAIProvider
+    from agentfox.providers.remote import OpenAIProvider
 
     assert isinstance(get_provider("azure-openai"), OpenAIProvider)
     assert isinstance(get_provider("litellm"), OpenAIProvider)
@@ -86,7 +86,7 @@ def test_bedrock_refuses_rather_than_improvising_sigv4(monkeypatch):
     if provider.available():  # boto3 present in this environment
         pytest.skip("boto3 installed; the unavailable path cannot be exercised here")
     with pytest.raises(RuntimeError, match="boto3"):
-        from nometria.providers import CompletionRequest
+        from agentfox.providers import CompletionRequest
 
         provider.complete(CompletionRequest(messages=[{"role": "user", "content": "hi"}]))
 
@@ -107,7 +107,7 @@ def test_litellm_does_not_require_a_key(monkeypatch):
 
 
 def test_system_prompts_are_lifted_out_for_bedrock_and_vertex():
-    from nometria.providers.enterprise import _split_system
+    from agentfox.providers.enterprise import _split_system
 
     rest, system = _split_system(
         [
@@ -128,8 +128,8 @@ def test_system_prompts_are_lifted_out_for_bedrock_and_vertex():
 def app(isolated_db):
     # Seeded and closed rather than holding an open session: the `guard` dependency
     # opens its own, and SQLite will not have two writers.
-    from nometria.db import session_scope
-    from nometria.seed import seed
+    from agentfox.db import session_scope
+    from agentfox.seed import seed
 
     with session_scope() as s:
         seed(s)
@@ -149,20 +149,20 @@ def app(isolated_db):
 
 
 def test_one_line_install_adds_a_health_probe(app):
-    body = app.get("/nometria/health").json()
+    body = app.get("/agentfox/health").json()
     assert body["status"] == "ok"
     assert body["mode"] == "observe", "global middleware must never enforce"
     assert body["service"] == "test-agent"
 
 
 def test_the_middleware_stamps_every_response(app):
-    response = app.get("/nometria/health")
+    response = app.get("/agentfox/health")
     assert response.headers["X-Nometria-Service"] == "test-agent"
     assert float(response.headers["X-Nometria-Latency-Ms"]) >= 0
 
 
 def test_correlation_ids_flow_through_the_middleware(app):
-    response = app.get("/nometria/health", headers={"langfuse-trace-id": "lf-mw"})
+    response = app.get("/agentfox/health", headers={"langfuse-trace-id": "lf-mw"})
     assert response.headers["X-Nometria-External-Trace"] == "lf-mw"
 
 
@@ -203,7 +203,7 @@ def test_the_middleware_cannot_refuse_a_request(isolated_db):
     """A middleware that can 403 a route its author never considered is how a
     governance layer gets removed on the first false positive."""
     application = FastAPI()
-    application.add_middleware(NometriaMiddleware)
+    application.add_middleware(AgentFoxMiddleware)
 
     @application.post("/anything")
     def anything(payload: dict):
@@ -228,11 +228,11 @@ def test_metrics_follow_prometheus_naming(seeded, enforcer):
     )
     body = render_metrics(seeded)
     for name in (
-        "nometria_decisions_total",
-        "nometria_detector_runs_total",
-        "nometria_open_findings",
-        "nometria_missed_escalation_rate",
-        "nometria_circuit_breaker_state",
+        "agentfox_decisions_total",
+        "agentfox_detector_runs_total",
+        "agentfox_open_findings",
+        "agentfox_missed_escalation_rate",
+        "agentfox_circuit_breaker_state",
     ):
         assert f"# TYPE {name} " in body, name
     for line in body.splitlines():
@@ -249,7 +249,7 @@ def test_observe_mode_is_reported_separately(seeded, enforcer):
         model="echo-1",
     )
     body = render_metrics(seeded)
-    assert 'nometria_decisions_by_mode_total{mode="observe"}' in body
+    assert 'agentfox_decisions_by_mode_total{mode="observe"}' in body
 
 
 def test_metrics_expose_counts_never_content(seeded, enforcer):
@@ -266,7 +266,7 @@ def test_metrics_expose_counts_never_content(seeded, enforcer):
 
 
 def test_label_values_are_escaped(seeded):
-    from nometria.integrations.prometheus import _line
+    from agentfox.integrations.prometheus import _line
 
     rendered = _line("m", {"detector": 'a"b\nc'}, 1.0)
     assert '\\"' in rendered and "\n" not in rendered
@@ -276,7 +276,7 @@ def test_the_metrics_endpoint_is_served(client):
     response = client.get("/metrics")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/plain")
-    assert "nometria_decisions_total" in response.text
+    assert "agentfox_decisions_total" in response.text
 
 
 def test_metrics_need_no_auth(client):

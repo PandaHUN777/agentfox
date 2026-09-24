@@ -9,7 +9,7 @@ Hugging Face's public datasets-server API (see `../fetch_dataset.py`).
   jailbreak, `0` for benign.
 - Size: 546 train + 116 test = 662 total examples.
 
-Nometria's detector is a hand-written heuristic pipeline, not a model trained on
+AgentFox's detector is a hand-written heuristic pipeline, not a model trained on
 this (or any) dataset, so `../run_prompt_injection_benchmark.py` scores both splits
 combined — there's no train/test leakage concern for code that was never fit to the
 data in the first place.

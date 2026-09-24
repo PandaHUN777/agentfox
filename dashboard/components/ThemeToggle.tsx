@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 type Theme = "light" | "dark" | "system";
 
-const STORAGE_KEY = "nometria-theme";
+const STORAGE_KEY = "agentfox-theme";
 
 function apply(theme: Theme) {
   const root = document.documentElement;

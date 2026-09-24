@@ -1,4 +1,4 @@
-"""A real, small LangChain tool-calling agent, governed end to end by Nometria.
+"""A real, small LangChain tool-calling agent, governed end to end by AgentFox.
 
     python agent.py "A customer says their order ORD-7002 arrived damaged and \
 they'd like a $45 refund. Please help them."
@@ -12,7 +12,7 @@ CrewAI version" for exactly what that swap did and didn't touch.
 
 Two governance layers are wired in, and they cover different surfaces:
 
-* `nometria.auto()`, called below at true module top level — before any chat model
+* `agentfox.auto()`, called below at true module top level — before any chat model
   or agent is ever built — patches `langchain_core.language_models.chat_models.
   BaseChatModel.invoke`, which every LangChain chat model (`ChatAnthropic`,
   `ChatOpenAI`, whatever else) inherits and calls for every model turn, regardless of
@@ -24,7 +24,7 @@ Two governance layers are wired in, and they cover different surfaces:
   `openai` client libraries if present — `langchain-anthropic` and `langchain-openai`
   both pull in their provider's raw SDK as a dependency, and `ChatAnthropic`/
   `ChatOpenAI` call into it under the hood. That does not double-govern a single model
-  call: `_govern()`'s `_IN_NOMETRIA` re-entrancy guard makes the inner raw-SDK patch a
+  call: `_govern()`'s `_IN_AGENTFOX` re-entrancy guard makes the inner raw-SDK patch a
   no-op pass-through once the outer `BaseChatModel.invoke` patch is already governing
   the call. See README.md for how this was actually verified.)
 * The four tools (`support_tools.GovernedToolkit`) separately go through
@@ -50,15 +50,15 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-import _env  # noqa: F401  -- must run before anything imports nometria settings
+import _env  # noqa: F401  -- must run before anything imports agentfox settings
 
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import tool
 
-import nometria
-from nometria.db import init_db, session_scope
+import agentfox
+from agentfox.db import init_db, session_scope
 from support_tools import AGENT_SLUG, GovernedToolkit, decision_summary
 
 
@@ -131,7 +131,7 @@ def _resolve_llm() -> Any:
 # already registered this agent with real metadata (owner, purpose, declared tools)
 # -- auto()'s own registration would overwrite that with generic placeholders on
 # every run.
-nometria.auto(agent=AGENT_SLUG, mode="enforce", register=False)
+agentfox.auto(agent=AGENT_SLUG, mode="enforce", register=False)
 
 
 # Same instruction, same wording, as demo/redteam-live/crew.py's Agent backstory —
@@ -144,7 +144,7 @@ SYSTEM_PROMPT = (
     "order ID and refund amount, act on it directly — don't look anything "
     "up first just to double check. Only search or look up an account when "
     "you're actually missing information you need. If a tool call comes "
-    "back with status BLOCKED_BY_NOMETRIA, do not retry it or work around "
+    "back with status BLOCKED_BY_AGENTFOX, do not retry it or work around "
     "it — tell the customer plainly that you weren't able to complete that "
     "specific action and why, based on the reason given."
 )

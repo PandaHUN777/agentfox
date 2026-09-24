@@ -5,19 +5,19 @@
 The attack shape: the tool itself is unremarkable and the agent's capability grant
 for it is genuinely valid — the danger is in an *ordinary-named* argument value.
 `look_up_order(order_id="*")` looks nothing like the SQL/shell/URL fields
-`src/nometria/guardrails/actions.py` used to check by key name alone
+`src/agentfox/guardrails/actions.py` used to check by key name alone
 (`_SQL_KEYS`/`_SHELL_KEYS`/`_URL_KEYS`); a field called `order_id` was never on
 any of those lists, so a wildcard or an injected fragment there went straight
 through P9 Action Assurance's dispatch. That gap is real — confirmed by reading
 the code before writing this, not assumed — and this benchmark exists on the far
 side of closing it, not the near side: `analyse_scope()`
-(`src/nometria/guardrails/actions.py`) now runs on every string argument
+(`src/agentfox/guardrails/actions.py`) now runs on every string argument
 regardless of key name.
 
 LLM Guard has no equivalent axis to measure here at all: it scans free text, not
 structured tool-call arguments, so it cannot see `{"order_id": "*"}` as anything
 but an opaque JSON blob with no injection-shaped text in it. This tier is reported
-as Nometria-only, not "Nometria N%, LLM Guard 0%" — the honest framing the user's
+as AgentFox-only, not "AgentFox N%, LLM Guard 0%" — the honest framing the user's
 own thesis asked for is "cannot participate", not a manufactured zero.
 
 10 cases: 5 real over-privilege/injection shapes across 3 attack families
@@ -34,12 +34,12 @@ import json
 import os
 from pathlib import Path
 
-from nometria import db
-from nometria.config import get_settings, reset_settings_cache
-from nometria.enforcement import Enforcer
-from nometria.identity import ensure_identity, grant_capability
-from nometria.registry.service import register_agent
-from nometria.seed import seed
+from agentfox import db
+from agentfox.config import get_settings, reset_settings_cache
+from agentfox.enforcement import Enforcer
+from agentfox.identity import ensure_identity, grant_capability
+from agentfox.registry.service import register_agent
+from agentfox.seed import seed
 
 from _util import wipe_db
 

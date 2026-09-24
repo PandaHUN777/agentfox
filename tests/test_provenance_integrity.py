@@ -19,7 +19,7 @@ import httpx
 import pytest
 from sqlalchemy import select
 
-from nometria.integrity import (
+from agentfox.integrity import (
     assess_integrity,
     check_arithmetic,
     detect_date_mismatch,
@@ -30,8 +30,8 @@ from nometria.integrity import (
     detect_unmatched_records,
     number_readings,
 )
-from nometria.models import Agent, Finding, SourceRecord, utcnow
-from nometria.provenance import (
+from agentfox.models import Agent, Finding, SourceRecord, utcnow
+from agentfox.provenance import (
     APPROVED,
     CHANGED,
     EXTERNAL,
@@ -158,7 +158,7 @@ def test_a_url_source_is_hashed_and_marked_valid_on_first_check(seeded, monkeypa
         def raise_for_status(self):
             pass
 
-    monkeypatch.setattr("nometria.provenance.httpx.get", lambda *a, **k: _Resp())
+    monkeypatch.setattr("agentfox.provenance.httpx.get", lambda *a, **k: _Resp())
     result = validate_source(seeded, url)
     assert result["status"] == VALID
     assert result["content_hash"] == hashlib.sha256(b"pricing content v1").hexdigest()
@@ -176,7 +176,7 @@ def test_changed_content_is_flagged_against_the_previously_recorded_hash(seeded,
         def raise_for_status(self):
             pass
 
-    monkeypatch.setattr("nometria.provenance.httpx.get", lambda *a, **k: _RespV1())
+    monkeypatch.setattr("agentfox.provenance.httpx.get", lambda *a, **k: _RespV1())
     first = validate_source(seeded, url)
     assert first["status"] == VALID
 
@@ -186,7 +186,7 @@ def test_changed_content_is_flagged_against_the_previously_recorded_hash(seeded,
         def raise_for_status(self):
             pass
 
-    monkeypatch.setattr("nometria.provenance.httpx.get", lambda *a, **k: _RespV2())
+    monkeypatch.setattr("agentfox.provenance.httpx.get", lambda *a, **k: _RespV2())
     second = validate_source(seeded, url)
     assert second["status"] == CHANGED
 
@@ -198,7 +198,7 @@ def test_an_unreachable_url_is_reported_rather_than_silently_passed(seeded, monk
     def _explode(*a, **k):
         raise httpx.ConnectError("no route to host")
 
-    monkeypatch.setattr("nometria.provenance.httpx.get", _explode)
+    monkeypatch.setattr("agentfox.provenance.httpx.get", _explode)
     result = validate_source(seeded, url)
     assert result["status"] == UNREACHABLE
     record = seeded.scalar(select(SourceRecord).where(SourceRecord.key == url))
@@ -219,7 +219,7 @@ def test_validating_an_unregistered_source_is_an_error(seeded):
 def encryption_key(monkeypatch):
     from cryptography.fernet import Fernet
 
-    from nometria.config import reset_settings_cache
+    from agentfox.config import reset_settings_cache
 
     monkeypatch.setenv("NOMETRIA_TOKEN_ENCRYPTION_KEY", Fernet.generate_key().decode())
     reset_settings_cache()
@@ -316,7 +316,7 @@ def test_an_api_connection_sends_the_decrypted_credential(seeded, encryption_key
 
         return _Resp()
 
-    monkeypatch.setattr("nometria.provenance.httpx.get", fake_get)
+    monkeypatch.setattr("agentfox.provenance.httpx.get", fake_get)
     result = validate_source(seeded, "confluence-space")
     assert result["status"] == VALID
     assert seen["url"] == "https://wiki.example.com/api/space"
@@ -334,7 +334,7 @@ def test_a_source_with_no_connection_still_falls_back_to_a_plain_url_check(seede
         def raise_for_status(self):
             pass
 
-    monkeypatch.setattr("nometria.provenance.httpx.get", lambda *a, **k: _Resp())
+    monkeypatch.setattr("agentfox.provenance.httpx.get", lambda *a, **k: _Resp())
     result = validate_source(seeded, "https://docs.example.com/plain")
     assert result["status"] == VALID
 

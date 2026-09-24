@@ -1,6 +1,6 @@
 ---
 name: onboard-codebase
-description: Takes a user's agent codebase from ungoverned to observed. It scans for model calls, initialises Nometria, adds nometria.auto() in observe mode, generates first traffic, and reports what was found. Use when the user wants to "start using nometria", "govern my agent", "add guardrails to this repo", or runs /nometria:start.
+description: Takes a user's agent codebase from ungoverned to observed. It scans for model calls, initialises AgentFox, adds agentfox.auto() in observe mode, generates first traffic, and reports what was found. Use when the user wants to "start using agentfox", "govern my agent", "add guardrails to this repo", or runs /agentfox:start.
 ---
 
 # Onboard a codebase
@@ -21,10 +21,10 @@ agentfox version
 - **Exits 127:** install the package into the *project's* environment (its venv, uv project or
   poetry env), not globally. The install line is `pip install "git+https://github.com/architsharm/guardrails.git"`.
 - **Separate database:** ask whether they want one per project. The default is a
-  `nometria.db` next to the package. For a project-local DB, export
-  `NOMETRIA_DATABASE_URL=sqlite:///$PWD/.nometria/nometria.db` and add `.nometria/` to
+  `agentfox.db` next to the package. For a project-local DB, export
+  `NOMETRIA_DATABASE_URL=sqlite:///$PWD/.agentfox/agentfox.db` and add `.agentfox/` to
   `.gitignore`.
-- **Config file:** `init` writes `nometria.toml` in the project, and every process started in
+- **Config file:** `init` writes `agentfox.toml` in the project, and every process started in
   that directory reads it. Environment variables still win. Tell the user it's live config,
   not documentation.
 
@@ -52,13 +52,13 @@ everything the process imports.
 ## 4. Choose the integration surface
 
 Use the decision table in [reference/sdk.md](../../reference/sdk.md). The default is
-`nometria.auto()`. Recommend more than that only when:
+`agentfox.auto()`. Recommend more than that only when:
 
 | Signal in their code | Recommend instead of, or on top of, `auto()` |
 |---|---|
 | async clients, `ainvoke`, streaming | gateway proxy (auto doesn't govern these) |
 | tools with side effects (payments, SQL, email, tickets) | SDK `@nom.tool(..., impact=...)` — load **integrate-guardrails** |
-| a LangGraph graph | `NometriaGuard` node wrappers |
+| a LangGraph graph | `AgentFoxGuard` node wrappers |
 | a FastAPI service taking prompts | `integrations.fastapi.install` + `guard()` |
 | MCP servers | `McpGovernor` |
 
@@ -67,8 +67,8 @@ Use the decision table in [reference/sdk.md](../../reference/sdk.md). The defaul
 Put it at the top of each process entry point, before model clients are created:
 
 ```python
-import nometria
-nometria.auto(agent="<slug>")      # follows policy modes: baseline observes, so nothing new is blocked
+import agentfox
+agentfox.auto(agent="<slug>")      # follows policy modes: baseline observes, so nothing new is blocked
 ```
 
 Choose `<slug>` with the user: a stable, lowercase service name such as `support-triage`.

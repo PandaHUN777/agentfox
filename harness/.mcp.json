@@ -1,7 +1,7 @@
 {
   "mcpServers": {
-    "nometria": {
-      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/nometria.sh",
+    "agentfox": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/agentfox.sh",
       "args": ["mcp", "serve"]
     }
   }

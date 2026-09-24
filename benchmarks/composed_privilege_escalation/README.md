@@ -1,6 +1,6 @@
 # F3.8 — composed privilege escalation: built
 
-**Status, changed from the original investigation below**: F3.8 was genuinely absent (*"needs data-flow tracking at the orchestration layer, not per-tool argument or per-statement checks"* — `docs/failure-modes.md`). It's now built: `src/nometria/guardrails/composition.py` (P9-11), wired into `enforcement.py::evaluate()` on the live `guard_tool_call` path, tested end-to-end in `tests/test_composition.py`. The investigation that follows is kept as-is because it's *why* the fix looked the way it did — reusing infrastructure that already existed for a different purpose, rather than building a new tracking mechanism.
+**Status, changed from the original investigation below**: F3.8 was genuinely absent (*"needs data-flow tracking at the orchestration layer, not per-tool argument or per-statement checks"* — `docs/failure-modes.md`). It's now built: `src/agentfox/guardrails/composition.py` (P9-11), wired into `enforcement.py::evaluate()` on the live `guard_tool_call` path, tested end-to-end in `tests/test_composition.py`. The investigation that follows is kept as-is because it's *why* the fix looked the way it did — reusing infrastructure that already existed for a different purpose, rather than building a new tracking mechanism.
 
 ## What F3.8 actually names
 
@@ -14,7 +14,7 @@ Fetched and inspected `data/test_cases_dh_base.json` (510 rows) directly. Every 
 
 `check_composed_escalation()` in `guardrails/composition.py` compares the *producing* tool's registered `Tool.impact` (read/write/irreversible) against the *consuming* tool's, using the taint tracker's own `TaintMark.propagated_from` — provenance the tracker was already recording (P3-4, for a different purpose: flagging untrusted content in arguments) but that nothing had compared against tool scope before. When a value inferred from a lower-impact tool's result flows into a higher-impact tool's argument, it's blocked — the same "fact about this call, not a policy opinion" treatment `enforcement.py` already gives a critical action risk or a capability denial.
 
-Two taint-mark path conventions carry tool identity today: MCP governance's `mcp.<server>.<tool>` (existing) and a new `tool:<tool_key>#<index>` convention added to the SDK's `tool_result(text, tool=...)` so non-MCP integrations (`nometria.auto()`, LangGraph, direct SDK use) can opt in too — omit `tool=` and the value is still tainted as before, it just isn't checked against this specific failure mode, since nothing then names which tool produced it.
+Two taint-mark path conventions carry tool identity today: MCP governance's `mcp.<server>.<tool>` (existing) and a new `tool:<tool_key>#<index>` convention added to the SDK's `tool_result(text, tool=...)` so non-MCP integrations (`agentfox.auto()`, LangGraph, direct SDK use) can opt in too — omit `tool=` and the value is still tainted as before, it just isn't checked against this specific failure mode, since nothing then names which tool produced it.
 
 ## Verification
 

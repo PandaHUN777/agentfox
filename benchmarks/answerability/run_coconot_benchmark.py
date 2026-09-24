@@ -1,4 +1,4 @@
-"""Scores `src/nometria/answerability.py`'s over-refusal rate against CoCoNot's
+"""Scores `src/agentfox/answerability.py`'s over-refusal rate against CoCoNot's
 `contrast` split (`data/coconot_contrast.json`, 379 rows, MIT).
 
     uv run python benchmarks/answerability/run_coconot_benchmark.py
@@ -21,8 +21,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from nometria.answerability import AGGREGATE, FACT, PROCEDURE, classify_answerability, question_type
-from nometria.models import KnowledgeBoundary
+from agentfox.answerability import AGGREGATE, FACT, PROCEDURE, classify_answerability, question_type
+from agentfox.models import KnowledgeBoundary
 
 DATA_DIR = Path(__file__).parent / "data"
 RESULTS_DIR = Path(__file__).parent / "results"

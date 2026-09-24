@@ -21,7 +21,7 @@ import importlib
 import pytest
 from sqlalchemy import select
 
-from nometria.seed import POISONED_DOCUMENT
+from agentfox.seed import POISONED_DOCUMENT
 
 
 @pytest.fixture(autouse=True)
@@ -30,7 +30,7 @@ def _reset_playground_rate_limits():
     abuse across the whole gateway process, not per request). Reset between tests
     so one test's budget doesn't bleed into the next; production behavior is
     unaffected since a real deployment's process never resets mid-run either."""
-    from nometria.gateway import playground_sessions as pg
+    from agentfox.gateway import playground_sessions as pg
 
     pg.session_creation_limiter._hits.clear()
     pg.action_limiter._hits.clear()
@@ -225,13 +225,13 @@ def test_trace_detail_404s_for_a_trace_outside_the_sandbox(client):
 
 class TestRateLimiter:
     def test_allows_up_to_the_limit_then_rejects(self):
-        from nometria.gateway.playground_sessions import RateLimiter
+        from agentfox.gateway.playground_sessions import RateLimiter
 
         limiter = RateLimiter(limit=3, window_seconds=60)
         assert [limiter.check("k") for _ in range(4)] == [True, True, True, False]
 
     def test_separate_keys_are_independent(self):
-        from nometria.gateway.playground_sessions import RateLimiter
+        from agentfox.gateway.playground_sessions import RateLimiter
 
         limiter = RateLimiter(limit=1, window_seconds=60)
         assert limiter.check("a") is True
@@ -240,7 +240,7 @@ class TestRateLimiter:
 
 
 def test_session_creation_is_rate_limited_per_client(client, monkeypatch):
-    from nometria.gateway import playground_sessions
+    from agentfox.gateway import playground_sessions
 
     monkeypatch.setattr(
         playground_sessions,
@@ -248,7 +248,7 @@ def test_session_creation_is_rate_limited_per_client(client, monkeypatch):
         playground_sessions.RateLimiter(limit=1, window_seconds=60),
     )
     monkeypatch.setattr(
-        importlib.import_module("nometria.gateway.routes.playground"),
+        importlib.import_module("agentfox.gateway.routes.playground"),
         "session_creation_limiter",
         playground_sessions.session_creation_limiter,
     )
@@ -257,7 +257,7 @@ def test_session_creation_is_rate_limited_per_client(client, monkeypatch):
 
 
 def test_actions_on_one_sandbox_are_rate_limited(client, monkeypatch):
-    from nometria.gateway import playground_sessions
+    from agentfox.gateway import playground_sessions
 
     monkeypatch.setattr(
         playground_sessions,
@@ -265,7 +265,7 @@ def test_actions_on_one_sandbox_are_rate_limited(client, monkeypatch):
         playground_sessions.RateLimiter(limit=1, window_seconds=60),
     )
     monkeypatch.setattr(
-        importlib.import_module("nometria.gateway.routes.playground_deps"),
+        importlib.import_module("agentfox.gateway.routes.playground_deps"),
         "action_limiter",
         playground_sessions.action_limiter,
     )
@@ -278,9 +278,9 @@ def test_actions_on_one_sandbox_are_rate_limited(client, monkeypatch):
 
 def _expire(session_id: str, *, seconds_ago: int = 60) -> None:
     """Backdate a sandbox's expiry, the way the clock would."""
-    from nometria.db import session_scope
-    from nometria.models import PlaygroundSandbox, utcnow
-    from nometria.tenancy import bind_session
+    from agentfox.db import session_scope
+    from agentfox.models import PlaygroundSandbox, utcnow
+    from agentfox.tenancy import bind_session
 
     with session_scope() as session:
         bind_session(session, session_id)
@@ -290,7 +290,7 @@ def _expire(session_id: str, *, seconds_ago: int = 60) -> None:
 
 
 def test_sandbox_is_unreadable_once_its_ttl_has_passed():
-    from nometria.gateway.playground_sessions import PlaygroundStore
+    from agentfox.gateway.playground_sessions import PlaygroundStore
 
     store = PlaygroundStore()
     record = store.create()
@@ -303,10 +303,10 @@ def test_sandbox_is_unreadable_once_its_ttl_has_passed():
 def test_expiry_deletes_the_sandboxs_data_not_just_its_registry_row():
     """Expiry has to sweep, not only hide: a public endpoint that accumulated one
     seeded world per visitor forever would be a storage leak with a nice error page."""
-    from nometria.db import session_scope
-    from nometria.gateway.playground_sessions import PlaygroundStore
-    from nometria.models import Agent, PlaygroundSandbox
-    from nometria.tenancy import bind_session
+    from agentfox.db import session_scope
+    from agentfox.gateway.playground_sessions import PlaygroundStore
+    from agentfox.models import Agent, PlaygroundSandbox
+    from agentfox.tenancy import bind_session
 
     store = PlaygroundStore()
     record = store.create()
@@ -325,7 +325,7 @@ def test_expiry_deletes_the_sandboxs_data_not_just_its_registry_row():
 
 
 def test_sweep_removes_expired_sandboxes_and_leaves_live_ones():
-    from nometria.gateway.playground_sessions import PlaygroundStore
+    from agentfox.gateway.playground_sessions import PlaygroundStore
 
     store = PlaygroundStore()
     stale = store.create()
@@ -340,10 +340,10 @@ def test_sweep_removes_expired_sandboxes_and_leaves_live_ones():
 def test_expiry_does_not_touch_the_deployments_own_data():
     """The sweep deletes by tenant. A bug in it is another tenant's rows, so this
     pins the boundary rather than trusting the query."""
-    from nometria.db import session_scope
-    from nometria.gateway.playground_sessions import PlaygroundStore
-    from nometria.models import Agent
-    from nometria.seed import seed
+    from agentfox.db import session_scope
+    from agentfox.gateway.playground_sessions import PlaygroundStore
+    from agentfox.models import Agent
+    from agentfox.seed import seed
 
     with session_scope() as session:
         seed(session)
@@ -364,7 +364,7 @@ def test_a_session_id_that_names_a_real_tenant_is_refused():
     """The path parameter becomes a tenant binding, so its shape is checked before
     anything is read. Without the check, `/sessions/org_default/state` would bind a
     session to the deployment's own tenant."""
-    from nometria.gateway.playground_sessions import PlaygroundStore, is_sandbox_id
+    from agentfox.gateway.playground_sessions import PlaygroundStore, is_sandbox_id
 
     store = PlaygroundStore()
     for candidate in ("org_default", "pg_short", "pg_" + "z" * 32, "../org_default", ""):
@@ -373,7 +373,7 @@ def test_a_session_id_that_names_a_real_tenant_is_refused():
 
 
 def test_sandbox_ids_are_unguessable():
-    from nometria.gateway.playground_sessions import is_sandbox_id, new_sandbox_id
+    from agentfox.gateway.playground_sessions import is_sandbox_id, new_sandbox_id
 
     ids = {new_sandbox_id() for _ in range(50)}
     assert len(ids) == 50
@@ -385,10 +385,10 @@ def test_sandbox_ids_are_unguessable():
 def test_max_concurrent_sandboxes_evicts_the_oldest():
     """The cap is deployment-wide now that the registry is a table. It was per
     process before, which on a serverless deployment meant it bounded nothing."""
-    from nometria.gateway.playground_sessions import PlaygroundStore
+    from agentfox.gateway.playground_sessions import PlaygroundStore
 
     store = PlaygroundStore()
-    import nometria.gateway.playground_sessions as mod
+    import agentfox.gateway.playground_sessions as mod
 
     original_cap = mod.MAX_SESSIONS
     mod.MAX_SESSIONS = 2
@@ -405,8 +405,8 @@ def test_max_concurrent_sandboxes_evicts_the_oldest():
 def test_the_cap_counts_sandboxes_made_by_other_store_instances():
     """A second store is a stand-in for a second serverless instance: the count it
     enforces has to include sandboxes it did not create itself."""
-    import nometria.gateway.playground_sessions as mod
-    from nometria.gateway.playground_sessions import PlaygroundStore
+    import agentfox.gateway.playground_sessions as mod
+    from agentfox.gateway.playground_sessions import PlaygroundStore
 
     original_cap = mod.MAX_SESSIONS
     mod.MAX_SESSIONS = 2
@@ -434,7 +434,7 @@ def _fresh_client():
     """
     from fastapi.testclient import TestClient
 
-    from nometria.gateway.app import create_app
+    from agentfox.gateway.app import create_app
 
     return TestClient(create_app())
 
@@ -468,7 +468,7 @@ def test_a_sandbox_made_on_one_app_instance_is_readable_on_another(client):
 
 
 def test_a_second_store_instance_resolves_the_first_ones_sandbox():
-    from nometria.gateway.playground_sessions import PlaygroundStore
+    from agentfox.gateway.playground_sessions import PlaygroundStore
 
     created = PlaygroundStore().create()
     resolved = PlaygroundStore().get(created.id)
@@ -497,9 +497,9 @@ def test_one_sandbox_cannot_read_anothers_data(client):
 def test_a_sandbox_cannot_read_the_deployments_own_agents(client):
     """The `client` fixture seeds the default org. A sandbox queries the same tables
     and must see only its own copies."""
-    from nometria.db import session_scope
-    from nometria.models import Agent
-    from nometria.tenancy import bind_session
+    from agentfox.db import session_scope
+    from agentfox.models import Agent
+    from agentfox.tenancy import bind_session
 
     sid = _create(client)
     with session_scope() as session:
@@ -527,9 +527,9 @@ def test_a_sandbox_tenant_cannot_be_authenticated_into(client):
     slugs = {a["slug"] for a in resp.json()["agents"]}
     assert slugs  # the deployment's own org, not the empty view a sandbox binding gives
 
-    from nometria.db import session_scope
-    from nometria.models import User
-    from nometria.tenancy import bind_session
+    from agentfox.db import session_scope
+    from agentfox.models import User
+    from agentfox.tenancy import bind_session
 
     with session_scope() as session:
         bind_session(session, sid)
@@ -582,8 +582,8 @@ def test_an_unmigrated_database_says_what_to_run(client):
     globally unique), which cannot be recreated here because the test database is
     built from the current models.
     """
-    from nometria.db import get_engine
-    from nometria.models import PlaygroundSandbox
+    from agentfox.db import get_engine
+    from agentfox.models import PlaygroundSandbox
 
     PlaygroundSandbox.__table__.drop(get_engine())
 
@@ -600,11 +600,11 @@ def test_an_agent_credential_from_a_sandbox_is_useless_on_the_inline_api(client)
 
     It does not make sandbox credentials secret. It makes them worthless here.
     """
-    from nometria.db import session_scope
-    from nometria.gateway.auth import resolve_agent
-    from nometria.identity import ensure_identity, issue_credential
-    from nometria.models import Agent
-    from nometria.tenancy import bind_session
+    from agentfox.db import session_scope
+    from agentfox.gateway.auth import resolve_agent
+    from agentfox.identity import ensure_identity, issue_credential
+    from agentfox.models import Agent
+    from agentfox.tenancy import bind_session
 
     sid = _create(client)
     with session_scope() as session:
@@ -632,11 +632,11 @@ def test_sandboxes_are_created_on_a_database_that_has_not_run_the_migration(tmp_
     """
     import sqlalchemy as sa
 
-    from nometria.config import get_settings, reset_settings_cache
-    from nometria.db import current_revision, init_db, reset_engine, upgrade_db
-    from nometria.gateway import playground_sessions
-    from nometria.models import Agent
-    from nometria.tenancy import bind_session
+    from agentfox.config import get_settings, reset_settings_cache
+    from agentfox.db import current_revision, init_db, reset_engine, upgrade_db
+    from agentfox.gateway import playground_sessions
+    from agentfox.models import Agent
+    from agentfox.tenancy import bind_session
 
     url = f"sqlite:///{tmp_path / 'pre-migration.db'}"
     monkeypatch.setenv("NOMETRIA_DATABASE_URL", url)
@@ -657,7 +657,7 @@ def test_sandboxes_are_created_on_a_database_that_has_not_run_the_migration(tmp_
         first, second = store.create(), store.create()
         assert first.id != second.id
 
-        from nometria.db import session_scope
+        from agentfox.db import session_scope
 
         with session_scope() as session:
             bind_session(session, first.id)

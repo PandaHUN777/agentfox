@@ -6,7 +6,7 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": [
         "-c",
-        "cd /Users/architsharma/guardrails && NOMETRIA_DATABASE_URL=sqlite:////tmp/nometria_pg_verify.db NOMETRIA_PLAYGROUND_CORS_ORIGIN=http://localhost:3000 uv run uvicorn nometria.gateway.app:app --host 127.0.0.1 --port 8080"
+        "cd /Users/architsharma/guardrails && NOMETRIA_DATABASE_URL=sqlite:////tmp/agentfox_pg_verify.db NOMETRIA_PLAYGROUND_CORS_ORIGIN=http://localhost:3000 uv run uvicorn agentfox.gateway.app:app --host 127.0.0.1 --port 8080"
       ],
       "port": 8080
     },

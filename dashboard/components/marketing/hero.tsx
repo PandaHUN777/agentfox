@@ -71,7 +71,7 @@ export function Hero() {
           <ToolCallMock />
         </div>
         {/* The $5,000 transfer and the three granted tools are the mock's own contents,
-            which mocks.tsx traces back to src/nometria/seed.py. No new figure here. */}
+            which mocks.tsx traces back to src/agentfox/seed.py. No new figure here. */}
         <p className="mk-fine" style={{ textAlign: "center", marginTop: 18 }}>
           A support agent, talked into asking for a $5,000 transfer. It was never given the
           payments tool, so the call is refused without anything having to recognise the

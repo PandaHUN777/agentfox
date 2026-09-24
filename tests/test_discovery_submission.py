@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from nometria.discovery import scan
+from agentfox.discovery import scan
 
 from .conftest import as_user
 

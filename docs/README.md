@@ -31,7 +31,7 @@ that matches why you are here.
 | [gap-analysis.md](gap-analysis.md) | Enterprise readiness and competitive position, audited and severity-ranked. | Buyers, and us. |
 | [competitor-analysis.md](competitor-analysis.md) | Market landscape, our niche, and where competitors win. | Anyone comparing options. |
 | [appendix-b-control-catalog.md](appendix-b-control-catalog.md) | 43 controls mapped to EU AI Act, NIST AI RMF, ISO 42001, SOC 2, OWASP LLM and Agentic, and MITRE ATLAS, plus what each mapping does not cover. | Compliance and GRC. Mappings are engineering drafts, not legal advice. |
-| [appendix-e-threat-model.md](appendix-e-threat-model.md) | Threats to the customer's agents, and threats to Nometria itself. | Security review. |
+| [appendix-e-threat-model.md](appendix-e-threat-model.md) | Threats to the customer's agents, and threats to AgentFox itself. | Security review. |
 | [pricing-and-procurement.md](pricing-and-procurement.md) | A draft proposal on pricing and the procurement bar. Nothing here is committed to. | Internal, pending a decision. |
 
 ## If you are working on the code

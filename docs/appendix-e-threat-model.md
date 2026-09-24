@@ -3,7 +3,7 @@
 Two threat models, and conflating them is a common failure in this category:
 
 - **E.1 — Threats to the customer's agents.** What the product defends against. Drives Pillars 3, 2 and 4.
-- **E.2 — Threats to Nometria itself.** We sit inline on the customer's critical path and hold their most sensitive text. We are a high-value target and a potential single point of failure.
+- **E.2 — Threats to AgentFox itself.** We sit inline on the customer's critical path and hold their most sensitive text. We are a high-value target and a potential single point of failure.
 
 Taxonomy anchors: OWASP LLM Top 10 (2025), OWASP Agentic Threats T1–T15, MITRE ATLAS. Mapped to controls in [Appendix B](appendix-b-control-catalog.md).
 
@@ -62,7 +62,7 @@ Taxonomy anchors: OWASP LLM Top 10 (2025), OWASP Agentic Threats T1–T15, MITRE
 
 ---
 
-## E.2 Threats to Nometria
+## E.2 Threats to AgentFox
 
 ### E.2.1 We are inline on the critical path
 
@@ -119,6 +119,6 @@ governance product into one that quietly rewrites itself.
 
 **Assumed:** the customer's network/host security, their IdP, their model provider's own security, and the sandbox isolating tool execution (§2.3 — E2B/Modal/Daytona's job, not ours).
 
-**Explicitly out of scope:** training-time attacks on *models* and model supply chain (ATLAS training techniques, LLM04 in its training sense) — Nometria does not train a model. Learning from labels and traffic to change *configuration* is in scope, and is covered in §E.2.5; vector-store security (LLM08 beyond symptom detection); T11 Unexpected RCE (sandbox concern); T14/T15 human-directed social attacks; non-text modalities in MVP (§6.3).
+**Explicitly out of scope:** training-time attacks on *models* and model supply chain (ATLAS training techniques, LLM04 in its training sense) — AgentFox does not train a model. Learning from labels and traffic to change *configuration* is in scope, and is covered in §E.2.5; vector-store security (LLM08 beyond symptom detection); T11 Unexpected RCE (sandbox concern); T14/T15 human-directed social attacks; non-text modalities in MVP (§6.3).
 
 **Stated because a compliance product must:** none of the above is a claim of completeness. Appendix B §B.4 carries the framework gap list, and this section is its threat-side counterpart.

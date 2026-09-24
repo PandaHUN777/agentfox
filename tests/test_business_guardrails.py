@@ -17,7 +17,7 @@ from __future__ import annotations
 import pytest
 from typer.testing import CliRunner
 
-from nometria.business import (
+from agentfox.business import (
     Ladder,
     VerifySpec,
     all_ladders,
@@ -28,10 +28,10 @@ from nometria.business import (
     run_verification,
     save_ladder,
 )
-from nometria.business.catalogue import BY_ID, CATALOGUE, INTENTS, inert_kinds, suggest
-from nometria.business.ladder import parse_amount
-from nometria.cli.main import app
-from nometria.db import session_scope
+from agentfox.business.catalogue import BY_ID, CATALOGUE, INTENTS, inert_kinds, suggest
+from agentfox.business.ladder import parse_amount
+from agentfox.cli.main import app
+from agentfox.db import session_scope
 
 runner = CliRunner()
 
@@ -414,7 +414,7 @@ def test_a_ladder_round_trips_through_storage(isolated_db):
 
 def test_re_authoring_bumps_the_version(isolated_db):
     """An auditor asking why a refund was approved in March needs March's thresholds."""
-    from nometria.models import BusinessRule
+    from agentfox.models import BusinessRule
 
     with session_scope() as session:
         save_ladder(session, ladder())
@@ -426,7 +426,7 @@ def test_re_authoring_bumps_the_version(isolated_db):
 def test_a_definition_that_no_longer_validates_is_skipped_not_fatal(isolated_db):
     """One malformed rule written months ago must not take the enforcement path down
     for every other rule that is fine."""
-    from nometria.models import BusinessRule
+    from agentfox.models import BusinessRule
 
     with session_scope() as session:
         save_ladder(session, ladder())
@@ -444,10 +444,10 @@ def test_a_definition_that_no_longer_validates_is_skipped_not_fatal(isolated_db)
 
 def test_the_ladder_governs_a_real_tool_call(isolated_db):
     """The whole point: not another engine nobody can reach."""
-    from nometria.enforcement import Enforcer
-    from nometria.identity import ensure_identity, grant_capability
-    from nometria.models import Agent
-    from nometria.seed import seed
+    from agentfox.enforcement import Enforcer
+    from agentfox.identity import ensure_identity, grant_capability
+    from agentfox.models import Agent
+    from agentfox.seed import seed
 
     with session_scope() as session:
         seed(session)
@@ -469,10 +469,10 @@ def test_the_ladder_governs_a_real_tool_call(isolated_db):
 
 
 def test_the_decision_records_which_rule_decided(isolated_db):
-    from nometria.enforcement import Enforcer
-    from nometria.identity import ensure_identity, grant_capability
-    from nometria.models import Agent
-    from nometria.seed import seed
+    from agentfox.enforcement import Enforcer
+    from agentfox.identity import ensure_identity, grant_capability
+    from agentfox.models import Agent
+    from agentfox.seed import seed
 
     with session_scope() as session:
         seed(session)
@@ -491,9 +491,9 @@ def test_the_decision_records_which_rule_decided(isolated_db):
 
 
 def test_ladders_do_not_run_on_surfaces_with_no_number_to_band(isolated_db):
-    from nometria.enforcement import Enforcer
-    from nometria.models import Agent
-    from nometria.seed import seed
+    from agentfox.enforcement import Enforcer
+    from agentfox.models import Agent
+    from agentfox.seed import seed
 
     with session_scope() as session:
         seed(session)

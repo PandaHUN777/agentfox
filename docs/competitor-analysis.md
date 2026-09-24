@@ -57,7 +57,7 @@ because they start from an asset (the metadata) rather than having to build one
 ## 3. Our niche
 
 **Positioning statement** (`docs/PRD.md` header): *horizontal, SDK-first, vendor-neutral,
-self-host by default.* **Unit of adoption**: `pip install nometria` + a LangGraph decorator —
+self-host by default.* **Unit of adoption**: `pip install agentfox` + a LangGraph decorator —
 the self-hosted control plane is what a team graduates to at ~20 agents, not where they
 start.
 

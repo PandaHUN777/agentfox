@@ -1,8 +1,8 @@
 ---
-title: nometria configuration (environment variables)
+title: AgentFox configuration (environment variables)
 layer: reference
 audience: agents, operators
-source_of_truth: src/nometria/config.py (Settings, env_prefix NOMETRIA_)
+source_of_truth: src/agentfox/config.py (Settings, env_prefix NOMETRIA_)
 verified_against: commit 6863b8b, 2026-09-15
 ---
 
@@ -11,14 +11,14 @@ verified_against: commit 6863b8b, 2026-09-15
 Sources, highest precedence first:
 
 1. `NOMETRIA_*` environment variables
-2. the `[nometria]` table of a TOML file
+2. the `[agentfox]` table of a TOML file
 3. built-in defaults
 
-The file is `$NOMETRIA_CONFIG` if set, which must exist. Otherwise it's `./nometria.toml` in
+The file is `$NOMETRIA_CONFIG` if set, which must exist. Otherwise it's `./agentfox.toml` in
 the working directory, if present. `NOMETRIA_CONFIG=none` turns file loading off, which is
 useful in CI and containers.
 
-`agentfox init` writes a `nometria.toml` whose keys are the Settings names below without the
+`agentfox init` writes a `agentfox.toml` whose keys are the Settings names below without the
 prefix, for example `enforcement_budget_ms = 300`. Other tables and unknown keys are ignored
 with a warning. List values can be TOML arrays in the file. As environment variables they
 must be JSON, for example `NOMETRIA_ENABLED_DETECTORS='["pii.native","secrets.native"]'`.
@@ -29,7 +29,7 @@ Settings are cached per process, so restart after changing them.
 
 | Variable | Default | Why an agent cares |
 |---|---|---|
-| `NOMETRIA_DATABASE_URL` | `sqlite:///<repo-root>/nometria.db` | **Point this at a scratch file for demos and experiments.** Postgres (`postgresql+psycopg://…`, `[postgres]` extra) for anything real. |
+| `NOMETRIA_DATABASE_URL` | `sqlite:///<repo-root>/agentfox.db` | **Point this at a scratch file for demos and experiments.** Postgres (`postgresql+psycopg://…`, `[postgres]` extra) for anything real. |
 | `NOMETRIA_ENVIRONMENT` | `development` | Also decides whether the dev auth header is accepted. |
 | `NOMETRIA_AUTH_MODE` | `auto` | `auto` \| `development` \| `token` \| `oidc`. Production must not accept `X-Nometria-User`; check with `agentfox auth status`. |
 | `NOMETRIA_DEFAULT_POLICY_MODE` | `observe` | `observe` records, `enforce` blocks. |
@@ -65,7 +65,7 @@ Settings are cached per process, so restart after changing them.
 | Variable | Default | Meaning |
 |---|---|---|
 | `NOMETRIA_IMPROVEMENT_FROZEN` | `false` | Kill switch. While true nothing is applied automatically, but proposals are still filed. |
-| `NOMETRIA_IMPROVEMENT_ACTOR_ID` | `nometria-improver` | The name automated steps are recorded under on the audit chain. |
+| `NOMETRIA_IMPROVEMENT_ACTOR_ID` | `agentfox-improver` | The name automated steps are recorded under on the audit chain. |
 | `NOMETRIA_IMPROVEMENT_MAX_AUTO_CHANGES_PER_DAY` | 20 | Cap on automated applies per tenant per day. |
 | `NOMETRIA_IMPROVEMENT_ROLLBACK_BUDGET` | 0.05 | A change kind rolled back more often than this drops one autonomy level. |
 | `NOMETRIA_CANARY_MIN_DWELL_SECONDS` / `_MAX_BLOCK_RATE_DROP` | 3600 / 0.15 | Default canary dwell time, and how much *less* the candidate may block before it rolls back. |
@@ -100,12 +100,12 @@ outbox, and a serverless process may freeze before sending.
 
 | Variable | Used by |
 |---|---|
-| `NOMETRIA_AGENT` | `nometria.auto()` agent slug. Fallbacks: `OTEL_SERVICE_NAME`, `SERVICE_NAME`, `APP_NAME`, `K_SERVICE`, script name, `default-agent`. |
+| `NOMETRIA_AGENT` | `agentfox.auto()` agent slug. Fallbacks: `OTEL_SERVICE_NAME`, `SERVICE_NAME`, `APP_NAME`, `K_SERVICE`, script name, `default-agent`. |
 | `NOMETRIA_CONFIG` | Path to the TOML config file, or `none`. |
 | `NOMETRIA_API_URL`, `NOMETRIA_API_TOKEN`, `NOMETRIA_USER` | `check/quickscan --submit` only. |
 | `NOMETRIA_AUDIT_KEY` | The `verify_chain.py` bundled in evidence packages (checkpoint signatures). |
 
-## Optional extras (`pip install "nometria[...]"`)
+## Optional extras (`pip install "agentfox[...]"`)
 
 `pii` (Presidio) · `classifiers` (transformers+torch: PIGuard, Granite Guardian, similarity) ·
 `sql` (sqlglot — action assurance fails closed without it) · `langgraph` · `otel` · `postgres` ·

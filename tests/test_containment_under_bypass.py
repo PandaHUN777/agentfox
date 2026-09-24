@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.config import get_settings
-from nometria.enforcement import Enforcer
-from nometria.registry.control import quarantine
+from agentfox.config import get_settings
+from agentfox.enforcement import Enforcer
+from agentfox.registry.control import quarantine
 
 CONTAINED = {"block", "escalate"}
 
@@ -29,7 +29,7 @@ ATTACK = (
 def no_detectors(monkeypatch):
     """A total detector bypass: the pipeline runs zero detectors."""
     monkeypatch.setenv("NOMETRIA_ENABLED_DETECTORS", "[]")
-    from nometria.config import reset_settings_cache
+    from agentfox.config import reset_settings_cache
 
     reset_settings_cache()
     yield

@@ -19,7 +19,7 @@ import type { CSSProperties, ReactNode } from "react";
  * Two literals are split rather than reproduced with their em-dash separator, because
  * the page style bans em-dashes in visible text. Both keep every word:
  *
- *   - `DRAFT — UNVERIFIED / NOT LEGAL ADVICE` (src/nometria/models.py:1474) renders as
+ *   - `DRAFT — UNVERIFIED / NOT LEGAL ADVICE` (src/agentfox/models.py:1474) renders as
  *     two adjacent chips.
  *   - `ours — essentially no OSS exists here` (README.md:465) renders as the "built on"
  *     value plus its note.
@@ -338,14 +338,14 @@ type DetectorRow = {
  * duration is quoted as a measurement anywhere below.
  *
  * Detectors are listed in the order `DetectorPipeline.select()` sorts them, which is
- * `_COST_ORDER` at src/nometria/guardrails/pipeline.py:66-77, cheapest first, so a
+ * `_COST_ORDER` at src/agentfox/guardrails/pipeline.py:66-77, cheapest first, so a
  * budget breach loses the expensive-but-marginal signal rather than the cheap one.
  * The surface is `retrieved`, which is why `schema.json` is not selected at all:
  * its surfaces are `output` and `tool_args` only.
  */
 const PIPELINE: DetectorRow[] = [
   {
-    // key/version src/nometria/guardrails/detectors/secrets.py:74-75, cost 0 pipeline.py:67
+    // key/version src/agentfox/guardrails/detectors/secrets.py:74-75, cost 0 pipeline.py:67
     key: "secrets.native",
     version: "1.1",
     tier: "default",
@@ -354,7 +354,7 @@ const PIPELINE: DetectorRow[] = [
     note: "Ran, found nothing. No provider format and no high-entropy value under a secret-shaped name.",
   },
   {
-    // key/version src/nometria/guardrails/detectors/injection.py:460-461
+    // key/version src/agentfox/guardrails/detectors/injection.py:460-461
     key: "injection.heuristic",
     version: "1.2",
     tier: "default",
@@ -367,7 +367,7 @@ const PIPELINE: DetectorRow[] = [
     note: "Lexical, structural and contextual signals. Table stakes by design, not the durable defence.",
   },
   {
-    // key/version src/nometria/guardrails/detectors/pii.py:83-84
+    // key/version src/agentfox/guardrails/detectors/pii.py:83-84
     key: "pii.native",
     version: "1.1",
     tier: "default",
@@ -376,7 +376,7 @@ const PIPELINE: DetectorRow[] = [
     note: "The address the injected instruction wants the customer database sent to.",
   },
   {
-    // key/version src/nometria/guardrails/detectors/safety.py:69-70
+    // key/version src/agentfox/guardrails/detectors/safety.py:69-70
     key: "safety.lexicon",
     version: "1.0",
     tier: "default",
@@ -385,7 +385,7 @@ const PIPELINE: DetectorRow[] = [
     note: "Ran, found nothing. A lexicon cannot resolve intent, so it reports a category or nothing.",
   },
   {
-    // key/version src/nometria/guardrails/detectors/schema.py:113-114; surfaces :115
+    // key/version src/agentfox/guardrails/detectors/schema.py:113-114; surfaces :115
     key: "schema.json",
     version: "1.0",
     tier: "default",
@@ -394,7 +394,7 @@ const PIPELINE: DetectorRow[] = [
     note: "Its surfaces are output and tool_args. This content arrived on retrieved, so it never ran.",
   },
   {
-    // key/version src/nometria/guardrails/adapters/presidio.py:84-85
+    // key/version src/agentfox/guardrails/adapters/presidio.py:84-85
     key: "pii.presidio",
     version: "1.0",
     tier: "opt-in",
@@ -403,7 +403,7 @@ const PIPELINE: DetectorRow[] = [
     note: "Registered and swappable, off until the dependency is installed and the key is enabled.",
   },
   {
-    // key/version src/nometria/guardrails/adapters/classifiers.py:135-136; timeout_ms :152
+    // key/version src/agentfox/guardrails/adapters/classifiers.py:135-136; timeout_ms :152
     key: "injection.classifier",
     version: "1.0",
     tier: "opt-in",
@@ -448,7 +448,7 @@ export function DetectorPipeline({ className }: { className?: string }) {
           <span className="mk-chip">taint retrieved</span>
         </div>
         <Code>
-          {/* src/nometria/evaluation/redteam.py:147-148, the injection.indirect_document probe */}
+          {/* src/agentfox/evaluation/redteam.py:147-148, the injection.indirect_document probe */}
           Quarterly report.
           <br />
           <br />
@@ -551,10 +551,10 @@ export function DetectorPipeline({ className }: { className?: string }) {
 
 /*
  * The same ticket before and after `redact_content`
- * (src/nometria/guardrails/detectors/pii.py:142-163), in both of its modes.
+ * (src/agentfox/guardrails/detectors/pii.py:142-163), in both of its modes.
  *
  * The values are the ones already used as fixtures in this repository: the SSN from the
- * `exfiltration.pii` probe (src/nometria/evaluation/redteam.py:199) and the key from
+ * `exfiltration.pii` probe (src/agentfox/evaluation/redteam.py:199) and the key from
  * `exfiltration.secret` (redteam.py:208). The card number is the canonical Luhn-valid
  * test Visa, which is what the PII.CREDIT_CARD rule's Luhn gate (pii.py:117-119) exists
  * to separate from an ordinary long digit run.
@@ -663,7 +663,7 @@ export function RedactionMock({ className }: { className?: string }) {
 /* --- 4. Discovery -------------------------------------------------------- */
 
 type ScanRow = {
-  /** Site.kind, src/nometria/discovery.py:164 */
+  /** Site.kind, src/agentfox/discovery.py:164 */
   kind: string;
   /** Site.severity, rendered by the CLI as the word itself, cli/onboarding.py:81-87 */
   severity: "critical" | "high" | "medium" | "low" | "info";
@@ -675,7 +675,7 @@ type ScanRow = {
 /*
  * ILLUSTRATIVE: the file counts, the site counts and the coverage percentage are a
  * chosen example repository, since no scan result is committed to this repo. Everything
- * else is real: the line wording (src/nometria/cli/onboarding.py:248-265), the site kinds
+ * else is real: the line wording (src/agentfox/cli/onboarding.py:248-265), the site kinds
  * (discovery.py:164), the severities and the detail formats (discovery.py:437, :478,
  * :761), the framework labels (discovery.py:100-121), the supported-language sentence
  * (discovery.py:81) and the next step (discovery.py:364-368).
@@ -720,8 +720,8 @@ const SCAN: ScanRow[] = [
 
 /*
  * The registered agents and what each one reaches. Slugs and capability keys are from
- * src/nometria/seed.py:118-183; the relation names are the three this product records,
- * `calls_tool`, `connects_mcp` and `delegates_to` (src/nometria/registry/service.py).
+ * src/agentfox/seed.py:118-183; the relation names are the three this product records,
+ * `calls_tool`, `connects_mcp` and `delegates_to` (src/agentfox/registry/service.py).
  * `hr-screening` carries `owner_email: None` in that same seed (seed.py:148), which is
  * what makes it the unowned one.
  */
@@ -862,7 +862,7 @@ export function DiscoveryMock({ className }: { className?: string }) {
       <Verdict tone="hold" verdict="next">
         <p style={STRONG}>
           {/* discovery.py:364-368 */}
-          4 model call(s) are ungoverned. Add `import nometria; nometria.auto()` to your
+          4 model call(s) are ungoverned. Add `import agentfox; agentfox.auto()` to your
           entry point, nothing else in the codebase has to change.
         </p>
       </Verdict>
@@ -891,7 +891,7 @@ type ScorerRow = {
  * The repository ships the suite and its cases but not a recorded result, so no number
  * here is presented as a measurement of anything.
  *
- * Real: the suite key and name (src/nometria/seed.py:462-463), its five cases
+ * Real: the suite key and name (src/agentfox/seed.py:462-463), its five cases
  * (seed.py:224-272), the scorer keys and their thresholds (evaluation/silent_failure.py:245,
  * :265 and evaluation/scorers.py:186), the summary line and column headers
  * (cli/main.py:727-745), the default tolerance (evaluation/gating.py:28), the regression
@@ -1071,7 +1071,7 @@ type ProbeRow = {
  * records no campaign result.
  *
  * Real: every probe key, category, severity, OWASP id, ATLAS id and description
- * (src/nometria/evaluation/redteam.py:136-360), the summary keys and how recall and
+ * (src/agentfox/evaluation/redteam.py:136-360), the summary keys and how recall and
  * precision are defined (redteam.py:1053-1076), the headline sentence
  * (redteam.py:822-825) and the scope statement (evaluation/adaptive.py:72-80).
  */
@@ -1254,7 +1254,7 @@ type ControlRow = {
  * ILLUSTRATIVE: the four posture counts and the numbers embedded in each rationale are
  * a chosen tenant, since a control status is computed from a live database.
  *
- * Real: the catalogue version and review status (src/nometria/compliance_data/controls.yaml:14-15),
+ * Real: the catalogue version and review status (src/agentfox/compliance_data/controls.yaml:14-15),
  * the framework keys (controls.yaml:16-24), the control count (43 entries in that file),
  * every control key and title, the status vocabulary (compliance/status.py:43), the
  * rationale sentence each rule handler emits (status.py:155-390) and the posture line

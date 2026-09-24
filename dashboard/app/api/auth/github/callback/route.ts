@@ -7,7 +7,7 @@
  * That's why the whole OAuth dance (redirect, code exchange, token) happens here in
  * Next.js rather than in the gateway: only the dashboard can set a cookie the
  * dashboard's own pages will see. Everything server-to-server after that (minting a
- * nometria token, storing the GitHub access token) still goes through the gateway,
+ * agentfox token, storing the GitHub access token) still goes through the gateway,
  * which stays the only thing that reads or writes the database.
  */
 
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
     email = emails.find((e: any) => e.primary)?.email ?? emails[0]?.email ?? null;
   }
 
-  // 3. Find-or-create the user + org, and mint a real nometria token — the one
+  // 3. Find-or-create the user + org, and mint a real agentfox token — the one
   // privileged call, authenticated with a shared secret rather than a user token
   // because no user token exists yet at this point.
   const provisionRes = await fetch(`${API_BASE}/api/auth/github/provision`, {

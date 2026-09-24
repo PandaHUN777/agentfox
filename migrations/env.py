@@ -1,6 +1,6 @@
 """Alembic environment (PL-2).
 
-Reads the database URL from Nometria settings rather than alembic.ini, so a migration
+Reads the database URL from AgentFox settings rather than alembic.ini, so a migration
 run always targets the same database the application does. A migration tool that can
 be pointed somewhere else by accident is a way to lose data.
 """
@@ -12,13 +12,13 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from nometria.config import get_settings
-from nometria.models import Base
+from agentfox.config import get_settings
+from agentfox.models import Base
 
 config = context.config
 if config.config_file_name is not None:
     # `disable_existing_loggers=False` is load-bearing. The default is True, which
-    # switches off every logger already configured — including all of Nometria's. The
+    # switches off every logger already configured — including all of AgentFox's. The
     # effect is that after any migration or stamp (and `init_db` stamps), the platform
     # stops emitting warnings entirely: provider degradation, fail-open decisions and
     # tenancy bypasses all go silent. For a product whose whole argument is that

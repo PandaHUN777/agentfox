@@ -108,7 +108,7 @@ export default function Security() {
                     This project&rsquo;s own code: the enforcement path, the policy engine,
                     the audit chain and its verifier, the gateway and its authentication,
                     the tenant isolation in{" "}
-                    <span className="mk-mono">src/nometria/tenancy.py</span>, and the
+                    <span className="mk-mono">src/agentfox/tenancy.py</span>, and the
                     public playground on this deployment.
                   </p>
                   <p className="mk-body" style={{ margin: "12px 0 0", fontSize: ".95rem" }}>
@@ -178,10 +178,10 @@ export default function Security() {
                 running system.
               </p>
               <Ref>
-                <a href={`${SRC}/src/nometria/tenancy.py`} target="_blank" rel="noreferrer">
-                  src/nometria/tenancy.py
+                <a href={`${SRC}/src/agentfox/tenancy.py`} target="_blank" rel="noreferrer">
+                  src/agentfox/tenancy.py
                 </a>
-                :15-24, 35-38; src/nometria/models.py:1669-1688
+                :15-24, 35-38; src/agentfox/models.py:1669-1688
               </Ref>
               <p className="mk-body" style={{ marginTop: 14 }}>
                 The playground rides on exactly this. A sandbox is a tenant whose{" "}
@@ -189,7 +189,7 @@ export default function Security() {
                 separated from another by the same mechanism that separates two paying
                 customers, with no playground-specific filter for anyone to forget.
               </p>
-              <Ref>src/nometria/gateway/playground_sessions.py:8-13</Ref>
+              <Ref>src/agentfox/gateway/playground_sessions.py:8-13</Ref>
 
               <h3 className="mk-h3" style={{ marginTop: 34 }}>
                 2. The audit log is a hash chain, and the verifier is a pure function
@@ -209,8 +209,8 @@ export default function Security() {
                 or delete path for an audit entry anywhere in the codebase.
               </p>
               <Ref>
-                <a href={`${SRC}/src/nometria/audit/chain.py`} target="_blank" rel="noreferrer">
-                  src/nometria/audit/chain.py
+                <a href={`${SRC}/src/agentfox/audit/chain.py`} target="_blank" rel="noreferrer">
+                  src/agentfox/audit/chain.py
                 </a>
                 :1-20, 56-64, 298-312
               </Ref>
@@ -239,11 +239,11 @@ export default function Security() {
               </div>
               <Ref>
                 <a
-                  href={`${SRC}/src/nometria/availability.py`}
+                  href={`${SRC}/src/agentfox/availability.py`}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  src/nometria/availability.py
+                  src/agentfox/availability.py
                 </a>
                 :18-30, 55-64, 87-95
               </Ref>
@@ -254,7 +254,7 @@ export default function Security() {
                 traffic, because a control that has been open for an hour is not degraded,
                 it is absent.
               </p>
-              <Ref>src/nometria/config.py:148-149; src/nometria/availability.py:21-26</Ref>
+              <Ref>src/agentfox/config.py:148-149; src/agentfox/availability.py:21-26</Ref>
             </div>
           </div>
         </section>
@@ -292,7 +292,7 @@ export default function Security() {
                 actually bound the cost, and both are deployment-wide. That is written down
                 in the module rather than implied.
               </p>
-              <Ref>src/nometria/gateway/playground_sessions.py:371-379</Ref>
+              <Ref>src/agentfox/gateway/playground_sessions.py:371-379</Ref>
               <p className="mk-fine" style={{ marginTop: 26 }}>
                 Also here: <Link href="/privacy">privacy</Link>,{" "}
                 <Link href="/terms">terms</Link>, <Link href="/legal">legal</Link>.

@@ -14,12 +14,12 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.audit.trace import full_trace, start_trace
+from agentfox.audit.trace import full_trace, start_trace
 
 
 @pytest.fixture(autouse=True)
 def _reset_playground_rate_limits():
-    from nometria.gateway import playground_sessions as pg
+    from agentfox.gateway import playground_sessions as pg
 
     pg.session_creation_limiter._hits.clear()
     pg.action_limiter._hits.clear()
@@ -166,7 +166,7 @@ def test_environment_is_named_as_a_declaration_not_as_a_live_system(enforcer, se
 
 
 def test_environment_risk_still_fires_and_still_ignores_non_production():
-    from nometria.guardrails.actions import analyse_sql, environment_risk
+    from agentfox.guardrails.actions import analyse_sql, environment_risk
 
     analysis = analyse_sql("DELETE FROM orders")
     assert environment_risk(analysis, "production") is not None

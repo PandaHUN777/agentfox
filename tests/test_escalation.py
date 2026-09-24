@@ -13,8 +13,8 @@ import datetime as dt
 
 import pytest
 
-from nometria.db import session_scope
-from nometria.escalation import (
+from agentfox.db import session_scope
+from agentfox.escalation import (
     DEFAULT_CONDITIONS,
     REQUIRED_CONTEXT,
     _loop_without_handoff,
@@ -35,7 +35,7 @@ from nometria.escalation import (
     topic_signal,
     turn_depth_risk,
 )
-from nometria.models import Agent, ConversationTurn, Finding, Handoff, utcnow
+from agentfox.models import Agent, ConversationTurn, Finding, Handoff, utcnow
 
 from .conftest import as_user
 
@@ -512,7 +512,7 @@ def test_the_escalation_api(client):
 
 
 def test_gateway_completions_record_a_conversation_turn(client):
-    """Before this, only the SDK's `nometria.auto()` monkeypatch called record_turn
+    """Before this, only the SDK's `agentfox.auto()` monkeypatch called record_turn
     — a team integrating via this HTTP gateway directly got zero escalation tracking
     however long they ran it. Exercised end to end through the actual route."""
     response = client.post(

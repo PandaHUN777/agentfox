@@ -2,7 +2,7 @@
 title: Detectors, verdicts and findings
 layer: reference
 audience: agents triaging results
-source_of_truth: src/nometria/guardrails/, src/nometria/enforcement.py, src/nometria/models.py (Finding), src/nometria/findings.py
+source_of_truth: src/agentfox/guardrails/, src/agentfox/enforcement.py, src/agentfox/models.py (Finding), src/agentfox/findings.py
 verified_against: branch claude/improvement-loop-phase0, 2026-09-20
 ---
 
@@ -66,7 +66,7 @@ writes a `finding.recurred` entry to the audit chain, so `occurrences` counts th
 history. Findings raised before fingerprints existed have none, and count 1.
 
 `agentfox findings --json` does not include the count. `GET /api/findings`, `GET
-/api/findings/{id}` and the `nometria_finding_occurrences` MCP tool do.
+/api/findings/{id}` and the `agentfox_finding_occurrences` MCP tool do.
 
 | Type | Meaning | First move |
 |---|---|---|

@@ -2,15 +2,15 @@
 title: agentfox CLI reference
 layer: reference
 audience: agents (and humans who want the dense version)
-source_of_truth: src/nometria/cli/ — the code wins if this file disagrees
+source_of_truth: src/agentfox/cli/ — the code wins if this file disagrees
 verified_against: branch claude/improvement-loop-phase0, 2026-09-20 (checked by harness/scripts/check_harness.py)
 ---
 
 # `agentfox` CLI reference
 
-Entry point: `nometria = nometria.cli.main:app` (Typer). In a source checkout without an
-installed console script, use `uv run agentfox …` or `python -m nometria.cli.main …`
-(see `harness/scripts/nometria.sh`, which picks the right one).
+Entry point: `agentfox = agentfox.cli.main:app` (Typer). In a source checkout without an
+installed console script, use `uv run agentfox …` or `python -m agentfox.cli.main …`
+(see `harness/scripts/agentfox.sh`, which picks the right one).
 
 ## Side-effect legend
 
@@ -33,7 +33,7 @@ HTTP API (`reference/http-api.md`) when you need structure.
 
 | Command | Effect | Exit / notes |
 |---|---|---|
-| `agentfox init [--path/-p .] [--env/-e development] [--demo]` | W, F | Idempotent. DB, the control catalog, and the 3 policy packs, each listed with its real mode (`tool-containment` enforces). Writes `nometria.toml`, which settings read from the working directory. |
+| `agentfox init [--path/-p .] [--env/-e development] [--demo]` | W, F | Idempotent. DB, the control catalog, and the 3 policy packs, each listed with its real mode (`tool-containment` enforces). Writes `agentfox.toml`, which settings read from the working directory. |
 | `agentfox check [PATH=.] [--json] [--limit/-n 15] [--fail] [--submit/--no-submit]` | R (static AST scan, never imports target code) | `--fail` → exit 1 if any model call is ungoverned. Use in CI. |
 | `agentfox doctor [--json]` | R\* | Exit 1 if any check is bad, with or without `--json`. |
 | `agentfox findings [--severity/-s S] [--limit/-n 20] [--json]` | R\* | Newest first. |

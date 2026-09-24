@@ -31,24 +31,24 @@ import {
  * guess:
  *
  *   - the six pillars and their questions .... README.md "The six pillars"
- *   - detector registrations ................. src/nometria/guardrails/__init__.py
- *   - INJECTION.* entity types ............... src/nometria/guardrails/detectors/injection.py
- *   - SECRET.* entity types .................. src/nometria/guardrails/detectors/secrets.py
- *   - normalisation views .................... src/nometria/guardrails/normalize.py
- *   - per-detector budget, degrade-not-skip .. src/nometria/guardrails/pipeline.py
- *   - baseline / tool-containment rule ids ... src/nometria/policies_data/*.yaml
- *   - capability.* and taint.* verdicts ...... src/nometria/enforcement.py
- *   - the provenance ladder .................. src/nometria/guardrails/taint.py, README "Commands"
+ *   - detector registrations ................. src/agentfox/guardrails/__init__.py
+ *   - INJECTION.* entity types ............... src/agentfox/guardrails/detectors/injection.py
+ *   - SECRET.* entity types .................. src/agentfox/guardrails/detectors/secrets.py
+ *   - normalisation views .................... src/agentfox/guardrails/normalize.py
+ *   - per-detector budget, degrade-not-skip .. src/agentfox/guardrails/pipeline.py
+ *   - baseline / tool-containment rule ids ... src/agentfox/policies_data/*.yaml
+ *   - capability.* and taint.* verdicts ...... src/agentfox/enforcement.py
+ *   - the provenance ladder .................. src/agentfox/guardrails/taint.py, README "Commands"
  *   - impact tiers ........................... dashboard/app/glossary/page.tsx
- *   - static-only scanning, TS/JS pass ....... src/nometria/discovery.py
- *   - OpenAPI onboarding ..................... src/nometria/discovery_openapi.py
- *   - local session scanning ................. src/nometria/session_scan.py
- *   - MCP hygiene finding types .............. src/nometria/registry/service.py
- *   - scorer keys ............................ src/nometria/evaluation/scorers.py
- *   - adaptive campaign scope ................ src/nometria/evaluation/adaptive.py
- *   - chain digests and verify() ............. src/nometria/audit/chain.py
- *   - computed compliance status ............. src/nometria/compliance/status.py
- *   - control count and framework keys ....... src/nometria/compliance_data/controls.yaml
+ *   - static-only scanning, TS/JS pass ....... src/agentfox/discovery.py
+ *   - OpenAPI onboarding ..................... src/agentfox/discovery_openapi.py
+ *   - local session scanning ................. src/agentfox/session_scan.py
+ *   - MCP hygiene finding types .............. src/agentfox/registry/service.py
+ *   - scorer keys ............................ src/agentfox/evaluation/scorers.py
+ *   - adaptive campaign scope ................ src/agentfox/evaluation/adaptive.py
+ *   - chain digests and verify() ............. src/agentfox/audit/chain.py
+ *   - computed compliance status ............. src/agentfox/compliance/status.py
+ *   - control count and framework keys ....... src/agentfox/compliance_data/controls.yaml
  *   - every CLI command shown ................ README.md "Commands"
  *
  * Figures appear only where README.md or app/benchmark/page.tsx already publishes them,
@@ -260,7 +260,7 @@ export function Pillars() {
 
 const GUARDRAIL_ITEMS: Item[] = [
   {
-    // Rule ids from src/nometria/policies_data/baseline.yaml.
+    // Rule ids from src/agentfox/policies_data/baseline.yaml.
     label: "injection.direct · injection.indirect",
     body: "Injection arriving in the user's own message, and injection arriving inside a retrieved document or a tool result. The second fires at a lower confidence, because an instruction has no business being in data.",
   },
@@ -343,7 +343,7 @@ export function Guardrails() {
 
 const CONTAINMENT_ITEMS: Item[] = [
   {
-    // src/nometria/policies_data/tool-containment.yaml
+    // src/agentfox/policies_data/tool-containment.yaml
     label: "taint.irreversible_tool",
     body: "An irreversible tool invoked with arguments that originated in untrusted content stops for a human, whatever the detectors said about the prompt.",
   },
@@ -462,7 +462,7 @@ export function Containment() {
 
 const DISCOVERY_ITEMS: Item[] = [
   {
-    // README.md "Commands"; behaviour from src/nometria/discovery.py.
+    // README.md "Commands"; behaviour from src/agentfox/discovery.py.
     label: "agentfox check",
     body: "Walks a repository and reports what talks to a model and which of it is ungoverned. Python is parsed, TypeScript and JavaScript are read too, and the report names the languages it actually read.",
   },
@@ -471,12 +471,12 @@ const DISCOVERY_ITEMS: Item[] = [
     body: "Sweeps for shadow agents, drift and identity posture. Anything sending traffic without being registered is raised as a shadow_agent finding, because the problem with an unregistered agent is that nobody is accountable for it.",
   },
   {
-    // src/nometria/registry/service.py raises these types.
+    // src/agentfox/registry/service.py raises these types.
     label: "agentfox scan mcp",
     body: "MCP tool hygiene: tool_poisoning in a tool description, an unpinned_server, schema_drift since the last scan.",
   },
   {
-    // src/nometria/discovery_openapi.py and session_scan.py.
+    // src/agentfox/discovery_openapi.py and session_scan.py.
     label: "OpenAPI and local sessions",
     body: "A hosted API is onboarded from its OpenAPI document, and only the spec is ever fetched. Local AI coding-assistant sessions are read for structural metadata only, never a prompt and never a tool call's arguments.",
   },
@@ -537,7 +537,7 @@ const ASSURANCE_ITEMS: Item[] = [
     body: "Scores a suite against its latest recorded baseline and exits 1 on a regression, so a build fails rather than a quality drop reaching production quietly.",
   },
   {
-    // Scorer keys registered in src/nometria/evaluation/scorers.py.
+    // Scorer keys registered in src/agentfox/evaluation/scorers.py.
     label: "groundedness · safety · tool_trajectory",
     body: "Scorers judge past output after the fact: whether an answer was supported by the context it was given, whether it was safe, whether the agent took the tool path it was meant to. Latency, cost, JSON schema and an LLM judge are registered too.",
   },
@@ -546,7 +546,7 @@ const ASSURANCE_ITEMS: Item[] = [
     body: "Adversarial probes fired at this agent's own capability grants, declared impact tiers and bound policies in enforce mode, mapped to the OWASP LLM Top 10 and MITRE ATLAS.",
   },
   {
-    // src/nometria/evaluation/adaptive.py: offline, deterministic, no model called.
+    // src/agentfox/evaluation/adaptive.py: offline, deterministic, no model called.
     label: "adaptive campaigns",
     body: "A blocked probe is retried in mutated form, with the mutation picked from why it was blocked. No model is called and no network is touched, so the same campaign at the same seed produces the same mutation program.",
   },
@@ -610,7 +610,7 @@ export function Assurance() {
 
 const AUDIT_ITEMS: Item[] = [
   {
-    // src/nometria/audit/chain.py.
+    // src/agentfox/audit/chain.py.
     label: "agentfox audit verify",
     body: "Re-derives the chain from the first entry and exits 1 if it is broken. Insertion, deletion, reordering and mutation are all detected, because each entry hashes the one before it.",
   },
@@ -619,12 +619,12 @@ const AUDIT_ITEMS: Item[] = [
     body: "An auditor package for one agent over a date range, shipping with a stdlib-only verify_chain.py. The auditor re-runs the check themselves rather than taking our word for the record.",
   },
   {
-    // src/nometria/compliance/status.py.
+    // src/agentfox/compliance/status.py.
     label: "status computed from telemetry",
     body: "Each control's status comes from the same execution data that drives enforcement, not from a form someone filled in. A control whose evidence source is producing nothing reads not_implemented, because silence is not success.",
   },
   {
-    // src/nometria/compliance_data/controls.yaml mapping keys.
+    // src/agentfox/compliance_data/controls.yaml mapping keys.
     label: "43 controls, seven frameworks",
     body: "eu-ai-act, nist-ai-rmf, iso-42001, soc2, owasp-llm, owasp-agentic and mitre-atlas. Where a mapping does not cover something, the coverage table says so rather than leaving the gap unmarked.",
   },

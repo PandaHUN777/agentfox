@@ -14,8 +14,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from nometria import models
-from nometria.improvement import contract
+from agentfox import models
+from agentfox.improvement import contract
 
 
 def test_index_predicate_lists_exactly_the_open_statuses():

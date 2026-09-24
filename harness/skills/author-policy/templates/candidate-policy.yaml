@@ -1,5 +1,5 @@
 # Candidate policy — start here, then: validate → lint → simulate → (user decides) enforce.
-# Schema: harness/reference/policy-schema.md. Real examples: src/nometria/policies_data/.
+# Schema: harness/reference/policy-schema.md. Real examples: src/agentfox/policies_data/.
 key: support-refunds                 # unique; becomes the name in `policy list`
 name: Support refunds
 description: >

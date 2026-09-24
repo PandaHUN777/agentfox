@@ -12,9 +12,9 @@ import datetime as dt
 import pytest
 from sqlalchemy import select
 
-from nometria.guardrails.base import Detection, DetectorResult
-from nometria.guardrails.pipeline import PipelineResult
-from nometria.guardrails.tuning import (
+from agentfox.guardrails.base import Detection, DetectorResult
+from agentfox.guardrails.pipeline import PipelineResult
+from agentfox.guardrails.tuning import (
     MIN_LABELS_FOR_RECOMMENDATION,
     LatencyLedger,
     active_suppressions,
@@ -29,7 +29,7 @@ from nometria.guardrails.tuning import (
     suppression_health,
     threshold_recommendations,
 )
-from nometria.models import Agent, GuardrailFeedback, Suppression
+from agentfox.models import Agent, GuardrailFeedback, Suppression
 
 from .conftest import INDIRECT_INJECTION, PII_TEXT, SECRET_TEXT, as_user
 
@@ -157,7 +157,7 @@ def test_a_later_surface_gets_only_what_is_left():
 def test_an_exhausted_ledger_degrades_rather_than_blowing_the_slo(seeded):
     """Shedding detectors is recorded as degradation, which the fail-mode policy then
     acts on. Silently overrunning would be the worse failure."""
-    from nometria.enforcement import Enforcer
+    from agentfox.enforcement import Enforcer
 
     enforcer = Enforcer(seeded)
     enforcer._ledger = LatencyLedger(budget_ms=0)

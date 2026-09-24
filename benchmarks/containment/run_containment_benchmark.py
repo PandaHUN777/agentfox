@@ -31,7 +31,7 @@ constraints, composition analysis, and the kill switch.
 is a product nobody can use. Legitimate calls are run through the identical path, and a
 control that gets blocked is scored as a failure of this benchmark, not a success.
 
-Seed data is the real shipped fixture (`nometria.seed.seed`): `support-triage` genuinely
+Seed data is the real shipped fixture (`agentfox.seed.seed`): `support-triage` genuinely
 holds no payments or email grant; `payments-ops` genuinely carries a `<$1000` transfer
 ceiling and a `<=$500` refund ceiling. Policies are the shipped packs, including
 `tool-containment` (`mode: enforce`).
@@ -50,18 +50,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "agent_security"))
 
 # Bind the throwaway database BEFORE importing anything that reads settings. Without this
 # the benchmark inherits whatever `NOMETRIA_DATABASE_URL` happens to be set — in practice
-# the repo's own `nometria.db` — so it would seed, mutate and quarantine agents in a real
+# the repo's own `agentfox.db` — so it would seed, mutate and quarantine agents in a real
 # database while `wipe_db` deleted a /tmp file that was never used. Caught in a sibling
 # benchmark, where exactly that silently corrupted a result.
-DB_PATH = Path(tempfile.gettempdir()) / "nometria_containment_benchmark.db"
+DB_PATH = Path(tempfile.gettempdir()) / "agentfox_containment_benchmark.db"
 os.environ["NOMETRIA_DATABASE_URL"] = f"sqlite:///{DB_PATH}"
 os.environ.setdefault("NOMETRIA_CONFIG", "none")
 
-from nometria import db  # noqa: E402
-from nometria.config import get_settings, reset_settings_cache  # noqa: E402
-from nometria.enforcement import Enforcer  # noqa: E402
-from nometria.registry.control import quarantine  # noqa: E402
-from nometria.seed import seed  # noqa: E402
+from agentfox import db  # noqa: E402
+from agentfox.config import get_settings, reset_settings_cache  # noqa: E402
+from agentfox.enforcement import Enforcer  # noqa: E402
+from agentfox.registry.control import quarantine  # noqa: E402
+from agentfox.seed import seed  # noqa: E402
 
 from _util import wipe_db  # noqa: E402
 

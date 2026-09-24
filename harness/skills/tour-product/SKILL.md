@@ -1,6 +1,6 @@
 ---
 name: tour-product
-description: Runs a safe, offline tour of what Nometria does, using a throwaway database so nothing the user owns changes. Use when someone asks "what does this do", "show me", "demo it", or is evaluating the product before adopting it.
+description: Runs a safe, offline tour of what AgentFox does, using a throwaway database so nothing the user owns changes. Use when someone asks "what does this do", "show me", "demo it", or is evaluating the product before adopting it.
 ---
 
 # Tour the product
@@ -80,5 +80,5 @@ Tell the user:
 
 - **What is theirs to keep:** nothing yet. The scratch DB is at `/tmp/nometria-tour.db`, and
   deleting it undoes the tour.
-- **The next step:** the onboard-codebase skill (`/nometria:start`), which governs their
+- **The next step:** the onboard-codebase skill (`/agentfox:start`), which governs their
   real code in observe mode.

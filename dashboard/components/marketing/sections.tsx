@@ -192,7 +192,7 @@ const STEPS: { title: string; body: React.ReactNode }[] = [
     title: "Put one line in your entry point, or call it over HTTP",
     body: (
       <>
-        <code className="mk-mono">import nometria; nometria.auto()</code> wraps the OpenAI,
+        <code className="mk-mono">import agentfox; agentfox.auto()</code> wraps the OpenAI,
         Anthropic, LiteLLM and LangChain clients already running in that process. From any
         other language, post a single tool call to{" "}
         <code className="mk-mono">/v1/guard/tool_call</code>, or point an existing client&rsquo;s
@@ -498,7 +498,7 @@ export function CTA() {
                 lineHeight: 1.7,
               }}
             >
-              {`pip install git+https://github.com/architsharm/guardrails.git\nnometria init && agentfox demo`}
+              {`pip install git+https://github.com/architsharm/guardrails.git\nagentfox init && agentfox demo`}
             </pre>
             <p className="mk-fine" style={{ marginTop: 12 }}>
               <code className="mk-mono">init</code> creates a SQLite database and loads 43

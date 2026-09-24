@@ -2,7 +2,7 @@
 title: Policy YAML schema
 layer: reference
 audience: agents authoring or explaining policy
-source_of_truth: src/nometria/policy/model.py (PolicyDocument, Rule, Condition), policy/engine.py
+source_of_truth: src/agentfox/policy/model.py (PolicyDocument, Rule, Condition), policy/engine.py
 verified_against: commit 6863b8b, 2026-09-15 — template validated with `agentfox policy validate`
 ---
 
@@ -10,7 +10,7 @@ verified_against: commit 6863b8b, 2026-09-15 — template validated with `agentf
 
 Policies are YAML. They compile to Rego (`GET /api/policies/{key}/rego`), and the native
 engine evaluates them by default (`NOMETRIA_POLICY_ENGINE=opa` switches to OPA). Examples:
-`src/nometria/policies_data/` and
+`src/agentfox/policies_data/` and
 `harness/skills/author-policy/templates/candidate-policy.yaml`.
 
 ## Document

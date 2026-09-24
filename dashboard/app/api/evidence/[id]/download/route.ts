@@ -36,7 +36,7 @@ export async function GET(
     headers: {
       "Content-Type": "application/zip",
       "Content-Disposition":
-        res.headers.get("content-disposition") || `attachment; filename="nometria-evidence-${id}.zip"`,
+        res.headers.get("content-disposition") || `attachment; filename="agentfox-evidence-${id}.zip"`,
     },
   });
 }

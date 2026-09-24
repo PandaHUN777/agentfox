@@ -1,7 +1,7 @@
 """Standalone bridge to a real `agentdojo` install, run via a subprocess.
 
 `agentdojo` (MIT, ETH Zurich) is a full agent-simulation framework with its own
-dependency tree — this script has zero `nometria` imports and is meant to be run
+dependency tree — this script has zero `agentfox` imports and is meant to be run
 with a *separate* interpreter that has `agentdojo` installed on its own, the same
 pattern `../agent_security/llm_guard_bridge.py` uses for `llm-guard`:
 

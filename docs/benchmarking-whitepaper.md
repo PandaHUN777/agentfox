@@ -1,4 +1,4 @@
-# Nometria: A Governance Control Plane for AI Agents, and What We've Proven About It
+# AgentFox: A Governance Control Plane for AI Agents, and What We've Proven About It
 
 **Date:** 2026-08-29, updated 2026-08-31 · **Status:** first edition, revised — added PII detection (§4.2), destructive-action/blast-radius (§4.4), and entitlement (§4.5) benchmark results once those datasets were built; F1 answerability is intentionally not cited with a benchmark number here (see §4.6) because its strongest measured category doesn't clear this document's own 65%-precision-and-recall bar — full numbers, not filtered, are in [`benchmarks/answerability/README.md`](../benchmarks/answerability/README.md).
 
@@ -6,9 +6,9 @@
 
 ---
 
-## 1. What Nometria is
+## 1. What AgentFox is
 
-Nometria is a control plane that sits in front of AI agents in production — as an inline gateway or a one-line SDK wrapper — and governs what they're allowed to do, catches what they get wrong, and proves what happened afterward. It's built around four things happening at once, on every governed call: **detect** (is this content malicious, off-scope, or unsafe), **enforce** (is this action within the agent's actual entitlements, and is it reversible if wrong), **evaluate** (did the agent's answer hold up — grounded, complete, correctly abstained when it should have), and **prove** (a tamper-evident record of all of the above that an auditor can verify independently, without trusting us).
+AgentFox is a control plane that sits in front of AI agents in production — as an inline gateway or a one-line SDK wrapper — and governs what they're allowed to do, catches what they get wrong, and proves what happened afterward. It's built around four things happening at once, on every governed call: **detect** (is this content malicious, off-scope, or unsafe), **enforce** (is this action within the agent's actual entitlements, and is it reversible if wrong), **evaluate** (did the agent's answer hold up — grounded, complete, correctly abstained when it should have), and **prove** (a tamper-evident record of all of the above that an auditor can verify independently, without trusting us).
 
 ## 2. The insight that shaped what we built
 
@@ -16,7 +16,7 @@ Most of the market — competitors and the industry conversation both — treats
 
 That's the thesis this product is built on, and it shows up directly in what we built: strong prompt-injection detection because it's real and worth having (Sections 3–4), but built alongside — not instead of — entitlement-aware disclosure control, destructive-action blast-radius analysis, and escalation governance, the categories the failure data says actually dominate.
 
-## 3. What makes Nometria different (the USPs)
+## 3. What makes AgentFox different (the USPs)
 
 **The one that matters most, and the one we now measure directly.** Every published result on
 adversarial robustness — most recently [*The Attacker Moves Second*](https://arxiv.org/abs/2510.09023),
@@ -114,7 +114,7 @@ Well-structured identifier types (`EMAIL`, `IBAN`, `IP_ADDRESS`) hold 90%+ preci
 
 **Benchmarked — yes, against a real, independently-installed `llm-guard`, not an asserted comparison.**
 
-| Tier | What it tests | Nometria | LLM Guard |
+| Tier | What it tests | AgentFox | LLM Guard |
 |---|---|---|---|
 | A — multi-turn / payload splitting | "Ignore all previous instructions" split across 3 separate API calls | 2/2 correct — none of the 3 fragments fires alone, only the assembled window | Flags all 3 fragments individually — not multi-turn awareness, just over-triggering |
 | B — indirect injection via tool output | 20 cases: hidden instructions, poisoned MCP tool descriptions | 100.0% recall / 66.7% precision | 90.0% recall / 81.8% precision |
@@ -198,9 +198,9 @@ bugs/gaps found and fixed while building this (a policy threshold silently disca
 15 already-detected attacks, a real detector gap, two runner bugs):
 [`benchmarks/redteam/README.md`](../benchmarks/redteam/README.md).
 
-## 5. Competitive landscape — where Nometria sits
+## 5. Competitive landscape — where AgentFox sits
 
-Four camps exist in this market, and Nometria doesn't fit cleanly into any one of them — which is a fair way to describe both its opportunity and its risk:
+Four camps exist in this market, and AgentFox doesn't fit cleanly into any one of them — which is a fair way to describe both its opportunity and its risk:
 
 | Camp | Examples | Runtime enforcement | Compliance depth | What they have that we don't |
 |---|---|---|---|---|
@@ -209,7 +209,7 @@ Four camps exist in this market, and Nometria doesn't fit cleanly into any one o
 | AI governance platforms (Gartner MQ) | IBM, ServiceNow, Credo AI, OneTrust | Mostly none — Gartner's own finding | Deep | Workflow/assessment engines, analyst recognition, installed base |
 | Eval / observability | Braintrust, Arize, LangSmith | N/A | N/A | Eval UX depth, dataset tooling |
 
-Gartner's own read on the governance camp is that it largely lacks runtime enforcement, and the security camp largely lacks compliance depth. Nometria's bet is the combination — runtime enforcement *and* audit-grade compliance depth, in one product, self-hosted. The full gap register, including where we still fall short of category table stakes (estate-scale connectors, a general workflow engine, third-party certifications), is in [`docs/gap-analysis.md`](gap-analysis.md).
+Gartner's own read on the governance camp is that it largely lacks runtime enforcement, and the security camp largely lacks compliance depth. AgentFox's bet is the combination — runtime enforcement *and* audit-grade compliance depth, in one product, self-hosted. The full gap register, including where we still fall short of category table stakes (estate-scale connectors, a general workflow engine, third-party certifications), is in [`docs/gap-analysis.md`](gap-analysis.md).
 
 ## 6. Methodology discipline (the rules every number above follows)
 

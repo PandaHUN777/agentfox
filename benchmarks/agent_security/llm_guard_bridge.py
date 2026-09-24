@@ -3,7 +3,7 @@
 `llm-guard` (Protect AI, MIT) pins `transformers==4.51.3` / `tokenizers==0.21.4`,
 which conflicts with this project's own pinned versions (`transformers>=5`, needed
 for `leolee99/PIGuard`). Rather than fight that in the main project venv, this
-script has zero `nometria` imports and is meant to be run with a *separate*
+script has zero `agentfox` imports and is meant to be run with a *separate*
 interpreter that has `llm-guard` installed on its own:
 
     uv venv /path/to/scratch/.venv

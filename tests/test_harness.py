@@ -53,10 +53,10 @@ def _decision(command: str) -> str:
     [
         "agentfox policy enforce baseline",
         "uv run --project /r agentfox policy observe baseline",
-        "python -m nometria.cli.main agents kill payments-ops",
+        "python -m agentfox.cli.main agents kill payments-ops",
         "cd /x && agentfox agents quarantine s -r incident",
         "NOMETRIA_DATABASE_URL=sqlite:////tmp/x.db agentfox demo",
-        "harness/scripts/nometria.sh seed",
+        "harness/scripts/agentfox.sh seed",
         "agentfox db downgrade base",
         "agentfox guardrails apply rule.yaml --mode enforce",
         "agentfox boundary set support --mode=enforce",
@@ -89,7 +89,7 @@ def test_blocking_commands_require_confirmation(command):
         "agentfox demo-notes.md",
         "git commit -m 'agentfox policy enforce baseline'",
         "echo agentfox seed",
-        "cat docs/nometria-policy-enforce.md",
+        "cat docs/agentfox-policy-enforce.md",
     ],
 )
 def test_read_only_and_look_alike_commands_pass_silently(command):

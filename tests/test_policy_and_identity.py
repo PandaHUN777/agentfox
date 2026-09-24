@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from nometria.identity import (
+from agentfox.identity import (
     check_capability,
     delegate,
     ensure_identity,
@@ -17,8 +17,8 @@ from nometria.identity import (
     rotate_credential,
     verify_credential,
 )
-from nometria.models import utcnow
-from nometria.policy import (
+from agentfox.models import utcnow
+from agentfox.policy import (
     NativePolicyEngine,
     PolicyDocument,
     PolicyInput,
@@ -27,7 +27,7 @@ from nometria.policy import (
     save_policy,
     set_mode,
 )
-from nometria.registry.service import register_agent
+from agentfox.registry.service import register_agent
 
 POLICY = """
 key: test
@@ -198,7 +198,7 @@ def test_combine_takes_strongest_across_policies():
 
 def test_rego_compilation_produces_a_module(doc):
     rego = compile_to_rego(doc)
-    assert "package nometria.policy.test" in rego
+    assert "package agentfox.policy.test" in rego
     assert "import rego.v1" in rego
     assert '"rule_id": "injection.block"' in rego
     assert "decision :=" in rego
@@ -221,7 +221,7 @@ def test_changing_hierarchy_placement_alone_rebinds_without_a_new_version(sessio
     rules, different level/scope — must still take effect. The no-op-edit check
     above only guards against manufacturing an identical *version*; it must not
     also silently swallow a real binding change."""
-    from nometria.models import PolicyBinding
+    from agentfox.models import PolicyBinding
 
     doc = PolicyDocument.from_yaml(POLICY)
     _policy, v1 = save_policy(session, doc, author="a", level="org", scope_id="*")

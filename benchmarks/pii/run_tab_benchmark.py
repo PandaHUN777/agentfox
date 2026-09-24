@@ -1,4 +1,4 @@
-"""Scores Nometria's PII detectors against the Text Anonymization Benchmark (TAB)'s
+"""Scores AgentFox's PII detectors against the Text Anonymization Benchmark (TAB)'s
 `echr_test.json` (`data/tab_echr_test.json`, 127 rows, real ECHR case law, MIT).
 
     uv run python benchmarks/pii/run_tab_benchmark.py
@@ -36,15 +36,15 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from nometria.guardrails.adapters.presidio import DEFAULT_EXCLUDED, PresidioPiiDetector
-from nometria.guardrails.base import DetectionContext
-from nometria.guardrails.detectors.pii import NativePiiDetector
+from agentfox.guardrails.adapters.presidio import DEFAULT_EXCLUDED, PresidioPiiDetector
+from agentfox.guardrails.base import DetectionContext
+from agentfox.guardrails.detectors.pii import NativePiiDetector
 
 DATA_DIR = Path(__file__).parent / "data"
 RESULTS_DIR = Path(__file__).parent / "results"
 
-# TAB entity_type -> Nometria PII.* canonical type. ORG, DEM, CODE, MISC,
-# QUANTITY have no corresponding Nometria detector and are dropped from ground
+# TAB entity_type -> AgentFox PII.* canonical type. ORG, DEM, CODE, MISC,
+# QUANTITY have no corresponding AgentFox detector and are dropped from ground
 # truth entirely (see README for the full list and rationale).
 GT_ENTITY_MAP = {
     "PERSON": "PII.PERSON",

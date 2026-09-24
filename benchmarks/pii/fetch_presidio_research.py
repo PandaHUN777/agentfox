@@ -13,7 +13,7 @@ entity_value, start_position, end_position}], template_id, metadata}`.
 
 No filtering or sampling is done here — all 1,500 rows are kept. The scoring
 script (`run_presidio_research_benchmark.py`) is the one that scopes rows down to
-the entity types Nometria's PII detectors actually claim to cover; that scoping
+the entity types AgentFox's PII detectors actually claim to cover; that scoping
 decision belongs with the scorer, not the fetcher, so the raw dataset stays
 untouched and re-usable for a wider comparison later if needed.
 """

@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic";
  *
  * Everything those components say was checked against the repository, with the
  * sources listed in that file's own header comment: Apache-2.0 in LICENSE, no
- * billing or licence-key code under src/nometria/, and managed cloud described as in
+ * billing or licence-key code under src/agentfox/, and managed cloud described as in
  * development everywhere it appears because it does not exist.
  *
  * No price appears here for the same reason it appears nowhere else: there isn't

@@ -1,12 +1,12 @@
-# This demo is a consumer of the nometria package, not part of it — install both
+# This demo is a consumer of the agentfox package, not part of it — install both
 # into whatever environment (venv/uv/conda) you'll run the demo from:
 #
-#   pip install -e /path/to/guardrails   # nometria itself, editable
+#   pip install -e /path/to/guardrails   # agentfox itself, editable
 #   pip install -r requirements.txt      # this file
 #
 # Do NOT `uv sync --all-extras` or `pip install langchain` into the main repo's
 # tracked `.venv` — langchain-anthropic and langchain-openai pull in `anthropic` and
-# `openai` as real transitive dependencies, and several nometria tests
+# `openai` as real transitive dependencies, and several agentfox tests
 # (tests/test_autoguard.py, specifically
 # test_missing_litellm_and_langchain_are_reported_not_hidden) assert `langchain_core`
 # (and `litellm`) are *absent* in the tracked venv, to prove auto() reports a missing

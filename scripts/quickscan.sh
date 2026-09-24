@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Nometria Quickscan — one command, no account, nothing leaves this machine.
+# AgentFox Quickscan — one command, no account, nothing leaves this machine.
 #
 #   curl -fsSL https://raw.githubusercontent.com/architsharm/guardrails/main/scripts/quickscan.sh | bash
 #
-# Installs Nometria into a throwaway virtualenv (removed on exit either way) and runs
+# Installs AgentFox into a throwaway virtualenv (removed on exit either way) and runs
 # `agentfox quickscan` against the current directory. It's the same package
-# `pip install nometria` would give you — this script exists only to skip "clone,
+# `pip install agentfox` would give you — this script exists only to skip "clone,
 # create a venv, activate it, pip install" for a first look. No step here talks to
 # anything but PyPI/GitHub (to fetch the package itself) and your local filesystem.
 
@@ -26,16 +26,16 @@ if [ -z "$PYTHON_BIN" ]; then
   done
 fi
 if [ -z "$PYTHON_BIN" ]; then
-  info "Nometria Quickscan needs Python 3.10+ and none was found on PATH."
+  info "AgentFox Quickscan needs Python 3.10+ and none was found on PATH."
   info "Install Python, then re-run this script."
   exit 1
 fi
 
-WORKDIR="$(mktemp -d -t nometria-quickscan-XXXXXX)"
+WORKDIR="$(mktemp -d -t agentfox-quickscan-XXXXXX)"
 cleanup() { rm -rf "$WORKDIR"; }
 trap cleanup EXIT
 
-info "Nometria Quickscan — setting up in a throwaway environment (nothing leaves this machine)..."
+info "AgentFox Quickscan — setting up in a throwaway environment (nothing leaves this machine)..."
 
 "$PYTHON_BIN" -m venv "$WORKDIR/venv"
 # shellcheck disable=SC1091

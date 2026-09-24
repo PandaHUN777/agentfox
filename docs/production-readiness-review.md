@@ -41,26 +41,26 @@ COPY policies ./policies
 
 Verified directly: `ls -d compliance policies` at the repo root returns "No such file or
 directory" for both. The actual data these lines presumably meant to copy already ships via
-the preceding `COPY src ./src` — it lives at `src/nometria/compliance_data/` and
-`src/nometria/policies_data/`. As written, `docker build -f deploy/Dockerfile .` targets a
+the preceding `COPY src ./src` — it lives at `src/agentfox/compliance_data/` and
+`src/agentfox/policies_data/`. As written, `docker build -f deploy/Dockerfile .` targets a
 source path that isn't in the tree. This is the **primary supported deployment path** (HLD
 §9) — if this build is not actually being run as part of any CI or release process right
 now, that itself is worth knowing, because it means the "self-host, docker compose up" story
 in the README has not been exercised end-to-end recently. **Action: fix the two `COPY` lines
-(most likely they should read `src/nometria/compliance_data` /
-`src/nometria/policies_data`, or be deleted if `COPY src ./src` already covers them — check
+(most likely they should read `src/agentfox/compliance_data` /
+`src/agentfox/policies_data`, or be deleted if `COPY src ./src` already covers them — check
 whether anything downstream in the image expects a top-level `/app/compliance` path before
 choosing), then add a CI job that actually builds this image so this class of drift can't
 recur silently.** Effort: S.
 
 ### 1.2 ✅ (was 🔴) The Vercel-vendored wheel is currently stale, not just historically incident-prone
 
-> **Resolved in `6863b8b`** — a pre-commit hook rebuilds both vendored wheels when `src/nometria/` changes, and CI's `vendored-wheel-freshness` job fails pushes that skip it.
+> **Resolved in `6863b8b`** — a pre-commit hook rebuilds both vendored wheels when `src/agentfox/` changes, and CI's `vendored-wheel-freshness` job fails pushes that skip it.
 
 Gap-analysis.md and the LLD both note the wheel-drift *pattern* (three recent commits —
 `2cfe048`, `551c220`, `00a4d4f` — show a real production incident from exactly this).
 Checked freshly on 2026-09-04: `api/vendor/nometria-0.1.0-py3-none-any.whl` is dated
-2026-08-28. Files newer than the wheel under `src/nometria/` include `enforcement.py`,
+2026-08-28. Files newer than the wheel under `src/agentfox/` include `enforcement.py`,
 `autoguard.py`, `context_integrity.py`, `models.py`, `answerability.py`, `entitlement.py`,
 `data_access.py`, `discovery.py`, `register.py`, `system_log.py`, `db.py`, `config.py`,
 `finding.py`, `effects.py`, `availability.py`, `attribution.py`, `seed.py`, plus
@@ -184,7 +184,7 @@ it.
 | "Wire the stub-only modules" (top priority) | `agent_loop.py`, `jobs.py`, `availability.py`'s limiter, F6, F8 all stub-only | **Partially closed since the last audit**: `agent_loop.py` has a real caller and active in-flight work (§1.3); `context_integrity.py`/F8 has real callers (§1.5); `jobs.py` remains fully stub-only (§1.4); F6/`commitments.py` status unconfirmed either way by this pass (§1.6); `availability.py`'s admission controller (`get_admission_controller`) is wired into `gateway/app.py`'s middleware — real, not stub — but see §3 for a caveat on its per-process scope |
 | Start the SOC 2/ISO 27001/pentest clock | Unstarted, organisational | **Not verifiable from code** — this is a legal/process track, not something a repository audit can confirm one way or the other. See §4. |
 | Close F7.7 and F8.3 | Named as the only genuinely-absent failure modes remaining (besides F3.8, closed 2026-08-30) | Not independently re-verified this pass — would require re-running the failure-mode coverage computation (`scripts/coverage.py`), which is out of scope for a documentation-focused review. **Recommend running it fresh rather than trusting either document's snapshot.** |
-| Decide Salesforce/ServiceNow/M365 estate connectors | Open, "a real, if large, build" | Unchanged — no evidence of new work in this area found during the HLD/LLD pass (nothing under `src/nometria/integrations/` references these platforms) |
+| Decide Salesforce/ServiceNow/M365 estate connectors | Open, "a real, if large, build" | Unchanged — no evidence of new work in this area found during the HLD/LLD pass (nothing under `src/agentfox/integrations/` references these platforms) |
 
 ---
 
@@ -226,7 +226,7 @@ don't assert them either way):
   which would itself be useful signal about whether the primary deployment path is being
   tested at all.
 - **Runtime behavior of the currently-stale Vercel deployment** (finding 1.2) — whether the
-  drift between the vendored wheel and current `src/nometria` has caused any *currently live*
+  drift between the vendored wheel and current `src/agentfox` has caused any *currently live*
   incorrect behavior wasn't tested; only the staleness itself was confirmed.
 
 ---

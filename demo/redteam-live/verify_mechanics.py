@@ -24,7 +24,7 @@ import json
 
 import _env  # noqa: F401
 
-from nometria.db import init_db, session_scope
+from agentfox.db import init_db, session_scope
 
 from support_tools import ORDERS, GovernedToolkit
 
@@ -71,7 +71,7 @@ def main() -> None:
         payload = _print(
             "issue_refund('ORD-7003', $50,000.00)", toolkit.issue_refund("ORD-7003", 50000.00)
         )
-        _check("oversized refund was BLOCKED", payload.get("status") == "BLOCKED_BY_NOMETRIA")
+        _check("oversized refund was BLOCKED", payload.get("status") == "BLOCKED_BY_AGENTFOX")
         _check(
             "a capability-denial rule fired",
             any("capability" in rid and "denied" in rid for rid in (payload.get("rules_fired") or [])),
@@ -94,7 +94,7 @@ def main() -> None:
             )
             _check(
                 "composed-escalation refund was BLOCKED",
-                refund_payload.get("status") == "BLOCKED_BY_NOMETRIA",
+                refund_payload.get("status") == "BLOCKED_BY_AGENTFOX",
             )
             _check(
                 "composition.escalation fired",
@@ -125,7 +125,7 @@ def main() -> None:
             "composition.escalation" not in (payload.get("rules_fired") or []),
         )
         print(
-            "  [note] this call still shows BLOCKED_BY_NOMETRIA overall, via "
+            "  [note] this call still shows BLOCKED_BY_AGENTFOX overall, via "
             "taint.irreversible_tool -- a *coarser*, session-wide rule (any "
             "irreversible tool call once the conversation has touched a "
             "tool_result), not the argument-precise F3.8 check. See README.md."

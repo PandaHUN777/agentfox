@@ -1,4 +1,4 @@
-# Nometria — Product Requirements Document
+# AgentFox — Product Requirements Document
 ## Agent Assurance & Governance for Enterprise AI
 
 | | |
@@ -52,7 +52,7 @@
 
 **A governance and assurance layer for AI agents that runs inline, enforces policy, and proves what happened — installed as a library, not procured as a platform.**
 
-The unit of adoption is `pip install nometria` plus a LangGraph decorator. The control plane is what a
+The unit of adoption is `pip install agentfox` plus a LangGraph decorator. The control plane is what a
 team graduates to when they have twenty agents, not what they start with.
 
 ### 1.2 The thesis, and the evidence for it
@@ -383,7 +383,7 @@ missing.
 
 **Our real competitor is internal engineering.** The comparison that matters:
 
-| | Hand-built (the 6/11 path) | Nometria |
+| | Hand-built (the 6/11 path) | AgentFox |
 |---|---|---|
 | Time to first enforcement | 4–8 engineer-weeks | an afternoon |
 | Hierarchical policy | rarely; Derrick's took real effort | built in |
@@ -796,7 +796,7 @@ Frequency-ordered from the 11 CVs. **This is measured, not assumed.**
 
 ### 7.1 Three integration surfaces, all additive
 
-1. **SDK (primary)** — `pip install nometria`, LangGraph-native decorators and node hooks. **This is the adoption path.**
+1. **SDK (primary)** — `pip install agentfox`, LangGraph-native decorators and node hooks. **This is the adoption path.**
 2. **Gateway** — OpenAI/Anthropic-compatible inline proxy for teams that cannot change code, or non-Python stacks.
 3. **OTel ingestion** — passive observation; gives Pillars 1 and 5 with zero integration.
 
@@ -955,7 +955,7 @@ Built and tested end to end:
 - **Adoption surface — `X-1`, `X-2`, `X-3`.** The binding constraint was never capability;
   it was that every integration asked the developer to change how they call the model, and the
   sum of small asks is why governance tooling sits in a proof-of-concept for six months.
-  `nometria.auto()` patches the client libraries in place so an existing codebase is governed by
+  `agentfox.auto()` patches the client libraries in place so an existing codebase is governed by
   one line, in observe mode, with no other file touched. `agentfox check` answers the question
   a platform team has to answer first and nobody has written down — *where does this codebase
   actually talk to a model?* — statically, ranked, ending in one sentence saying what to do next.
@@ -1176,7 +1176,7 @@ signing, no replay protection, no agent-card attestation anywhere in the enforce
 
 **Shipped as `NOM-IAM-08`:** a genuine `agent_message` surface distinct from `tool_result`, so a
 sub-agent's output is evaluated as another agent's untrusted claim rather than a tool's return
-value; HMAC message signing + verification for Nometria-mediated agent-to-agent traffic (payload +
+value; HMAC message signing + verification for AgentFox-mediated agent-to-agent traffic (payload +
 declared sender + nonce + timestamp), with unsigned traffic on an external transport reported as a
 finding rather than silently passed; anti-replay via a short-term fingerprint cache; agent-card
 fields checked against the sender at message time, reusing `attest_registry()`'s existing
@@ -1189,7 +1189,7 @@ declared-vs-observed comparison.
 - **ASI10 behavioral attestation** — `attest_registry()` already did after-the-fact drift detection;
   periodic signed re-attestation is a parameter on existing machinery, not new architecture.
 - **ASI05 (unexpected code execution)** — declared explicitly as a non-goal in writing (§10.3):
-  Nometria governs the interface into a tool call, not the agent's own code-execution runtime.
+  AgentFox governs the interface into a tool call, not the agent's own code-execution runtime.
 
 ### 12.4 Dashboard UX — the complexity complaint, checked against evidence
 

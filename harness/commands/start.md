@@ -1,5 +1,5 @@
 ---
-description: Govern this codebase — scan, init, add nometria.auto() in observe mode, report
+description: Govern this codebase — scan, init, add agentfox.auto() in observe mode, report
 argument-hint: "[path]"
 ---
 Load the `onboard-codebase` skill and follow it for the codebase at `$ARGUMENTS` (the

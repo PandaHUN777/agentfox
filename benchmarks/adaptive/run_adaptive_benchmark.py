@@ -57,9 +57,9 @@ from pathlib import Path
 from typing import Any
 
 BENCHMARK_DIR = Path(__file__).parent
-DB_PATH = Path("/tmp/nometria_adaptive_benchmark.db")
+DB_PATH = Path("/tmp/agentfox_adaptive_benchmark.db")
 
-# Set before nometria is imported, so the benchmark never touches the repo database.
+# Set before agentfox is imported, so the benchmark never touches the repo database.
 os.environ.setdefault("NOMETRIA_DATABASE_URL", f"sqlite:///{DB_PATH}")
 
 sys.path.insert(0, str(BENCHMARK_DIR.parent / "agent_security"))
@@ -69,10 +69,10 @@ sys.path.insert(0, str(BENCHMARK_DIR.parent.parent / "tests"))
 from _util import wipe_db  # noqa: E402
 from operators import BACKFIRES, BY_KEY, COUNTERS, OPERATORS  # noqa: E402
 
-from nometria import db  # noqa: E402
-from nometria.config import get_settings  # noqa: E402
-from nometria.enforcement import Enforcer  # noqa: E402
-from nometria.seed import seed as seed_fixture  # noqa: E402
+from agentfox import db  # noqa: E402
+from agentfox.config import get_settings  # noqa: E402
+from agentfox.enforcement import Enforcer  # noqa: E402
+from agentfox.seed import seed as seed_fixture  # noqa: E402
 
 RESULTS_DIR = BENCHMARK_DIR / "results"
 

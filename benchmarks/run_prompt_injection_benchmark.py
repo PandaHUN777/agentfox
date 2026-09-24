@@ -2,11 +2,11 @@
 
     uv run python benchmarks/run_prompt_injection_benchmark.py
 
-Scores Nometria's real, shipping detectors against `deepset/prompt-injections`
+Scores AgentFox's real, shipping detectors against `deepset/prompt-injections`
 (Hugging Face, apache-2.0, 662 labeled examples, license/source in
 `data/README.md`). The dataset was fetched once (see `fetch_dataset.py`) and is
 committed under `data/`, so anyone can re-run this file and get the same numbers —
-the classifier/similarity configs need `pip install nometria[classifiers]` and
+the classifier/similarity configs need `pip install agentfox[classifiers]` and
 one-time model downloads (~350MB deberta, ~90MB MiniLM, both apache-2.0);
 everything else is fully offline.
 
@@ -44,7 +44,7 @@ import json
 import time
 from pathlib import Path
 
-from nometria.guardrails import DetectionContext, DetectorPipeline, get_detector, warm_all
+from agentfox.guardrails import DetectionContext, DetectorPipeline, get_detector, warm_all
 
 DATA_DIR = Path(__file__).parent / "data"
 RESULTS_DIR = Path(__file__).parent / "results"
@@ -172,7 +172,7 @@ def main() -> None:
     else:
         print(
             "injection.classifier / injection.similarity unavailable (pip install "
-            "nometria[classifiers] and download the models) — only scoring the "
+            "agentfox[classifiers] and download the models) — only scoring the "
             "heuristic-only config.\n"
         )
 

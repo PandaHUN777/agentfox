@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Pre-commit hook: keep the vendored wheels honest.
 
-`api/` and `demo/redteam-live-lang/` both deploy `nometria` from a prebuilt wheel
+`api/` and `demo/redteam-live-lang/` both deploy `agentfox` from a prebuilt wheel
 checked into their own `vendor/` directory, not an editable install — see hld.md's
 deployment-shape section for why. That makes the wheel a second copy of the package
-that a commit can update `src/nometria/` without touching, and nothing before this
+that a commit can update `src/agentfox/` without touching, and nothing before this
 hook noticed when that happened. It already happened twice on 2026-09-04: the demo
 crashed in production on a schema change its wheel never picked up, and
 `guardrails-api` served week-old code for long enough that a completely new route
 returned 404 in production.
 
-So: any commit whose staged changes touch `src/nometria/` rebuilds both vendored
+So: any commit whose staged changes touch `src/agentfox/` rebuilds both vendored
 wheels and stages the result, the same way a formatter rewrites and re-stages a
 file. If the build itself fails, the commit is blocked — better here than after
 `git push` triggers a deploy.
@@ -38,10 +38,10 @@ def staged_files() -> list[str]:
 
 
 def main() -> int:
-    if not any(f.startswith("src/nometria/") for f in staged_files()):
+    if not any(f.startswith("src/agentfox/") for f in staged_files()):
         return 0
 
-    print("src/nometria/ changed — rebuilding vendored wheels so they can't drift...")
+    print("src/agentfox/ changed — rebuilding vendored wheels so they can't drift...")
     for vendor_dir in VENDOR_DIRS:
         out_dir = REPO_ROOT / vendor_dir
         if not out_dir.is_dir():

@@ -73,7 +73,7 @@ class FakeDeployment:
         self.cors_status = 200
         self.cors_allow_origin = DASH
         self.dashboard_status = {"/login": 200, "/playground": 200, "/benchmark": 200}
-        self.root = FakeResponse(200, {"name": "nometria", "version": "0.3.0", "docs": "/docs"})
+        self.root = FakeResponse(200, {"name": "agentfox", "version": "0.3.0", "docs": "/docs"})
         #: How many reads a sandbox survives before it starts answering 404, which is
         #: what a visitor hit when sandboxes lived in one process of a many-process API.
         self.sandbox_reads_before_gone = None

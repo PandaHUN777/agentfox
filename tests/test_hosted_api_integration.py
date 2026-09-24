@@ -5,7 +5,7 @@ repo-scan path: nothing created here is live until a human approves it.
 
 from __future__ import annotations
 
-from nometria.discovery_openapi import scan_spec
+from agentfox.discovery_openapi import scan_spec
 
 from .conftest import as_user
 
@@ -56,7 +56,7 @@ def test_scan_spec_with_no_paths_reports_the_gap_rather_than_crashing():
 
 
 def test_scanning_a_hosted_api_proposes_a_draft_agent_and_policy(client, monkeypatch):
-    import nometria.gateway.routes.integrations as integrations
+    import agentfox.gateway.routes.integrations as integrations
 
     monkeypatch.setattr(integrations, "fetch_spec", lambda url: PETSTORE_SPEC)
 
@@ -96,8 +96,8 @@ def test_scanning_with_no_spec_still_registers_the_endpoint_for_review(client, m
 
 
 def test_a_bad_spec_url_fails_the_scan_without_creating_a_draft_agent(client, monkeypatch):
-    import nometria.gateway.routes.integrations as integrations
-    from nometria.discovery_openapi import SpecFetchError
+    import agentfox.gateway.routes.integrations as integrations
+    from agentfox.discovery_openapi import SpecFetchError
 
     def _boom(url):
         raise SpecFetchError("could not fetch the OpenAPI spec: connection refused")
@@ -118,7 +118,7 @@ def test_a_bad_spec_url_fails_the_scan_without_creating_a_draft_agent(client, mo
 
 
 def test_approving_a_hosted_api_draft_makes_it_active(client, monkeypatch):
-    import nometria.gateway.routes.integrations as integrations
+    import agentfox.gateway.routes.integrations as integrations
 
     monkeypatch.setattr(integrations, "fetch_spec", lambda url: PETSTORE_SPEC)
     scan = client.post(

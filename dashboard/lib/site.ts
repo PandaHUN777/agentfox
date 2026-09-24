@@ -14,7 +14,7 @@
  * request time is both sufficient and repointable.
  */
 
-/** Production host. The custom domain, replacing guardrails-nometria.vercel.app. */
+/** Production host. The custom domain, replacing guardrails-agentfox.vercel.app. */
 const FALLBACK_SITE_URL = "https://useagentfox.com";
 
 /** No trailing slash, so `new URL(path, SITE_URL)` and template literals agree. */
@@ -49,7 +49,7 @@ export const SITE_DESCRIPTION =
 export const REPO_URL = "https://github.com/architsharm/guardrails";
 
 /** Verified in components/marketing/editions.tsx and components/Playground.tsx. */
-export const SUPPORT_EMAIL = "support@nometria.com";
+export const SUPPORT_EMAIL = "support@agentfox.com";
 
 /** Absolute URL for a path, for canonicals and structured data. */
 export function absolute(path: string): string {

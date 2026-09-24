@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.models import Decision, Policy, PolicyBinding, PolicyVersion
-from nometria.policy import (
+from agentfox.models import Decision, Policy, PolicyBinding, PolicyVersion
+from agentfox.policy import (
     CanaryError,
     PolicyDocument,
     active_canary,

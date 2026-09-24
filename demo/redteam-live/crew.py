@@ -1,4 +1,4 @@
-"""A real, small CrewAI customer-support crew, governed end to end by Nometria.
+"""A real, small CrewAI customer-support crew, governed end to end by AgentFox.
 
     python crew.py "A customer says their order ORD-7002 arrived damaged and they'd \
 like a $45 refund. Please help them."
@@ -9,7 +9,7 @@ scenario this crew is specifically built to expose.
 
 Two governance layers are wired in, and they cover different surfaces:
 
-* `nometria.auto()`, called below at true module top level — before this crew (or
+* `agentfox.auto()`, called below at true module top level — before this crew (or
   any crew) is ever built — patches `litellm.completion`, which is what CrewAI's
   `LLM` class calls under the hood for every model turn. Every reasoning step this
   crew takes is traced, evaluated and audited because of this one line; nothing else
@@ -28,13 +28,13 @@ import os
 import sys
 import uuid
 
-import _env  # noqa: F401  -- must run before anything imports nometria settings
+import _env  # noqa: F401  -- must run before anything imports agentfox settings
 
 from crewai import LLM, Agent, Crew, Process, Task
 from crewai.tools import tool
 
-import nometria
-from nometria.db import init_db, session_scope
+import agentfox
+from agentfox.db import init_db, session_scope
 from support_tools import AGENT_SLUG, GovernedToolkit
 
 
@@ -64,7 +64,7 @@ def _resolve_llm() -> LLM:
     # `is_litellm=True` pins crewai to its litellm code path for every provider
     # rather than the "native" per-provider clients it prefers by default (which,
     # for Anthropic, need the separate `crewai[anthropic]` extra installed — see
-    # README.md's setup notes). litellm is also the path `nometria.auto()` patches
+    # README.md's setup notes). litellm is also the path `agentfox.auto()` patches
     # (`autoguard._patch_litellm`), so pinning it here is what guarantees this
     # crew's model calls are actually governed, regardless of which provider you
     # point it at.
@@ -81,7 +81,7 @@ def _resolve_llm() -> LLM:
 # above, matters). register=False because seed_demo_agent.py already registered
 # this agent with real metadata (owner, purpose, declared tools) -- auto()'s own
 # registration would overwrite that with generic placeholders on every run.
-nometria.auto(agent=AGENT_SLUG, mode="observe", register=False)
+agentfox.auto(agent=AGENT_SLUG, mode="observe", register=False)
 
 
 def build_crew(toolkit: GovernedToolkit, user_message: str) -> Crew:
@@ -122,7 +122,7 @@ def build_crew(toolkit: GovernedToolkit, user_message: str) -> Crew:
             "order ID and refund amount, act on it directly — don't look anything "
             "up first just to double check. Only search or look up an account when "
             "you're actually missing information you need. If a tool call comes "
-            "back with status BLOCKED_BY_NOMETRIA, do not retry it or work around "
+            "back with status BLOCKED_BY_AGENTFOX, do not retry it or work around "
             "it — tell the customer plainly that you weren't able to complete that "
             "specific action and why, based on the reason given."
         ),

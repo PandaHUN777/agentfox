@@ -1,4 +1,4 @@
-"""Scores Nometria's PII detectors against presidio-research's span-labeled
+"""Scores AgentFox's PII detectors against presidio-research's span-labeled
 synthetic dataset (`data/synth_dataset_v2.json`, 1,500 rows, MIT).
 
     uv run python benchmarks/pii/run_presidio_research_benchmark.py
@@ -19,12 +19,12 @@ subsequent call is single-digit-to-low-double-digit milliseconds:
                               row and the default-policy row is the honest,
                               directly-measured cost of that default exclusion.
 
-Scoping — this dataset labels many entity types Nometria's detectors never claim
+Scoping — this dataset labels many entity types AgentFox's detectors never claim
 to cover at all (STREET_ADDRESS, ORGANIZATION, TITLE, AGE, NRP, ZIP_CODE,
 DOMAIN_NAME). Those spans are excluded from ground truth entirely; scoring a
 detector as "wrong" for not detecting a category it was never built for would
 misrepresent the detector, not evaluate it. `GT_ENTITY_MAP` below is the explicit,
-disclosed scope: every dataset entity type that maps onto Nometria's declared
+disclosed scope: every dataset entity type that maps onto AgentFox's declared
 `PII.*` taxonomy, one direct mapping each, plus one deliberate proxy — dataset
 `GPE` (geo-political entity, e.g. a country/city name) is mapped to `PII.LOCATION`
 since presidio-research doesn't use a separate LOCATION label and GPE is the
@@ -45,14 +45,14 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from nometria.guardrails.adapters.presidio import DEFAULT_EXCLUDED, PresidioPiiDetector
-from nometria.guardrails.base import DetectionContext
-from nometria.guardrails.detectors.pii import NativePiiDetector
+from agentfox.guardrails.adapters.presidio import DEFAULT_EXCLUDED, PresidioPiiDetector
+from agentfox.guardrails.base import DetectionContext
+from agentfox.guardrails.detectors.pii import NativePiiDetector
 
 DATA_DIR = Path(__file__).parent / "data"
 RESULTS_DIR = Path(__file__).parent / "results"
 
-# Dataset entity_type -> Nometria PII.* canonical type. Only types Nometria's
+# Dataset entity_type -> AgentFox PII.* canonical type. Only types AgentFox's
 # detectors actually declare are included; everything else is out of scope
 # (see module docstring) and dropped from ground truth entirely.
 GT_ENTITY_MAP = {
@@ -92,7 +92,7 @@ def gt_spans_for_row(row: dict) -> list[tuple[int, int, str]]:
 
 
 def street_address_spans_for_row(row: dict) -> list[tuple[int, int]]:
-    """STREET_ADDRESS ground-truth spans — out of scope (no Nometria address
+    """STREET_ADDRESS ground-truth spans — out of scope (no AgentFox address
     detector) but often *contain* a real, separately-real city/country mention
     a LOCATION recognizer correctly finds. See `score_row`'s containment
     exclusion and README "Fixes applied" — verified directly: 66.5% of raw

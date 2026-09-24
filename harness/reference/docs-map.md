@@ -48,7 +48,7 @@ Quote coverage numbers only from these, and only after regenerating.
 | File | Known drift | Use instead |
 |---|---|---|
 | `docs/appendix-c-api-spec.md` | missing and phantom routes | `harness/reference/http-api.md`, live `/docs` |
-| `docs/appendix-d-data-model.md` | wrong model path | `src/nometria/models.py` |
+| `docs/appendix-d-data-model.md` | wrong model path | `src/agentfox/models.py` |
 | `docs/production-readiness-review.md` | 🔴 1.1, 1.2 and §1.4 fixed since | `docs/gap-analysis.md` + `git log` |
 
 ## Class D — task-scoped: read only when working on that thing
@@ -83,11 +83,11 @@ Everything under `harness/` is agent-facing by design and follows `harness/STRUC
 | Question | First stop | Then |
 |---|---|---|
 | How do I run X? | `harness/reference/cli.md` | `agentfox X --help` |
-| Which env var controls Y? | `harness/reference/config.md` | `src/nometria/config.py` |
-| What does this API route take? | `harness/reference/http-api.md` | `src/nometria/gateway/routes/` |
+| Which env var controls Y? | `harness/reference/config.md` | `src/agentfox/config.py` |
+| What does this API route take? | `harness/reference/http-api.md` | `src/agentfox/gateway/routes/` |
 | Why was this built / is it in scope? | `docs/PRD.md` | `docs/gap-analysis.md` |
 | Where is requirement P9-11 implemented? | `docs/traceability.md` | `docs/lld.md` |
 | Is failure mode F3.8 covered? | `docs/status.md` (regenerate first) | `docs/failure-modes.md` |
-| Which framework clause does control NOM-RTG-04 map to? | `src/nometria/compliance_data/controls.yaml` | Appendix B |
-| What does the loop want to change, and who may decide it? | `harness/skills/operate-improvement-loop/SKILL.md` | `src/nometria/improvement/contract.py` |
+| Which framework clause does control NOM-RTG-04 map to? | `src/agentfox/compliance_data/controls.yaml` | Appendix B |
+| What does the loop want to change, and who may decide it? | `harness/skills/operate-improvement-loop/SKILL.md` | `src/agentfox/improvement/contract.py` |
 | Why did the tool do something surprising? | `harness/reference/known-issues.md` | source |

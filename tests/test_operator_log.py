@@ -14,9 +14,9 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.business.ladder import Ladder
-from nometria.business.store import save_ladder, set_mode
-from nometria.operator_log import (
+from agentfox.business.ladder import Ladder
+from agentfox.business.store import save_ladder, set_mode
+from agentfox.operator_log import (
     PRIVILEGED,
     ReasonRequired,
     operator_history,
@@ -135,8 +135,8 @@ def test_issuing_a_credential_never_records_the_credential(seeded):
     """
     from sqlalchemy import select
 
-    from nometria.gateway.auth import issue_token
-    from nometria.models import User
+    from agentfox.gateway.auth import issue_token
+    from agentfox.models import User
 
     user = seeded.scalars(select(User)).first()
     if user is None:
@@ -161,7 +161,7 @@ def test_history_reads_newest_first_and_carries_the_reason(seeded):
 
 def test_agent_decisions_are_not_returned_as_operator_actions(seeded):
     """The false-positive floor: the shared chain has to stay filterable."""
-    from nometria.audit import chain
+    from agentfox.audit import chain
 
     chain.append(seeded, "decision.recorded", actor_type="agent", actor_id="agent-1")
     record(seeded, "operator.business_rule.changed", actor="ops", reason="a change")

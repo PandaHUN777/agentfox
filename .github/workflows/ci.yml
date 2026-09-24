@@ -57,7 +57,7 @@ jobs:
           push: false
 
   # Belt-and-suspenders for the local pre-commit hook (.pre-commit-config.yaml):
-  # catches the case where src/nometria/ changed and the vendored wheel(s) didn't,
+  # catches the case where src/agentfox/ changed and the vendored wheel(s) didn't,
   # e.g. a commit made with --no-verify. This is what let guardrails-api and the
   # redteam demo silently run stale code in production before this existed.
   vendored-wheel-freshness:
@@ -66,7 +66,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Fail if src/nometria changed without rebuilding the vendored wheels
+      - name: Fail if src/agentfox changed without rebuilding the vendored wheels
         run: |
           BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
           if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
@@ -74,9 +74,9 @@ jobs:
             exit 0
           fi
           CHANGED="$(git diff --name-only "$BASE" "${{ github.sha }}")"
-          if echo "$CHANGED" | grep -q '^src/nometria/' \
+          if echo "$CHANGED" | grep -q '^src/agentfox/' \
              && ! echo "$CHANGED" | grep -qE '^(api|demo/redteam-live-lang)/vendor/.*\.whl$'; then
-            echo "src/nometria/ changed but the vendored wheel(s) weren't rebuilt alongside it."
+            echo "src/agentfox/ changed but the vendored wheel(s) weren't rebuilt alongside it."
             echo "Run: uv build --wheel --out-dir api/vendor && uv build --wheel --out-dir demo/redteam-live-lang/vendor"
             echo "(the local pre-commit hook does this automatically — see .pre-commit-config.yaml)"
             exit 1

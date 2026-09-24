@@ -16,7 +16,7 @@ call MCP/SDK/gateway integrations make before a tool executes — not the text-o
 `evaluation.redteam` probe runner, which never reaches capability/taint logic at
 all (confirmed by reading it: it only calls `Enforcer.check_content`).
 
-Scenarios use the actual shipped seed data (`nometria.seed.seed`) — real agents
+Scenarios use the actual shipped seed data (`agentfox.seed.seed`) — real agents
 (`support-triage`, `payments-ops`), real capability grants, real shipped policies
 (`policies_data/tool-containment.yaml`, `mode: enforce`) — not synthetic fixtures
 invented for this benchmark. `support-triage` is granted `kb.search`, `crm.lookup`,
@@ -29,11 +29,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from nometria import db
-from nometria.config import get_settings, reset_settings_cache
-from nometria.enforcement import Enforcer
-from nometria.registry.control import quarantine
-from nometria.seed import seed
+from agentfox import db
+from agentfox.config import get_settings, reset_settings_cache
+from agentfox.enforcement import Enforcer
+from agentfox.registry.control import quarantine
+from agentfox.seed import seed
 
 from _util import wipe_db
 

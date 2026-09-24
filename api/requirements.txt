@@ -1,7 +1,7 @@
 # Vercel Python function entrypoint (api/index.py) installs from this file.
 # Placed inside api/ deliberately: a requirements.txt at the repo root is ignored
 # in favour of the root pyproject.toml, whose core [project.dependencies] excludes
-# the postgres and sql extras by design (pip install nometria stays offline-light).
+# the postgres and sql extras by design (pip install agentfox stays offline-light).
 # This file is scoped to what the deployed function actually needs.
 # Core runtime deps mirror pyproject.toml's [project.dependencies]; the ML/PII/redteam
 # extras are intentionally excluded — the enabled-by-default detectors are all
@@ -26,18 +26,18 @@ psycopg-binary>=3.2
 sqlglot>=25.0
 # Encrypts a connected GitHub account's access token at rest (routes/integrations.py).
 cryptography>=43
-# The local `nometria` package, as a prebuilt wheel checked into vendor/ (physically
+# The local `agentfox` package, as a prebuilt wheel checked into vendor/ (physically
 # at api/vendor/). Two things ruled out simpler options: Root Directory is "api", so a
 # sys.path trick pointing at ../src ships nothing (../src is outside the deployed
 # tree); and a bare ".." path dependency ships nothing either — Vercel's build runs
 # `uv sync` against a synthetic wrapper project, which derives an expected package name
 # from the resolved directory (e.g. "path0") and fails when that doesn't match the real
-# name ("nometria") in pyproject.toml. A wheel's metadata is self-describing, so that
+# name ("agentfox") in pyproject.toml. A wheel's metadata is self-describing, so that
 # ambiguity doesn't arise. The leading "../" below is not a typo: Vercel's local-path
 # resolver for this synthetic project resolves relative to the repo root while also
 # treating requirements.txt's own location as one "api/" deeper than it actually is,
 # so every relative path needs one extra ".." to land correctly (confirmed against the
 # actual build error: a bare "vendor/..." resolved to ".../api/api/vendor/...").
-# Rebuild after changing src/nometria: `uv build --wheel --out-dir api/vendor` from the
+# Rebuild after changing src/agentfox: `uv build --wheel --out-dir api/vendor` from the
 # repo root, then delete the old wheel file.
-../vendor/nometria-0.3.0-py3-none-any.whl
+../vendor/agentfox-0.3.0-py3-none-any.whl

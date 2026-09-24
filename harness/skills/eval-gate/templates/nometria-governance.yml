@@ -1,6 +1,6 @@
-# Nometria governance gate — copy to .github/workflows/nometria-governance.yml
+# AgentFox governance gate — copy to .github/workflows/agentfox-governance.yml
 # Every step is offline by default (echo provider, SQLite, no egress).
-name: nometria-governance
+name: agentfox-governance
 on:
   pull_request:
   push:
@@ -10,14 +10,14 @@ jobs:
   governance:
     runs-on: ubuntu-latest
     env:
-      NOMETRIA_DATABASE_URL: sqlite:///${{ github.workspace }}/.nometria-ci.db
+      NOMETRIA_DATABASE_URL: sqlite:///${{ github.workspace }}/.agentfox-ci.db
       NOMETRIA_ENVIRONMENT: test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Install nometria
+      - name: Install agentfox
         run: pip install "git+https://github.com/architsharm/guardrails.git"
       - name: Initialise (offline, idempotent)
         run: agentfox init --env test
@@ -36,5 +36,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: nometria-eval
+          name: agentfox-eval
           path: reports/

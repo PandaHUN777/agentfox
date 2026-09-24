@@ -4,20 +4,20 @@ from __future__ import annotations
 
 import pytest
 
-from nometria.evaluation import evaluate_slos, gate, psi, run_campaign, set_baseline, set_slo
-from nometria.evaluation.drift import ks_statistic
-from nometria.evaluation.gating import to_junit, to_sarif
-from nometria.evaluation.model_groundedness import model_groundedness
-from nometria.evaluation.runner import NativeEvalRunner
-from nometria.evaluation.scorers import ScoreContext, get_scorer
-from nometria.evaluation.silent_failure import (
+from agentfox.evaluation import evaluate_slos, gate, psi, run_campaign, set_baseline, set_slo
+from agentfox.evaluation.drift import ks_statistic
+from agentfox.evaluation.gating import to_junit, to_sarif
+from agentfox.evaluation.model_groundedness import model_groundedness
+from agentfox.evaluation.runner import NativeEvalRunner
+from agentfox.evaluation.scorers import ScoreContext, get_scorer
+from agentfox.evaluation.silent_failure import (
     Envelope,
     SilentFailureScorer,
     groundedness,
     self_consistency,
 )
-from nometria.models import EvalSuite
-from nometria.providers import register_provider
+from agentfox.models import EvalSuite
+from agentfox.providers import register_provider
 
 from .conftest import as_user
 
@@ -275,7 +275,7 @@ def test_gate_passes_against_itself(seeded):
 def test_gate_respects_scorer_direction(seeded):
     """`silent_failure` is lower-is-better; treating a rise as an improvement would
     gate on exactly the wrong thing."""
-    from nometria.models import EvalResult
+    from agentfox.models import EvalResult
 
     suite = seeded.query(EvalSuite).filter_by(key="support-quality").one()
     baseline = NativeEvalRunner().run(
@@ -316,7 +316,7 @@ def test_gate_reports_are_wellformed(seeded):
 
     sarif = json.loads(to_sarif(result))
     assert sarif["version"] == "2.1.0"
-    assert sarif["runs"][0]["tool"]["driver"]["name"] == "Nometria"
+    assert sarif["runs"][0]["tool"]["driver"]["name"] == "AgentFox"
     assert result.exit_code == 1
 
 
@@ -418,7 +418,7 @@ def test_campaign_produces_posture(seeded):
 
 
 def test_campaign_blocks_injection_probes_when_enforcing(seeded):
-    from nometria.policy import set_mode
+    from agentfox.policy import set_mode
 
     set_mode(seeded, "baseline", "enforce")
     campaign = run_campaign(
@@ -443,7 +443,7 @@ def test_campaigns_are_static_unless_adaptive_is_asked_for(seeded):
 
 
 def test_campaign_breach_raises_a_finding(seeded):
-    from nometria.models import Finding
+    from agentfox.models import Finding
 
     run_campaign(seeded, "support-triage")
     findings = seeded.query(Finding).filter_by(type="redteam").all()
@@ -464,7 +464,7 @@ def test_campaign_breach_raises_a_finding(seeded):
 
 
 def test_a_tool_call_probe_with_no_grant_is_blocked(seeded):
-    from nometria.policy import set_mode
+    from agentfox.policy import set_mode
 
     set_mode(seeded, "tool-containment", "enforce")
     campaign = run_campaign(seeded, "support-triage", probes=["capability.ungranted_tool"])
@@ -472,7 +472,7 @@ def test_a_tool_call_probe_with_no_grant_is_blocked(seeded):
 
 
 def test_a_tool_call_probe_violating_a_grant_constraint_is_blocked(seeded):
-    from nometria.policy import set_mode
+    from agentfox.policy import set_mode
 
     set_mode(seeded, "tool-containment", "enforce")
     campaign = run_campaign(seeded, "support-triage", probes=["capability.constraint_violation"])
@@ -483,7 +483,7 @@ def test_action_assurance_probes_are_reachable_via_guard_tool_call(seeded):
     """These fire `analyse_arguments` (destructive SQL, the scope/SQLi backstop) —
     unreachable via `check_content()` before this round, since it never passes
     `arguments`/`tool_key` at all."""
-    from nometria.policy import set_mode
+    from agentfox.policy import set_mode
 
     set_mode(seeded, "tool-containment", "enforce")
     campaign = run_campaign(
@@ -502,7 +502,7 @@ def test_the_composed_escalation_scenario_probe_is_blocked(seeded):
     """F3.8 through the red-team runner specifically — a read tool's synthetic
     result feeding a write tool's argument across two real `guard_tool_call`s
     sharing one `TaintTracker`."""
-    from nometria.policy import set_mode
+    from agentfox.policy import set_mode
 
     set_mode(seeded, "tool-containment", "enforce")
     campaign = run_campaign(seeded, "support-triage", probes=["escalation.composed_privilege"])
@@ -513,7 +513,7 @@ def test_the_composed_escalation_negative_control_is_not_over_blocked(seeded):
     """The same two tools, but the second call's argument never appeared in the
     first call's result — must not be flagged, proving the block above is about
     provenance and not just "any two-step tool sequence on these tools"."""
-    from nometria.policy import set_mode
+    from agentfox.policy import set_mode
 
     set_mode(seeded, "tool-containment", "enforce")
     campaign = run_campaign(
@@ -523,7 +523,7 @@ def test_the_composed_escalation_negative_control_is_not_over_blocked(seeded):
 
 
 def test_a_legitimate_call_within_the_same_constraint_is_not_over_blocked(seeded):
-    from nometria.policy import set_mode
+    from agentfox.policy import set_mode
 
     set_mode(seeded, "tool-containment", "enforce")
     campaign = run_campaign(

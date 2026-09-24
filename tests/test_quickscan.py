@@ -12,7 +12,7 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from nometria.cli.main import app
+from agentfox.cli.main import app
 
 runner = CliRunner()
 
@@ -28,7 +28,7 @@ def test_quickscan_runs_with_no_database_and_no_network(tmp_path: Path):
     result = runner.invoke(app, ["quickscan", str(tmp_path), "--skip-sessions"])
     assert result.exit_code == 0, result.output
     text = flat(result.output)
-    assert "Nometria Quickscan" in text
+    assert "AgentFox Quickscan" in text
     assert "No account" in text
 
 
@@ -72,7 +72,7 @@ def test_no_submit_never_touches_the_network(tmp_path: Path, monkeypatch):
     def _boom(*a, **k):
         raise AssertionError("httpx.post must not be called when --no-submit is passed")
 
-    monkeypatch.setattr("nometria.cli.submit.httpx.post", _boom)
+    monkeypatch.setattr("agentfox.cli.submit.httpx.post", _boom)
     result = runner.invoke(app, ["quickscan", str(tmp_path), "--skip-sessions", "--no-submit"])
     assert result.exit_code == 0, result.output
 
@@ -85,7 +85,7 @@ def test_default_run_does_not_prompt_or_submit_when_not_a_tty(tmp_path: Path, mo
     def _boom(*a, **k):
         raise AssertionError("nothing should be submitted with no flag on a non-tty run")
 
-    monkeypatch.setattr("nometria.cli.submit.httpx.post", _boom)
+    monkeypatch.setattr("agentfox.cli.submit.httpx.post", _boom)
     result = runner.invoke(app, ["quickscan", str(tmp_path), "--skip-sessions"])
     assert result.exit_code == 0, result.output
     assert "Submit to the dashboard?" not in result.output
@@ -126,7 +126,7 @@ def test_submit_posts_only_the_redacted_payload(tmp_path: Path, monkeypatch):
         captured["headers"] = headers
         return _FakeResponse()
 
-    monkeypatch.setattr("nometria.cli.submit.httpx.post", _fake_post)
+    monkeypatch.setattr("agentfox.cli.submit.httpx.post", _fake_post)
 
     result = runner.invoke(
         app, ["quickscan", str(tmp_path), "--skip-sessions", "--submit"]

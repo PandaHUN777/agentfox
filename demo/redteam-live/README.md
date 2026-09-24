@@ -1,11 +1,11 @@
-# Red-team-live demo: a real CrewAI support crew, governed by Nometria
+# Red-team-live demo: a real CrewAI support crew, governed by AgentFox
 
 A small but genuine CrewAI customer-support crew — real in-memory customer/order
-data, real refund and email side effects, wrapped in `nometria.auto()` — that
-Nometria's red-team runner can be pointed at **live** to watch it actually block
+data, real refund and email side effects, wrapped in `agentfox.auto()` — that
+AgentFox's red-team runner can be pointed at **live** to watch it actually block
 real attacks against real tool calls. Nothing here is a mock: `issue_refund`
 really flips an order's status, `send_email` really queues a message, and every
-call goes through the same governed path (`nometria.integrations.mcp.McpGovernor`)
+call goes through the same governed path (`agentfox.integrations.mcp.McpGovernor`)
 the automated test suite (`tests/test_composition.py`) exercises.
 
 Everything below reflects a real run performed while building this demo (see the
@@ -16,7 +16,7 @@ say).
 
 | File | What it's for |
 |---|---|
-| `_env.py` | Points nometria at this demo's own SQLite file. Imported first by everything else. |
+| `_env.py` | Points AgentFox at this demo's own SQLite file. Imported first by everything else. |
 | `support_tools.py` | The fake dataset, the four tool implementations, and `GovernedToolkit` — the governed wrapper both `crew.py` and `verify_mechanics.py` call into. |
 | `seed_demo_agent.py` | One-time setup: registers the agent, its capability grants, its tools, and the shipped policy packs. |
 | `crew.py` | The live CrewAI crew. **Run this for the actual demo.** |
@@ -28,7 +28,7 @@ say).
 **Use a separate virtualenv, not the main repo's `.venv`.** `crewai` pulls in
 `litellm` and `anthropic` as real dependencies, and several of the main test
 suite's tests (`tests/test_autoguard.py`) assert those libraries are *absent*, to
-prove `nometria.auto()` reports a missing library honestly instead of silently
+prove `agentfox.auto()` reports a missing library honestly instead of silently
 hiding it. Installing this demo's requirements into the tracked `.venv` will make
 those tests fail for reasons that have nothing to do with a regression — this was
 confirmed empirically while building this demo (`uv sync` afterward restores the
@@ -39,7 +39,7 @@ tracked venv cleanly if that happens to you).
 python3 -m venv .venv-demo
 source .venv-demo/bin/activate
 
-pip install -e /path/to/guardrails          # nometria itself, editable
+pip install -e /path/to/guardrails          # agentfox itself, editable
 pip install -r demo/redteam-live/requirements.txt   # crewai + litellm + anthropic
 
 # one of these — see "No LLM key?" below if you don't have either
@@ -51,7 +51,7 @@ python seed_demo_agent.py
 ```
 
 `seed_demo_agent.py` registers the agent `support-crew-live`, its identity, its
-four capability grants, and loads the three policy packs `nometria` ships
+four capability grants, and loads the three policy packs `agentfox` ships
 (`baseline`, `tool-containment`, `eu-ai-act-high-risk`) — the same packs
 `agentfox seed` loads, using the same `ensure_identity` / `grant_capability` /
 `register_agent` / `McpGovernor.register_tools` helpers `agentfox seed` and
@@ -59,7 +59,7 @@ four capability grants, and loads the three policy packs `nometria` ships
 safe to re-run.
 
 **This demo uses its own database file** (`demo/redteam-live/demo.db`, via
-`_env.py`), never the repo's own `nometria.db`. You do not need to set
+`_env.py`), never the repo's own `agentfox.db`. You do not need to set
 `NOMETRIA_DATABASE_URL` yourself, but every command below — including the
 `agentfox` CLI ones — needs to see the *same* database, so either run everything
 from inside `demo/redteam-live/` (the scripts set the default relative to
@@ -149,8 +149,8 @@ the chain is wrong on its own.**
 2. The agent calls `issue_refund(order_id="ORD-7001", amount=50)` — $50 is well
    under the $500 cap, and `issue_refund` is a tool this agent genuinely holds.
 
-Individually, both calls pass every check. **Nometria blocks it anyway**, because
-`nometria.guardrails.composition.check_composed_escalation` (F3.8) tracks *where
+Individually, both calls pass every check. **AgentFox blocks it anyway**, because
+`agentfox.guardrails.composition.check_composed_escalation` (F3.8) tracks *where
 each argument's value came from* — `TaintTracker`'s `propagated_from` provenance
 — and sees that `order_id` didn't come from the user or from Priya's own
 account; it came from a broad internal search a moment earlier, being reused as
@@ -162,7 +162,7 @@ see something like:
 
 ```json
 {
-  "status": "BLOCKED_BY_NOMETRIA",
+  "status": "BLOCKED_BY_AGENTFOX",
   "rules_fired": ["eu.art14.human_oversight", "taint.irreversible_tool",
                   "capability.approval_required", "composition.escalation"],
   "reason": "... argument 'order_id' carries a value produced by tool
@@ -271,8 +271,8 @@ specific pack:
 agentfox policy enforce baseline
 python -c "
 import _env
-from nometria.db import init_db, session_scope
-from nometria.enforcement import Enforcer
+from agentfox.db import init_db, session_scope
+from agentfox.enforcement import Enforcer
 init_db()
 with session_scope() as s:
     r = Enforcer(s).check_content(
@@ -301,7 +301,7 @@ third-party network calls happen anywhere in this demo.
 Everything above that shows real output — the `verify_mechanics.py` run, the
 `agentfox redteam run` numbers, the `agentfox policy list` / `policy enforce
 baseline` before/after, the crew's construction (tools attach, both providers'
-`LLM` objects resolve, `nometria.auto()` reports `Patched: openai, anthropic,
+`LLM` objects resolve, `agentfox.auto()` reports `Patched: openai, anthropic,
 litellm`) — was actually run, in an isolated scratch virtualenv, while building
 this demo. What I did **not** run: an actual `crew.kickoff()` against a real
 model. There is no LLM API key available in the environment this was built in,
@@ -319,10 +319,10 @@ Step 2's caveat).
 ## A gap found while building this — since fixed
 
 Found while wiring `issue_refund` through `McpGovernor`, reported rather than
-patched at the time (per that round's instructions, since `src/nometria/` was
+patched at the time (per that round's instructions, since `src/agentfox/` was
 being edited elsewhere in parallel). **Now fixed**, in the same round as the
 red-team probe/benchmark work: `McpGovernor._govern_result()`
-(`src/nometria/integrations/mcp.py`) re-runs the full capability check —
+(`src/agentfox/integrations/mcp.py`) re-runs the full capability check —
 including argument constraints — on the *post*-call evaluation of a tool's own
 result, but was never threading the original call's arguments into that second
 `Enforcer.evaluate()` call. Concretely: `_govern_result` called

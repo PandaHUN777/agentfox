@@ -22,8 +22,8 @@ import time
 
 import pytest
 
-from nometria.policy import PolicyDocument, save_policy
-from nometria.trajectory import (
+from agentfox.policy import PolicyDocument, save_policy
+from agentfox.trajectory import (
     ENTITY,
     RISK_CODE,
     assess,
@@ -144,7 +144,7 @@ def drive(enforcer, session, session_id: str, turns: list[str]) -> list:
     The window check runs *before* the turn is stored, which is what a real
     per-turn hook sees, and is how `benchmarks/crescendo/` scores it too.
     """
-    from nometria.models import ConversationTurn
+    from agentfox.models import ConversationTurn
 
     results = []
     for index, text in enumerate(turns):
@@ -323,8 +323,8 @@ def test_the_per_turn_hook_is_on_the_live_sdk_path():
     built, complete and never called. `check_conversation_window` is called from
     `autoguard._govern`'s pre-flight and from the gateway playground route, which is
     why attaching here needed no new wiring — asserted, not assumed."""
-    from nometria import autoguard
-    from nometria.gateway.routes import playground
+    from agentfox import autoguard
+    from agentfox.gateway.routes import playground
 
     assert "check_conversation_window" in inspect.getsource(autoguard._run_preflight)
     assert "_run_preflight" in inspect.getsource(autoguard._preflight)
@@ -371,7 +371,7 @@ def test_it_records_and_surfaces_but_never_blocks_on_its_own(enforcer, session):
 def test_the_finding_is_filed_so_an_operator_can_see_it(enforcer, session):
     from sqlalchemy import select
 
-    from nometria.models import Finding
+    from agentfox.models import Finding
 
     drive(enforcer, session, "filed", CRESCENDO_DELETE)
 

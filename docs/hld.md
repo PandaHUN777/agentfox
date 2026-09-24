@@ -13,9 +13,9 @@ detail), [docs/production-readiness-review.md](production-readiness-review.md) (
 
 ## 1. What this system is
 
-Nometria is a **governance and assurance layer for AI agents that runs inline, enforces
+AgentFox is a **governance and assurance layer for AI agents that runs inline, enforces
 policy, and proves what happened** — installed as a library into an agent's own process
-(`pip install nometria` + `nometria.auto()`, or a LangGraph decorator), not procured as a
+(`pip install agentfox` + `agentfox.auto()`, or a LangGraph decorator), not procured as a
 platform a team integrates against from the outside. A self-hosted control plane (gateway +
 API + dashboard) is what a team graduates to once it has enough agents that "check the logs"
 stops working — not the starting point.
@@ -46,7 +46,7 @@ where genuine, currently-unclaimed differentiation lives (detail in
 These are load-bearing design commitments found consistently enforced in code, not aspiration:
 
 1. **Additive, never a rewrite.** Three integration surfaces (SDK monkey-patch, inline
-   proxy, OTel ingestion — §5) all sit *beside* an agent's existing code. `nometria.auto()`
+   proxy, OTel ingestion — §5) all sit *beside* an agent's existing code. `agentfox.auto()`
    starts in **observe mode**: nothing is blocked until a human explicitly runs
    `agentfox policy enforce baseline`. A library that starts refusing production traffic
    because someone added an import is, in the product's own words, "indefensible."
@@ -112,7 +112,7 @@ Four deployable units, one shared Python package:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│  src/nometria/  (the package — 14,895 lines across ~40 modules       │
+│  src/agentfox/  (the package — 14,895 lines across ~40 modules       │
 │  + 14 subpackages: audit, business, cli, compliance, evaluation,     │
 │  gateway, guardrails, identity, integrations, policy, providers,     │
 │  registry, sdk — see docs/lld.md §1 for the full inventory)          │
@@ -121,8 +121,8 @@ Four deployable units, one shared Python package:
         ▼
 ┌───────────────┐  ┌────────────────────┐  ┌──────────────────┐  ┌───────────────────┐
 │  CLI           │  │  Gateway process    │  │  Client library   │  │  Dashboard          │
-│  `agentfox`    │  │  FastAPI app        │  │  nometria.auto()  │  │  (Next.js)          │
-│  binary        │  │  (gateway/app.py)   │  │  or NometriaGuard │  │                     │
+│  `agentfox`    │  │  FastAPI app        │  │  agentfox.auto()  │  │  (Next.js)          │
+│  binary        │  │  (gateway/app.py)   │  │  or AgentFoxGuard │  │                     │
 │  Typer, 1304   │  │  serves BOTH the    │  │  monkey-patches   │  │  Client of the API, │
 │  lines,        │  │  inline proxy       │  │  the agent's own  │  │  no privileged      │
 │  wraps every   │  │  (/v1/*) and the    │  │  process in-place │  │  back-channel       │
@@ -152,7 +152,7 @@ Four deployable units, one shared Python package:
 ```
 
 **A fifth deployment shape exists**: `api/index.py` re-exports the identical
-`nometria.gateway.app:app` object as a Vercel serverless function, for a hosted demo/trial
+`agentfox.gateway.app:app` object as a Vercel serverless function, for a hosted demo/trial
 path that doesn't require self-hosting Postgres. This is not a separately designed API — see
 §9 for why it is nonetheless a real architectural risk.
 
@@ -184,13 +184,13 @@ Three ways to adopt, explicitly designed to be additive and to meet a team where
 
 | Surface | How it's used | What it gives you | Cost to adopt |
 |---|---|---|---|
-| **SDK / `nometria.auto()`** | `import nometria; nometria.auto()` — detects installed frameworks from `sys.modules` (LangGraph, LangChain, LlamaIndex, CrewAI, AutoGen, FastAPI, Flask, Django, MCP, Ragas, LiteLLM) and monkey-patches the OpenAI, Anthropic, LiteLLM, and LangChain `BaseChatModel` call sites | Every model call traced, evaluated, audited — no code changes beyond the one import | One line |
-| **LangGraph decorators** (`NometriaGuard`) | `guard.model_node(...)`, `guard.retrieval_node(...)`, `guard.tool_node(...)` wrap existing graph nodes | Same enforcement, plus tool-call gating *before* the wrapped function body runs, and indirect-injection scanning on retrieval output specifically | Named **the primary adoption path** — 11/11 surveyed senior AI engineers use LangGraph |
+| **SDK / `agentfox.auto()`** | `import agentfox; agentfox.auto()` — detects installed frameworks from `sys.modules` (LangGraph, LangChain, LlamaIndex, CrewAI, AutoGen, FastAPI, Flask, Django, MCP, Ragas, LiteLLM) and monkey-patches the OpenAI, Anthropic, LiteLLM, and LangChain `BaseChatModel` call sites | Every model call traced, evaluated, audited — no code changes beyond the one import | One line |
+| **LangGraph decorators** (`AgentFoxGuard`) | `guard.model_node(...)`, `guard.retrieval_node(...)`, `guard.tool_node(...)` wrap existing graph nodes | Same enforcement, plus tool-call gating *before* the wrapped function body runs, and indirect-injection scanning on retrieval output specifically | Named **the primary adoption path** — 11/11 surveyed senior AI engineers use LangGraph |
 | **Inline gateway proxy** | Point an OpenAI/Anthropic client's `base_url` at the gateway's `/v1/chat/completions` or `/v1/messages` | Works for non-Python stacks and teams that can't touch application code at all | Config change only |
 | **OTel ingestion** (`POST /v1/traces`) | Passive, zero-integration — the gateway just observes spans already being emitted | Pillars 1 (discovery) and 5 (audit) for free, no enforcement | Zero code change, but no blocking capability |
 
 The SDK and LangGraph paths converge on one call: both eventually call
-`Enforcer.preflight()` (`src/nometria/enforcement.py:1591`). This matters architecturally —
+`Enforcer.preflight()` (`src/agentfox/enforcement.py:1591`). This matters architecturally —
 there is exactly one enforcement code path, not two parallel implementations that could
 silently drift (a bug the codebase's own comments note was fixed, not designed in from the
 start — `autoguard.py:350-352`).
@@ -237,7 +237,7 @@ the same policy/audit spine. See [docs/lld.md](lld.md) §3 for the method-level 
 
 | Layer | Technology | Notes |
 |---|---|---|
-| Core package | Python ≥3.11, FastAPI, SQLAlchemy 2.0, Pydantic 2.9, Typer, Alembic | Core deps deliberately minimal — everything that wraps a third-party OSS primitive is an optional extra (`pyproject.toml`), so `pip install nometria` stays offline-capable |
+| Core package | Python ≥3.11, FastAPI, SQLAlchemy 2.0, Pydantic 2.9, Typer, Alembic | Core deps deliberately minimal — everything that wraps a third-party OSS primitive is an optional extra (`pyproject.toml`), so `pip install agentfox` stays offline-capable |
 | Database | SQLite (default, offline/local) or Postgres 16 (`NOMETRIA_DATABASE_URL`) | 25 Alembic revisions to date (`migrations/versions/`) |
 | Policy engine | Native deterministic evaluator (default) or OPA/Rego (optional sidecar, falls back to native if unreachable) | `policy/engine.py`, `policy/opa.py` |
 | PII/secrets detection | Native regex/NER, Presidio (Microsoft, MIT) | `guardrails/adapters/presidio.py` |
@@ -282,16 +282,16 @@ compliance and self-host-vs-SaaS competitive claims are actually built for.
 
 **Secondary path — Vercel serverless (`api/`), for a hosted trial/demo:** `api/index.py`
 re-exports the gateway app; dependencies install from a **git-committed prebuilt wheel**
-(`api/vendor/nometria-0.3.0-py3-none-any.whl`) because Vercel's Root Directory for this
+(`api/vendor/agentfox-0.3.0-py3-none-any.whl`) because Vercel's Root Directory for this
 function is `api/`, so a relative import against `../src` doesn't ship. **This is an
 architecturally significant risk, not a packaging footnote**: the wheel must be rebuilt
-and committed after every change to `src/nometria` that the hosted path should reflect.
+and committed after every change to `src/agentfox` that the hosted path should reflect.
 It went stale once (dated 2026-08-28 while `enforcement.py`, `autoguard.py` and others
 had changed), and history shows it caused a real incident (`551c220 revert(demo): restore
 last known-good vendored wheel — production DB migration gap`). Since commit `6863b8b` the
 risk is controlled rather than open: a pre-commit hook (`scripts/rebuild_vendored_wheels.py`)
-rebuilds both vendored wheels whenever `src/nometria/` changes, and CI's
-`vendored-wheel-freshness` job fails any push that changes `src/nometria/` without them.
+rebuilds both vendored wheels whenever `src/agentfox/` changes, and CI's
+`vendored-wheel-freshness` job fails any push that changes `src/agentfox/` without them.
 The original finding is recorded in [production-readiness-review.md](production-readiness-review.md) §1.2.
 
 A related consequence: because the serverless deployment cannot run `alembic upgrade head`

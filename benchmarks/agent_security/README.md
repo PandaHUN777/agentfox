@@ -21,7 +21,7 @@ Each script is self-contained (own throwaway SQLite DB, cleaned up after). The
 interpreter with `llm-guard` installed — see `llm_guard_bridge.py`'s docstring;
 `llm-guard` pins `transformers==4.51.3`, which conflicts with this project's own
 pinned `transformers>=5`, so it must live in a separate venv, never the main one.
-Without that variable, the scripts still run and report Nometria's own numbers;
+Without that variable, the scripts still run and report AgentFox's own numbers;
 the `llm_guard`/`llm_guard_predictions` fields come back `null`.
 
 ## Honest framing before the numbers
@@ -35,7 +35,7 @@ class names:
 | **D** — excessive agency | Real, tested, pre-execution enforcement: default-deny capabilities, taint-based escalation, kill switch. Mature. | A benchmark harness that actually exercises it (the existing `evaluation.redteam` runner never did — confirmed by reading it) — and, in doing so, **found a real gap**: the kill switch was never checked in `guard_tool_call`, only in `preflight`. Fixed. |
 | **B** — indirect injection via tool output | Real, tested MCP pre/post-call gate (`McpGovernor`), but non-blocking by default. | A 20-case benchmark with a real `llm-guard` comparison, plus a genuine ensemble-classifier upgrade (see `../REPORT.md`'s "An ensemble backstop") that took recall to **100%**, ahead of llm-guard's 90% — at a real precision cost (66.7% vs. llm-guard's 81.8%). The first version of this benchmark reported a false 20% recall from a benchmark-harness bug of its own, corrected below. |
 | **C** — tool parameter exploitation | Only SQL/shell/URL fields under three hard-coded key names. `order_id="*"` was invisible. | Net-new: `analyse_scope()` in `guardrails/actions.py`, a generic detector for wildcard-scope values, SQL fragments, and path traversal in *any* argument, wired into the real enforcement path. |
-| **A** — multi-turn / payload splitting | Nothing. Confirmed zero coverage — neither the SDK path nor the gateway path re-evaluates content against conversation history. | Net-new: `Enforcer.check_conversation_window`, wired into `nometria.auto()`'s pre-flight, using the `ConversationTurn` table escalation governance already writes. |
+| **A** — multi-turn / payload splitting | Nothing. Confirmed zero coverage — neither the SDK path nor the gateway path re-evaluates content against conversation history. | Net-new: `Enforcer.check_conversation_window`, wired into `agentfox.auto()`'s pre-flight, using the `ConversationTurn` table escalation governance already writes. |
 
 This is the same discipline the prompt-injection benchmark next door
 (`../REPORT.md`) uses: report the win, report the loss, and don't round either
@@ -60,12 +60,12 @@ call) failed on the first run: the call went straight through. Reading
 `enforcement.py` explained why — `_control_verdict` (the kill switch / quarantine
 check, whose own docstring says "checked before anything else in the request
 path") was wired into `preflight` only. `guard_tool_call` — the function
-`McpGovernor` and `NometriaGuard.tool_node` call directly, without going through
+`McpGovernor` and `AgentFoxGuard.tool_node` call directly, without going through
 `preflight` first — never checked it. A quarantined agent's tool calls were not
 actually stopped by the kill switch.
 
 **Fixed**: `guard_tool_call` now checks `_control_verdict` first, exactly like
-`preflight` does (`src/nometria/enforcement.py`). Regression test:
+`preflight` does (`src/agentfox/enforcement.py`). Regression test:
 `test_quarantine_blocks_tool_calls_not_just_completions` in
 `tests/test_tranche0.py`.
 
@@ -79,7 +79,7 @@ the identical 20 strings:
 
 | | Precision | Recall | FP | FN |
 |---|---|---|---|---|
-| **Nometria** (`McpGovernor._govern_result`, full detector stack, round 4 ensemble) | 66.7% | **100.0%** | 5 | 0 |
+| **AgentFox** (`McpGovernor._govern_result`, full detector stack, round 4 ensemble) | 66.7% | **100.0%** | 5 | 0 |
 | **llm-guard** (`PromptInjection` scanner) | 81.8% | 90.0% | 2 | 1 |
 
 Recall now leads llm-guard; precision trails it — the same trade-off the
@@ -88,7 +88,7 @@ backstop"), showing up here too rather than being specific to this tier.
 
 ### A benchmark-harness bug this tier's first run had, corrected
 
-The very first version of this benchmark reported Nometria at a startling 20%
+The very first version of this benchmark reported AgentFox at a startling 20%
 recall — worse than it had any right to be. The cause was in the harness, not
 the detector: to avoid reloading the model between 20 sequential cases, the
 script reused one `Enforcer` object across all of them, but
@@ -159,7 +159,7 @@ Confirmed as a real, zero-coverage gap before building anything: neither
 `autoguard.py`'s `_govern` (joins one call's own `messages` array, never a
 previous *separate* call) nor the gateway's `preflight` (evaluates each message
 individually, never joins) re-evaluated content against conversation history.
-`Enforcer.check_conversation_window` closes it for the `nometria.auto()` SDK
+`Enforcer.check_conversation_window` closes it for the `agentfox.auto()` SDK
 path — joins the last N turns' `user_text` (from `ConversationTurn`, the table
 P11 escalation governance already writes for an unrelated reason) with the new
 message and runs the same detector pipeline over the assembled text. Wired into
@@ -179,7 +179,7 @@ scanner cannot have any — it's the same over-triggering-on-isolated-trigger-
 words behavior the primary benchmark's over-defense section
 (`../REPORT.md`) already found in the model llm-guard uses under the hood
 (`protectai/deberta-v3-base-prompt-injection-v2`, the model this project moved
-away from for exactly this reason). Nometria's regex heuristic, checked the same
+away from for exactly this reason). AgentFox's regex heuristic, checked the same
 way, fires on **none** of the three fragments alone — only the assembled window
 — which is the actual, specific claim this tier makes: not "we catch more,"
 but "we distinguish a real assembled attack from a fragment that merely
@@ -195,13 +195,13 @@ construction.
   raising the ensemble's threshold based on this result would be tuning against
   data this project deliberately treats as held-out.
 - **The gateway (`preflight`) path** for Tier A — `check_conversation_window` is
-  wired into the SDK one-liner (`nometria.auto()`) only. `preflight` already
+  wired into the SDK one-liner (`agentfox.auto()`) only. `preflight` already
   accepts a `session_id` parameter and could call the same method; not done this
   round to keep the change reviewable and its test coverage tight.
 - **A real head-to-head cost/latency comparison** — this suite measures
   detection and enforcement correctness, not throughput. `llm-guard`'s scanner
   loads its own model per call in the isolated venv; no attempt was made to
-  benchmark it under load the way `../REPORT.md` does for Nometria's own
+  benchmark it under load the way `../REPORT.md` does for AgentFox's own
   detectors.
 
 ## Files

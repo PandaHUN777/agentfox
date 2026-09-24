@@ -94,7 +94,7 @@ SECTIONS: list[tuple[str, tuple[str, ...]]] = [
 def _app_paths() -> dict:
     os.environ.setdefault("NOMETRIA_DATABASE_URL", f"sqlite:///{tempfile.mkdtemp()}/routes.db")
     sys.path.insert(0, str(REPO / "src"))
-    from nometria.gateway.app import create_app
+    from agentfox.gateway.app import create_app
 
     return create_app().openapi()["paths"]
 

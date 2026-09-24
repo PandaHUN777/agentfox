@@ -2,9 +2,9 @@
 
 The LangChain sibling of `demo/redteam-live/` (a real CrewAI crew) — same real
 in-memory customer/order data, same real refund and email side effects, same
-`nometria.auto()` wiring, same three demo scenarios. Nothing here is a mock:
+`agentfox.auto()` wiring, same three demo scenarios. Nothing here is a mock:
 `issue_refund` really flips an order's status, `send_email` really queues a message,
-and every call goes through the same governed path (`nometria.integrations.mcp.
+and every call goes through the same governed path (`agentfox.integrations.mcp.
 McpGovernor`) the automated test suite (`tests/test_composition.py`) exercises.
 
 **What's actually different from `demo/redteam-live/`: only the agent framework.**
@@ -24,7 +24,7 @@ say).
 
 | File | What it's for |
 |---|---|
-| `_env.py` | Points nometria at this demo's own SQLite file (`demo.db`, distinct from the CrewAI demo's). Imported first by everything else. Byte-identical to the CrewAI demo's copy — the path derives from `__file__`, so it already points at the right place. |
+| `_env.py` | Points AgentFox at this demo's own SQLite file (`demo.db`, distinct from the CrewAI demo's). Imported first by everything else. Byte-identical to the CrewAI demo's copy — the path derives from `__file__`, so it already points at the right place. |
 | `support_tools.py` | The fake dataset, the four tool implementations, and `GovernedToolkit` — the governed wrapper both `agent.py` and `verify_mechanics.py` call into. Ported near-verbatim from `demo/redteam-live/support_tools.py`; see the diff below. |
 | `seed_demo_agent.py` | One-time setup: registers the agent (`support-crew-live-lang`), its capability grants, its tools, and the shipped policy packs. |
 | `agent.py` | The live LangChain agent. **Run this for the actual demo.** The genuinely new piece — CrewAI's `Agent`/`Task`/`Crew` replaced with a LangChain tool-calling agent. |
@@ -38,7 +38,7 @@ say).
 and `langchain-openai` pull in `anthropic` and `openai` as real transitive
 dependencies, and one of the main test suite's tests
 (`tests/test_autoguard.py::test_missing_litellm_and_langchain_are_reported_not_hidden`)
-asserts `langchain_core` (and `litellm`) are *absent*, to prove `nometria.auto()`
+asserts `langchain_core` (and `litellm`) are *absent*, to prove `agentfox.auto()`
 reports a missing library honestly instead of silently hiding it. Installing this
 demo's requirements into the tracked `.venv` would make that test fail for reasons
 that have nothing to do with a regression — same reasoning as the CrewAI demo's
@@ -49,7 +49,7 @@ that have nothing to do with a regression — same reasoning as the CrewAI demo'
 python3 -m venv .venv-demo-lang
 source .venv-demo-lang/bin/activate
 
-pip install -e /path/to/guardrails               # nometria itself, editable
+pip install -e /path/to/guardrails               # agentfox itself, editable
 pip install -r demo/redteam-live-lang/requirements-dev.txt   # langchain + langchain-anthropic + langchain-openai
 
 # one of these — see "No LLM key?" below if you don't have either
@@ -61,14 +61,14 @@ python seed_demo_agent.py
 ```
 
 `seed_demo_agent.py` registers the agent `support-crew-live-lang`, its identity, its
-four capability grants, and loads the three policy packs `nometria` ships
+four capability grants, and loads the three policy packs `agentfox` ships
 (`baseline`, `tool-containment`, `eu-ai-act-high-risk`) — the same packs the CrewAI
 demo's seed script loads, using the same `ensure_identity` / `grant_capability` /
 `register_agent` / `McpGovernor.register_tools` helpers. It's idempotent — safe to
 re-run.
 
 **This demo uses its own database file** (`demo/redteam-live-lang/demo.db`, via
-`_env.py`) — never the repo's own `nometria.db`, and never `demo/redteam-live/
+`_env.py`) — never the repo's own `agentfox.db`, and never `demo/redteam-live/
 demo.db` either, so the two demos can be seeded and run side by side without
 colliding. Every command below — including the `agentfox` CLI ones — needs to see
 the *same* database, so either run everything from inside `demo/redteam-live-lang/`
@@ -183,8 +183,8 @@ the chain is wrong on its own.**
 2. The agent calls `issue_refund(order_id="ORD-7001", amount=50)` — $50 is well
    under the $500 cap, and `issue_refund` is a tool this agent genuinely holds.
 
-Individually, both calls pass every check. **Nometria blocks it anyway**, because
-`nometria.guardrails.composition.check_composed_escalation` (F3.8) tracks *where
+Individually, both calls pass every check. **AgentFox blocks it anyway**, because
+`agentfox.guardrails.composition.check_composed_escalation` (F3.8) tracks *where
 each argument's value came from* — `TaintTracker`'s `propagated_from` provenance —
 and sees that `order_id` didn't come from the user or from Priya's own account; it
 came from a broad internal search a moment earlier, being reused as if it had been
@@ -193,7 +193,7 @@ independently verified. Real output, from `verify_mechanics.py`'s scenario 3
 
 ```json
 {
-  "status": "BLOCKED_BY_NOMETRIA",
+  "status": "BLOCKED_BY_AGENTFOX",
   "reason": "EU AI Act Art. 14 — irreversible action by a high-risk system requires human oversight.; Irreversible tool invoked with arguments originating in untrusted content (retrieved document, tool result or sub-agent output). Human approval required.\n; The granting capability requires human approval for this action.; argument 'order_id' carries a value produced by tool 'mcp:support-tools/search_orders' (read), now passed into 'mcp:support-tools/issue_refund' (irreversible) — a composition neither tool's own scope permits alone",
   "rules_fired": ["eu.art14.human_oversight", "taint.irreversible_tool",
                   "capability.approval_required", "composition.escalation"],
@@ -252,7 +252,7 @@ model involved. Real output, captured while building this demo:
 
 === issue_refund('ORD-7003', $50,000.00) ===
 {
-  "status": "BLOCKED_BY_NOMETRIA",
+  "status": "BLOCKED_BY_AGENTFOX",
   "reason": "EU AI Act Art. 14 — irreversible action by a high-risk system requires human oversight.; No capability grants this agent the requested tool and action (default deny).",
   "rules_fired": ["eu.art14.human_oversight", "capability.denied"],
   "verdict": "block"
@@ -272,7 +272,7 @@ model involved. Real output, captured while building this demo:
 
 === issue_refund('ORD-7001', $50.00) -- id came from search, not the user ===
 {
-  "status": "BLOCKED_BY_NOMETRIA",
+  "status": "BLOCKED_BY_AGENTFOX",
   "rules_fired": ["eu.art14.human_oversight", "taint.irreversible_tool",
                   "capability.approval_required", "composition.escalation"],
   "verdict": "block"
@@ -285,12 +285,12 @@ model involved. Real output, captured while building this demo:
 
 === issue_refund('ORD-7005', $34.50) -- never appeared in any prior tool result ===
 {
-  "status": "BLOCKED_BY_NOMETRIA",
+  "status": "BLOCKED_BY_AGENTFOX",
   "rules_fired": ["eu.art14.human_oversight", "taint.irreversible_tool"],
   "verdict": "escalate"
 }
   [ok] composition.escalation specifically did NOT fire for this argument
-  [note] this call still shows BLOCKED_BY_NOMETRIA overall, via taint.irreversible_tool
+  [note] this call still shows BLOCKED_BY_AGENTFOX overall, via taint.irreversible_tool
   -- a coarser, session-wide rule, not the argument-precise F3.8 check.
 
 ============================================================
@@ -343,8 +343,8 @@ building this demo):
 agentfox policy enforce baseline
 python -c "
 import _env
-from nometria.db import init_db, session_scope
-from nometria.enforcement import Enforcer
+from agentfox.db import init_db, session_scope
+from agentfox.enforcement import Enforcer
 init_db()
 with session_scope() as s:
     r = Enforcer(s).check_content(
@@ -384,13 +384,13 @@ needing a live key:
   real `AgentExecutor` with all four tools bound (`lookup_customer`,
   `search_orders`, `issue_refund`, `send_email`), for both providers, and
   `NOMETRIA_DEMO_MODEL` correctly pins the model name.
-- **`nometria.auto()`'s patch report.** Importing `agent.py` prints
+- **`agentfox.auto()`'s patch report.** Importing `agent.py` prints
   `Patched: openai, anthropic, langchain` — `_patch_langchain` patches
   `langchain_core.language_models.chat_models.BaseChatModel.invoke` directly (see
-  `src/nometria/autoguard.py`), which every LangChain chat model inherits regardless
+  `src/agentfox/autoguard.py`), which every LangChain chat model inherits regardless
   of provider. This is a real difference from the CrewAI demo worth calling out:
   CrewAI's `crew.py` had to pass `LLM(..., is_litellm=True)` specifically because
-  `nometria.auto()` only patches `litellm.completion`, not CrewAI's own client
+  `agentfox.auto()` only patches `litellm.completion`, not CrewAI's own client
   routing layer, so the demo had to force CrewAI onto the one path that's patched.
   LangChain needs no such trick — `autoguard.py` patches LangChain's own base class,
   so every provider is governed by construction, with zero special-casing in this
@@ -398,9 +398,9 @@ needing a live key:
   `langchain-anthropic`/`langchain-openai` pull in the raw provider SDKs as
   dependencies and `ChatAnthropic`/`ChatOpenAI` call into them under the hood — but
   that does *not* double-govern a single model call. `autoguard._govern()`'s
-  `_IN_NOMETRIA` re-entrancy guard makes the inner raw-SDK patch a no-op
+  `_IN_AGENTFOX` re-entrancy guard makes the inner raw-SDK patch a no-op
   pass-through once the outer `BaseChatModel.invoke` patch is already governing the
-  call in progress. Read `src/nometria/autoguard.py` lines ~299-320 for exactly
+  call in progress. Read `src/agentfox/autoguard.py` lines ~299-320 for exactly
   where that guard sits.)
 - **`GovernedToolkit`'s governed call path** (shared with the CrewAI demo,
   unmodified in its logic) — via `verify_mechanics.py`, exactly as the CrewAI demo
@@ -537,6 +537,6 @@ not assumed; see `web.py`'s docstring).
    the chat endpoint, which returns the same clean `missing_api_key` message
    `agent.py`'s CLI does — never a crash, never a fabricated response.
 
-Rebuild the wheel after any `src/nometria` change intended for this deployment:
+Rebuild the wheel after any `src/agentfox` change intended for this deployment:
 `uv build --wheel --out-dir demo/redteam-live-lang/vendor`, delete the old wheel,
 `git add -f` the new one (see `requirements.txt`'s own comment).

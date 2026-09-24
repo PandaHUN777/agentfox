@@ -16,13 +16,13 @@ Idempotent — re-running it is safe and just confirms the existing state.
 
 from __future__ import annotations
 
-import _env  # noqa: F401  -- must run before anything imports nometria settings
+import _env  # noqa: F401  -- must run before anything imports agentfox settings
 
-from nometria.db import init_db, session_scope
-from nometria.identity import ensure_identity, grant_capability
-from nometria.integrations.mcp import McpGovernor, tool_key
-from nometria.policy import load_from_dir, save_policy
-from nometria.registry.service import register_agent, upsert_tool
+from agentfox.db import init_db, session_scope
+from agentfox.identity import ensure_identity, grant_capability
+from agentfox.integrations.mcp import McpGovernor, tool_key
+from agentfox.policy import load_from_dir, save_policy
+from agentfox.registry.service import register_agent, upsert_tool
 
 from support_tools import AGENT_SLUG, CAPABILITY_GRANTS, SERVER_NAME, TOOL_DESCRIPTORS, declared_tool_keys
 
@@ -39,7 +39,7 @@ def main() -> None:
                 "customers, searches the order database, issues refunds and sends "
                 "email — a real target for adversarial tool-call probes, not a mock."
             ),
-            owner_email="solutions-eng@nometria.example",
+            owner_email="solutions-eng@agentfox.example",
             owner_team="Solutions Engineering",
             environment="production",
             risk_tier="high",  # it holds a money-moving tool and a PII lookup

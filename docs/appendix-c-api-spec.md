@@ -26,7 +26,7 @@ Keys and tokens are hashed at rest (`argon2id`), looked up by prefix, shown once
 ### `POST /v1/chat/completions` — OpenAI-compatible proxy
 ### `POST /v1/messages` — Anthropic-compatible proxy
 
-Drop-in: point `base_url` at the gateway, keep the existing client (X-1a, NFR-8). Request/response bodies are the provider's own. Nometria adds optional headers:
+Drop-in: point `base_url` at the gateway, keep the existing client (X-1a, NFR-8). Request/response bodies are the provider's own. AgentFox adds optional headers:
 
 | Header | Meaning |
 |---|---|
@@ -47,7 +47,7 @@ Response adds:
 | `X-Nometria-Decision` | Decision id. |
 | `X-Nometria-Latency-Ms` | Added enforcement latency (NFR-1 observability). |
 
-**On block** → `HTTP 403` with `{"error": {"type": "nometria_policy_violation", "message", "verdict", "trace_id", "decision_id", "policy_version", "rules_fired", "entities", "explanation", "suppressed"}}` (X-4: never block without an auditable reason).
+**On block** → `HTTP 403` with `{"error": {"type": "agentfox_policy_violation", "message", "verdict", "trace_id", "decision_id", "policy_version", "rules_fired", "entities", "explanation", "suppressed"}}` (X-4: never block without an auditable reason).
 **On escalate** → `HTTP 202` with `approval_id`; poll `GET /api/approvals/{id}` (P2-3).
 **On overload** → `HTTP 429` with `Retry-After` from the admission gate; `X-Nometria-Priority` raises a request's priority.
 
@@ -374,7 +374,7 @@ canary rollout), `POST /api/traces/{id}/replay` (use `POST /api/policies/simulat
 ## C.4 Role → permission matrix
 
 Every authenticated role can read. Writes are gated per route family by `WRITE_ROLES` in
-`src/nometria/gateway/deps.py`, which this table mirrors:
+`src/agentfox/gateway/deps.py`, which this table mirrors:
 
 | Write family | owner | admin | security | compliance | developer | auditor |
 |---|---|---|---|---|---|---|

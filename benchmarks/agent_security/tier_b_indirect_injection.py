@@ -18,7 +18,7 @@ Two things are measured, not one:
 2. **Enforcement** — does anything happen as a result? This is not a fair fight,
    and isn't scored as one: llm-guard returns a flag on a string; it has no tool
    registry, no capability model, and no mechanism to stop the *next* tool call
-   that content might have poisoned. Nometria's `McpGovernor` gates the call
+   that content might have poisoned. AgentFox's `McpGovernor` gates the call
    before it happens and taints the result after, so a downstream argument later
    derived from that content is recognisably `tool_result`-sourced rather than
    treated as if the agent itself had authored it — see scenario `mcp_e2e` below,
@@ -27,7 +27,7 @@ Two things are measured, not one:
 20 cases in `data/tier_b_cases.json`: 10 real, documented indirect-injection
 shapes (HTML comments, fake "system notes", hidden divs, one of them the seeded
 `internal.export_report` poisoned MCP tool description shipped in
-`nometria.seed`) and 10 deliberately benign documents using the same trigger
+`agentfox.seed`) and 10 deliberately benign documents using the same trigger
 vocabulary ("ignore", "override", "disregard") with no injection intent — the
 same over-defense discipline as `benchmarks/data_generalization/notinject.json`,
 so a detector that just pattern-matches loaded words doesn't get credit it
@@ -40,12 +40,12 @@ import json
 import os
 from pathlib import Path
 
-from nometria import db
-from nometria.config import get_settings, reset_settings_cache
-from nometria.enforcement import Enforcer
-from nometria.guardrails import warm_all
-from nometria.integrations.mcp import McpGovernor
-from nometria.seed import seed
+from agentfox import db
+from agentfox.config import get_settings, reset_settings_cache
+from agentfox.enforcement import Enforcer
+from agentfox.guardrails import warm_all
+from agentfox.integrations.mcp import McpGovernor
+from agentfox.seed import seed
 
 from _util import wipe_db
 
@@ -84,7 +84,7 @@ def score_nometria(cases: list[dict]) -> list[dict]:
             session=session, agent_slug="support-triage", server_name="benchmark-tier-b"
         )
         # `kb.search` is one of support-triage's real granted capabilities (see
-        # nometria.seed.CAPABILITIES) — using a tool_key the agent was never
+        # agentfox.seed.CAPABILITIES) — using a tool_key the agent was never
         # granted would make `evaluate()`'s capability check (enforcement.py:349,
         # `if tool_key: decision = check_capability(...)`) fire `capability.denied`
         # on every case regardless of content, masking the actual content-detection
@@ -201,7 +201,7 @@ def run_mcp_e2e_scenario() -> dict:
 
 def main() -> None:
     cases = load_cases()
-    nometria_results = score_nometria(cases)
+    agentfox_results = score_nometria(cases)
     llm_guard_results = score_llm_guard(cases)
     e2e = run_mcp_e2e_scenario()
 
@@ -209,7 +209,7 @@ def main() -> None:
         "tier": "B — indirect injection via tool output",
         "methodology": (
             "20 cases (10 real indirect-injection shapes, 10 benign documents using "
-            "the same trigger vocabulary) scored two ways: Nometria via the real "
+            "the same trigger vocabulary) scored two ways: AgentFox via the real "
             "McpGovernor._govern_result post-call gate (surface=tool_result, full "
             "opt-in detector stack), llm-guard via its real PromptInjection scanner "
             "run in an isolated venv. Both see the exact same 20 strings — this half "
@@ -218,11 +218,11 @@ def main() -> None:
             "of taint propagated from the poisoned result, which llm-guard has no "
             "mechanism to do at all."
         ),
-        "nometria": confusion(nometria_results),
+        "agentfox": confusion(agentfox_results),
         "llm_guard": confusion(llm_guard_results) if llm_guard_results else None,
         "llm_guard_available": llm_guard_results is not None,
         "mcp_e2e_taint_propagation_scenario": e2e,
-        "nometria_predictions": nometria_results,
+        "agentfox_predictions": agentfox_results,
         "llm_guard_predictions": llm_guard_results,
     }
     RESULTS_DIR.mkdir(exist_ok=True)

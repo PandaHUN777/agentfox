@@ -132,7 +132,7 @@ Legend: `[ ]` open · `[~]` in progress · `[x]` done · `[-]` intentionally def
 - [x] **CORRECTED (was wrongly marked "does not reproduce") — "the Copilot failure"
   cited with zero explanation.** My original grep only checked the dashboard's
   `.tsx` files and missed that this string is generated server-side and fetched into
-  the page — it lives in `src/nometria/entitlement.py`'s empty-state `note` field
+  the page — it lives in `src/agentfox/entitlement.py`'s empty-state `note` field
   (`/api/entitlement/over-permission`), not in any frontend file. A second,
   independent fresh-eyes agent in a later round quoted the exact same phrase, which
   is what prompted re-investigation. Fixed: reworded the note to explain the failure
@@ -177,7 +177,7 @@ Legend: `[ ]` open · `[~]` in progress · `[x]` done · `[-]` intentionally def
 ## Discarded (investigated, not a real issue — tooling artifact this run)
 
 - [discarded] `hometria` typo in guardrails detector copy — grepped the actual source
-  (`gateway/app.py`), the string is `pip install 'nometria[presidio]'`, spelled
+  (`gateway/app.py`), the string is `pip install 'agentfox[presidio]'`, spelled
   correctly.
 - [discarded] Escalation conversation row not opening on click — a different persona
   (incident investigator) independently clicked the same row in the same session and

@@ -4,11 +4,11 @@ from __future__ import annotations
 
 from sqlalchemy import select
 
-from nometria.improvement import contract
-from nometria.improvement.loops import propose_threshold_changes
-from nometria.improvement.proposals import apply_proposal, decide
-from nometria.models import ChangeProposal, GuardrailFeedback
-from nometria.policy import PolicyDocument, save_policy
+from agentfox.improvement import contract
+from agentfox.improvement.loops import propose_threshold_changes
+from agentfox.improvement.proposals import apply_proposal, decide
+from agentfox.models import ChangeProposal, GuardrailFeedback
+from agentfox.policy import PolicyDocument, save_policy
 
 POLICY = """
 key: loop-test

@@ -2,13 +2,13 @@
 
 **Internal planning document, not a benchmark report.** This is the research that precedes actually building `benchmarks/`-style harnesses for the capabilities beyond prompt-injection detection. It follows the same discipline as [`benchmarks/data_generalization/README.md`](../benchmarks/data_generalization/README.md): every dataset is named, its license verified directly (not inferred from a badge — several candidates below looked clean until the actual `LICENSE` file was fetched), and rejected candidates are recorded with reasons so they aren't re-litigated next time this list is revisited. Discipline: **MIT / Apache-2.0 / CC-BY-permissive only.** CC-BY-NC, CC-BY-SA, ODC-BY, no-license, and "MIT plus a restrictive field-of-use clause" are all treated as unusable, consistent with the exclusions already documented for the injection-detection generalization set (TensorTrust, BIPIA, wildjailbreak, BeaverTails).
 
-Five capability areas researched in parallel, each required to surface at least three independently-sourced candidates. All five came back with real, usable options — and, just as valuable, real gaps: several failure modes have **no** public dataset that matches Nometria's specific mechanics, and would need a synthetic layer built on top of a real corpus rather than a drop-in benchmark. That's recorded per section below, not glossed over.
+Five capability areas researched in parallel, each required to surface at least three independently-sourced candidates. All five came back with real, usable options — and, just as valuable, real gaps: several failure modes have **no** public dataset that matches AgentFox's specific mechanics, and would need a synthetic layer built on top of a real corpus rather than a drop-in benchmark. That's recorded per section below, not glossed over.
 
 ---
 
 ## F3 — Destructive-action & blast-radius analysis
 
-Detection lives in `src/nometria/guardrails/actions.py` (deterministic sqlglot SQL parsing, a shell deny-list, HTTP/scope checkers, environment binding).
+Detection lives in `src/agentfox/guardrails/actions.py` (deterministic sqlglot SQL parsing, a shell deny-list, HTTP/scope checkers, environment binding).
 
 | Dataset | License | Size | Fit |
 |---|---|---|---|
@@ -26,7 +26,7 @@ Detection lives in `src/nometria/guardrails/actions.py` (deterministic sqlglot S
 
 ## F4 — Entitlement & disclosure control
 
-Detection lives in `src/nometria/entitlement.py` (default-deny ACL filtering, restricted-class tiers, purpose limitation, k-anonymity aggregation checks, inference-risk detection) and `src/nometria/tenancy.py` (session-level isolation — not benchmarkable against a public dataset, it's an integration-test target).
+Detection lives in `src/agentfox/entitlement.py` (default-deny ACL filtering, restricted-class tiers, purpose limitation, k-anonymity aggregation checks, inference-risk detection) and `src/agentfox/tenancy.py` (session-level isolation — not benchmarkable against a public dataset, it's an integration-test target).
 
 | Dataset | License | Size | Fit |
 |---|---|---|---|
@@ -42,7 +42,7 @@ Detection lives in `src/nometria/entitlement.py` (default-deny ACL filtering, re
 
 ## PII & secrets detection
 
-Detection: `src/nometria/guardrails/detectors/pii.py` (native regex) + Presidio adapter (`PERSON`/`LOCATION`/`DATE_TIME` excluded by default as "noisy"), and `src/nometria/guardrails/detectors/secrets.py` (named formats + entropy-gated generic fallback).
+Detection: `src/agentfox/guardrails/detectors/pii.py` (native regex) + Presidio adapter (`PERSON`/`LOCATION`/`DATE_TIME` excluded by default as "noisy"), and `src/agentfox/guardrails/detectors/secrets.py` (named formats + entropy-gated generic fallback).
 
 | Dataset | Capability | License | Size | Fit |
 |---|---|---|---|---|
@@ -58,7 +58,7 @@ Detection: `src/nometria/guardrails/detectors/pii.py` (native regex) + Presidio 
 
 ## F1 — Answerability & abstention
 
-Detection: `src/nometria/answerability.py` — a **declared-boundary** system (systems of record, coverage window, entity roster, answerable question types), not a generic unanswerable-question classifier.
+Detection: `src/agentfox/answerability.py` — a **declared-boundary** system (systems of record, coverage window, entity roster, answerable question types), not a generic unanswerable-question classifier.
 
 **Important correction surfaced by this research:** the whitepaper cites AbstentionBench (arXiv:2506.09038) as the field's primary academic benchmark for this area. **AbstentionBench itself is CC-BY-NC-4.0** — verified directly against its HF card and repo LICENSE file — which fails this project's own license bar. It's cited in the whitepaper only as a research finding ("reasoning fine-tuning degrades abstention"), not as something benchmarked against, so no correction is needed there. But it rules the packaged dataset out for actual use. Several of its 20 constituent datasets, however, carry independent, permissive licenses and can be pulled directly from their original sources, bypassing the NC-licensed aggregation:
 
@@ -79,7 +79,7 @@ Detection: `src/nometria/answerability.py` — a **declared-boundary** system (s
 
 ## F2 — Source authority & provenance
 
-Detection: `src/nometria/provenance.py` — source tiering, freshness SLAs, domain matching, and citation binding (does a claim map to a chunk that actually supports it). Explicitly **not** the same thing as groundedness (answer-vs-context faithfulness), which the project already covers separately.
+Detection: `src/agentfox/provenance.py` — source tiering, freshness SLAs, domain matching, and citation binding (does a claim map to a chunk that actually supports it). Explicitly **not** the same thing as groundedness (answer-vs-context faithfulness), which the project already covers separately.
 
 | Dataset | License | Size | Fit |
 |---|---|---|---|
@@ -95,7 +95,7 @@ Detection: `src/nometria/provenance.py` — source tiering, freshness SLAs, doma
 
 ## Cross-cutting findings
 
-1. **No candidate anywhere matches Nometria's exact internal data model.** Every capability area has the same shape of gap: public datasets test the general problem (is this citation fake, is this source credible, is this question unanswerable) but none carry the specific declared metadata Nometria's code actually keys on (coverage windows, entity rosters, source tiers, ACL grants, environment bindings). Building real benchmarks here means layering synthetic metadata onto a real, license-clean corpus — the same pattern already used successfully for the injection-detection corpus growth (round 6's HackAPrompt-informed category additions).
+1. **No candidate anywhere matches AgentFox's exact internal data model.** Every capability area has the same shape of gap: public datasets test the general problem (is this citation fake, is this source credible, is this question unanswerable) but none carry the specific declared metadata AgentFox's code actually keys on (coverage windows, entity rosters, source tiers, ACL grants, environment bindings). Building real benchmarks here means layering synthetic metadata onto a real, license-clean corpus — the same pattern already used successfully for the injection-detection corpus growth (round 6's HackAPrompt-informed category additions).
 2. **License verification catches real problems, not just paperwork.** Four separate near-misses this round: AbstentionBench (CC-BY-NC despite being the field's standard reference), AgentHarm (MIT label with an added restrictive clause), ai4privacy (tiered commercial license, one variant with no license file at all), and AmbiFC (license claimed in the paper, not actually attached to the data repo). Reading the actual `LICENSE` file, not the badge or the paper's stated terms, found all four.
 3. **F3.8 (composed privilege escalation) — our one confirmed-absent failure mode — has a strong, ready-to-use dataset.** InjecAgent's attacker/user-tool split is the closest thing in this whole research pass to a drop-in benchmark for a gap we've already named as genuinely unaddressed in `failure-modes.md`. Worth prioritizing.
 4. **PII's default exclusion has a measurable cost, waiting to be measured.** `PERSON`/`LOCATION`/`DATE_TIME` are excluded by default in the Presidio adapter as "noisy" — presidio-research's own synthetic set shows `PERSON` alone is 37% of labeled spans, meaning the honest recall cost of that default is a number we can produce directly, the same kind of disclosed trade-off the injection-detection ensemble work already reports.

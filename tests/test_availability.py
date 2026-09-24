@@ -13,7 +13,7 @@ import datetime as dt
 
 import pytest
 
-from nometria.availability import (
+from agentfox.availability import (
     CLOSED,
     NEVER_OPEN,
     OPEN,
@@ -223,7 +223,7 @@ def test_get_admission_controller_reads_settings(monkeypatch):
     monkeypatch.setenv("NOMETRIA_ADMISSION_RATE_PER_SECOND", "5")
     monkeypatch.setenv("NOMETRIA_ADMISSION_BURST", "7")
     monkeypatch.setenv("NOMETRIA_ADMISSION_MAX_CONCURRENT", "9")
-    from nometria.config import reset_settings_cache
+    from agentfox.config import reset_settings_cache
 
     reset_settings_cache()
     reset_admission_controller()
@@ -248,7 +248,7 @@ def test_the_controller_is_a_singleton_until_reset():
 
 def _saturate_admission(monkeypatch) -> None:
     """One token, refilling too slowly for the test to ever see a second one."""
-    from nometria.config import reset_settings_cache
+    from agentfox.config import reset_settings_cache
 
     monkeypatch.setenv("NOMETRIA_ADMISSION_BURST", "1")
     monkeypatch.setenv("NOMETRIA_ADMISSION_RATE_PER_SECOND", "0.0001")
@@ -267,7 +267,7 @@ def test_the_gate_sheds_inline_traffic_once_saturated(client, monkeypatch):
 
     shed = client.post("/v1/guard/input", json=payload)
     assert shed.status_code == 429
-    assert shed.json()["error"]["type"] == "nometria_admission_shed"
+    assert shed.json()["error"]["type"] == "agentfox_admission_shed"
     assert float(shed.headers["Retry-After"]) >= 1
 
 

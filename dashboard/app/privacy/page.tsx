@@ -80,7 +80,7 @@ export default function Privacy() {
                 cryptographic random source. That id is the sandbox&rsquo;s tenant key and
                 it is the only credential in the playground. It identifies no person.
               </p>
-              <Ref>src/nometria/gateway/playground_sessions.py:23-26, 84-89</Ref>
+              <Ref>src/agentfox/gateway/playground_sessions.py:23-26, 84-89</Ref>
 
               <h3 className="mk-h3" style={{ marginTop: 30 }}>
                 What goes into a sandbox
@@ -93,7 +93,7 @@ export default function Privacy() {
                 it is stored. Paste accordingly.
               </p>
               <Ref>
-                src/nometria/gateway/routes/playground.py:87-143; src/nometria/escalation.py:204-247
+                src/agentfox/gateway/routes/playground.py:87-143; src/agentfox/escalation.py:204-247
               </Ref>
               <p className="mk-body" style={{ marginTop: 14 }}>
                 Every one of those rows is written under an{" "}
@@ -103,7 +103,7 @@ export default function Privacy() {
                 playground-specific filter that somebody has to remember.
               </p>
               <Ref>
-                src/nometria/gateway/playground_sessions.py:8-13; src/nometria/tenancy.py:15-24
+                src/agentfox/gateway/playground_sessions.py:8-13; src/agentfox/tenancy.py:15-24
               </Ref>
 
               <h3 className="mk-h3" style={{ marginTop: 30 }}>
@@ -118,14 +118,14 @@ export default function Privacy() {
                 than 200 are live across the whole deployment at once.
               </p>
               <Ref>
-                src/nometria/gateway/playground_sessions.py:57-66, 137-166, 282-286, 322-327
+                src/agentfox/gateway/playground_sessions.py:57-66, 137-166, 282-286, 322-327
               </Ref>
               <p className="mk-body" style={{ marginTop: 14 }}>
                 Two things follow from the id being the only credential. Anyone you send
                 your sandbox link to can read that sandbox. And the id cannot be revoked
                 before it expires.
               </p>
-              <Ref>src/nometria/gateway/playground_sessions.py:23-26</Ref>
+              <Ref>src/agentfox/gateway/playground_sessions.py:23-26</Ref>
 
               <h3 className="mk-h3" style={{ marginTop: 30 }}>
                 Your IP address
@@ -136,7 +136,7 @@ export default function Privacy() {
                 purpose only. It is not written to the database. The request address
                 appears exactly once in the whole server codebase, on that line.
               </p>
-              <Ref>src/nometria/gateway/routes/playground.py:49-50, 62-67</Ref>
+              <Ref>src/agentfox/gateway/routes/playground.py:49-50, 62-67</Ref>
 
               <h3 className="mk-h3" style={{ marginTop: 30 }}>
                 No model provider is called
@@ -150,7 +150,7 @@ export default function Privacy() {
                 attack have no backend behind them.
               </p>
               <Ref>
-                src/nometria/gateway/routes/playground.py:5-8, 127; src/nometria/providers/echo.py:1-6
+                src/agentfox/gateway/routes/playground.py:5-8, 127; src/agentfox/providers/echo.py:1-6
               </Ref>
             </div>
           </div>
@@ -166,7 +166,7 @@ export default function Privacy() {
                 with you as its owner, because there is no invite flow yet, so a new
                 person and a new tenant are the same event.
               </p>
-              <Ref>src/nometria/gateway/routes/integrations.py:116-163</Ref>
+              <Ref>src/agentfox/gateway/routes/integrations.py:116-163</Ref>
 
               <h3 className="mk-h3" style={{ marginTop: 30 }}>
                 The fields stored about you
@@ -181,7 +181,7 @@ export default function Privacy() {
                 billing row.
               </p>
               <Ref>
-                dashboard/app/api/auth/github/callback/route.ts:62-91; src/nometria/models.py:397-406
+                dashboard/app/api/auth/github/callback/route.ts:62-91; src/agentfox/models.py:397-406
               </Ref>
 
               <h3 className="mk-h3" style={{ marginTop: 30 }}>
@@ -197,14 +197,14 @@ export default function Privacy() {
               </p>
               <Ref>
                 dashboard/app/api/auth/github/callback/route.ts:97-103;
-                src/nometria/gateway/routes/integrations.py:69-82, 181-214;
-                src/nometria/models.py:421-434
+                src/agentfox/gateway/routes/integrations.py:69-82, 181-214;
+                src/agentfox/models.py:421-434
               </Ref>
               <p className="mk-body" style={{ marginTop: 14 }}>
                 A repository scan is static. Nothing in the scanner imports or executes the
                 code it reads.
               </p>
-              <Ref>src/nometria/gateway/routes/integrations.py:1-9</Ref>
+              <Ref>src/agentfox/gateway/routes/integrations.py:1-9</Ref>
             </div>
           </div>
         </section>
@@ -311,7 +311,7 @@ export default function Privacy() {
                   </p>
                   <Ref>
                     dashboard/app/api/auth/github/callback/route.ts:46, 64-68;
-                    src/nometria/gateway/routes/integrations.py:57
+                    src/agentfox/gateway/routes/integrations.py:57
                   </Ref>
                 </div>
               </div>
@@ -325,8 +325,8 @@ export default function Privacy() {
                 above.
               </p>
               <Ref>
-                src/nometria/config.py:117-119, 173-181, 360-398; nometria.toml:13-14;
-                src/nometria/webhooks.py:97
+                src/agentfox/config.py:117-119, 173-181, 360-398; agentfox.toml:13-14;
+                src/agentfox/webhooks.py:97
               </Ref>
             </div>
           </div>
@@ -351,8 +351,8 @@ export default function Privacy() {
                 recognise what kind of thing matched. It is not enough to be the value.
               </p>
               <Ref>
-                src/nometria/guardrails/base.py:204-218;
-                src/nometria/guardrails/detectors/pii.py:133; src/nometria/models.py:486-502
+                src/agentfox/guardrails/base.py:204-218;
+                src/agentfox/guardrails/detectors/pii.py:133; src/agentfox/models.py:486-502
               </Ref>
               <p className="mk-body" style={{ marginTop: 14 }}>
                 Separately, before anything reaches the audit chain, values under keys that
@@ -361,14 +361,14 @@ export default function Privacy() {
                 <span className="mk-mono">&lt;redacted&gt;</span>, and long strings are
                 truncated. The chain stores structure and decisions, not content.
               </p>
-              <Ref>src/nometria/audit/chain.py:67-107</Ref>
+              <Ref>src/agentfox/audit/chain.py:67-107</Ref>
               <p className="mk-body" style={{ marginTop: 14 }}>
                 The cost of that design, stated rather than hidden: there is no update or
                 delete path for an audit entry anywhere in the codebase. That is what makes
                 the chain worth verifying, and it is also why erasing an account is a
                 manual operation rather than a button. See below.
               </p>
-              <Ref>src/nometria/audit/chain.py:12-19</Ref>
+              <Ref>src/agentfox/audit/chain.py:12-19</Ref>
             </div>
           </div>
         </section>
@@ -447,8 +447,8 @@ export default function Privacy() {
                   anywhere.
                 </p>
                 <Ref>
-                  src/nometria/config.py:117-119, 360-363; nometria.toml:13-14;
-                  src/nometria/webhooks.py:97; src/nometria/providers/echo.py:1-6
+                  src/agentfox/config.py:117-119, 360-363; agentfox.toml:13-14;
+                  src/agentfox/webhooks.py:97; src/agentfox/providers/echo.py:1-6
                 </Ref>
                 <p className="mk-body" style={{ marginTop: 14 }}>
                   This is unusual enough to be worth checking rather than believing. The{" "}

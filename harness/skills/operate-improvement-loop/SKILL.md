@@ -1,6 +1,6 @@
 ---
 name: operate-improvement-loop
-description: Covers the governed improvement loop. It reads the change-proposal inbox, explains what a proposal would change and what proved it, takes a decision under the two-approver rule where that applies, stages a change through a canary, rolls one back, and freezes the loop. Use for "what does it want to change", "review the proposals", "approve this tuning change", "why is this waiting for a second approver", "turn the automation off", or /nometria:proposals.
+description: Covers the governed improvement loop. It reads the change-proposal inbox, explains what a proposal would change and what proved it, takes a decision under the two-approver rule where that applies, stages a change through a canary, rolls one back, and freezes the loop. Use for "what does it want to change", "review the proposals", "approve this tuning change", "why is this waiting for a second approver", "turn the automation off", or /agentfox:proposals.
 ---
 
 # Operate the improvement loop
@@ -14,7 +14,7 @@ decision trail. Commands are in
 [reference/cli.md](../../reference/cli.md#proposals--governed-changes-improvement-loop),
 routes in [reference/http-api.md](../../reference/http-api.md), settings in
 [reference/config.md](../../reference/config.md#improvement-loop-and-scheduler), and the
-exact rules in `src/nometria/improvement/contract.py`.
+exact rules in `src/agentfox/improvement/contract.py`.
 
 One rule sits above the rest: **a change that loosens a control is never applied
 automatically.** Direction is computed by the applier from the diff and the live

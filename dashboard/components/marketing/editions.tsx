@@ -14,24 +14,24 @@ import type { CSSProperties } from "react";
  *   - Apache-2.0, whole repo .......... LICENSE (Apache License 2.0, full text),
  *                                       README.md "Licence" section
  *   - nothing gated behind a paid tier  no billing, plan, price or licence-key
- *                                       code exists under src/nometria/. The
+ *                                       code exists under src/agentfox/. The
  *                                       `entitlement.py` module is data-access
  *                                       entitlement (who may see which resource),
  *                                       not payment entitlement.
  *   - runs offline, no API key ........ README.md lines 34-35, and
- *                                       src/nometria/providers/echo.py
+ *                                       src/agentfox/providers/echo.py
  *   - no telemetry phoning home ....... no AgentFox-owned endpoint appears
- *                                       anywhere in src/nometria/. The only
+ *                                       anywhere in src/agentfox/. The only
  *                                       outbound hosts in config.py are the
  *                                       model and tracing providers the operator
  *                                       configures themselves.
  *   - benchmarks reproducible ......... README.md "Benchmarks, reproducible by
  *                                       anyone", nine scripts under benchmarks/
- *   - stdlib-only verifier ............ src/nometria/audit/evidence.py
+ *   - stdlib-only verifier ............ src/agentfox/audit/evidence.py
  *                                       VERIFIER_SCRIPT, written into every
  *                                       package as verify_chain.py
- *   - mappings ship labelled DRAFT .... src/nometria/compliance/catalog.py:214,
- *                                       src/nometria/compliance/risk.py:369
+ *   - mappings ship labelled DRAFT .... src/agentfox/compliance/catalog.py:214,
+ *                                       src/agentfox/compliance/risk.py:369
  *   - cloud does not exist yet ........ README.md line 183: single-org
  *                                       multi-tenancy at the session, "not yet a
  *                                       managed multi-region offering", no live
@@ -41,7 +41,7 @@ import type { CSSProperties } from "react";
  * exist, so none of them appear.
  */
 
-const SUPPORT_EMAIL = "support@nometria.com";
+const SUPPORT_EMAIL = "support@agentfox.com";
 
 const SUPPORTED_HREF =
   `mailto:${SUPPORT_EMAIL}` +
@@ -141,9 +141,9 @@ export function Editions() {
                 {INSTALL_CMD}
               </pre>
               <p className="mk-fine" style={{ margin: 0 }}>
-                The command is <code className="mk-mono">agentfox</code>. The Python
-                package is still imported as <code className="mk-mono">nometria</code>;
-                that rename is in progress.
+                The command is <code className="mk-mono">agentfox</code> and the package
+                imports as <code className="mk-mono">agentfox</code>.{" "}
+                <code className="mk-mono">nometria</code>, the old name, still works.
               </p>
               <a
                 className="mk-btn mk-btn-outline"
@@ -254,7 +254,7 @@ const OSS_FACTS: { label: string; body: string; where: string }[] = [
   {
     label: "No telemetry",
     body: "Nothing calls an AgentFox server. Outbound hosts are the ones you configure.",
-    where: "src/nometria/config.py",
+    where: "src/agentfox/config.py",
   },
   {
     label: "Reproducible",

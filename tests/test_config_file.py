@@ -1,6 +1,6 @@
-"""nometria.toml — written by `agentfox init`, and now actually read.
+"""agentfox.toml — written by `agentfox init`, and now actually read.
 
-Precedence, highest first: init kwargs > NOMETRIA_* env > [nometria] table > defaults.
+Precedence, highest first: init kwargs > NOMETRIA_* env > [agentfox] table > defaults.
 """
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ import logging
 
 import pytest
 
-from nometria.config import (
+from agentfox.config import (
     ConfigFileError,
     Settings,
     get_settings,
@@ -50,8 +50,8 @@ def test_no_file_means_defaults(workdir):
 
 
 def test_toml_value_is_applied(workdir):
-    path = workdir / "nometria.toml"
-    path.write_text('[nometria]\nenvironment = "staging"\ndefault_policy_mode = "enforce"\n')
+    path = workdir / "agentfox.toml"
+    path.write_text('[agentfox]\nenvironment = "staging"\ndefault_policy_mode = "enforce"\n')
     settings = fresh()
     assert settings.environment == "staging"
     assert settings.default_policy_mode == "enforce"
@@ -60,8 +60,8 @@ def test_toml_value_is_applied(workdir):
 
 
 def test_env_overrides_toml(workdir, monkeypatch):
-    (workdir / "nometria.toml").write_text(
-        '[nometria]\nenvironment = "staging"\nenforcement_budget_ms = 120\n'
+    (workdir / "agentfox.toml").write_text(
+        '[agentfox]\nenvironment = "staging"\nenforcement_budget_ms = 120\n'
     )
     monkeypatch.setenv("NOMETRIA_ENVIRONMENT", "production")
     settings = fresh()
@@ -70,17 +70,17 @@ def test_env_overrides_toml(workdir, monkeypatch):
 
 
 def test_init_kwargs_override_env_and_toml(workdir, monkeypatch):
-    (workdir / "nometria.toml").write_text('[nometria]\nenvironment = "staging"\n')
+    (workdir / "agentfox.toml").write_text('[agentfox]\nenvironment = "staging"\n')
     monkeypatch.setenv("NOMETRIA_ENVIRONMENT", "production")
     assert Settings(environment="explicit").environment == "explicit"
 
 
 def test_explicit_path_via_nometria_config(workdir, tmp_path, monkeypatch):
     # A cwd file exists too; the explicit path must win over it.
-    (workdir / "nometria.toml").write_text('[nometria]\nenvironment = "cwd"\n')
+    (workdir / "agentfox.toml").write_text('[agentfox]\nenvironment = "cwd"\n')
     elsewhere = tmp_path / "etc" / "custom.toml"
     elsewhere.parent.mkdir()
-    elsewhere.write_text('[nometria]\nenvironment = "explicit"\n')
+    elsewhere.write_text('[agentfox]\nenvironment = "explicit"\n')
     monkeypatch.setenv("NOMETRIA_CONFIG", str(elsewhere))
     settings = fresh()
     assert settings.environment == "explicit"
@@ -95,10 +95,10 @@ def test_missing_explicit_path_is_an_error(workdir, tmp_path, monkeypatch):
 
 
 def test_unknown_key_is_ignored_with_a_warning(workdir, caplog):
-    (workdir / "nometria.toml").write_text(
-        '[nometria]\nenvironment = "staging"\nenviroment_typo = "x"\n'
+    (workdir / "agentfox.toml").write_text(
+        '[agentfox]\nenvironment = "staging"\nenviroment_typo = "x"\n'
     )
-    with caplog.at_level(logging.WARNING, logger="nometria.config"):
+    with caplog.at_level(logging.WARNING, logger="agentfox.config"):
         settings = fresh()
     assert settings.environment == "staging"
     assert not hasattr(settings, "enviroment_typo")
@@ -107,8 +107,8 @@ def test_unknown_key_is_ignored_with_a_warning(workdir, caplog):
 
 def test_list_field_from_toml_array_and_types_coerced(workdir, monkeypatch):
     monkeypatch.delenv("NOMETRIA_ALLOW_EGRESS", raising=False)  # conftest sets it; env wins
-    (workdir / "nometria.toml").write_text(
-        "[nometria]\n"
+    (workdir / "agentfox.toml").write_text(
+        "[agentfox]\n"
         'enabled_detectors = ["pii.native", "secrets.native"]\n'
         "allow_egress = true\n"
         'enforcement_budget_ms = "250"\n'  # string coerced to int, as from env
@@ -120,13 +120,13 @@ def test_list_field_from_toml_array_and_types_coerced(workdir, monkeypatch):
 
 
 def test_invalid_toml_value_fails_validation(workdir):
-    (workdir / "nometria.toml").write_text('[nometria]\nenforcement_budget_ms = "fast"\n')
+    (workdir / "agentfox.toml").write_text('[agentfox]\nenforcement_budget_ms = "fast"\n')
     with pytest.raises(Exception, match="enforcement_budget_ms"):
         fresh()
 
 
 def test_other_tables_ignored_and_missing_table_is_harmless(workdir):
-    path = workdir / "nometria.toml"
+    path = workdir / "agentfox.toml"
     path.write_text('[tool.other]\nenvironment = "wrong"\n')
     assert fresh().environment == "development"
     path.write_text("# hand-edited\n")
@@ -136,19 +136,19 @@ def test_other_tables_ignored_and_missing_table_is_harmless(workdir):
 def test_the_file_nometria_init_writes_is_read(workdir, isolated_db):
     from typer.testing import CliRunner
 
-    from nometria.cli.main import app
+    from agentfox.cli.main import app
 
     result = CliRunner().invoke(app, ["init", "--path", str(workdir)])
     assert result.exit_code == 0, result.output
     settings = fresh()
-    assert settings.config_file == (workdir / "nometria.toml").resolve()
+    assert settings.config_file == (workdir / "agentfox.toml").resolve()
     assert settings.default_policy_mode == "observe"
     assert settings.allow_egress is False
 
 
 def test_config_none_turns_file_loading_off(workdir, monkeypatch):
     """CI, containers and the test suite itself need a way to say 'env and defaults only'."""
-    (workdir / "nometria.toml").write_text('[nometria]\nenvironment = "staging"\n')
+    (workdir / "agentfox.toml").write_text('[agentfox]\nenvironment = "staging"\n')
     monkeypatch.setenv("NOMETRIA_CONFIG", "none")
     settings = fresh()
     assert settings.environment == "development"

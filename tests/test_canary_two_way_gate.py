@@ -9,11 +9,11 @@ from __future__ import annotations
 
 import datetime as dt
 
-from nometria import jobs_db, scheduler
-from nometria.config import get_settings
-from nometria.models import AuditEntry, Decision, JobSchedule, Policy, PolicyBinding, PolicyVersion
-from nometria.policy import PolicyDocument, save_policy
-from nometria.policy.canary import canary_rollout, evaluate_gate, start_canary
+from agentfox import jobs_db, scheduler
+from agentfox.config import get_settings
+from agentfox.models import AuditEntry, Decision, JobSchedule, Policy, PolicyBinding, PolicyVersion
+from agentfox.policy import PolicyDocument, save_policy
+from agentfox.policy.canary import canary_rollout, evaluate_gate, start_canary
 from tests.conftest import as_user
 
 BASE = """

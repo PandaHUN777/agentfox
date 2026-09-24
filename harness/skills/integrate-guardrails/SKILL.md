@@ -1,6 +1,6 @@
 ---
 name: integrate-guardrails
-description: Wires Nometria into specific application code beyond the one-liner. It declares tools with impact levels, marks retrieved and tool-returned content as untrusted so taint containment works, and integrates LangGraph nodes, FastAPI endpoints, MCP clients or the gateway proxy, with a test that proves a tainted irreversible call escalates. Use when an agent has side-effecting tools, uses LangGraph/FastAPI/MCP, uses async or streaming clients, or `agentfox check` shows calls auto() can't govern.
+description: Wires AgentFox into specific application code beyond the one-liner. It declares tools with impact levels, marks retrieved and tool-returned content as untrusted so taint containment works, and integrates LangGraph nodes, FastAPI endpoints, MCP clients or the gateway proxy, with a test that proves a tainted irreversible call escalates. Use when an agent has side-effecting tools, uses LangGraph/FastAPI/MCP, uses async or streaming clients, or `agentfox check` shows calls auto() can't govern.
 ---
 
 # Integrate guardrails
@@ -10,7 +10,7 @@ description: Wires Nometria into specific application code beyond the one-liner.
 
 The one-liner governs model *text*. The product's strongest guarantee is about *actions*.
 An irreversible tool can't take arguments that came from untrusted content without a human.
-That guarantee only holds when the code tells Nometria two things:
+That guarantee only holds when the code tells AgentFox two things:
 
 1. **What each tool can do.** This is its `impact`: `read`, `write`, `high_impact` or
    `irreversible`.
@@ -36,8 +36,8 @@ irreversible action that is mis-declared as `write` loses the human-in-the-loop 
 
 | The code is… | Do this |
 |---|---|
-| plain Python with tool functions | `Nometria` SDK: `@nom.tool(key, impact=...)` plus `with nom.session(intent=...)`; wrap fetched content with `s.retrieved(...)` / `s.tool_result(...)` |
-| a LangGraph graph | `NometriaGuard`: `retrieval_node` for fetchers, `model_node` for LLM calls, `tool_node(fn, tool=key)` for tools |
+| plain Python with tool functions | `AgentFox` SDK: `@nom.tool(key, impact=...)` plus `with nom.session(intent=...)`; wrap fetched content with `s.retrieved(...)` / `s.tool_result(...)` |
+| a LangGraph graph | `AgentFoxGuard`: `retrieval_node` for fetchers, `model_node` for LLM calls, `tool_node(fn, tool=key)` for tools |
 | a FastAPI service | `install(app)` for observe middleware; `Depends(guard(agent=..., field="prompt"))` on prompt-taking endpoints |
 | an MCP client | `McpGovernor`: `register_tools` once, then `gov.call(...)` instead of calling the server directly |
 | streaming that must be cut mid-response, or not Python | gateway proxy: set `base_url` to `http://<gateway>:8080/v1` and send `X-Nometria-Agent` plus `X-Nometria-Trust` for untrusted message indices |
@@ -54,7 +54,7 @@ made with no declared intent.
 
 - `ApprovalRequired`: the action is waiting for a human. Surface `approval_id` to the user,
   and don't retry in a loop.
-- `PolicyViolation` or `nometria.Blocked`: tell the user it was refused, and log `rules_fired`.
+- `PolicyViolation` or `agentfox.Blocked`: tell the user it was refused, and log `rules_fired`.
 - **Redaction:** the returned content is already redacted. Use it, not the original.
 
 While the relevant policies observe, none of these are raised. The code must be ready for

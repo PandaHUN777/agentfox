@@ -1,4 +1,4 @@
-# Nometria — self-hosted control plane.
+# AgentFox — self-hosted control plane.
 #
 # Self-host is the default and only MVP deployment mode (X-8, P3-8, NFR-4). Nothing
 # here reaches the internet at *runtime*: the default model provider is `echo`, egress
@@ -19,7 +19,7 @@
 #   API + gateway   http://localhost:8080
 #   OPA (optional)  http://localhost:8181
 
-name: nometria
+name: agentfox
 
 secrets:
   # Backed by the HF_TOKEN environment variable, never written to a file in the
@@ -31,13 +31,13 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: nometria
-      POSTGRES_PASSWORD: nometria
-      POSTGRES_DB: nometria
+      POSTGRES_USER: agentfox
+      POSTGRES_PASSWORD: agentfox
+      POSTGRES_DB: agentfox
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nometria"]
+      test: ["CMD-SHELL", "pg_isready -U agentfox"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -59,7 +59,7 @@ services:
       secrets:
         - hf_token
     environment:
-      NOMETRIA_DATABASE_URL: postgresql+psycopg://nometria:nometria@db:5432/nometria
+      NOMETRIA_DATABASE_URL: postgresql+psycopg://agentfox:nometria@db:5432/agentfox
       NOMETRIA_ORG_ID: org_default
       NOMETRIA_ENVIRONMENT: production
       # Zero egress by default. Set to "true" and supply a key to use a hosted model.
@@ -88,7 +88,7 @@ services:
       # CHANGE THIS. The checkpoint signing key should live outside the application
       # database and be held by the customer (NFR-7, Appendix E.2.2).
       NOMETRIA_AUDIT_SIGNING_KEY: change-me-before-any-real-deployment
-      NOMETRIA_EVIDENCE_DIR: /var/nometria/evidence
+      NOMETRIA_EVIDENCE_DIR: /var/agentfox/evidence
       # The public playground page (dashboard/app/playground) calls this origin
       # directly from the visitor's browser, unauthenticated — additive to the
       # hardcoded localhost origins in gateway/app.py, not a replacement. Only
@@ -98,7 +98,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - evidence:/var/nometria/evidence
+      - evidence:/var/agentfox/evidence
     depends_on:
       db:
         condition: service_healthy

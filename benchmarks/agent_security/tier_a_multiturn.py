@@ -13,7 +13,7 @@ hypothetical one: neither `autoguard.py`'s `_govern` (joins one call's own
 `messages` array, never a previous *separate* call) nor the gateway's
 `preflight` (evaluates each message individually, never joins) re-evaluated
 content against conversation history. `Enforcer.check_conversation_window`
-(`src/nometria/enforcement.py`) closes it for the `nometria.auto()` SDK path by
+(`src/agentfox/enforcement.py`) closes it for the `agentfox.auto()` SDK path by
 joining the last N turns' recorded `user_text` (from `ConversationTurn`, the
 table P11 escalation governance already writes) with the new message and running
 the same detector pipeline over the assembled text.
@@ -39,12 +39,12 @@ import json
 import os
 from pathlib import Path
 
-from nometria import db
-from nometria.config import get_settings, reset_settings_cache
-from nometria.enforcement import Enforcer
-from nometria.models import ConversationTurn
-from nometria.policy import set_mode
-from nometria.seed import seed
+from agentfox import db
+from agentfox.config import get_settings, reset_settings_cache
+from agentfox.enforcement import Enforcer
+from agentfox.models import ConversationTurn
+from agentfox.policy import set_mode
+from agentfox.seed import seed
 
 from _util import wipe_db
 
@@ -82,8 +82,8 @@ SCENARIOS = [
 
 
 def score_turn_alone(pipeline_text: str) -> bool:
-    from nometria.guardrails.detectors.injection import InjectionHeuristicDetector
-    from nometria.guardrails.base import DetectionContext
+    from agentfox.guardrails.detectors.injection import InjectionHeuristicDetector
+    from agentfox.guardrails.base import DetectionContext
 
     result = InjectionHeuristicDetector().detect(pipeline_text, DetectionContext(surface="input"))
     return bool(result.detections)
@@ -150,7 +150,7 @@ def score_llm_guard_per_turn(scenario: dict) -> dict | None:
             "individually, including 'all previous' alone — not evidence of "
             "multi-turn awareness, but of the same over-triggering-on-isolated-"
             "trigger-words problem this project found and moved away from in its "
-            "own classifier (see REPORT.md's over-defense section). Nometria's "
+            "own classifier (see REPORT.md's over-defense section). AgentFox's "
             "heuristic, by contrast, genuinely fires only on the assembled window, "
             "not on any fragment — that distinction is the actual point of Tier A."
         ),
@@ -183,7 +183,7 @@ def main() -> None:
         "tier": "A — contextual & multi-turn injection (payload splitting)",
         "methodology": (
             "Enforcer.check_conversation_window (real product code, wired into "
-            "nometria.auto()'s _govern pre-flight) joins recorded ConversationTurn "
+            "agentfox.auto()'s _govern pre-flight) joins recorded ConversationTurn "
             "history with the new message and runs the real injection.heuristic "
             "detector. llm-guard is scored per-turn in isolation via its real "
             "PromptInjection scanner — it has no session concept, so this is shown "

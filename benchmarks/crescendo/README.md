@@ -56,13 +56,13 @@ The headline result is "caught nothing", which is indistinguishable from "the be
 
 Both pass. The window check demonstrably works on the attack it was built for.
 
-**This gate has already earned its place.** An earlier version of this script set `NOMETRIA_DB_PATH` to point at a throwaway database. That is not a real setting — `Settings` is `extra="ignore"`, so it was accepted silently, every run wrote to the repo's shared `nometria.db`, and `wipe_db` dutifully deleted a `/tmp` file that had never been created. Because `check_conversation_window` selects stored turns by `session_id`, turns accumulated across runs under the same ids: by the second run `p1` was reading a window of stale duplicates and no longer detected the payload split. The attack results were unchanged at 0/13 either way — which is exactly the problem, since a broken harness and a real negative result look identical. The script now sets `NOMETRIA_DATABASE_URL`, resets the engine, and asserts it is on its own database before doing anything.
+**This gate has already earned its place.** An earlier version of this script set `NOMETRIA_DB_PATH` to point at a throwaway database. That is not a real setting — `Settings` is `extra="ignore"`, so it was accepted silently, every run wrote to the repo's shared `agentfox.db`, and `wipe_db` dutifully deleted a `/tmp` file that had never been created. Because `check_conversation_window` selects stored turns by `session_id`, turns accumulated across runs under the same ids: by the second run `p1` was reading a window of stale duplicates and no longer detected the payload split. The attack results were unchanged at 0/13 either way — which is exactly the problem, since a broken harness and a real negative result look identical. The script now sets `NOMETRIA_DATABASE_URL`, resets the engine, and asserts it is on its own database before doing anything.
 
 ## Results
 
 ### Before / after
 
-`CRESCENDO.TRAJECTORY_DRIFT` (`src/nometria/trajectory.py`, wired into
+`CRESCENDO.TRAJECTORY_DRIFT` (`src/agentfox/trajectory.py`, wired into
 `Enforcer.check_conversation_window`) was built after the run below, to the design F9.4
 already specified. The two columns are the same 22 conversations through the same
 harness; nothing in the corpus changed.
@@ -216,8 +216,8 @@ remaining gap.
   verdict and entities, every turn's windowed verdict, every turn's trajectory slope,
   level and marker families, first-catch indices for both mechanisms, the measured
   added latency, the liveness block, and per-family breakdown.
-- The detector itself is `src/nometria/trajectory.py`; its wiring is
+- The detector itself is `src/agentfox/trajectory.py`; its wiring is
   `Enforcer._trajectory_checks` / `Enforcer.check_conversation_window` in
-  `src/nometria/enforcement.py`; its tests, including all nine controls as negative
+  `src/agentfox/enforcement.py`; its tests, including all nine controls as negative
   tests and an assertion that the hook is on the live SDK path, are
   `tests/test_crescendo_detection.py`.
