@@ -6,14 +6,7 @@ import { CATEGORY } from "./how-it-works/_public";
 import { MarketingNav } from "@/components/marketing/nav";
 import { Hero } from "@/components/marketing/hero";
 import { Evidence, HowItWorks, Honesty, FAQ, CTA, Footer } from "@/components/marketing/sections";
-import {
-  Pillars,
-  Guardrails,
-  Containment,
-  Discovery,
-  Assurance,
-  Evidence2,
-} from "@/components/marketing/pillars";
+import { Capabilities } from "@/components/marketing/capabilities";
 import { Editions, WhyOpen } from "@/components/marketing/editions";
 
 export const dynamic = "force-dynamic";
@@ -229,22 +222,20 @@ function Landing() {
     <div className="mk">
       <MarketingNav />
       <main>
+        {/* What it is, what is in it, whether it works, how you adopt it, what it
+            costs, what it cannot do, and four questions. Proof sits after the product
+            rather than before it: "8 of 8 contained" means nothing to someone who has
+            not yet been told what containment is. The long version of each pillar is
+            /product, because this page's job is to get someone to the playground or
+            the repository, not to be the documentation. */}
         <Hero />
-        {/* What it is, then each pillar with the real screen that proves it, then
-            the numbers, then how you adopt it, then what it costs, then the limits.
-            A visitor who only scrolls sees the product; the prose is underneath. */}
-        <Pillars />
-        <Guardrails />
-        <Containment />
-        <Discovery />
-        <Assurance />
-        <Evidence2 />
+        <Capabilities />
         <Evidence />
         <HowItWorks />
         <Editions />
         <WhyOpen />
         <Honesty />
-        <FAQ />
+        <FAQ n={4} more />
         <CTA />
       </main>
       <Footer />

@@ -164,10 +164,8 @@ export function Evidence() {
           className="mk-fine mk-up mk-d3"
           style={{ maxWidth: "70ch", margin: "24px auto 0", textAlign: "center" }}
         >
-          The three calls that escaped the AgentDojo replay are all read-only, and they are
-          named one by one on the benchmark page. The detection figure stays on this page on
-          purpose: it is the number that makes the product look worse, and publishing it is
-          the reason the rest is worth believing.
+          The three calls that escaped the AgentDojo replay are all read-only, and the
+          benchmark page names them one by one. The weakest figure is in the set on purpose.
         </p>
         <div
           className="mk-row mk-up mk-d4"
@@ -227,9 +225,8 @@ export function HowItWorks() {
             From nothing to governed, in the order you would actually do it.
           </h2>
           <p className="mk-body" style={{ marginTop: 14, maxWidth: "48ch" }}>
-            Nothing in the first three steps refuses a call. The point of starting in observe
-            is that a library which begins rejecting production traffic because someone added
-            an import gets switched off within a day.
+            Nothing in the first three steps refuses a call. A library that starts rejecting
+            production traffic because someone added an import gets switched off within a day.
           </p>
           <div
             className="mk-card"
@@ -237,12 +234,10 @@ export function HowItWorks() {
           >
             <span className="mk-label">One exception, from day one</span>
             <p className="mk-body" style={{ margin: "8px 0 0", fontSize: ".94rem" }}>
-              Tool containment enforces from the moment you install. In one situation only: the
-              agent is about to call a tool that can do real damage, such as moving money,
-              deleting something or sending an email, and a value it wants to pass to that tool
-              did not come from the person using the agent. It came from a web page, a retrieved
-              document or another tool&rsquo;s output. Those calls are refused, or sent to a
-              human to decide.
+              Tool containment enforces from the moment you install, in one situation only: a
+              tool that can move money, delete something or send an email is about to be called
+              with a value that came from a document or another tool rather than from the
+              person. Those calls are refused, or sent to a human.
             </p>
           </div>
         </div>
@@ -354,12 +349,9 @@ const QUESTIONS: { q: string; a: React.ReactNode }[] = [
     q: "Does my traffic or my source leave the machine?",
     a: (
       <>
-        Scanning a repository is static. It walks your source with a parser, never imports it,
-        never executes it and makes no network call, and onboarding a hosted API reads only
-        that API&rsquo;s OpenAPI document without calling any operation on it. A local install
-        downloads no model weights and needs no API key, and Nometria adds no destination of
-        its own: if you configure a real model provider, the model call goes to that provider
-        exactly as it did before.
+        No. A repository scan walks your source with a parser, never imports it, never runs it
+        and makes no network call. A local install downloads no weights and needs no API key,
+        and Nometria adds no destination of its own.
       </>
     ),
   },
@@ -367,11 +359,9 @@ const QUESTIONS: { q: string; a: React.ReactNode }[] = [
     q: "Where does this sit relative to a gateway or a web application firewall?",
     a: (
       <>
-        A web application firewall reads HTTP traffic at the edge and looks for attacks inside
-        requests. An API gateway routes, authenticates and rate-limits those requests. Neither
-        knows which agent made a call, what that agent was granted, or where the value in an
-        argument came from, so Nometria works one layer in, on the agent&rsquo;s own actions,
-        and replaces neither.
+        A firewall reads HTTP at the edge; a gateway routes and rate-limits it. Neither knows
+        which agent made the call, what it was granted, or where an argument&rsquo;s value came
+        from. This works one layer in, on the agent&rsquo;s own actions, and replaces neither.
       </>
     ),
   },
@@ -379,11 +369,9 @@ const QUESTIONS: { q: string; a: React.ReactNode }[] = [
     q: "What does it cost in latency?",
     a: (
       <>
-        There is no published latency or throughput benchmark, and no hardware is recorded in
-        any of the results files, so we are not going to quote you a number. What is written
-        down is the shape: detectors run under a shipped 40ms per-detector timeout and a
-        detector that times out is scored as raising nothing, while the tool-call check reads
-        no text and consults no model at all.
+        We have not benchmarked it, so we will not quote you a number. What is written down:
+        detectors run under a shipped 40ms timeout each, and the tool-call check reads no text
+        and calls no model at all.
       </>
     ),
   },
@@ -437,7 +425,14 @@ const QUESTIONS: { q: string; a: React.ReactNode }[] = [
   },
 ];
 
-export function FAQ() {
+/**
+ * `n` caps how many questions render, because the homepage and the product page
+ * want different amounts of this. Eight answers is a support article; four is the
+ * set someone actually needs before they will run the install command. The rest
+ * stay one click away rather than being deleted.
+ */
+export function FAQ({ n, more }: { n?: number; more?: boolean } = {}) {
+  const shown = n ? QUESTIONS.slice(0, n) : QUESTIONS;
   return (
     <section id="faq" className="mk-section">
       <div className="mk-wrap">
@@ -447,7 +442,7 @@ export function FAQ() {
           center
         />
         <div className="mk-narrow mk-up mk-d2" style={{ marginTop: 36 }}>
-          {QUESTIONS.map((item) => (
+          {shown.map((item) => (
             <div key={item.q} className="mk-faq">
               <h3 className="mk-h3">{item.q}</h3>
               <p className="mk-body" style={{ margin: "8px 0 0", fontSize: ".94rem" }}>
@@ -455,6 +450,13 @@ export function FAQ() {
               </p>
             </div>
           ))}
+          {more && (
+            <p className="mk-fine" style={{ marginTop: 22, textAlign: "center" }}>
+              <Link href="/product#faq">
+                {QUESTIONS.length - shown.length} more, on the product page
+              </Link>
+            </p>
+          )}
         </div>
       </div>
     </section>

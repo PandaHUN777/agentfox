@@ -14,7 +14,7 @@ import { BrandLockup } from "@/components/marketing/brand";
 // wants to know what this does actually needs; the pages are the two things that
 // need no account plus the source.
 const LINKS: [string, string][] = [
-  ["Product", "/#pillars"],
+  ["Product", "/product"],
   ["Open source", "/#editions"],
   ["Playground", "/playground"],
   ["Benchmarks", "/benchmark"],

@@ -62,8 +62,10 @@ export function Hero() {
         className="mk-wrap mk-up mk-d5"
         style={{ position: "relative", marginTop: 46, paddingBottom: 18, maxWidth: 900 }}
       >
-        <ToolCallMock />
-        <p className="mk-fine" style={{ textAlign: "center", marginTop: 14 }}>
+        <div style={{ borderRadius: "var(--mk-r-xl)", boxShadow: "var(--mk-shadow-float)" }}>
+          <ToolCallMock />
+        </div>
+        <p className="mk-fine" style={{ textAlign: "center", marginTop: 18 }}>
           The layer that is ours: a refusal that never read the attack. A real response from
           the hosted sandbox, reproducible in the{" "}
           <Link href="/playground">playground</Link>.
