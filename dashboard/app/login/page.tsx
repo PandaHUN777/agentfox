@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { publicPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
@@ -5,6 +7,27 @@ import { SESSION_COOKIE } from "@/lib/api";
 import { Wordmark } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Crawlable but not indexable, which is the right pair rather than a contradiction.
+ *
+ * app/robots.ts allows /login, because a `Disallow` would stop a crawler fetching
+ * the page and therefore stop it ever seeing the `noindex` below. The `noindex`
+ * itself is because a sign-in form is not a useful search result for anybody: the
+ * queries it would answer are answered better by "/" or /how-it-works, and this is
+ * also where every authenticated route redirects, so it is the page most at risk of
+ * being indexed many times over under other URLs.
+ *
+ * It still carries a title, description and canonical, because those are what get
+ * shown when somebody pastes the sign-in link into Slack.
+ */
+export const metadata: Metadata = publicPageMetadata({
+  title: "Sign in or create a workspace",
+  description:
+    "Sign in to Nometria with GitHub, which creates the workspace if you do not have one. The playground and the published benchmarks need no account at all.",
+  path: "/login",
+  noIndex: true,
+});
 
 /**
  * This page is the sign-up path as much as the sign-in one — a GitHub identity

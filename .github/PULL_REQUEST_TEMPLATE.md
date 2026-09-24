@@ -1,0 +1,30 @@
+# What this changes
+
+Say what breaks without it.
+
+# Checks
+
+[CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) has the detail. These four run in CI, so
+a red one will not merge:
+
+```bash
+pytest -q
+python scripts/api_routes.py --check
+python scripts/claims.py --check
+python harness/scripts/check_harness.py
+```
+
+- [ ] `pytest -q` passes.
+- [ ] `scripts/api_routes.py --check` passes, or Appendix C was regenerated with it.
+- [ ] `scripts/claims.py --check` passes. If a published number moved, the benchmark was
+      re-run and its result file is in this PR. Numbers are not edited by hand.
+- [ ] `harness/scripts/check_harness.py` passes, if `harness/` or the CLI changed.
+- [ ] If `src/nometria/` changed, the vendored wheels in `api/vendor/` and
+      `demo/redteam-live-lang/vendor/` were rebuilt in the same commit. The pre-commit
+      hook does this for you (`uvx pre-commit install`); CI fails the push otherwise,
+      because `api/` and the live demo deploy the wheel, not an editable install.
+- [ ] A test that would have caught the bug, if this is a fix.
+
+# Anything a reviewer should know
+
+Behaviour that changed, a limit that moved, or a decision you were unsure about.

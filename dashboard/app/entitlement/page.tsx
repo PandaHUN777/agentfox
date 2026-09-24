@@ -1,6 +1,17 @@
+import type { Metadata } from "next";
+import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, apiErrorProps } from "@/lib/api";
 import { ApiDown, Empty, InfoTip, Panel, Stat } from "@/components/ui";
+
+/**
+ * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
+ * copy of "Nometria Control Plane". See lib/site.ts appPageMetadata.
+ */
+export const metadata: Metadata = appPageMetadata(
+  "Access control",
+  "What each agent was granted, and what it is therefore allowed to call.",
+);
 
 export const dynamic = "force-dynamic";
 

@@ -1,0 +1,117 @@
+name: Bug report
+description: Something crashed, hung, or did not do what the documentation says it does.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before you paste anything: this issue is public, and a bug report for this
+        product is unusually likely to contain production data.**
+
+        Do not paste real prompts, real tool arguments, real retrieved documents, real
+        audit rows or real trace payloads. Replace names, account numbers, URLs and
+        secrets with obvious placeholders before you submit. A reduced reproduction with
+        made-up values is more useful to us than a real one, because we can run it.
+
+        If the thing you found is a security vulnerability, do not file it here at all.
+        Follow [SECURITY.md](../blob/main/SECURITY.md) instead.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did, what happened, and what you expected instead.
+      placeholder: |
+        I ran ... and expected ... but got ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: The command and its output
+      description: >
+        The exact command or code, and the output, with real values replaced by
+        placeholders. Include the traceback in full if there is one.
+      render: shell
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Nometria version
+      description: >
+        Output of `nometria version` (the first line is enough), or the commit SHA if
+        you are running from a clone.
+      placeholder: "0.1.0, or commit 1b91e2c"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: how-running
+    attributes:
+      label: How are you running it
+      multiple: true
+      options:
+        - Library, patched in with auto()
+        - Control plane, nometria serve
+        - CLI (nometria init / demo / scan / doctor / check ...)
+        - Docker Compose (deploy/docker-compose.yml)
+        - MCP server (nometria mcp serve)
+        - Hosted playground
+        - Other, described below
+    validations:
+      required: true
+
+  - type: input
+    id: policy-packs
+    attributes:
+      label: Policy packs and modes
+      description: >
+        Which packs are bound and in which mode. `nometria policy list` prints this.
+        The shipped packs are `baseline`, `tool-containment` and
+        `eu-ai-act-high-risk`; each is in `observe` or `enforce`.
+      placeholder: "baseline=observe, tool-containment=enforce"
+    validations:
+      required: false
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: Output of `python3 --version`. The project requires 3.11 or newer.
+      placeholder: "3.11.9"
+    validations:
+      required: true
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "macOS 15.1 arm64, or Ubuntu 24.04 x86_64"
+    validations:
+      required: true
+
+  - type: input
+    id: extras
+    attributes:
+      label: Which extras are installed
+      description: >
+        For example `pii`, `classifiers`, `sql`, `otel`, `postgres`. Note that
+        installing with `--all-extras` is not supported and is known to break tests.
+      placeholder: "pii, sql, otel"
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Before submitting
+      options:
+        - label: >
+            I have removed real prompts, tool arguments, retrieved content, audit rows
+            and secrets from everything above.
+          required: true
+        - label: This is not a security vulnerability (those go through SECURITY.md).
+          required: true

@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
+import { appPageMetadata } from "@/lib/site";
 import { api, safeApi, ApiError, apiErrorProps } from "@/lib/api";
 import { ApiDown, Panel, ts } from "@/components/ui";
 import { PolicyEditor } from "@/components/PolicyEditor";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { CanaryPanel } from "@/components/CanaryPanel";
+
+/**
+ * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
+ * copy of "Nometria Control Plane". See lib/site.ts appPageMetadata.
+ */
+export const metadata: Metadata = appPageMetadata("Policy");
 
 export const dynamic = "force-dynamic";
 

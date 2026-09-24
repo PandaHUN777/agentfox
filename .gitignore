@@ -8,6 +8,9 @@ __pycache__/
 *.db-shm
 var/
 node_modules/
+# `uv build` writes here. The release workflow builds on a runner, but a local
+# `uv build` should not leave artefacts staged for commit.
+/dist/
 dashboard/.next/
 dashboard/.npm-cache/
 .env

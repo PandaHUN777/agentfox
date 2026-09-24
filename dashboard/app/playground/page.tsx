@@ -1,12 +1,15 @@
+import type { Metadata } from "next";
+import { publicPageMetadata } from "@/lib/site";
 import { Playground } from "@/components/Playground";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "Playground — Nometria",
+export const metadata: Metadata = publicPageMetadata({
+  title: "Playground: try to break a live agent",
   description:
-    "Try to break a real agent. Prompt injection, indirect injection, multi-turn payload splitting, tool-parameter exploitation — see the actual enforcement verdict.",
-};
+    "Attack a running agent from the browser with no account: prompt injection, indirect injection, payload splitting, and the enforcement verdict for every try.",
+  path: "/playground",
+});
 
 /**
  * Server Component wrapper only, so the API base URL is resolved from the

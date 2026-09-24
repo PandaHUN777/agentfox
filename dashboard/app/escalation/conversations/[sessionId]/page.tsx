@@ -1,7 +1,15 @@
+import type { Metadata } from "next";
+import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { ApiError, api, apiErrorProps } from "@/lib/api";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { ApiDown, InfoTip, NotFound, Severity, ts } from "@/components/ui";
+
+/**
+ * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
+ * copy of "Nometria Control Plane". See lib/site.ts appPageMetadata.
+ */
+export const metadata: Metadata = appPageMetadata("Escalated conversation");
 
 export const dynamic = "force-dynamic";
 

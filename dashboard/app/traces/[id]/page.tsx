@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
+import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { ApiError, api, apiErrorProps } from "@/lib/api";
 import { ApiDown, ControlChip, InfoTip, NotFound, Panel, Verdict, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { controlTitleMap } from "@/lib/controls";
+
+/**
+ * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
+ * copy of "Nometria Control Plane". See lib/site.ts appPageMetadata.
+ */
+export const metadata: Metadata = appPageMetadata("Trace");
 
 export const dynamic = "force-dynamic";
 

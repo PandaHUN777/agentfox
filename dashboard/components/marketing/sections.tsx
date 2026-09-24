@@ -228,18 +228,11 @@ export function HowItWorks() {
             Nothing in the first three steps refuses a call. A library that starts rejecting
             production traffic because someone added an import gets switched off within a day.
           </p>
-          <div
-            className="mk-card"
-            style={{ marginTop: 22, background: "var(--mk-surface-2)", maxWidth: "48ch" }}
-          >
-            <span className="mk-label">One exception, from day one</span>
-            <p className="mk-body" style={{ margin: "8px 0 0", fontSize: ".94rem" }}>
-              Tool containment enforces from the moment you install, in one situation only: a
-              tool that can move money, delete something or send an email is about to be called
-              with a value that came from a document or another tool rather than from the
-              person. Those calls are refused, or sent to a human.
-            </p>
-          </div>
+          <p className="mk-fine" style={{ marginTop: 18, maxWidth: "48ch" }}>
+            One exception from day one: a tool that can move money, delete something or send an
+            email, called with a value that came from a document rather than a person, is
+            refused or sent to a human.
+          </p>
         </div>
         <ol className="mk-steps mk-up mk-d2" style={{ listStyle: "none", margin: 0, padding: 0 }}>
           {STEPS.map((s, i) => (
@@ -268,9 +261,8 @@ const LIMITS: { title: string; body: React.ReactNode }[] = [
     title: "Detection is a speed bump, and we measure it against ourselves",
     body: (
       <>
-        An adaptive attacker that reads our verdict and tries again gets 73% of the attacks we
-        do catch through within 50 attempts, using only mutations a model can still read. Our
-        held-out injection recall is 66.7%, published rather than rounded up.
+        Held-out injection recall is 66.7%. An attacker who reads our verdict and tries again
+        gets 73% of what we do catch through within 50 attempts.
       </>
     ),
   },
@@ -278,10 +270,9 @@ const LIMITS: { title: string; body: React.ReactNode }[] = [
     title: "On detection, a competitor beats us",
     body: (
       <>
-        On indirect injection through tool output, a real installed{" "}
-        <code className="mk-mono">llm-guard</code> is more precise than we are on the same 20
-        cases: 81.8% against our 66.7%. That is the axis a text scanner competes on, and it is
-        why the containment numbers are the ones we lead with.
+        On indirect injection through tool output, an installed{" "}
+        <code className="mk-mono">llm-guard</code> is more precise on the same 20 cases: 81.8%
+        against our 66.7%. Which is why we lead with containment.
       </>
     ),
   },
@@ -289,9 +280,8 @@ const LIMITS: { title: string; body: React.ReactNode }[] = [
     title: "Containment is only as good as the declarations behind it",
     body: (
       <>
-        Grants, impact tiers, ceilings and downstream triggers are declared by whoever operates
-        the agent, and every check above believes them. A tool recorded as read-only that is
-        not read-only is not covered by any of this.
+        Grants and impact tiers are declared by whoever operates the agent, and every check
+        believes them. A tool recorded as read-only that is not read-only is not covered.
       </>
     ),
   },
@@ -299,9 +289,8 @@ const LIMITS: { title: string; body: React.ReactNode }[] = [
     title: "It is MVP v0.3",
     body: (
       <>
-        No single sign-on, so there is no live identity-provider integration yet. Multi-tenancy
-        is enforced at the session for a single organisation, and this is not a managed
-        multi-region offering. Text is the only modality: no images, no audio, no video.
+        No SSO. Multi-tenancy is enforced at the session for a single organisation, and this is
+        not a managed multi-region offering. Text only: no images, audio or video.
       </>
     ),
   },

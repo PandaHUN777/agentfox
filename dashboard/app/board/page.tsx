@@ -1,4 +1,12 @@
+import type { Metadata } from "next";
+import { appPageMetadata } from "@/lib/site";
 import { legacyTabRedirect } from "@/lib/legacyRedirect";
+
+/**
+ * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
+ * copy of "Nometria Control Plane". See lib/site.ts appPageMetadata.
+ */
+export const metadata: Metadata = appPageMetadata("Compliance board");
 
 /**
  * Board view used to be its own nav item; it's now the "Board" tab on the

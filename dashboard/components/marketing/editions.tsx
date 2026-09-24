@@ -115,8 +115,7 @@ export function Editions() {
             Free forever, supported, or waiting.
           </h2>
           <p className="mk-lede" style={{ margin: "14px auto 0", maxWidth: "62ch" }}>
-            The software is the same in all three. What you pay for is a support
-            relationship, and in one case a product that is still in development.
+            Same software in all three. What you pay for is a support relationship.
           </p>
         </div>
 
@@ -129,13 +128,10 @@ export function Editions() {
             </div>
 
             <Item label="What you get">
-              The whole control plane. Discovery, capability grants, provenance,
-              the audit chain, evidence packages, red-team suites, compliance
-              mappings.
+              The whole control plane. Every feature above, none of them gated.
             </Item>
             <Item label="Who it is for">
-              Anyone who wants to run it themselves and read the code that decides
-              what their agent may do.
+              Anyone who wants to read the code that decides what their agent may do.
             </Item>
             <Item label="Cost">Free, Apache-2.0. No licence key, no gated features.</Item>
 
@@ -164,24 +160,18 @@ export function Editions() {
             </div>
 
             <Item label="What you get">
-              The identical software, plus a support relationship. Help with
-              rollout, and priority on fixes.
+              The identical software, plus help with rollout and priority on fixes.
             </Item>
             <Item label="Who it is for">
-              Teams putting this in front of an auditor or a regulator who want a
-              named person to call.
+              Teams putting this in front of an auditor who want a named person to call.
             </Item>
             <Item label="Cost">
-              Talk to us. Support is not priced yet, and we would rather
-              agree it with the first few teams than guess at a number.
+              Talk to us. Not priced yet, and we would rather agree it with the first
+              few teams than guess.
             </Item>
 
             <div style={ACTION_FOOT}>
               <span className="mk-label">Start here</span>
-              <p className="mk-fine" style={{ margin: 0 }}>
-                Tell us what you are deploying and we will tell you whether we can
-                help.
-              </p>
               <a
                 className="mk-btn mk-btn-primary"
                 href={SUPPORTED_HREF}
@@ -200,23 +190,17 @@ export function Editions() {
             </div>
 
             <Item label="What you get">
-              Nothing yet. The managed cloud is in development and you cannot sign
-              up for it today.
+              Nothing yet. It is in development and you cannot sign up today.
             </Item>
             <Item label="Who it is for">
-              Teams who would rather not run it themselves, once the in-development
-              cloud exists.
+              Teams who would rather not run it themselves, once it exists.
             </Item>
             <Item label="Cost">
-              Talk to us. Nothing is priced, because nothing is running.
+              Nothing is priced, because nothing is running.
             </Item>
 
             <div style={ACTION_FOOT}>
               <span className="mk-label">Start here</span>
-              <p className="mk-fine" style={{ margin: 0 }}>
-                Today the product is single-org multi-tenancy enforced at the
-                session, with no live IdP or SSO.
-              </p>
               <a
                 className="mk-btn mk-btn-outline"
                 href={CLOUD_HREF}
@@ -254,22 +238,22 @@ export function Editions() {
 const OSS_FACTS: { label: string; body: string; where: string }[] = [
   {
     label: "Licence",
-    body: "Apache-2.0 in full, covering everything in the repository. It stays that way.",
+    body: "Apache-2.0 in full. It stays that way.",
     where: "LICENSE",
   },
   {
     label: "Offline",
-    body: "Install, init and the thirteen-step demo need no API key and no downloaded weights.",
+    body: "No API key, no downloaded weights.",
     where: "nometria init && nometria demo",
   },
   {
     label: "No telemetry",
-    body: "Nothing in the control plane calls a Nometria server. The only outbound hosts are the model and tracing providers you configure.",
+    body: "Nothing calls a Nometria server. Outbound hosts are the ones you configure.",
     where: "src/nometria/config.py",
   },
   {
-    label: "Reproducible numbers",
-    body: "Every benchmark figure we publish has a script in the repository that regenerates it.",
+    label: "Reproducible",
+    body: "Every published figure has a script that regenerates it.",
     where: "benchmarks/",
   },
 ];

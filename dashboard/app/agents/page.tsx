@@ -1,7 +1,18 @@
+import type { Metadata } from "next";
+import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, apiErrorProps } from "@/lib/api";
 import { ApiDown, InfoTip, Panel, Stat, ts } from "@/components/ui";
 import { Modal } from "@/components/Modal";
+
+/**
+ * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
+ * copy of "Nometria Control Plane". See lib/site.ts appPageMetadata.
+ */
+export const metadata: Metadata = appPageMetadata(
+  "Agents",
+  "The register of every AI agent in this workspace.",
+);
 
 export const dynamic = "force-dynamic";
 

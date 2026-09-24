@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { publicPageMetadata } from "@/lib/site";
 import Link from "next/link";
 
 /**
@@ -34,11 +36,12 @@ import Link from "next/link";
  * redirected to /login, which is the same dead end this page was built to remove.
  */
 
-export const metadata = {
-  title: "Benchmarks — Nometria",
+export const metadata: Metadata = publicPageMetadata({
+  title: "Benchmarks and methodology",
   description:
-    "Containment under total detector bypass, an AgentDojo replay of 617 ground-truth calls, agent-runtime tiers against a real llm-guard install, the honest detection numbers and an adaptive attack on our own detectors, with the limits of each.",
-};
+    "Containment under total detector bypass, an AgentDojo replay of 617 ground-truth calls, our honest detection rates and an adaptive attack, each with its limits.",
+  path: "/benchmark",
+});
 
 function Source({ children }: { children: React.ReactNode }) {
   return <p className="source">Source: {children}</p>;

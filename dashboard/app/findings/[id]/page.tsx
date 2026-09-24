@@ -1,8 +1,16 @@
+import type { Metadata } from "next";
+import { appPageMetadata } from "@/lib/site";
 import { ApiError, api, safeApi, apiErrorProps } from "@/lib/api";
 import { AgentLink, ApiDown, ControlChip, NotFound, Severity, findingTypeInfo, ts } from "@/components/ui";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { FindingEvidence } from "@/components/FindingEvidence";
 import { controlTitleMap } from "@/lib/controls";
+
+/**
+ * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
+ * copy of "Nometria Control Plane". See lib/site.ts appPageMetadata.
+ */
+export const metadata: Metadata = appPageMetadata("Finding");
 
 export const dynamic = "force-dynamic";
 

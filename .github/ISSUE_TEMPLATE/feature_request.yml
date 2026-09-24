@@ -1,0 +1,61 @@
+name: Feature request
+description: Something the control plane should be able to do and cannot.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is one developer's project, so the useful shape of a request is a concrete
+        problem rather than a wish list. Describe what you were trying to govern and
+        where the product ran out of road.
+
+        Please keep real prompts, tool arguments and audit rows out of a public issue.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do
+      description: >
+        The situation, not the solution. What agent, what tool, what decision did you
+        need the control plane to make.
+    validations:
+      required: true
+
+  - type: textarea
+    id: blocked
+    attributes:
+      label: Where it stops working today
+      description: >
+        What you tried, and what the product did instead. If there is a workaround you
+        are using, say what it costs you.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you think it should do
+      description: Optional. A sketch of the interface, CLI command or policy rule you had in mind.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the product
+      multiple: true
+      options:
+        - Enforcement and policy engine
+        - Capability grants and tool containment
+        - Detectors and scorers
+        - Audit chain and evidence
+        - Compliance mappings and controls
+        - CLI
+        - Control-plane API and gateway
+        - Dashboard
+        - Integrations (LangGraph, MCP, OpenTelemetry, providers)
+        - Benchmarks and evidence tooling
+        - Documentation
+        - Not sure
+    validations:
+      required: false

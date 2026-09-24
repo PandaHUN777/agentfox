@@ -12,7 +12,8 @@ import pytest
 
 from nometria.config import get_settings, reset_settings_cache
 
-VERCEL = "https://guardrails-dashboard-eight.vercel.app"
+VERCEL = "https://guardrails-nometria.vercel.app"
+VERCEL_OLD = "https://guardrails-dashboard-eight.vercel.app"
 RENDER = "https://nometria-dashboard.onrender.com"
 
 

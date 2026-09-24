@@ -1,5 +1,9 @@
 # Nometria
 
+[![CI](https://github.com/architsharm/guardrails/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/architsharm/guardrails/actions/workflows/ci.yml)
+[![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
+
 Nometria is a control plane that sits between your AI agent and the models, tools and data it
 reaches, and decides what each call is allowed to do. Every decision is recorded in a
 tamper-evident log and mapped to the compliance frameworks you have to answer to.
@@ -15,7 +19,7 @@ with every detector switched off, and publish the result below.
 ## See it work right now
 
 **1. Hosted playground, no account, nothing to install:**
-<https://guardrails-dashboard-eight.vercel.app/playground>
+<https://guardrails-nometria.vercel.app/playground>
 
 Every visitor gets a throwaway sandbox running the same enforcement code the product runs in
 production. Send an injection and watch the baseline policy flag it while the call still goes

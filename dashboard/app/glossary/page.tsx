@@ -1,4 +1,22 @@
+import type { Metadata } from "next";
+import { appPageMetadata } from "@/lib/site";
+
 export const dynamic = "force-dynamic";
+
+/**
+ * Not public, despite being pure reference text with no data in it. It is linked
+ * only from signed-in pages (Start here, Agents, Policies, Compliance, Findings),
+ * it renders inside the app sidebar rather than the marketing chrome, and it is
+ * not in middleware.ts's PUBLIC_PATHS, so a signed-out request for it is redirected
+ * to /login. Marking it indexable would therefore put the sign-in form in the index
+ * under this URL. See the note in the report accompanying this change: making it
+ * genuinely public is a reasonable thing to want, but it needs the public header
+ * treatment /how-it-works has, not just a line in a list.
+ */
+export const metadata: Metadata = appPageMetadata(
+  "Glossary",
+  "Every term and code this interface shows, decoded once: the concepts, then the pillar numbering and NOM control prefixes used across policies and compliance.",
+);
 
 const PILLARS: [string, string][] = [
   ["Pillar 1", "Discovery & Agent Registry — knowing every agent exists"],

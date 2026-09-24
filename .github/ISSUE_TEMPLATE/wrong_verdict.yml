@@ -1,0 +1,159 @@
+name: Wrong verdict / detection quality
+description: It blocked something it should have allowed, or it allowed something it should have stopped.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        These are the most valuable reports this project gets, so there is a template
+        just for them. A false positive costs a user their afternoon; a false negative
+        is the thing the product exists to prevent. Both are worth filing.
+
+        **This issue is public, and a verdict report is very likely to contain
+        production data.** Replace the prompt, the tool arguments, the retrieved
+        document, the account numbers and the URLs with obvious placeholders before you
+        submit. The trace id and the rule id are what we need; the payload usually is
+        not.
+
+        A prompt injection that a detector missed belongs here, not in a security
+        advisory. [SECURITY.md](../blob/main/SECURITY.md) says so explicitly: detection
+        is a speed bump, not a defence, and a miss is a quality report. What does go
+        through the private advisory route is an action getting through that the
+        *declarations* should have refused, cross-tenant access, or a broken audit
+        chain.
+
+  - type: dropdown
+    id: direction
+    attributes:
+      label: Which way did it go wrong
+      options:
+        - It stopped something it should have allowed (false positive)
+        - It allowed something it should have stopped (false negative)
+        - The verdict was right but the reason or the rule attribution was wrong
+    validations:
+      required: true
+
+  - type: input
+    id: trace-id
+    attributes:
+      label: Trace id
+      description: >
+        The decision's trace id. The Traces view in the dashboard shows it, and
+        `GET /api/traces/{id}` returns the decision behind it. Leave blank if the
+        decision was not recorded.
+      placeholder: "trc_..."
+    validations:
+      required: false
+
+  - type: input
+    id: rule-id
+    attributes:
+      label: Rule id
+      description: >
+        The rule that fired, or that you expected to fire. Every verdict carries one,
+        printed next to the effect. Examples from the shipped packs:
+        `injection.indirect`, `taint.irreversible_tool`, `capability.denied`,
+        `capability.approval_required`.
+      placeholder: "taint.irreversible_tool"
+    validations:
+      required: false
+
+  - type: input
+    id: pack-and-mode
+    attributes:
+      label: Policy pack and mode
+      description: >
+        Which pack the rule came from and whether it was in `observe` or `enforce`.
+        `nometria policy list` prints both. The shipped packs are `baseline`,
+        `tool-containment` and `eu-ai-act-high-risk`.
+      placeholder: "tool-containment, enforce"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Which surface was being checked
+      options:
+        - input (the prompt going to the model)
+        - output (what the model returned)
+        - tool_args (the arguments of a tool call)
+        - tool_result (what a tool returned)
+        - memory_write (something being written to memory)
+        - agent_message (agent to agent)
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: verdicts
+    attributes:
+      label: What the decision said
+      description: >
+        The verdict and the effective verdict (they differ when a pack is in observe:
+        nothing was stopped, but the policy says what it would have done), plus the
+        reason text. Redact the payload, keep the structure.
+      render: shell
+      placeholder: |
+        enforced=block  policy-would=block
+            injection.indirect → block  baseline is in enforce
+              Instruction-like content found in untrusted retrieved or tool content
+              controls: NOM-RTG-01, NOM-DSC-05
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+      description: >
+        The verdict you wanted, and why that is the right answer for this call. If it is
+        a false positive, say what about the content or the argument was legitimate.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: A reproduction we can run
+      description: >
+        A redacted version of the call, ideally one that still reproduces. If it is a
+        policy question rather than a detector one, `nometria policy simulate --file
+        <candidate.yaml>` replays recorded traffic against a candidate policy and is
+        often the fastest way to show us the disagreement.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: declarations
+    attributes:
+      label: Tool declaration and capability grant, if a tool was involved
+      description: >
+        Containment is exactly as good as the declarations behind it. If the call
+        involved a tool, paste its impact tier (`read`, `write`, `high_impact`,
+        `irreversible`) from `nometria tools list`, and the capability grant that
+        applied. `nometria doctor` grades declaration quality and often explains a
+        surprising verdict on its own.
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Nometria version
+      description: Output of `nometria version`, or the commit SHA if you run from a clone.
+      placeholder: "0.1.0, or commit 1b91e2c"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Before submitting
+      options:
+        - label: >
+            I have replaced real prompts, tool arguments, retrieved content, audit rows
+            and secrets with placeholders.
+          required: true

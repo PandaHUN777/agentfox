@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { publicPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { PublicHeader, PublicFooter, CATEGORY, REPO } from "./_public";
 import { DraftCaveat } from "@/components/ui";
@@ -20,11 +22,12 @@ import { DraftCaveat } from "@/components/ui";
  * /benchmark rather than restating a figure.
  */
 
-export const metadata = {
-  title: "How it works — Nometria",
+export const metadata: Metadata = publicPageMetadata({
+  title: "How it works",
   description:
-    "The path one agent call takes, what is checked before a tool runs, and what the six areas of the product are for.",
-};
+    "The path one agent call takes through the control plane, what is checked before a tool is allowed to run, and what each of the six areas of the product is for.",
+  path: "/how-it-works",
+});
 
 /** The <ol> renders the number; the title must not repeat it. */
 function Step({ title, children }: { title: string; children: React.ReactNode }) {

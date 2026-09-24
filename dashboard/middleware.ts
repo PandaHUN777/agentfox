@@ -30,7 +30,33 @@ import { SESSION_COOKIE } from "@/lib/api";
 //
 // Note the match below is `=== p` or `startsWith(p + "/")`, so the "/" entry matches
 // the root path exactly and never the whole site: no path begins with "//".
-const PUBLIC_PATHS = ["/", "/how-it-works", "/login", "/api/auth", "/playground", "/benchmark"];
+// /product is public because components/marketing/nav.tsx links to it from the
+// public header on "/" itself, under a comment promising that nav "links point only
+// at pages a signed-out visitor can actually open". It was not in this list, so the
+// first row of the nav on the landing page bounced the visitor to /login. Like
+// /benchmark it is a static page with no session and no API call.
+//
+// The generated metadata routes are public because their whole purpose is to be
+// fetched by a crawler or an unfurler, which has no session. /robots.txt and
+// /sitemap.xml are already excluded by the extension rule in the matcher below;
+// /opengraph-image, /twitter-image, /icon and /apple-icon have no extension, so
+// without these entries Reddit, Slack, X and Discord would all be served a redirect
+// to /login where they asked for a PNG, and the unfurl would stay blank.
+const PUBLIC_PATHS = [
+  "/",
+  "/product",
+  "/how-it-works",
+  "/login",
+  "/api/auth",
+  "/playground",
+  "/benchmark",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/opengraph-image",
+  "/twitter-image",
+  "/icon",
+  "/apple-icon",
+];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

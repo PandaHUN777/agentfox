@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, apiErrorProps } from "@/lib/api";
 import { ApiDown, InfoTip, Panel } from "@/components/ui";
@@ -6,6 +8,12 @@ import { Modal } from "@/components/Modal";
 import { SourceAddFlow } from "@/components/SourceAddFlow";
 import { SourceRowActions } from "@/components/SourceRowActions";
 import { TIER_TONE } from "@/lib/sourceOptions";
+
+/**
+ * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
+ * copy of "Nometria Control Plane". See lib/site.ts appPageMetadata.
+ */
+export const metadata: Metadata = appPageMetadata("Verified sources");
 
 export const dynamic = "force-dynamic";
 

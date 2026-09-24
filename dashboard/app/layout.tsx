@@ -13,16 +13,81 @@ import { NotificationsBell } from "@/components/NotificationsBell";
 import { CommandSearch } from "@/components/CommandSearch";
 import { SideNav, type NavItem } from "@/components/SideNav";
 import { TopbarStats } from "@/components/TopbarStats";
+import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, HOME_TITLE, REPO_URL } from "@/lib/site";
 import "./globals.css";
 import "./marketing.css";
 
 // Runs before paint so a stored theme choice never flashes the wrong colors on load.
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("nometria-theme");if(t&&t!=="system")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
 
+/**
+ * Root metadata. Everything here is inherited by every route, so it holds only
+ * what is true of the whole site; anything page-specific lives on the page.
+ *
+ * `metadataBase` is what turns the relative `canonical` and image paths below and
+ * on every page into the absolute URLs a crawler and an unfurler need. It reads
+ * the host from the environment (lib/site.ts) so a preview deployment does not
+ * publish canonicals pointing at production.
+ *
+ * `title.template` means a page exports just its own name ("Glossary") and gets
+ * "Glossary | Nometria" in the tab and the unfurl. `title.default` is what a route
+ * with no title of its own inherits.
+ *
+ * No `verification`, no `category`, and no keyword list beyond the six terms this
+ * product is genuinely described by, because a longer list is not a ranking signal
+ * and reads as stuffing to a human who views source.
+ */
 export const metadata: Metadata = {
-  title: "Nometria Control Plane",
-  description:
-    "See every agent, control what it can do, prove it works, and demonstrate compliance.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: HOME_TITLE,
+    template: "%s | Nometria",
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  keywords: [
+    "AI agent governance",
+    "AI agent security",
+    "prompt injection",
+    "tool call authorisation",
+    "LLM guardrails",
+    "agent audit trail",
+  ],
+  authors: [{ name: "Nometria", url: REPO_URL }],
+  // No `images` key in either block. app/opengraph-image.tsx and
+  // app/twitter-image.tsx sit at the root of app/, and the file convention applies
+  // them to every route beneath automatically, with a content hash in the URL that
+  // busts a social network's image cache when the card changes. Listing an image
+  // here as well is how a page ends up emitting two `og:image` tags pointing at
+  // two different URLs for the same picture and letting the unfurler choose.
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    url: "/",
+    title: HOME_TITLE,
+    description: SITE_DESCRIPTION,
+    locale: "en_GB",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: HOME_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1 },
+  },
+  alternates: { canonical: "/" },
+  // app/icon.tsx and app/apple-icon.tsx generate these same two routes by the file
+  // convention, and file-based metadata takes precedence over this block. It is
+  // written out anyway because it is the declaration of record: it names the sizes
+  // and types those two files must keep producing, and it is what still describes
+  // the icons if either file is ever replaced by a static asset.
+  icons: {
+    icon: [{ url: "/icon", type: "image/png", sizes: "32x32" }],
+    apple: [{ url: "/apple-icon", type: "image/png", sizes: "180x180" }],
+  },
 };
 
 /**
@@ -142,7 +207,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     isPublicHome ||
     pathname.startsWith("/how-it-works") ||
     pathname.startsWith("/playground") ||
-    pathname.startsWith("/benchmark");
+    pathname.startsWith("/benchmark") ||
+    // /product is the long version of the landing page and renders its own
+    // MarketingNav and Footer. Without this it came out with the marketing nav
+    // nested inside the app sidebar, which is two navigations for one page, and
+    // a signed-out visitor could not open it at all (see middleware.ts).
+    pathname.startsWith("/product");
 
   let me: any = null;
   let attention: any = null;

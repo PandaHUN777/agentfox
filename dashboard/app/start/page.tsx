@@ -1,8 +1,19 @@
+import type { Metadata } from "next";
+import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, safeApi, ApiError, apiErrorProps } from "@/lib/api";
 import { ApiDown, Panel, Empty } from "@/components/ui";
 import { RepoTable } from "@/components/RepoTable";
 import { TokenManager } from "@/components/TokenManager";
+
+/**
+ * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
+ * copy of "Nometria Control Plane". See lib/site.ts appPageMetadata.
+ */
+export const metadata: Metadata = appPageMetadata(
+  "Start here",
+  "Connect a repository or a hosted API, mint a token, and see the first trace.",
+);
 
 export const dynamic = "force-dynamic";
 

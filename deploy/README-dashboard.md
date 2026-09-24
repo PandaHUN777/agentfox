@@ -9,7 +9,7 @@ organisation, stores their GitHub grant, lists their repositories, scans one for
 ungoverned agent code, and issues them an API token their agents authenticate with.
 
 > **Status, 2026-09-20.** The UI is already live on Vercel at
-> `https://guardrails-dashboard-eight.vercel.app`, with GitHub sign-in, the repo list and
+> `https://guardrails-nometria.vercel.app`, with GitHub sign-in, the repo list and
 > the repo scan all working, and the playground fixed (see step 4 — the origin was not
 > allowed, so every visitor saw "Failed to fetch"). A second copy now runs on Render at
 > `https://nometria-dashboard.onrender.com` as a backup; its sign-in returns 503 until the
@@ -121,7 +121,7 @@ The value is comma-separated, so list every host that serves the playground, wit
 trailing slashes, then redeploy the API:
 
 ```
-https://guardrails-dashboard-eight.vercel.app,https://nometria-dashboard.onrender.com
+https://guardrails-nometria.vercel.app,https://guardrails-dashboard-eight.vercel.app,https://nometria-dashboard.onrender.com
 ```
 
 Appending matters. While this setting took a single origin, adding the standby silently

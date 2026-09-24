@@ -1,7 +1,18 @@
+import type { Metadata } from "next";
+import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, safeApi, apiErrorProps } from "@/lib/api";
 import { AgentLink, ApiDown, Empty, InfoTip, Severity, ts } from "@/components/ui";
 import { Countdown } from "@/components/Countdown";
+
+/**
+ * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
+ * copy of "Nometria Control Plane". See lib/site.ts appPageMetadata.
+ */
+export const metadata: Metadata = appPageMetadata(
+  "Approvals",
+  "Actions held for a human decision, and the escalation queue.",
+);
 
 export const dynamic = "force-dynamic";
 

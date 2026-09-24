@@ -648,7 +648,9 @@ def test_importing_the_package_has_no_side_effects():
         timeout=60,
     )
     assert result.returncode == 0, result.stderr
-    assert "0.1.0" in result.stdout
+    from nometria import __version__
+
+    assert result.stdout.strip() == __version__
 
 
 def test_blocked_carries_the_decision():

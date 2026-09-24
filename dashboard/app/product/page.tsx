@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+import { publicPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { MarketingNav } from "@/components/marketing/nav";
 import {
@@ -12,11 +14,15 @@ import { Evidence, HowItWorks, FAQ, CTA, Footer } from "@/components/marketing/s
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "What Nometria does: the six pillars, on real screens",
+// layout.tsx appends " | Nometria", so the name is not repeated here. The previous
+// description ran to 244 characters and was cut mid-clause in every search result
+// and every unfurl; this one says the same six things inside the ~160 that get shown.
+export const metadata: Metadata = publicPageMetadata({
+  title: "What Nometria does, on real screens",
   description:
-    "Every layer of the control plane, with the screen that shows it: guardrails on model traffic, tool calls bounded by capability grants, agent discovery, evals and red-teaming, the tamper-evident chain, and compliance computed from telemetry.",
-};
+    "The six pillars of the control plane, each with the screen that runs it: guardrails, capability grants, agent discovery, evals, the audit chain and compliance.",
+  path: "/product",
+});
 
 /**
  * The long version.

@@ -1,0 +1,175 @@
+name: Release
+
+# Triggered by a maintainer pushing a tag, and by nothing else. There is no schedule and
+# no push-to-main path, so this workflow does nothing until someone deliberately runs:
+#
+#   git tag v0.3.0 && git push origin v0.3.0
+#
+# It builds the sdist and the wheel, refuses to continue unless the built version and the
+# version declared in the source both match the tag, and publishes a GitHub Release whose
+# notes are the matching CHANGELOG.md section with the two artefacts attached.
+#
+# It deliberately does NOT publish to PyPI. The distribution name is not claimed there,
+# and claiming it is a decision for a human, not for a workflow.
+
+on:
+  push:
+    tags:
+      - "v*"
+
+# Only what creating a release needs. No packages, no id-token, no write access to
+# anything else.
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      - name: Read the version out of the tag
+        id: version
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          # A tag like v0.2.0-rc1 is published as a pre-release.
+          if [ "${VERSION}" != "${VERSION%%-*}" ]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "tag ${TAG} claims version ${VERSION}"
+
+      - name: Build the sdist and the wheel
+        run: uv build
+
+      - name: Refuse to release unless the built version matches the tag
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          ls -1 dist/
+          python3 - <<'PY'
+          import glob
+          import os
+          import pathlib
+          import re
+          import sys
+
+          version = os.environ["VERSION"]
+          problems = []
+
+          wheels = glob.glob("dist/*.whl")
+          sdists = glob.glob("dist/*.tar.gz")
+          if len(wheels) != 1:
+              problems.append(f"expected exactly one wheel in dist/, found {wheels}")
+          if len(sdists) != 1:
+              problems.append(f"expected exactly one sdist in dist/, found {sdists}")
+
+          for path in wheels + sdists:
+              name = pathlib.Path(path).name
+              built = name.split("-")[1]
+              if built.endswith(".tar.gz"):
+                  built = built[: -len(".tar.gz")]
+              if built != version:
+                  problems.append(f"{name} is version {built}, but the tag says {version}")
+
+          # The two places the version is written by hand. uv build reads the first;
+          # `nometria version` prints the second. They must agree with the tag, or a
+          # released artefact reports a version nobody can match to a commit.
+          declared = re.search(
+              r'^version\s*=\s*"([^"]+)"',
+              pathlib.Path("pyproject.toml").read_text(),
+              re.MULTILINE,
+          )
+          if not declared:
+              problems.append("could not find `version = ` in pyproject.toml")
+          elif declared.group(1) != version:
+              problems.append(
+                  f"pyproject.toml declares {declared.group(1)}, but the tag says {version}"
+              )
+
+          dunder = re.search(
+              r'^__version__\s*=\s*"([^"]+)"',
+              pathlib.Path("src/nometria/__init__.py").read_text(),
+              re.MULTILINE,
+          )
+          if not dunder:
+              problems.append("could not find `__version__ = ` in src/nometria/__init__.py")
+          elif dunder.group(1) != version:
+              problems.append(
+                  f"src/nometria/__init__.py declares {dunder.group(1)}, "
+                  f"but the tag says {version}"
+              )
+
+          if problems:
+              for problem in problems:
+                  print(f"error: {problem}", file=sys.stderr)
+              sys.exit(1)
+          print(f"version {version} agrees across the tag, pyproject.toml, "
+                f"src/nometria/__init__.py and dist/")
+          PY
+
+      - name: Take the release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import sys
+
+          version = os.environ["VERSION"]
+          heading = f"## [{version}]"
+          lines = pathlib.Path("CHANGELOG.md").read_text().splitlines()
+
+          start = None
+          for index, line in enumerate(lines):
+              if line.startswith(heading):
+                  start = index + 1
+                  break
+          if start is None:
+              sys.exit(
+                  f"error: CHANGELOG.md has no '{heading}' section. "
+                  "Add one before tagging, so the release notes say something."
+              )
+
+          end = len(lines)
+          for index in range(start, len(lines)):
+              if lines[index].startswith("## "):
+                  end = index
+                  break
+
+          body = "\n".join(lines[start:end]).strip()
+          if not body:
+              sys.exit(f"error: the '{heading}' section in CHANGELOG.md is empty.")
+
+          pathlib.Path("release-notes.md").write_text(body + "\n")
+          print(body)
+          PY
+
+      - name: Create the GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ steps.version.outputs.tag }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          FLAGS=""
+          if [ "${PRERELEASE}" = "true" ]; then
+            FLAGS="--prerelease"
+          fi
+          # shellcheck disable=SC2086
+          gh release create "${TAG}" \
+            --title "${TAG}" \
+            --notes-file release-notes.md \
+            --verify-tag \
+            ${FLAGS} \
+            dist/*.whl dist/*.tar.gz

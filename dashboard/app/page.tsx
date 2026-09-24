@@ -1,9 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { api, apiErrorProps, SESSION_COOKIE } from "@/lib/api";
 import { ApiDown, Severity, Stat, StatLink, findingTypeInfo, ts } from "@/components/ui";
-import { CATEGORY } from "./how-it-works/_public";
-import { MarketingNav } from "@/components/marketing/nav";
+import { CATEGORY_CAP } from "./how-it-works/_public";
+import { SITE_URL, SUPPORT_EMAIL, publicPageMetadata, HOME_TITLE, HOME_DESCRIPTION } from "@/lib/site";
+import { MarketingNav, REPO } from "@/components/marketing/nav";
 import { Hero } from "@/components/marketing/hero";
 import { Evidence, HowItWorks, Honesty, FAQ, CTA, Footer } from "@/components/marketing/sections";
 import { Capabilities } from "@/components/marketing/capabilities";
@@ -12,17 +14,103 @@ import { Editions, WhyOpen } from "@/components/marketing/editions";
 export const dynamic = "force-dynamic";
 
 /**
- * layout.tsx titles every page "Nometria Control Plane", which was a fourth name for
- * the product in the first viewport alongside the strapline, the landing body line
- * and the API root's own description. A page-level export overrides the layout's
- * static title for this route only, so "/" now carries the same category name the
- * body uses. layout.tsx is owned by a concurrent change and is not touched.
+ * layout.tsx's title template appends " | Nometria" to a child page's title. This
+ * page is the one that must not take it: "Nometria: ... | Nometria" says the name
+ * twice inside a 60-character budget, so `title.absolute` opts out.
+ *
+ * The description drops the previous one's "even after a prompt injection has
+ * convinced the model" clause only for length: at 191 characters it was cut off in
+ * the result snippet, which is where the sentence needs to land whole.
  */
-export const metadata = {
-  title: `Nometria: ${CATEGORY}`,
-  description:
-    "Nometria checks every tool call an agent makes against what that agent was granted, and refuses the ones outside it, even after a prompt injection has convinced the model.",
+export const metadata: Metadata = {
+  ...publicPageMetadata({
+    title: HOME_TITLE,
+    description: HOME_DESCRIPTION,
+    path: "/",
+  }),
+  // `absolute` opts this one page out of layout.tsx's "%s | Nometria" template.
+  title: { absolute: HOME_TITLE },
 };
+
+/**
+ * Structured data for the landing page.
+ *
+ * Two objects in one `@graph`, because they describe two different things that
+ * point at each other: the software, and whoever publishes it.
+ *
+ * Every property below is a fact checked against a file in this repository, and
+ * nothing that could not be checked is here:
+ *
+ *   - `license` / "Apache-2.0" ............ LICENSE at the repository root
+ *   - `codeRepository` / `url` ............ components/marketing/nav.tsx REPO
+ *   - `email` ............................. components/marketing/editions.tsx
+ *   - `description` ....................... app/how-it-works/_public.tsx CATEGORY
+ *   - `offers` price 0 .................... it is Apache-2.0 source; the free
+ *                                           edition is what this page describes
+ *   - `applicationCategory` / `os` ........ "runs offline with no API key",
+ *                                           components/marketing/hero.tsx
+ *
+ * Deliberately absent: `aggregateRating`, `review`, `ratingValue`, any user or
+ * customer count, and any price other than zero. This project has no ratings and
+ * no published customers, and invented review markup is the single most common
+ * cause of a Google manual action against structured data. A rich result bought
+ * with a fabricated number is worth less than no rich result.
+ *
+ * `SoftwareApplication` rather than `SoftwareSourceCode`: both fit an open-source
+ * control plane, but the thing a reader is looking for here is a product they can
+ * run, and `SoftwareApplication` is the type that carries `offers` and
+ * `operatingSystem`. `codeRepository` keeps the source side of it addressable.
+ */
+function LandingJsonLd() {
+  const graph = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SoftwareApplication",
+        "@id": `${SITE_URL}/#software`,
+        name: "Nometria",
+        applicationCategory: "SecurityApplication",
+        applicationSubCategory: "AI agent governance and security control plane",
+        description: CATEGORY_CAP,
+        url: SITE_URL,
+        operatingSystem: "Linux, macOS, Windows",
+        license: "https://www.apache.org/licenses/LICENSE-2.0",
+        codeRepository: REPO,
+        isAccessibleForFree: true,
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+          availability: "https://schema.org/InStock",
+        },
+        publisher: { "@id": `${SITE_URL}/#organisation` },
+      },
+      {
+        "@type": "Organization",
+        "@id": `${SITE_URL}/#organisation`,
+        name: "Nometria",
+        url: SITE_URL,
+        logo: `${SITE_URL}/apple-icon`,
+        sameAs: [REPO],
+        contactPoint: {
+          "@type": "ContactPoint",
+          contactType: "customer support",
+          email: SUPPORT_EMAIL,
+          url: `${SITE_URL}/`,
+        },
+      },
+    ],
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      // JSON.stringify, not a template literal: it is the only thing that escapes
+      // a quote or a newline that ever ends up in one of these strings correctly.
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(graph) }}
+    />
+  );
+}
 
 /**
  * Nobody opens a governance dashboard to ask "what do we have" — they open it to ask
@@ -220,6 +308,10 @@ async function Overview() {
 function Landing() {
   return (
     <div className="mk">
+      {/* Inside the signed-out branch only. The signed-in Overview at this same URL
+          is a private dashboard, and marking it up as a product page would be
+          describing the wrong document. */}
+      <LandingJsonLd />
       <MarketingNav />
       <main>
         {/* What it is, what is in it, whether it works, how you adopt it, what it

@@ -1,5 +1,8 @@
 # Contributing
 
+By taking part you agree to the [Code of Conduct](CODE_OF_CONDUCT.md). Security problems
+do not go through pull requests or public issues: see [SECURITY.md](SECURITY.md).
+
 ## Setting up
 
 ```bash
