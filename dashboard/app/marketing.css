@@ -304,6 +304,11 @@
 }
 @media (min-width: 1040px) { .mk-grid-5 { grid-template-columns: repeat(5, 1fr); } }
 @media (min-width: 720px) { .mk-grid-4 { grid-template-columns: repeat(2, 1fr); } }
+/* Exactly four, never three: 1 up, then 2, then 4. Skipping the three-column step
+   is the point, because three columns leaves the fourth card alone underneath. */
+.mk-grid-quad { grid-template-columns: 1fr; }
+@media (min-width: 560px) { .mk-grid-quad { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1000px) { .mk-grid-quad { grid-template-columns: repeat(4, 1fr); } }
 .mk-split { display: grid; gap: 48px; align-items: center; grid-template-columns: 1fr; }
 @media (min-width: 900px) { .mk-split { grid-template-columns: 1fr 1fr; } }
 @media (min-width: 900px) { .mk-split-wide { grid-template-columns: 5fr 7fr; } }

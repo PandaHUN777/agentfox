@@ -148,7 +148,7 @@ export function Evidence() {
         <SectionHead
           eyebrow="Evidence"
           title="Measured with every detector switched off."
-          lede="Switching the detectors off is a total bypass rather than a weakened threshold or a simulated miss. What is left is capability grants, argument provenance and declared impact tiers, which is the whole design."
+          lede="Most tools try to recognise the malicious text. We do that too, and we publish how badly it goes: 66.7% recall on a held-out set, and an attacker who reads the verdict and retries gets 73% of what we do catch through. So we switched every detector off and measured what was left."
           center
         />
         <div className="mk-grid mk-grid-5 mk-up mk-d2" style={{ marginTop: 40 }}>
