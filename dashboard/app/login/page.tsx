@@ -4,7 +4,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { SESSION_COOKIE } from "@/lib/api";
-import { Wordmark } from "@/components/Logo";
+import { Logo } from "@/components/Logo";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +29,32 @@ export const metadata: Metadata = publicPageMetadata({
   noIndex: true,
 });
 
+/** GitHub's mark, drawn at the size the button uses it. `currentColor` so it takes
+ *  the button's label colour rather than needing a second value for dark. */
+function GitHubMark() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.42 7.42 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+    </svg>
+  );
+}
+
+/**
+ * The measurement on the brand wall.
+ *
+ * It is the same experiment the home page leads its proof section with, and the
+ * same three figures in the same order, because a visitor who followed a link from
+ * there and is now deciding whether to hand over a GitHub identity should meet the
+ * claim they already read rather than a second, different one. README.md, "What we
+ * claim, and what we don't", bound to benchmarks/agentdojo_e2e/results by
+ * scripts/claims.py.
+ */
+const PROOF: [string, string][] = [
+  ["42 of 42", "attacker calls that act, contained"],
+  ["552 of 552", "legitimate calls still allowed"],
+  ["0", "detectors switched on"],
+];
+
 /**
  * This page is the sign-up path as much as the sign-in one — a GitHub identity
  * nobody has seen before creates a new org on the far side of it — so it can't
@@ -49,44 +75,80 @@ export default async function Login({
   }
 
   return (
-    <div className="login-shell">
-      <div className="login-card">
-        <div className="brand">
-          <Wordmark />
-        </div>
-        <small className="muted" style={{ display: "block", marginBottom: 18 }}>
-          by Nometria
-        </small>
-        <h1 style={{ fontSize: 20 }}>Sign in or create a workspace</h1>
-        <p className="sub" style={{ maxWidth: "none" }}>
-          AgentFox keeps a register of every AI agent you run, the rules each one has
-          to follow, and a record of what it actually did. Sign in with GitHub: if
-          this is your first time, that creates a new workspace for you.
-        </p>
-        {expired && (
-          <div className="error small" style={{ textAlign: "left", marginBottom: 16 }}>
-            Your session expired, so you were signed out. Signing in again picks up
-            where you left off.
+    <div className="auth">
+      <div className="auth-form">
+        <div className="auth-inner">
+          <Link href="/" className="auth-brand">
+            <Logo size={26} />
+            <span>
+              <b>AgentFox</b>
+              <span style={{ display: "block" }}>by Nometria</span>
+            </span>
+          </Link>
+
+          <h1>Sign in, or start a workspace.</h1>
+          <p className="sub">
+            AgentFox keeps a register of every AI agent you run, the rules each one has
+            to follow, and a record of what it actually did. Signing in with GitHub
+            creates the workspace if you do not have one yet.
+          </p>
+
+          {expired && (
+            <div className="error small" style={{ margin: "18px 0 0" }}>
+              Your session expired, so you were signed out. Signing in again picks up
+              where you left off.
+            </div>
+          )}
+          {error && (
+            <div className="error small" style={{ margin: "18px 0 0" }}>
+              {error}
+            </div>
+          )}
+
+          <div style={{ marginTop: 26 }}>
+            <a className="btn-github" href="/api/auth/github/login">
+              <GitHubMark />
+              Continue with GitHub
+            </a>
           </div>
-        )}
-        {error && <div className="error small">{error}</div>}
-        <a className="btn-github" href="/api/auth/github/login">
-          Sign in with GitHub
-        </a>
-        <p className="small muted" style={{ marginTop: 18 }}>
-          Signing in with GitHub is also what lets you connect a repository, so we can
-          scan it for agents that need governing. We only read code structure to detect
-          what you&rsquo;re using, never execute it.
-        </p>
-        <p className="small" style={{ marginTop: 18 }}>
-          <Link href="/playground">Try the playground first</Link>
-          <span className="muted">
-            {" "}
-            — send a prompt at a sample agent and watch what gets blocked. No account,
-            nothing to install.
-          </span>
-        </p>
+          <p className="small muted" style={{ marginTop: 12 }}>
+            GitHub is also what lets you connect a repository so we can scan it for
+            agents that need governing. We read code structure to detect what you are
+            using, and never execute it.
+          </p>
+
+          <div className="auth-or">
+            <span>or</span>
+          </div>
+
+          <Link href="/playground" className="auth-alt">
+            <b>Try the playground first &rarr;</b>
+            <span>
+              Send a prompt at a sample agent and watch what gets refused. No account,
+              nothing to install.
+            </span>
+          </Link>
+        </div>
       </div>
+
+      <aside className="auth-wall" aria-label="What AgentFox does">
+        <div className="auth-wall-inner">
+          <span className="auth-wall-eyebrow">Measured, not asserted</span>
+          <h2>We turned the detectors off and ran it anyway.</h2>
+          <p>
+            617 real agent calls, replayed with every detector disabled. What was left
+            is the part that does not depend on catching the attack.
+          </p>
+          <div className="auth-stats">
+            {PROOF.map(([n, label]) => (
+              <div key={label} className="auth-stat">
+                <b>{n}</b>
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </aside>
     </div>
   );
 }

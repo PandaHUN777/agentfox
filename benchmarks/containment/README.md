@@ -23,7 +23,7 @@ Every scenario runs twice through the real `Enforcer.guard_tool_call` path, the 
 | Mode | Detector stack |
 |---|---|
 | `detectors_on` | the shipped default stack |
-| `detectors_off` | `NOMETRIA_ENABLED_DETECTORS=[]` — **zero detectors** |
+| `detectors_off` | `AGENTFOX_ENABLED_DETECTORS=[]` — **zero detectors** |
 
 `detectors_off` is a total bypass, not a weakened threshold or a simulated miss. To prove the bypass is real rather than assumed, each scenario's payload is re-run through `check_content` in the same mode and the entity count is recorded. Across the whole attack set in `detectors_off`:
 

@@ -248,6 +248,7 @@ def test_a_malformed_tool_call_never_breaks_the_caller(client):
 def _break_detector_pipeline(monkeypatch) -> None:
     """A real probe firing on real configuration: every enabled detector missing
     means the pipeline as a whole has nothing to run."""
+    monkeypatch.delenv("AGENTFOX_ENABLED_DETECTORS", raising=False)
     monkeypatch.setenv("NOMETRIA_ENABLED_DETECTORS", '["nope.does_not_exist"]')
     reset_settings_cache()
     reset_degradation_ledger()

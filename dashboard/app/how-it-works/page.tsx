@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { publicPageMetadata } from "@/lib/site";
 import Link from "next/link";
-import { PublicHeader, PublicFooter, CATEGORY, REPO } from "./_public";
+import { CATEGORY, REPO } from "./_public";
+import { MarketingNav } from "@/components/marketing/nav";
+import { Footer } from "@/components/marketing/sections";
 import { DraftCaveat } from "@/components/ui";
 
 /**
@@ -68,17 +70,34 @@ function Area({
 
 export default function HowItWorks() {
   return (
-    <div className="pg-shell">
-      <PublicHeader current="/how-it-works" />
+    /* The site's own nav and footer, and the hero the other public pages open with.
+       This page kept a header of its own from before there was a marketing layer,
+       which meant the one page explaining the product was also the one page that did
+       not look like the product's site. The article underneath is unchanged. */
+    <div className="mk">
+      <MarketingNav />
+      <main>
+        <section className="mk-section-tight">
+          <div className="mk-wrap">
+            <div style={{ maxWidth: 760 }}>
+              <span className="mk-eyebrow">How it works</span>
+              <h1
+                className="mk-h2"
+                style={{ marginTop: 12, fontSize: "clamp(2rem, 4.4vw, 3rem)" }}
+              >
+                One call, all the way through.
+              </h1>
+              <p className="mk-lede" style={{ marginTop: 18, maxWidth: "58ch" }}>
+                AgentFox is a {CATEGORY}. It sits between your agent and everything it
+                can act on. This page follows a single call through every check, then
+                says what each area of the product is for.
+              </p>
+            </div>
+          </div>
+        </section>
 
-      <div className="bm-doc">
-        <h1>How it works</h1>
-        <p className="lede">
-          AgentFox is a {CATEGORY}. It sits on the path between your agent and
-          everything it can act on. This page walks one call through it, then says what
-          each of the six areas of the product is for and what you would actually do in
-          each one.
-        </p>
+      <div className="mk-wrap">
+        <article className="bm-doc">
 
         <h2>The path one call takes</h2>
         <p>
@@ -281,9 +300,10 @@ export default function HowItWorks() {
             The numbers, and where a competitor beats us
           </Link>
         </div>
+        </article>
       </div>
-
-      <PublicFooter />
+      </main>
+      <Footer />
     </div>
   );
 }

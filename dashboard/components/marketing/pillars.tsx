@@ -440,7 +440,7 @@ export function Containment() {
         <Pair>
           <Shot
             src="/shots/approvals.webp"
-            h={958}
+            h={525}
             alt="The Approvals screen in AgentFox, showing tool calls suspended pending a human decision, each with the agent, the tool, the rule that escalated it and approve or deny actions."
             title="agentfox · approvals"
             caption="An escalated call is suspended, not dropped. It waits for a person, and the decision they make is recorded in the same chain as the call."
@@ -674,7 +674,7 @@ export function Evidence2() {
         <Pair>
           <Shot
             src="/shots/traces.webp"
-            h={632}
+            h={721}
             alt="The Traces screen in AgentFox, listing governed calls with the agent, the surface, the verdict and the effective verdict for each one."
             title="agentfox · traces"
             caption="Every governed call, with the verdict next to the effective verdict, so you can read what enforcing would have cost before you turn it on."

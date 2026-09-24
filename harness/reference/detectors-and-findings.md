@@ -33,7 +33,7 @@ indirect injection is contained even when no detector fires.
 | `rails.nemo`, `rails.guardrails_ai` | NeMo Guardrails / Guardrails AI validators | `[rails]` / `[validators]` |
 
 `agentfox doctor` lists which detectors are actually available. Enable extras with
-`NOMETRIA_ENABLED_DETECTORS` (JSON list).
+`AGENTFOX_ENABLED_DETECTORS` (JSON list).
 
 Non-detector analysis also feeds policy: action assurance on SQL/shell/HTTP (`[sql]`, fails
 closed without it), taint tracking, composed privilege escalation, loop and budget governance.

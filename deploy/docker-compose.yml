@@ -76,7 +76,7 @@ services:
       # Every detector this image has weights baked in for (deploy/Dockerfile),
       # on top of the 5 zero-dependency defaults. `safety.restricted` is Llama Guard
       # 3-8B — gated behind the flag below, not behind this list alone.
-      NOMETRIA_ENABLED_DETECTORS: >-
+      AGENTFOX_ENABLED_DETECTORS: >-
         ["injection.heuristic","pii.native","secrets.native","safety.lexicon",
         "schema.json","injection.classifier","safety.granite","injection.similarity",
         "safety.restricted"]

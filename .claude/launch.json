@@ -27,6 +27,24 @@
         "cd /Users/architsharma/guardrails/.claude/worktrees/gap-analysis-failure-modes-2a3ba9/dashboard/.next/standalone && PORT=3100 HOSTNAME=127.0.0.1 node server.js"
       ],
       "port": 3100
+    },
+    {
+      "name": "shotgw",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/architsharma/guardrails/.claude/worktrees/gap-analysis-failure-modes-2a3ba9 && AGENTFOX_DATABASE_URL=sqlite:////private/tmp/claude-501/-Users-architsharma-guardrails--claude-worktrees-gap-analysis-failure-modes-2a3ba9/51690438-15cf-42ec-80c2-29ce269bcca9/scratchpad/shots.db AGENTFOX_PLAYGROUND_CORS_ORIGIN=http://localhost:3001 PYTHONPATH=src /Users/architsharma/guardrails/.venv/bin/uvicorn agentfox.gateway.app:app --host 127.0.0.1 --port 8081"
+      ],
+      "port": 8081
+    },
+    {
+      "name": "shotdash",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-c",
+        "cd /Users/architsharma/guardrails/.claude/worktrees/gap-analysis-failure-modes-2a3ba9/dashboard && AGENTFOX_API_URL=http://127.0.0.1:8081 NOMETRIA_API_URL=http://127.0.0.1:8081 PORT=3001 npm run dev -- -p 3001"
+      ],
+      "port": 3001
     }
   ]
 }

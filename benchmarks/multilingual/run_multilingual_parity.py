@@ -1382,9 +1382,9 @@ def run_detection_parity(corpora: dict[str, Any], config: dict[str, Any]) -> dic
     from agentfox.seed import seed
 
     if config["detectors"] is None:
-        os.environ.pop("NOMETRIA_ENABLED_DETECTORS", None)
+        os.environ.pop("AGENTFOX_ENABLED_DETECTORS", None)
     else:
-        os.environ["NOMETRIA_ENABLED_DETECTORS"] = json.dumps(config["detectors"])
+        os.environ["AGENTFOX_ENABLED_DETECTORS"] = json.dumps(config["detectors"])
     if config["detector_timeout_ms"] is None:
         os.environ.pop("NOMETRIA_DETECTOR_TIMEOUT_MS", None)
     else:

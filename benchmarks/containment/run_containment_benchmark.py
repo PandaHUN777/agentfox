@@ -15,7 +15,7 @@ harm?**
 **Method.** Every scenario is run twice against the real enforcement path:
 
 * `detectors_on`  — the shipped detector stack.
-* `detectors_off` — `NOMETRIA_ENABLED_DETECTORS=[]`, i.e. a total bypass. This is not
+* `detectors_off` — `AGENTFOX_ENABLED_DETECTORS=[]`, i.e. a total bypass. This is not
   a simulated miss or a weakened threshold: the pipeline runs zero detectors, so the
   payload is invisible to content inspection. Verified per scenario by re-running the
   payload through `check_content` and asserting zero entities and an `allow` effective
@@ -269,9 +269,9 @@ SCENARIOS: list[dict[str, Any]] = [
 
 def _set_detectors(enabled: bool) -> list[str]:
     if enabled:
-        os.environ.pop("NOMETRIA_ENABLED_DETECTORS", None)
+        os.environ.pop("AGENTFOX_ENABLED_DETECTORS", None)
     else:
-        os.environ["NOMETRIA_ENABLED_DETECTORS"] = "[]"
+        os.environ["AGENTFOX_ENABLED_DETECTORS"] = "[]"
     reset_settings_cache()
     return list(get_settings().enabled_detectors)
 
@@ -366,7 +366,7 @@ def main() -> None:
         ),
         "method": (
             "Every scenario runs twice through the real Enforcer.guard_tool_call path: once "
-            "with the shipped detector stack, once with NOMETRIA_ENABLED_DETECTORS=[] (zero "
+            "with the shipped detector stack, once with AGENTFOX_ENABLED_DETECTORS=[] (zero "
             "detectors, a total bypass). The agent is assumed fully compromised and attempts "
             "the attacker's requested action with attacker-sourced argument values. Negative "
             "controls are legitimate calls that must still be allowed in both modes."

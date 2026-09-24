@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { publicPageMetadata } from "@/lib/site";
 import Link from "next/link";
+import { MarketingNav } from "@/components/marketing/nav";
+import { Footer } from "@/components/marketing/sections";
 
 /**
  * Public, unauthenticated evidence page for the number the playground quotes.
@@ -27,9 +29,10 @@ import Link from "next/link";
  * the one link a sceptic follows to check the headline numbers led to a page
  * that did not contain them.
  *
- * The header and footer are local to this route on purpose. app/how-it-works/
- * has a shared PublicHeader; a concurrent change owns that file, so this page
- * carries its own rather than importing across an edit boundary.
+ * The header and footer are the site's own (components/marketing/*), the same ones
+ * the home page uses. This route used to carry a third set, local to itself, which
+ * meant a reader following "every number, and how to reproduce it" from the home
+ * page arrived somewhere that looked like a different site.
  *
  * NOTE FOR WHOEVER OWNS dashboard/middleware.ts: this route must be added to
  * PUBLIC_PATHS. Without it a signed-out visitor following the playground link is
@@ -50,93 +53,84 @@ function Source({ children }: { children: React.ReactNode }) {
 const REPO = "https://github.com/architsharm/guardrails";
 
 /**
- * This page used to have one link on it, to the playground, and no way back to
- * anything else. A visitor who arrives from the home page to check a number has
- * nowhere to go afterwards, including to the repository the numbers come from.
+ * The five write-ups, in the order the page makes them, and the one figure each
+ * is remembered for. The section headings below carry the matching ids.
+ *
+ * Numbered because they genuinely are a sequence rather than a menu: section 2 is
+ * section 1's claim at scale, section 4 is the detection number sections 1 and 2
+ * assume is lost, and section 5 attacks section 4's result.
  */
-function PageHeader() {
-  return (
-    <header className="pg-header">
-      <div>
-        <Link
-          href="/"
-          style={{
-            fontWeight: 640,
-            fontSize: 15,
-            color: "var(--text)",
-            textDecoration: "none",
-          }}
-        >
-          AgentFox
-        </Link>
-        <span
-          style={{
-            display: "block",
-            fontSize: 12.5,
-            color: "var(--muted)",
-            marginTop: 4,
-          }}
-        >
-          Governance, security and evidence for AI agents in production
-        </span>
-      </div>
-      <nav
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: 16,
-          fontSize: 13,
-        }}
-      >
-        <Link href="/">Home</Link>
-        <Link href="/how-it-works">How it works</Link>
-        <Link href="/playground">Playground</Link>
-        <a href={REPO} target="_blank" rel="noreferrer">
-          Repository
-        </a>
-      </nav>
-    </header>
-  );
-}
+const CONTENTS: { id: string; title: string }[] = [
+  { id: "containment", title: "Containment when detection has already failed" },
+  { id: "agentdojo", title: "The same claim at scale: 617 AgentDojo calls" },
+  { id: "tiers", title: "Four agent-runtime tiers, against a real llm-guard" },
+  { id: "detection", title: "Detection on its own, our least flattering number" },
+  { id: "adaptive", title: "An adaptive attacker that reads our verdict" },
+  { id: "reproduce", title: "How to reproduce any of this" },
+];
 
-function PageFooter() {
-  return (
-    <footer
-      style={{
-        marginTop: 44,
-        paddingTop: 16,
-        borderTop: "1px solid var(--hairline)",
-        display: "flex",
-        flexWrap: "wrap",
-        alignItems: "center",
-        gap: 16,
-        fontSize: 12.5,
-        color: "var(--muted)",
-      }}
-    >
-      <span style={{ fontWeight: 640, color: "var(--text)" }}>AgentFox</span>
-      <Link href="/">Home</Link>
-      <Link href="/how-it-works">How it works</Link>
-      <Link href="/playground">Playground</Link>
-      <a href={REPO} target="_blank" rel="noreferrer">
-        Repository
-      </a>
-    </footer>
-  );
-}
+/**
+ * The four figures the page is cited for, lifted out of the opening paragraph so a
+ * reader who came to check one number finds it without reading the write-up first.
+ *
+ * The fourth is here for the same reason the other three are: it is the number a
+ * competitor would quote at us, and it is better said in our own type than found
+ * in someone else's. Every one is restated in full, with its method, below.
+ */
+const HEADLINE: { n: string; label: string; weak?: boolean }[] = [
+  { n: "42 of 42", label: "AgentDojo attacker calls that act, contained" },
+  { n: "552 of 552", label: "legitimate calls still allowed in that run" },
+  { n: "8 of 8", label: "attacks contained with every detector off" },
+  { n: "66.7%", label: "held-out injection recall, where llm-guard gets 81.8%", weak: true },
+];
 
 export default function BenchmarkPage() {
   return (
-    <div className="bm-doc">
-      <PageHeader />
-      <h1>What was measured, and what it does not show</h1>
+    <div className="mk">
+      <MarketingNav />
+      <main>
+        <section className="mk-section-tight">
+          <div className="mk-wrap">
+            <div style={{ maxWidth: 760 }}>
+              <span className="mk-eyebrow">Benchmarks</span>
+              <h1
+                className="mk-h2"
+                style={{ marginTop: 12, fontSize: "clamp(2rem, 4.4vw, 3rem)" }}
+              >
+                What was measured, and what it does not show.
+              </h1>
+              <p className="mk-lede" style={{ marginTop: 18, maxWidth: "58ch" }}>
+                Five benchmarks, written up in full. Some of them make this product look
+                good and some of them do not, and they are here for the same reason: a
+                claim only the vendor can reproduce is not evidence.
+              </p>
+            </div>
+
+            <div className="mk-grid mk-grid-quad" style={{ marginTop: 40 }}>
+              {HEADLINE.map((h) => (
+                <div key={h.label} className="mk-card mk-stat">
+                  <b style={{ color: h.weak ? "var(--mk-muted)" : "var(--mk-text)" }}>{h.n}</b>
+                  <span>{h.label}</span>
+                </div>
+              ))}
+            </div>
+
+            <nav className="bm-index" style={{ marginTop: 18 }} aria-label="Sections">
+              {CONTENTS.map((c, i) => (
+                <a key={c.id} href={`#${c.id}`}>
+                  <i>{String(i + 1).padStart(2, "0")}</i>
+                  <span>{c.title}</span>
+                </a>
+              ))}
+            </nav>
+          </div>
+        </section>
+
+        <div className="mk-wrap">
+          <article className="bm-doc">
       <p className="lede">
-        Five benchmarks are written up in full on this page. Some of them make
-        this product look good and some of them do not, and they are all here
-        for the same reason: a detection claim only the vendor can reproduce is
-        not evidence. Every number on this page is copied from a results file
-        checked into the repo, and the file is named under each table.
+        Every number here is copied from a results file checked into the repository,
+        and the file is named under each table.
       </p>
       <p>
         These five are not all of them. The{" "}
@@ -174,7 +168,7 @@ export default function BenchmarkPage() {
         </p>
       </div>
 
-      <h2>1. Containment when detection has already failed</h2>
+      <h2 id="containment">1. Containment when detection has already failed</h2>
       <p>
         This is the benchmark the product actually rests on, and it starts by
         assuming the detectors lose.{" "}
@@ -190,7 +184,7 @@ export default function BenchmarkPage() {
         <code className="mono">Enforcer.guard_tool_call</code> path, the same
         call the SDK, the LangGraph nodes, the MCP governor and the gateway all
         make before a tool executes. In the second run{" "}
-        <code className="mono">NOMETRIA_ENABLED_DETECTORS</code> is set to the
+        <code className="mono">AGENTFOX_ENABLED_DETECTORS</code> is set to the
         empty list. That is a total bypass, not a weakened threshold or a
         simulated miss, and it is checked rather than assumed: each scenario's
         payload is re-run through <code className="mono">check_content</code> in
@@ -352,7 +346,7 @@ export default function BenchmarkPage() {
         and &quot;What this benchmark does not show&quot;.
       </Source>
 
-      <h2>2. The same claim at scale: an AgentDojo replay of 617 calls</h2>
+      <h2 id="agentdojo">2. The same claim at scale: an AgentDojo replay of 617 calls</h2>
       <p>
         The eight scenarios above are ours. This one is not.{" "}
         <a
@@ -532,7 +526,7 @@ export default function BenchmarkPage() {
         , recorded in the results file as AgentDojo v1, MIT, ETH Zurich.
       </Source>
 
-      <h2>3. Four agent-runtime tiers, against a real llm-guard install</h2>
+      <h2 id="tiers">3. Four agent-runtime tiers, against a real llm-guard install</h2>
       <p>
         These four harnesses test a narrower claim: that a prompt-injection text
         scanner evaluates one string at a time, in isolation, with no memory of
@@ -662,7 +656,7 @@ export default function BenchmarkPage() {
         </li>
       </ul>
 
-      <h2>4. Detection on its own, which is the least flattering number here</h2>
+      <h2 id="detection">4. Detection on its own, which is the least flattering number here</h2>
       <p>
         On the primary dataset,{" "}
         <code className="mono">deepset/prompt-injections</code> (662 labeled
@@ -709,7 +703,7 @@ export default function BenchmarkPage() {
         cost&quot; under the ensemble backstop, and the round 7 table.
       </Source>
 
-      <h2>
+      <h2 id="adaptive">
         5. An adaptive attacker that reads our verdict and tries again
       </h2>
       <p>
@@ -976,7 +970,7 @@ export default function BenchmarkPage() {
         listed above are absences in those same files.
       </Source>
 
-      <h2>How to reproduce any of this</h2>
+      <h2 id="reproduce">How to reproduce any of this</h2>
       <p>
         Each benchmark is a self-contained script with its own throwaway SQLite
         database, and each writes a results file that is checked in beside it.
@@ -1007,7 +1001,10 @@ export default function BenchmarkPage() {
         a disagreement.
       </p>
 
-      <PageFooter />
+          </article>
+        </div>
+      </main>
+      <Footer />
     </div>
   );
 }

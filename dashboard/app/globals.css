@@ -1,120 +1,161 @@
 /* AgentFox control plane — one pane for "all our agents".
-   Theme-aware: light by default. Dark applies under the system preference, or when
-   the user picks it explicitly via the sidebar toggle (data-theme="dark" on <html>,
-   set before paint by the inline script in layout.tsx — see ThemeToggle.tsx). An
-   explicit "light" choice (data-theme="light") wins over the system preference too.
 
-   Token system: warm oat/cream neutrals + a terracotta accent, carried over from
-   decawork.ai (the reference the team standardized on) — measured off their live
-   site (near-black warm charcoal text, not pure black; cream panels, not stark
-   white; a single burnt-orange accent used sparingly) and translated into a
-   token set for this app's plain-CSS architecture (no Tailwind here, so the
-   tokens are custom properties rather than @theme). Severity colors (ok/warn/
-   escalate/bad) stay conventional red/amber/green — semantic meaning, not brand,
-   so they're deliberately not warmed to match. */
+   One design system, two surfaces. The public pages (app/marketing.css, the
+   `.mk-*` layer) and this app used to be on different palettes entirely: warm
+   oat and cream with a terracotta accent here, true neutrals with the brand
+   navy and orange there. A visitor who signed in walked into what looked like a
+   different product, and the screenshots on the home page did not match the app
+   they advertised.
+
+   The fix was to replace the VALUES of the tokens below with the marketing
+   system's, and to leave every token NAME alone. Forty routes and every
+   component are written against `--bg`, `--panel`, `--text`, `--accent` and the
+   rest, so re-basing the values restyles all of them at once and none of them
+   had to be touched. Read app/marketing.css for the reasoning behind the ramp
+   itself; what follows is the same ramp under this app's names.
+
+   Light by default, on purpose. The inline script in layout.tsx stamps
+   data-theme="light" when the visitor has never chosen, so the product opens in
+   the theme the marketing site is designed in. Dark still applies when it is
+   picked in the sidebar, and when a visitor who picked "System" is on a dark OS.
+
+   Contrast was measured rather than eyeballed, and the worst ratio each colour
+   reaches against any ground it is used on is written beside it. Everything at
+   text size clears WCAG AA's 4.5:1.
+
+   The brand orange (#fd4901 in the mark) is not in this file. It measures 3.31:1
+   on white, which is a display colour, not a text one, and this app is almost
+   entirely text. `--accent` is the darkened orange the marketing layer uses for
+   anything word-sized, and `--cta` is the navy the primary button uses, because
+   navy with a white label is 15.4:1 where orange with any label is under 4.5:1. */
 
 :root {
-  --bg: #f6f4ef;
-  --panel: #fdfcf8;
-  --panel-2: #efece1;
-  --elevated: #fffefb;
-  --border: #e2ddcd;
-  --hairline: #eae5d6;
-  --text: #1f2624;
-  --text-2: #454d49;
-  --muted: #5c655e;
-  /* Light-theme --faint and --accent were set by eye and measured 2.63:1 (--faint
-     on --panel) and 3.80:1 (--accent on --bg) against WCAG AA's 4.5:1 for body
-     text; --accent-ink on --accent came to 4.00:1. All three are darkened here
-     until every pair clears 4.5:1 against --bg, --panel and --panel-2, keeping the
-     same hue and saturation so this is the same palette, just legible. The
-     measured ratio sits above each token. Dark-theme values are separate; only
-     --faint changed there, and for the same reason. */
-  /* on --panel 5.24:1, on --bg 4.89:1, on --panel-2 4.55:1 */
-  --faint: #636d65;
-  /* on --bg 4.87:1, on --panel 5.21:1, on --panel-2 4.52:1 */
-  --accent: #a75332;
-  --accent-press: #8b4527;
-  /* --accent-ink on --accent: 5.12:1 */
-  --accent-ink: #fbfaf5;
-  --accent-weak: rgba(167, 83, 50, 0.1);
-  --ok: #15803d;
-  --ok-bg: #dcfce7;
-  --warn: #a16207;
-  --warn-bg: #fef3c7;
-  --escalate: #c2410c;
-  --escalate-bg: #ffedd5;
-  --bad: #b91c1c;
-  --bad-bg: #fee2e2;
-  --dim-bg: #ece7d9;
+  color-scheme: light;
+
+  --bg: #fbfbfd;
+  --panel: #ffffff;
+  --panel-2: #f5f5f7;
+  --elevated: #ffffff;
+  --border: #e3e3e6;
+  --hairline: #ececef;
+
+  --text: #1d1d1f;        /* 16.83:1 on --panel */
+  --text-2: #424245;      /* 10.01:1 on --panel */
+  --muted: #5f5f64;       /*  5.83:1 on --panel-2, its worst ground */
+  --faint: #6e6e73;       /*  4.66:1 on --panel-2, its worst ground */
+
+  --accent: #c23600;      /*  5.05:1 on --panel-2, its worst ground */
+  --accent-press: #a32d00;
+  --accent-ink: #ffffff;  /*  5.50:1 on --accent */
+  --accent-weak: rgba(194, 54, 0, 0.10);
+
+  /* The primary action. Navy, not the accent: see the note above. */
+  --cta: #012455;
+  --cta-press: #01326f;
+  --cta-ink: #ffffff;     /* 15.40:1 on --cta */
+
+  /* Semantic, and deliberately not brand colours: green here always means a call
+     was allowed. Each pairs with its own soft ground and clears AA on it. */
+  --ok: #17754b;          /*  5.10:1 on --ok-bg */
+  --ok-bg: #e9f5ef;
+  --warn: #8a5a00;        /*  5.39:1 on --warn-bg */
+  --warn-bg: #fdf3e2;
+  --escalate: #a04407;    /*  5.56:1 on --escalate-bg */
+  --escalate-bg: #fdeee1;
+  --bad: #b3261e;         /*  5.71:1 on --bad-bg */
+  --bad-bg: #fceceb;
+  --dim-bg: #ececef;
+  /* Behind a modal or the command palette. One value, so the two cannot drift
+     apart again — they were a warm black and a cool black before. */
+  --scrim: rgba(0, 0, 0, 0.40);
+
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui,
+    Roboto, var(--font-geist-sans), "Helvetica Neue", Arial, sans-serif;
   --mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  --r-1: 7px; --r-2: 9px; --r-3: 13px; --r-4: 20px; --r-pill: 999px;
-  --e-1: 0 1px 2px rgba(31, 26, 15, 0.05), 0 1px 3px rgba(31, 26, 15, 0.04);
-  --e-2: 0 6px 16px rgba(31, 26, 15, 0.09), 0 2px 6px rgba(31, 26, 15, 0.05);
-  --e-3: 0 20px 48px rgba(24, 20, 12, 0.18), 0 6px 18px rgba(24, 20, 12, 0.09);
+
+  --r-1: 8px; --r-2: 10px; --r-3: 14px; --r-4: 22px; --r-pill: 999px;
+
+  /* Wide, soft and almost colourless. A shadow you can name is too strong. */
+  --e-1: 0 1px 2px rgba(0, 0, 0, .03), 0 4px 12px rgba(0, 0, 0, .04);
+  --e-2: 0 4px 16px rgba(0, 0, 0, .06), 0 1px 2px rgba(0, 0, 0, .04);
+  --e-3: 0 18px 48px -12px rgba(0, 0, 0, .12), 0 4px 12px rgba(0, 0, 0, .05);
   --bar-bg: color-mix(in srgb, var(--bg) 72%, transparent);
 }
 
+/* The dark ramp, written once and applied twice: under the system preference for
+   anyone who chose "System", and under an explicit choice. Both blocks must stay
+   identical — a value that exists in only one of them is the classic bug where the
+   toggle and the OS setting disagree. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #17140f;
-    --panel: #201c16;
-    --panel-2: #27221a;
-    --elevated: #241f18;
-    --border: #362d21;
-    --hairline: #2c2519;
-    --text: #f2ede1;
-    --text-2: #d6cfbe;
-    --muted: #a39c8a;
-    /* on --panel 4.56:1, on --bg 4.94:1 */
-    --faint: #8c846f;
-    --accent: #e08a5e;
-    --accent-press: #e8a179;
-    --accent-ink: #19140e;
-    --accent-weak: rgba(224, 138, 94, 0.16);
-    --ok: #4ade80;
-    --ok-bg: #052e16;
-    --warn: #fbbf24;
-    --warn-bg: #3b2f0a;
-    --escalate: #fb923c;
-    --escalate-bg: #431407;
-    --bad: #f87171;
-    --bad-bg: #3b0d0d;
-    --dim-bg: #2a2419;
-    --e-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-    --e-2: 0 10px 24px rgba(0, 0, 0, 0.45), 0 3px 8px rgba(0, 0, 0, 0.35);
-    --e-3: 0 24px 56px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+    --bg: #000000;
+    --panel: #1d1d1f;
+    --panel-2: #161617;
+    --elevated: #232325;
+    --border: #333336;
+    --hairline: #2a2a2c;
+    --text: #f5f5f7;      /* 15.46:1 on --panel */
+    --text-2: #d1d1d6;    /* 11.06:1 on --panel */
+    --muted: #a1a1a6;     /*  6.54:1 on --panel, its worst ground */
+    --faint: #8e8e93;     /*  5.16:1 on --panel, its worst ground */
+    --accent: #ff7a45;    /*  6.51:1 on --panel */
+    --accent-press: #ff9066;
+    --accent-ink: #14110e; /* 7.28:1 on --accent */
+    --accent-weak: rgba(255, 122, 69, 0.16);
+    /* On black there is no navy that carries a button, so the accent takes the
+       primary action back — the same swap marketing.css makes. */
+    --cta: #fd4901;
+    --cta-press: #ff6a2b;
+    --cta-ink: #14110e;
+    --ok: #6fd3a6;        /*  9.03:1 on --ok-bg */
+    --ok-bg: #10231b;
+    --warn: #e8be74;      /*  9.57:1 on --warn-bg */
+    --warn-bg: #241d12;
+    --escalate: #ffa06b;  /*  8.73:1 on --escalate-bg */
+    --escalate-bg: #2a1408;
+    --bad: #ff9d92;       /*  8.63:1 on --bad-bg */
+    --bad-bg: #2a1513;
+    --dim-bg: #232325;
+    --scrim: rgba(0, 0, 0, 0.60);
+    --e-1: 0 1px 2px rgba(0, 0, 0, .5);
+    --e-2: 0 4px 16px rgba(0, 0, 0, .55);
+    --e-3: 0 18px 48px -12px rgba(0, 0, 0, .7);
   }
 }
 
 :root[data-theme="dark"] {
-  --bg: #17140f;
-  --panel: #201c16;
-  --panel-2: #27221a;
-  --elevated: #241f18;
-  --border: #362d21;
-  --hairline: #2c2519;
-  --text: #f2ede1;
-  --text-2: #d6cfbe;
-  --muted: #a39c8a;
-  /* on --panel 4.56:1, on --bg 4.94:1 */
-  --faint: #8c846f;
-  --accent: #e08a5e;
-  --accent-press: #e8a179;
-  --accent-ink: #19140e;
-  --accent-weak: rgba(224, 138, 94, 0.16);
-  --ok: #4ade80;
-  --ok-bg: #052e16;
-  --warn: #fbbf24;
-  --warn-bg: #3b2f0a;
-  --escalate: #fb923c;
-  --escalate-bg: #431407;
-  --bad: #f87171;
-  --bad-bg: #3b0d0d;
-  --dim-bg: #2a2419;
-  --e-1: 0 1px 2px rgba(0, 0, 0, 0.5);
-  --e-2: 0 10px 24px rgba(0, 0, 0, 0.45), 0 3px 8px rgba(0, 0, 0, 0.35);
-  --e-3: 0 24px 56px rgba(0, 0, 0, 0.6), 0 8px 20px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+  --bg: #000000;
+  --panel: #1d1d1f;
+  --panel-2: #161617;
+  --elevated: #232325;
+  --border: #333336;
+  --hairline: #2a2a2c;
+  --text: #f5f5f7;
+  --text-2: #d1d1d6;
+  --muted: #a1a1a6;
+  --faint: #8e8e93;
+  --accent: #ff7a45;
+  --accent-press: #ff9066;
+  --accent-ink: #14110e;
+  --accent-weak: rgba(255, 122, 69, 0.16);
+  --cta: #fd4901;
+  --cta-press: #ff6a2b;
+  --cta-ink: #14110e;
+  --ok: #6fd3a6;
+  --ok-bg: #10231b;
+  --warn: #e8be74;
+  --warn-bg: #241d12;
+  --escalate: #ffa06b;
+  --escalate-bg: #2a1408;
+  --bad: #ff9d92;
+  --bad-bg: #2a1513;
+  --dim-bg: #232325;
+  --scrim: rgba(0, 0, 0, 0.60);
+  --e-1: 0 1px 2px rgba(0, 0, 0, .5);
+  --e-2: 0 4px 16px rgba(0, 0, 0, .55);
+  --e-3: 0 18px 48px -12px rgba(0, 0, 0, .7);
 }
 
 * { box-sizing: border-box; }
@@ -123,9 +164,12 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.55 var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    Helvetica, Arial, sans-serif;
+  /* The same stack the marketing layer sets, so a signed-in page and the page it
+     was reached from are set in one typeface. 14px rather than the marketing
+     layer's 17: this is a dense data surface, not running prose. */
+  font: 14px/1.55 var(--sans);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   letter-spacing: -0.011em;
 }
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
@@ -137,37 +181,107 @@ a:hover { text-decoration: underline; }
 
 /* --- Auth pages ------------------------------------------------------------- */
 
-.login-main { display: block; width: 100%; }
-.login-shell {
+/* `main` above carries the app's page padding and a 1400px measure. A sign-in
+   split and a marketing page both run to the viewport edge, so the chromeless
+   wrapper gives all of it back. Without this the navy wall stops short of the
+   right edge and sits in a white margin. */
+.login-main { display: block; width: 100%; max-width: none; padding: 0; margin: 0; }
+
+/* The sign-in page.
+   It was a 380px card, centred, with every line of it centred inside that —
+   including three consecutive paragraphs, which is the one thing centred text is
+   worst at. It also sat on a warm cream wash that existed nowhere else once the
+   app and the marketing pages were re-based onto one palette.
+
+   Now it is a split: the form on the left at reading width and left-aligned, and a
+   brand wall on the right carrying the one measurement worth showing somebody who
+   has not signed up yet. The wall is decoration in the strict sense — it holds no
+   control and no information the left side needs — so below 900px it is simply not
+   rendered rather than stacked, and the form takes the whole screen. */
+.auth {
   min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+@media (min-width: 900px) { .auth { grid-template-columns: 1fr 1fr; } }
+
+.auth-form {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  background: var(--panel-2);
-  background-image: radial-gradient(circle at 20% 15%, var(--accent-weak), transparent 42%),
-    radial-gradient(circle at 82% 85%, var(--accent-weak), transparent 45%);
+  padding: 40px 24px;
+  background: var(--bg);
 }
-.login-card {
-  width: 100%;
-  max-width: 380px;
-  background: var(--elevated);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-4);
-  padding: 34px 30px;
-  text-align: center;
-  box-shadow: var(--e-3);
+.auth-inner { width: 100%; max-width: 400px; }
+.auth-inner h1 {
+  font-size: clamp(1.6rem, 3vw, 2rem);
+  line-height: 1.12;
+  letter-spacing: -0.024em;
+  margin: 18px 0 0;
 }
-.login-card .brand { display: flex; justify-content: center; font-weight: 700; font-size: 17px; margin-bottom: 4px; }
-.login-card .brand small {
-  display: block;
-  font-weight: 400;
+.auth-inner .sub { margin: 12px 0 0; max-width: none; font-size: 14px; }
+.auth-brand { display: flex; align-items: center; gap: 9px; }
+.auth-brand b { font-size: 16px; font-weight: 620; letter-spacing: -0.02em; }
+.auth-brand span { font-size: 11px; color: var(--muted); letter-spacing: 0.01em; }
+
+/* A rule with a word sitting in it, for the break between "sign in" and the way in
+   that needs no account at all. */
+.auth-or {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  margin: 26px 0 18px;
+  color: var(--faint);
   font-size: 11px;
-  color: var(--muted);
-  margin-top: 4px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
-.login-card .sub { margin: 16px 0 22px; max-width: none; }
-.login-card .error { text-align: left; margin-bottom: 16px; }
+.auth-or::before, .auth-or::after { content: ""; height: 1px; background: var(--border); }
+
+.auth-alt {
+  display: block;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--panel);
+  color: inherit;
+}
+.auth-alt:hover { border-color: var(--accent); text-decoration: none; }
+.auth-alt b { display: block; font-size: 13.5px; font-weight: 600; color: var(--accent); }
+.auth-alt span { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); }
+
+/* The brand wall does not follow the theme, and that is deliberate: it is a surface
+   of the mark, like the mark itself, and the navy reads on either ground. White on
+   #012455 is 15.4:1, so everything on it clears AA by a wide margin. */
+.auth-wall {
+  display: none;
+  background: #012455;
+  color: #ffffff;
+  padding: 48px;
+  align-items: center;
+}
+@media (min-width: 900px) { .auth-wall { display: flex; } }
+.auth-wall-inner { max-width: 380px; margin: 0 auto; }
+.auth-wall-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffb08a;
+}
+.auth-wall-inner h2 {
+  margin: 14px 0 0;
+  font-size: clamp(1.4rem, 2.2vw, 1.85rem);
+  line-height: 1.16;
+  letter-spacing: -0.022em;
+  font-weight: 600;
+}
+.auth-wall-inner p { margin: 14px 0 0; font-size: 13.5px; line-height: 1.55; color: rgba(255, 255, 255, 0.72); }
+.auth-stats { margin-top: 34px; display: grid; gap: 1px; background: rgba(255, 255, 255, 0.14); border-radius: var(--r-3); overflow: hidden; }
+.auth-stat { background: #012455; padding: 16px 18px; }
+.auth-stat b { display: block; font-size: 21px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.auth-stat span { display: block; margin-top: 2px; font-size: 12.5px; color: rgba(255, 255, 255, 0.72); }
 
 /* --- Buttons ------------------------------------------------------------- */
 
@@ -199,10 +313,11 @@ a:hover { text-decoration: underline; }
    anything, and dressing every primary action in traffic-light color is what reads
    as a template rather than a considered surface. */
 .btn-primary {
-  background: var(--text);
-  color: var(--bg);
-  border-color: var(--text);
+  background: var(--cta);
+  color: var(--cta-ink);
+  border-color: var(--cta);
 }
+.btn-primary:hover:not(:disabled) { background: var(--cta-press); border-color: var(--cta-press); opacity: 1; }
 .btn-primary:hover { opacity: 0.88; }
 .btn-primary:disabled { opacity: 0.45; cursor: default; }
 .btn-approve { border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); color: var(--ok); }
@@ -211,20 +326,24 @@ a:hover { text-decoration: underline; }
 .btn-reject:hover { background: var(--bad-bg); border-color: var(--bad); }
 .review-actions { display: flex; gap: 0; }
 
+/* The one action on the sign-in page. Navy, like every other primary action, so
+   the button someone presses to get in is the same object as the button that got
+   them here from the home page. */
 .btn-github {
   display: flex;
   width: 100%;
-  height: 42px;
+  height: 46px;
   padding: 0 16px;
-  background: var(--text);
-  color: var(--bg);
+  gap: 9px;
+  background: var(--cta);
+  color: var(--cta-ink);
   border: none;
   border-radius: var(--r-pill);
-  font-size: 13.5px;
-  font-weight: 620;
-  box-shadow: var(--e-1);
+  font-size: 14px;
+  font-weight: 600;
 }
-.btn-github:hover { opacity: 0.9; text-decoration: none; }
+.btn-github svg { flex: 0 0 17px; }
+.btn-github:hover { background: var(--cta-press); text-decoration: none; }
 
 /* --- Sidebar -------------------------------------------------------------- */
 
@@ -668,7 +787,7 @@ ol.steps li.done .step-title { color: var(--muted); }
   color: var(--text);
   box-shadow: var(--e-3);
 }
-.modal::backdrop { background: rgba(20, 16, 10, 0.45); }
+.modal::backdrop { background: var(--scrim); }
 .modal-head {
   display: flex;
   align-items: center;
@@ -943,7 +1062,7 @@ ol.steps li.done .step-title { color: var(--muted); }
 .cmdk-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(12, 13, 18, 0.5);
+  background: var(--scrim);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -1016,7 +1135,7 @@ ol.steps li.done .step-title { color: var(--muted); }
   top: -6px;
   right: -6px;
   background: var(--bad);
-  color: #fff;
+  color: var(--panel);
   font-size: 10px;
   font-weight: 700;
   line-height: 1;
@@ -1320,7 +1439,7 @@ input[type="checkbox"], input[type="radio"] {
    because nothing else in this app is a chat surface. */
 
 .pg-shell { max-width: 1180px; margin: 0 auto; padding: 28px 20px 64px; }
-.pg-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.pg-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
 /* Below this width the sign-in button sat beside a paragraph narrow enough that the
    text wrapped around it, which is the first thing a visitor on a phone sees. */
 @media (max-width: 560px) {
@@ -1333,7 +1452,15 @@ input[type="checkbox"], input[type="radio"] {
    the global h1 (25px), which would make the lede under it look like an
    afterthought. It carries the visual weight the first line of that lede
    already had, so promoting it to a heading changed the outline, not the page. */
-.pg-header h1.pg-title { font-size: 16px; font-weight: 640; letter-spacing: -0.012em; margin: 8px 0 0; }
+.pg-header h1.pg-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  line-height: 1.12;
+  font-weight: 620;
+  letter-spacing: -0.024em;
+  margin: 12px 0 0;
+}
+.pg-sub { margin: 12px 0 0; max-width: 66ch; font-size: 14px; line-height: 1.6; color: var(--muted); }
+.pg-sub-fine { font-size: 13px; color: var(--faint); }
 .pg-columns { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
 @media (max-width: 860px) { .pg-columns { grid-template-columns: 1fr; } }
 
@@ -1352,6 +1479,18 @@ input[type="checkbox"], input[type="radio"] {
 /* In observe mode the flagged state is the finding and the applied verdict is
    the footnote, so the emphasis sits on what the policy would have done. */
 .pg-turn .pg-would { color: var(--text); font-weight: 620; font-size: 12px; }
+/* The same "what enforce would have done" line, in the tool panel, where it has no
+   chat bubble around it to sit inside. */
+.pg-trace .pg-would {
+  margin-top: 10px;
+  padding: 9px 11px;
+  border-radius: var(--r-2);
+  background: var(--warn-bg);
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.pg-trace .pg-would strong { color: var(--warn); }
 
 .pg-composer { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--hairline); }
 .pg-composer textarea { flex: 1; resize: none; }
@@ -1403,8 +1542,97 @@ input[type="checkbox"], input[type="radio"] {
 .pg-cta h2 { margin: 0 0 8px; }
 .pg-cta p { color: var(--muted); max-width: 520px; margin: 0 auto 16px; }
 
-.pg-chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
-.pg-chip { display: inline-flex; align-items: center; gap: 5px; border-radius: var(--r-pill); background: var(--panel-2); border: 1px solid var(--hairline); padding: 3px 10px; font-size: 11.5px; }
+
+/* The agent picker, and the card for whichever one is selected.
+
+   These replace `.pg-lede`, which was a numbered explanation of the order of the
+   panels underneath it. The page's problem was never the order: it was that every
+   agent appeared in every panel, twice over, with no statement anywhere of what a
+   given agent could do. One choice at the top, with its consequences printed beside
+   it, is the whole change. */
+.pg-pick {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1fr;
+  margin-bottom: 14px;
+}
+@media (min-width: 760px) { .pg-pick { grid-template-columns: repeat(3, 1fr); } }
+.pg-pick-tab {
+  text-align: left;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--panel);
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color .12s, background .12s, box-shadow .12s;
+}
+.pg-pick-tab b { display: block; font-size: 13.5px; font-weight: 620; letter-spacing: -0.012em; }
+.pg-pick-tab span {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--muted);
+  /* Two lines of purpose, so three tabs of different lengths stay one height. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pg-pick-tab:hover { border-color: var(--border-strong, var(--muted)); }
+.pg-pick-tab[aria-selected="true"] {
+  border-color: var(--accent);
+  background: var(--accent-weak);
+}
+.pg-pick-tab[aria-selected="true"] b { color: var(--accent); }
+
+.pg-brief {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 1fr;
+  padding: 20px 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--panel);
+  margin-bottom: 18px;
+}
+@media (min-width: 900px) { .pg-brief { grid-template-columns: 1fr 1fr; gap: 32px; } }
+.pg-brief-label {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.pg-brief p { margin: 6px 0 16px; font-size: 13px; line-height: 1.55; color: var(--text-2); }
+.pg-brief p:last-of-type { margin-bottom: 0; }
+.pg-brief-note { color: var(--faint) !important; font-size: 12px !important; margin-top: 12px !important; }
+
+.pg-tries { display: grid; gap: 8px; margin-top: 8px; }
+.pg-try {
+  text-align: left;
+  padding: 11px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--panel-2);
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+}
+.pg-try:hover:not(:disabled) { border-color: var(--accent); }
+.pg-try:disabled { opacity: .55; cursor: default; }
+.pg-try-head { display: flex; align-items: center; gap: 8px; }
+.pg-try-head b { font-size: 13px; font-weight: 600; }
+.pg-try-expect {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+}
 
 /* The framing that chains the three panels below it into one story, so the
    containment argument is read before the detection demo rather than after it. */
@@ -1433,44 +1661,93 @@ input[type="checkbox"], input[type="radio"] {
    measure and prose spacing; everything else reuses the app's own tokens and
    table styles. */
 
-.bm-doc { max-width: 820px; }
-.bm-doc h1 { margin-bottom: 6px; }
-.bm-doc h2 { margin: 34px 0 10px; font-size: 17px; }
-.bm-doc h3 { margin: 22px 0 8px; font-size: 14px; }
-.bm-doc p { font-size: 13.5px; line-height: 1.6; color: var(--text-2); margin: 0 0 12px; }
-.bm-doc ul, .bm-doc ol { font-size: 13.5px; line-height: 1.6; color: var(--text-2); padding-left: 20px; margin: 0 0 12px; }
-.bm-doc li { margin-bottom: 7px; }
-.bm-doc table { margin: 14px 0 18px; font-size: 13px; }
-.bm-doc .source { font-size: 12px; color: var(--muted); margin: -8px 0 20px; }
-.bm-doc .lede { font-size: 15px; line-height: 1.55; color: var(--text); }
-.bm-doc .callout { border: 1px solid var(--hairline); border-left: 3px solid var(--accent); background: var(--panel); border-radius: var(--r-3); padding: 14px 18px; margin: 18px 0; }
-.bm-doc .callout p:last-child { margin-bottom: 0; }
+/* The benchmark write-up.
 
+   It is a long technical document and it is also, for a sceptical reader, the most
+   important page on the site: the home page's proof section links here with "every
+   number, and how to reproduce it". It used to be set at the app's 13.5px table
+   text in one undifferentiated column, which is the right size for a data grid and
+   the wrong one for two thousand words of argument.
 
-/* --- Public landing: proof before prose ------------------------------------
-   The page argued its case in paragraphs and showed nothing. These two blocks
-   carry the actual verdict the product returns and the published counts, so a
-   visitor who reads nothing still sees the product work. */
-.lp-proof {
-  border: 1px solid var(--hairline); border-radius: 12px; background: var(--elevated);
-  overflow: hidden; margin-top: 26px;
+   Set here for reading: 16px at a 1.65 line, a measure that stops at 74 characters,
+   section headings at display size with real space above them, and every table on
+   its own card so the numbers separate from the prose around them. The page chrome
+   around this article is the marketing layer's, so the route a reader arrives on
+   from the home page does not change design system halfway. */
+.bm-doc { max-width: 760px; }
+.bm-doc h2,
+.mk .bm-doc h2 {
+  margin: 64px 0 0;
+  font-size: clamp(1.35rem, 2.2vw, 1.7rem);
+  line-height: 1.18;
+  letter-spacing: -0.022em;
+  font-weight: 600;
+  scroll-margin-top: 90px;
 }
-.lp-proof-row { padding: 14px 16px; }
-.lp-proof-row + .lp-proof-row { border-top: 1px solid var(--hairline); }
-.lp-proof-label {
-  display: block; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
-  color: var(--faint); margin-bottom: 7px;
+.bm-doc h2 + p, .mk .bm-doc h2 + p { margin-top: 16px; }
+.bm-doc h3,
+.mk .bm-doc h3 {
+  margin: 46px 0 0;
+  font-size: 1.06rem;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  font-weight: 600;
 }
-.lp-proof code { font-family: var(--mono); font-size: 12.5px; line-height: 1.7; }
-.lp-proof .lp-args { color: var(--text-2); }
-.lp-proof-verdict { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 8px; }
-.lp-proof p { margin: 0 0 8px; font-size: 13.5px; color: var(--text); }
-.lp-proof small { color: var(--faint); font-size: 12px; line-height: 1.6; display: block; }
+.bm-doc h3 + p, .bm-doc h3 + ul, .bm-doc h3 + ol, .bm-doc h3 + .scroll-x { margin-top: 12px; }
+.bm-doc p { font-size: 16px; line-height: 1.65; color: var(--text-2); margin: 16px 0 0; }
+.bm-doc ul, .bm-doc ol { font-size: 16px; line-height: 1.65; color: var(--text-2); padding-left: 22px; margin: 16px 0 0; }
+.bm-doc li { margin-bottom: 10px; }
+.bm-doc li > strong, .bm-doc li > b { color: var(--text); }
+.bm-doc a,
+.mk .bm-doc a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.bm-doc code.mono { font-size: 0.86em; }
 
-.lp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 26px; }
-.lp-stat { border: 1px solid var(--hairline); border-radius: 10px; padding: 12px 14px; background: var(--elevated); }
-.lp-stat b { display: block; font-size: 21px; line-height: 1.15; font-variant-numeric: tabular-nums; }
-.lp-stat span { display: block; font-size: 12px; line-height: 1.5; color: var(--faint); margin-top: 4px; }
-@media (max-width: 560px) {
-  .lp-proof code { font-size: 11.5px; }
+/* Tables are the evidence, so they get an edge of their own rather than floating
+   in the prose at a smaller size than it. */
+.bm-doc .scroll-x {
+  margin-top: 22px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--panel);
+  overflow-x: auto;
+}
+.bm-doc .scroll-x > table { margin: 0; width: 100%; }
+.bm-doc table { margin: 22px 0 0; font-size: 14px; }
+.bm-doc .source { font-size: 13px; color: var(--faint); margin: 10px 0 0; }
+.bm-doc .lede { font-size: 1.15rem; line-height: 1.5; color: var(--muted); margin-top: 18px; }
+
+/* The one pulled-out paragraph on the page: the whole result in five sentences,
+   for the reader who will not read the other two thousand words. */
+.bm-doc .callout {
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  background: var(--panel);
+  border-radius: var(--r-3);
+  padding: 20px 24px;
+  margin: 34px 0 0;
+}
+.bm-doc .callout p { margin: 0; font-size: 15.5px; }
+
+/* The section index under the hero. Numbered because the sections genuinely are a
+   sequence: each one assumes the previous one's result. */
+.bm-index { display: grid; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--r-3); overflow: hidden; }
+@media (min-width: 760px) { .bm-index { grid-template-columns: 1fr 1fr; } }
+.bm-index a {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 12px;
+  align-items: baseline;
+  padding: 16px 18px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 14.5px;
+  line-height: 1.4;
+}
+.bm-index a:hover { background: var(--panel-2); text-decoration: none; }
+.bm-index i {
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
 }

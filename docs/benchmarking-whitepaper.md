@@ -53,7 +53,7 @@ condition every adversarial-robustness paper says to expect.
 
 **Benchmarked, twice, with detection switched off entirely.**
 [`benchmarks/containment/`](../benchmarks/containment/README.md) runs eight structurally different attack
-scenarios with `NOMETRIA_ENABLED_DETECTORS=[]` — a total bypass, verified per scenario by re-probing the
+scenarios with `AGENTFOX_ENABLED_DETECTORS=[]` — a total bypass, verified per scenario by re-probing the
 payload and recording zero entities: **8/8 contained, 4/4 legitimate controls still allowed**.
 [`benchmarks/agentdojo_e2e/`](../benchmarks/agentdojo_e2e/README.md) replays
 [AgentDojo](https://github.com/ethz-spylab/agentdojo)'s own hand-authored ground truth — 65 calls a

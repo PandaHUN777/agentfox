@@ -27,7 +27,13 @@ ATTACK = (
 
 @pytest.fixture
 def no_detectors(monkeypatch):
-    """A total detector bypass: the pipeline runs zero detectors."""
+    """A total detector bypass: the pipeline runs zero detectors.
+
+    Deliberately the legacy variable name: this is the only place that proves the
+    compatibility prefix still reaches Settings. AGENTFOX_ is read first, so it has
+    to be cleared or an ambient value would mask what this sets.
+    """
+    monkeypatch.delenv("AGENTFOX_ENABLED_DETECTORS", raising=False)
     monkeypatch.setenv("NOMETRIA_ENABLED_DETECTORS", "[]")
     from agentfox.config import reset_settings_cache
 

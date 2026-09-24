@@ -21,7 +21,7 @@ useful in CI and containers.
 `agentfox init` writes a `agentfox.toml` whose keys are the Settings names below without the
 prefix, for example `enforcement_budget_ms = 300`. Other tables and unknown keys are ignored
 with a warning. List values can be TOML arrays in the file. As environment variables they
-must be JSON, for example `NOMETRIA_ENABLED_DETECTORS='["pii.native","secrets.native"]'`.
+must be JSON, for example `AGENTFOX_ENABLED_DETECTORS='["pii.native","secrets.native"]'`.
 
 Settings are cached per process, so restart after changing them.
 
@@ -36,7 +36,7 @@ Settings are cached per process, so restart after changing them.
 | `NOMETRIA_FAIL_MODE` | `open` | What happens when a detector errors/times out. `closed` for high-risk agents. |
 | `NOMETRIA_ALLOW_EGRESS` | `false` | Must be true for any real model provider or network fetch. |
 | `NOMETRIA_DEFAULT_PROVIDER` | `echo` | Offline echo model. Others: `openai`, `anthropic`, `azure`, `bedrock`, `vertex`, `litellm`. |
-| `NOMETRIA_ENABLED_DETECTORS` | `["injection.heuristic","pii.native","secrets.native","safety.lexicon","schema.json"]` | Add `pii.presidio`, `injection.classifier`, `injection.similarity`, `safety.granite` after installing their extras. |
+| `AGENTFOX_ENABLED_DETECTORS` | `["injection.heuristic","pii.native","secrets.native","safety.lexicon","schema.json"]` | Add `pii.presidio`, `injection.classifier`, `injection.similarity`, `safety.granite` after installing their extras. |
 | `NOMETRIA_EVIDENCE_DIR` | `<repo-root>/var/evidence` | Where `evidence export` writes zips. |
 | `NOMETRIA_AUDIT_SIGNING_KEY` | `dev-insecure-checkpoint-key` | **Must be changed in production.** |
 | `NOMETRIA_SERVICE_AUTH_SECRET` | `dev-insecure-service-secret` | Dashboard OAuth callback. **Must be changed in production.** |

@@ -26,7 +26,7 @@ driving a live model through the environment and is therefore out of scope here;
 stated in the README rather than approximated.
 
 Every scenario runs twice: with the shipped detector stack, and with
-`NOMETRIA_ENABLED_DETECTORS=[]` — a total detector bypass, the companion of
+`AGENTFOX_ENABLED_DETECTORS=[]` — a total detector bypass, the companion of
 `benchmarks/containment/`.
 """
 
@@ -138,9 +138,9 @@ def build_registry(session, calls: dict[str, list[dict[str, Any]]]) -> dict[str,
 
 def _set_detectors(enabled: bool) -> list[str]:
     if enabled:
-        os.environ.pop("NOMETRIA_ENABLED_DETECTORS", None)
+        os.environ.pop("AGENTFOX_ENABLED_DETECTORS", None)
     else:
-        os.environ["NOMETRIA_ENABLED_DETECTORS"] = "[]"
+        os.environ["AGENTFOX_ENABLED_DETECTORS"] = "[]"
     reset_settings_cache()
     return list(get_settings().enabled_detectors)
 

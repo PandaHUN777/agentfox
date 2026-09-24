@@ -69,7 +69,7 @@ def score_nometria(cases: list[dict]) -> list[dict]:
     # this is meant to reflect the platform's real ceiling, the same reasoning the
     # primary injection benchmark uses for its `heuristic_classifier_similarity`
     # config.
-    os.environ["NOMETRIA_ENABLED_DETECTORS"] = json.dumps(
+    os.environ["AGENTFOX_ENABLED_DETECTORS"] = json.dumps(
         ["injection.heuristic", "injection.classifier", "injection.similarity"]
     )
     reset_settings_cache()

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Albert_Sans } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
@@ -17,8 +17,20 @@ import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, HOME_TITLE, REPO_URL } from "@/l
 import "./globals.css";
 import "./marketing.css";
 
-// Runs before paint so a stored theme choice never flashes the wrong colors on load.
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("agentfox-theme");if(t&&t!=="system")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
+/**
+ * Runs before paint so a stored theme choice never flashes the wrong colours.
+ *
+ * It only ever *departs* from light, which is rendered on <html> by the server.
+ * Light being the default is the point: leaving the decision to the OS means a
+ * visitor on a dark Mac meets a dark product on their first visit, having just come
+ * from a marketing site that is designed light. "System" is still one of the three
+ * choices in the sidebar; it is simply no longer the one nobody picked.
+ *
+ * The `catch` matters and is deliberately empty: localStorage throws outright in
+ * some privacy modes, and the right outcome there is the light default already in
+ * the markup.
+ */
+const THEME_INIT_SCRIPT = `(function(){try{var r=document.documentElement,t=localStorage.getItem("agentfox-theme");if(t==="system")r.removeAttribute("data-theme");else if(t==="dark")r.setAttribute("data-theme","dark");}catch(e){}})();`;
 
 /**
  * Root metadata. Everything here is inherited by every route, so it holds only
@@ -37,6 +49,21 @@ const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("agentfox-
  * product is genuinely described by, because a longer list is not a ranking signal
  * and reads as stuffing to a human who views source.
  */
+/**
+ * Tints the browser chrome on mobile to the page's own ground, so the status bar
+ * stops sitting in a different colour from the app underneath it. Two entries
+ * rather than one: a single value would be wrong in whichever theme it is not.
+ *
+ * These are `--bg` in each theme, by hand. A media-query meta tag cannot read a
+ * custom property, so if the ramp in globals.css moves, these move with it.
+ */
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fbfbfd" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
@@ -225,7 +252,23 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="en-GB" className={`${albertSans.variable} ${GeistMono.variable} ${GeistSans.variable}`}>
+    /* `data-theme="light"` is rendered here, on the server, and not only written by
+       the script below. It is the default, so rendering it is what makes the markup
+       React hydrates against match the DOM the script produced for the visitor who
+       has chosen nothing — which is almost everybody. Stamping it from the script
+       alone put an attribute on <html> that the server HTML did not have, and React
+       reported a hydration mismatch on every first load.
+
+       `suppressHydrationWarning` covers the remaining two cases, where the script
+       legitimately disagrees with the server: a visitor who picked Dark, and one who
+       picked System. It applies to this element's own attributes only, not to its
+       subtree, so nothing else on the page stops being checked. */
+    <html
+      lang="en-GB"
+      data-theme="light"
+      suppressHydrationWarning
+      className={`${albertSans.variable} ${GeistMono.variable} ${GeistSans.variable}`}
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>

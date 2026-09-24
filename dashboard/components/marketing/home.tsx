@@ -264,8 +264,8 @@ export function Benefits() {
           <Shot
             src="/shots/trace-detail-crop.webp"
             alt="One request in AgentFox: its span timeline, a provenance table marking both message values untrusted, and a decisions table allowing the input and blocking the tool result."
-            w={1283}
-            h={790}
+            w={1600}
+            h={985}
           />
         }
       />
@@ -285,8 +285,8 @@ export function Benefits() {
           <Shot
             src="/shots/agents-crop.webp"
             alt="The AgentFox agent registry: four agents, one unregistered and two with no owner, and a table naming the unregistered one as detected from traffic."
-            w={1283}
-            h={670}
+            w={1600}
+            h={835}
           />
         }
       />

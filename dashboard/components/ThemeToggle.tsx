@@ -17,10 +17,12 @@ function apply(theme: Theme) {
  * so there's no flash — this just syncs the button state and persists future clicks.
  */
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>("system");
+  // Light, to agree with the pre-paint script in layout.tsx. Starting at
+  // "system" here would light the wrong segment for one frame after hydration.
+  const [theme, setTheme] = useState<Theme>("light");
 
   useEffect(() => {
-    const stored = (localStorage.getItem(STORAGE_KEY) as Theme | null) || "system";
+    const stored = (localStorage.getItem(STORAGE_KEY) as Theme | null) || "light";
     setTheme(stored);
   }, []);
 
