@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Albert_Sans } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
+import { GeistSans } from "geist/font/sans";
 
 const albertSans = Albert_Sans({ subsets: ["latin"], variable: "--font-sans" });
 import { cookies, headers } from "next/headers";
@@ -13,6 +14,7 @@ import { CommandSearch } from "@/components/CommandSearch";
 import { SideNav, type NavItem } from "@/components/SideNav";
 import { TopbarStats } from "@/components/TopbarStats";
 import "./globals.css";
+import "./marketing.css";
 
 // Runs before paint so a stored theme choice never flashes the wrong colors on load.
 const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("nometria-theme");if(t&&t!=="system")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();`;
@@ -152,7 +154,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   return (
-    <html lang="en" className={`${albertSans.variable} ${GeistMono.variable}`}>
+    <html lang="en" className={`${albertSans.variable} ${GeistMono.variable} ${GeistSans.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
