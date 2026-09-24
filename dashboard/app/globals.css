@@ -1433,227 +1433,213 @@ input[type="checkbox"], input[type="radio"] {
   a { color: inherit; text-decoration: none; }
   .panel, .card { break-inside: avoid; }
 }
-
 /* --- Public playground (/playground) -------------------------------------
-   Same token system as the rest of the app (no new palette), a bespoke layout
-   because nothing else in this app is a chat surface. */
 
-.pg-shell { max-width: 1180px; margin: 0 auto; padding: 28px 20px 64px; }
-.pg-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 30px; }
-/* Below this width the sign-in button sat beside a paragraph narrow enough that the
-   text wrapped around it, which is the first thing a visitor on a phone sees. */
-@media (max-width: 560px) {
-  .pg-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .pg-header .btn-scan { align-self: flex-start; }
-}
-.pg-header .brand { display: flex; align-items: center; gap: 8px; font-weight: 640; }
-.pg-header p.sub { margin: 4px 0 0; }
-/* The playground's page heading. Sized to the header it sits in rather than to
-   the global h1 (25px), which would make the lede under it look like an
-   afterthought. It carries the visual weight the first line of that lede
-   already had, so promoting it to a heading changed the outline, not the page. */
-.pg-header h1.pg-title {
-  font-size: clamp(1.5rem, 3vw, 2rem);
-  line-height: 1.12;
+   A chat window with a narrow rail beside it, and nothing else. The page it
+   replaced was eight panels and a comparison table; the selectors for those are
+   gone rather than left behind, because a dead rule is how the next person ends
+   up rebuilding the thing that was removed on purpose.
+
+   Same token system as the rest of the site. The one thing worth noting is the
+   stream height: it is a `min-height` and a `max-height` rather than a fixed
+   one, so an empty conversation still looks like a chat window instead of a
+   sliver, and a long one scrolls inside itself instead of pushing the composer
+   off the bottom of the page. */
+
+.pg { padding-block: 40px 72px; }
+.pg-h1 {
+  font-size: clamp(1.7rem, 3.4vw, 2.4rem);
+  line-height: 1.1;
+  letter-spacing: -0.026em;
   font-weight: 620;
-  letter-spacing: -0.024em;
-  margin: 12px 0 0;
+  margin: 0;
 }
-.pg-sub { margin: 12px 0 0; max-width: 66ch; font-size: 14px; line-height: 1.6; color: var(--muted); }
-.pg-sub-fine { font-size: 13px; color: var(--faint); }
-.pg-columns { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
-@media (max-width: 860px) { .pg-columns { grid-template-columns: 1fr; } }
+.pg-lede { margin: 10px 0 0; font-size: 15px; color: var(--muted); }
 
-.pg-turns { display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; max-height: 420px; overflow-y: auto; }
-.pg-turn { max-width: 86%; padding: 8px 12px; border-radius: var(--r-2); font-size: 13px; line-height: 1.45; }
-.pg-turn.user { align-self: flex-end; background: var(--text); color: var(--bg); }
-.pg-turn.agent { align-self: flex-start; background: var(--panel-2); border: 1px solid var(--hairline); }
-.pg-turn .pg-turn-meta { display: flex; gap: 6px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
-/* The scripted reply is a fixture that obeys the attack on purpose. Said above
-   the words themselves, not only in the page header, so a screenshot of one
-   reply still carries it. */
-.pg-turn .pg-turn-label {
-  font-size: 10.5px; letter-spacing: 0.02em; text-transform: uppercase;
-  color: var(--muted); margin-bottom: 5px;
-}
-/* In observe mode the flagged state is the finding and the applied verdict is
-   the footnote, so the emphasis sits on what the policy would have done. */
-.pg-turn .pg-would { color: var(--text); font-weight: 620; font-size: 12px; }
-/* The same "what enforce would have done" line, in the tool panel, where it has no
-   chat bubble around it to sit inside. */
-.pg-trace .pg-would {
-  margin-top: 10px;
-  padding: 9px 11px;
-  border-radius: var(--r-2);
-  background: var(--warn-bg);
-  color: var(--text-2);
-  font-size: 12px;
-  line-height: 1.5;
-}
-.pg-trace .pg-would strong { color: var(--warn); }
-
-.pg-composer { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--hairline); }
-.pg-composer textarea { flex: 1; resize: none; }
-
-.pg-presets { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px; }
-.pg-preset-btn { border: 1px dashed var(--border); background: transparent; border-radius: var(--r-pill); padding: 4px 10px; font-size: 11.5px; color: var(--text-2); cursor: pointer; }
-.pg-preset-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-.pg-mode-toggle { display: flex; align-items: center; gap: 8px; padding: 12px 16px; }
-.pg-mode-toggle .tag { cursor: default; }
-/* The mode panel carries two paragraphs now: what the switch moves, and the
-   pack it does not move. Without this they ran together into one block. */
-.pg-mode-note p { margin: 0 0 8px; }
-.pg-mode-note p:last-child { margin-bottom: 0; }
-.pg-mode-note strong { color: var(--text); }
-
-/* What the four impact tiers in the tool dropdown mean. A paragraph in a form
-   grid, so it gets prose leading rather than the grid's label rhythm. */
-.pg-legend { margin: 0; line-height: 1.55; }
-.pg-legend .mono { font-size: 11.5px; }
-
-.pg-trace { padding: 10px 16px; border-top: 1px solid var(--hairline); font-size: 12.5px; }
-.pg-trace:first-child { border-top: none; }
-.pg-trace-rule { margin-top: 4px; }
-
-/* A detector run now states whether it matched and with what score, not only
-   that it executed. Five short facts, wrapping rather than overflowing in the
-   narrow sidebar column and on a phone. */
-.pg-detector-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-/* The masked excerpt the detector matched on. Arbitrary visitor text, so it has
-   to be allowed to break anywhere rather than push the column wider. */
-.pg-sample {
-  margin-top: 3px; font-size: 11px; line-height: 1.5;
-  overflow-wrap: anywhere; word-break: break-word;
-}
-/* The audit chain's head digest: 24 hex characters, same treatment. */
-.pg-digest { margin-top: 6px; font-size: 11px; overflow-wrap: anywhere; }
-/* The chain and control-posture panels are stacked sentences now rather than a
-   single line each, so they need leading between them to read as sentences. */
-.pg-shell .panel .body.small > div + div { margin-top: 6px; }
-.pg-shell .panel .body.small { line-height: 1.55; }
-.pg-cta-note { max-width: 520px; margin: 14px auto 0; }
-
-.pg-callout { border: 1px solid var(--hairline); background: var(--panel-2); border-radius: var(--r-3); padding: 16px 18px; margin-top: 18px; }
-.pg-callout h2 { margin: 0 0 8px; font-size: 14px; }
-.pg-callout table { margin-top: 8px; }
-
-.pg-cta { text-align: center; margin-top: 30px; padding: 26px 20px; border: 1px solid var(--hairline); border-radius: var(--r-3); background: var(--panel); }
-.pg-cta h2 { margin: 0 0 8px; }
-.pg-cta p { color: var(--muted); max-width: 520px; margin: 0 auto 16px; }
-
-
-/* The agent picker, and the card for whichever one is selected.
-
-   These replace `.pg-lede`, which was a numbered explanation of the order of the
-   panels underneath it. The page's problem was never the order: it was that every
-   agent appeared in every panel, twice over, with no statement anywhere of what a
-   given agent could do. One choice at the top, with its consequences printed beside
-   it, is the whole change. */
-.pg-pick {
-  display: grid;
-  gap: 10px;
-  grid-template-columns: 1fr;
-  margin-bottom: 14px;
-}
-@media (min-width: 760px) { .pg-pick { grid-template-columns: repeat(3, 1fr); } }
-.pg-pick-tab {
+/* The agent picker. Three tabs, a name and one line each. */
+.pg-agents { display: grid; gap: 10px; grid-template-columns: 1fr; margin: 26px 0 16px; }
+@media (min-width: 760px) { .pg-agents { grid-template-columns: repeat(3, 1fr); } }
+.pg-agent {
   text-align: left;
-  padding: 14px 16px;
+  padding: 13px 15px;
   border: 1px solid var(--border);
   border-radius: var(--r-3);
   background: var(--panel);
-  color: var(--text);
-  font-family: inherit;
-  cursor: pointer;
-  transition: border-color .12s, background .12s, box-shadow .12s;
-}
-.pg-pick-tab b { display: block; font-size: 13.5px; font-weight: 620; letter-spacing: -0.012em; }
-.pg-pick-tab span {
-  display: block;
-  margin-top: 4px;
-  font-size: 12px;
-  line-height: 1.45;
-  color: var(--muted);
-  /* Two lines of purpose, so three tabs of different lengths stay one height. */
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-.pg-pick-tab:hover { border-color: var(--border-strong, var(--muted)); }
-.pg-pick-tab[aria-selected="true"] {
-  border-color: var(--accent);
-  background: var(--accent-weak);
-}
-.pg-pick-tab[aria-selected="true"] b { color: var(--accent); }
-
-.pg-brief {
-  display: grid;
-  gap: 24px;
-  grid-template-columns: 1fr;
-  padding: 20px 22px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-3);
-  background: var(--panel);
-  margin-bottom: 18px;
-}
-@media (min-width: 900px) { .pg-brief { grid-template-columns: 1fr 1fr; gap: 32px; } }
-.pg-brief-label {
-  display: block;
-  font-size: 10.5px;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--faint);
-}
-.pg-brief p { margin: 6px 0 16px; font-size: 13px; line-height: 1.55; color: var(--text-2); }
-.pg-brief p:last-of-type { margin-bottom: 0; }
-.pg-brief-note { color: var(--faint) !important; font-size: 12px !important; margin-top: 12px !important; }
-
-.pg-tries { display: grid; gap: 8px; margin-top: 8px; }
-.pg-try {
-  text-align: left;
-  padding: 11px 13px;
-  border: 1px solid var(--border);
-  border-radius: var(--r-2);
-  background: var(--panel-2);
   color: var(--text);
   font-family: inherit;
   cursor: pointer;
   transition: border-color .12s, background .12s;
 }
-.pg-try:hover:not(:disabled) { border-color: var(--accent); }
-.pg-try:disabled { opacity: .55; cursor: default; }
-.pg-try-head { display: flex; align-items: center; gap: 8px; }
-.pg-try-head b { font-size: 13px; font-weight: 600; }
-.pg-try-expect {
-  display: block;
-  margin-top: 5px;
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--muted);
+.pg-agent b { display: block; font-size: 13.5px; font-weight: 620; letter-spacing: -0.012em; }
+.pg-agent span { display: block; margin-top: 3px; font-size: 12px; line-height: 1.4; color: var(--muted); }
+.pg-agent:hover { border-color: var(--muted); }
+.pg-agent[aria-selected="true"] { border-color: var(--accent); background: var(--accent-weak); }
+.pg-agent[aria-selected="true"] b { color: var(--accent); }
+
+.pg-main { display: grid; gap: 16px; grid-template-columns: 1fr; align-items: start; }
+@media (min-width: 900px) { .pg-main { grid-template-columns: minmax(0, 1fr) 232px; } }
+
+.pg-chat {
+  border: 1px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--panel);
+  overflow: hidden;
+}
+.pg-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  min-height: 260px;
+  max-height: 520px;
+  overflow-y: auto;
 }
 
-/* The framing that chains the three panels below it into one story, so the
-   containment argument is read before the detection demo rather than after it. */
-.pg-lede { border: 1px solid var(--hairline); border-left: 3px solid var(--accent); background: var(--panel); border-radius: var(--r-3); padding: 16px 18px; margin-bottom: 18px; }
-.pg-lede p { margin: 0 0 10px; font-size: 13px; color: var(--muted); }
-.pg-lede ol { margin: 0; padding-left: 20px; font-size: 13px; }
-.pg-lede li { margin-bottom: 5px; }
-.pg-lede li:last-child { margin-bottom: 0; }
-.pg-lede strong { color: var(--text); }
+/* The empty state is the only instruction on the page, and it is one word.
+   `margin-top: auto` sits the suggestions on the composer rather than floating
+   them in the middle of an empty box, which is where every chat client a visitor
+   has used puts them. */
+.pg-empty { margin-top: auto; }
+.pg-empty-label {
+  display: block;
+  font-size: 10.5px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--faint);
+  margin-bottom: 10px;
+}
+.pg-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pg-chip {
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  border-radius: var(--r-pill);
+  padding: 7px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .12s, color .12s;
+}
+.pg-chip:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.pg-chip:disabled { opacity: .5; cursor: default; }
 
-/* Shown when the sandbox is gone (any route 404s) or never started, in place of
-   raw error text and a "Setting up your sandbox..." line that never resolves. */
-.pg-recovery { border: 1px solid var(--border); background: var(--panel); border-radius: var(--r-3); padding: 18px 20px; margin-bottom: 18px; }
-.pg-recovery strong { display: block; font-size: 14px; margin-bottom: 6px; }
-.pg-recovery p { margin: 0 0 12px; max-width: 620px; }
+.pg-msg {
+  max-width: 82%;
+  padding: 10px 13px;
+  border-radius: var(--r-3);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.pg-msg.user { align-self: flex-end; background: var(--cta); color: var(--cta-ink); border-bottom-right-radius: var(--r-1); }
+.pg-msg.agent { align-self: flex-start; background: var(--panel-2); border-bottom-left-radius: var(--r-1); }
+.pg-msg-note {
+  display: block;
+  font-size: 11px;
+  color: var(--faint);
+  margin-bottom: 5px;
+}
 
+/* A tool the agent reached for. Full width and centred between the bubbles, the
+   way a chat client draws tool use: it is neither side of the conversation. */
+.pg-action {
+  align-self: stretch;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--r-2);
+  background: var(--panel-2);
+  padding: 11px 13px;
+}
+.pg-action-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; font-size: 12.5px; }
+.pg-action-args { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.pg-pending { display: block; margin-top: 7px; font-size: 12px; color: var(--faint); }
+
+/* The verdict, and the reason behind it one click away. Closed by default: the
+   chip is the answer, the reason is for the reader who wants it. */
+.pg-verdict { margin-top: 8px; }
+.pg-verdict > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  list-style: none;
+}
+.pg-verdict > summary::-webkit-details-marker { display: none; }
+.pg-would { font-size: 11.5px; font-weight: 600; color: var(--warn); }
+.pg-why { font-size: 11.5px; color: var(--faint); text-decoration: underline; text-underline-offset: 2px; }
+.pg-verdict[open] .pg-why { color: var(--accent); }
+.pg-verdict-body { margin-top: 8px; padding-left: 2px; border-left: 2px solid var(--hairline); padding-left: 10px; }
+.pg-verdict-body p { margin: 0 0 5px; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.pg-verdict-body p:last-child { margin-bottom: 0; }
+.pg-verdict-body p.mono { font-size: 11.5px; overflow-wrap: anywhere; }
+
+.pg-doc { padding: 0 18px 12px; }
+.pg-doc-label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 7px; }
+.pg-doc textarea { width: 100%; resize: vertical; font-size: 13px; }
+
+.pg-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--hairline);
+}
+.pg-composer textarea {
+  flex: 1;
+  resize: none;
+  min-height: 40px;
+  max-height: 140px;
+  font-size: 14px;
+  padding: 10px 12px;
+}
+.pg-composer .btn-primary { height: 40px; padding: 0 18px; }
+.pg-attach {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--panel);
+  color: var(--muted);
+  cursor: pointer;
+}
+.pg-attach:hover, .pg-attach[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
+
+.pg-rail { display: grid; gap: 14px; }
+.pg-mode { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pg-mode .tag { cursor: default; }
+.pg-tip > summary { font-size: 12px; color: var(--faint); cursor: pointer; }
+.pg-tip > summary:hover { color: var(--accent); }
+.pg-tip p { margin: 8px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
+.pg-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted); }
+.pg-chain b { color: var(--text); font-variant-numeric: tabular-nums; }
+
+/* Shown when the sandbox is gone (any route 404s) or never started. */
+.pg-lost {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: var(--r-3);
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.pg-lost p { margin: 0 0 12px; font-size: 13.5px; }
 
 @media (max-width: 760px) {
-  .pg-shell { padding: 18px 14px 48px; }
-  .pg-turn { max-width: 96%; }
-  .pg-callout { overflow-x: auto; }
+  .pg-msg { max-width: 94%; }
+  .pg-stream { min-height: 240px; max-height: 60vh; padding: 14px; }
+}
+/* At phone width the attach button and Send leave the field about 110px, which
+   is narrower than its own placeholder — the second line was being cut through
+   the middle of a word. The field takes its own row and the two controls sit
+   under it. */
+@media (max-width: 560px) {
+  .pg-composer { flex-wrap: wrap; }
+  .pg-composer textarea { order: -1; flex: 1 0 100%; }
+  .pg-composer .btn-primary { flex: 1; }
 }
 
 /* --- Public benchmark page (/benchmark) -----------------------------------
