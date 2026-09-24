@@ -67,7 +67,7 @@ function PageHeader() {
             textDecoration: "none",
           }}
         >
-          Nometria
+          AgentFox
         </Link>
         <span
           style={{
@@ -115,7 +115,7 @@ function PageFooter() {
         color: "var(--muted)",
       }}
     >
-      <span style={{ fontWeight: 640, color: "var(--text)" }}>Nometria</span>
+      <span style={{ fontWeight: 640, color: "var(--text)" }}>AgentFox</span>
       <Link href="/">Home</Link>
       <Link href="/how-it-works">How it works</Link>
       <Link href="/playground">Playground</Link>
@@ -564,7 +564,7 @@ export default function BenchmarkPage() {
           </thead>
           <tbody>
             <tr>
-              <td>Nometria, full detector stack</td>
+              <td>AgentFox, full detector stack</td>
               <td className="num">66.7%</td>
               <td className="num">
                 <strong>100.0%</strong>

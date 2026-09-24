@@ -5,7 +5,7 @@ enforcement. Every command here was run before it was written down. Each step sa
 because a governance tool that you cannot check is a governance tool you should not trust.
 
 If you would rather see the product work before installing anything, the hosted playground needs no
-account: <https://guardrails-nometria.vercel.app/playground>.
+account: <https://useagentfox.com/playground>.
 
 **You need:** Python 3.11 or newer, and a terminal. Nothing else. Every step below runs offline:
 no API key, no model weights, no network egress. The built-in `echo` model provider makes the whole

@@ -14,8 +14,8 @@ import { Editions, WhyOpen } from "@/components/marketing/editions";
 export const dynamic = "force-dynamic";
 
 /**
- * layout.tsx's title template appends " | Nometria" to a child page's title. This
- * page is the one that must not take it: "Nometria: ... | Nometria" says the name
+ * layout.tsx's title template appends " | AgentFox" to a child page's title. This
+ * page is the one that must not take it: "AgentFox: ... | AgentFox" says the name
  * twice inside a 60-character budget, so `title.absolute` opts out.
  *
  * The description drops the previous one's "even after a prompt injection has
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     description: HOME_DESCRIPTION,
     path: "/",
   }),
-  // `absolute` opts this one page out of layout.tsx's "%s | Nometria" template.
+  // `absolute` opts this one page out of layout.tsx's "%s | AgentFox" template.
   title: { absolute: HOME_TITLE },
 };
 
@@ -68,7 +68,7 @@ function LandingJsonLd() {
       {
         "@type": "SoftwareApplication",
         "@id": `${SITE_URL}/#software`,
-        name: "Nometria",
+        name: "AgentFox",
         applicationCategory: "SecurityApplication",
         applicationSubCategory: "AI agent governance and security control plane",
         description: CATEGORY_CAP,
@@ -88,7 +88,7 @@ function LandingJsonLd() {
       {
         "@type": "Organization",
         "@id": `${SITE_URL}/#organisation`,
-        name: "Nometria",
+        name: "AgentFox",
         url: SITE_URL,
         logo: `${SITE_URL}/apple-icon`,
         sameAs: [REPO],

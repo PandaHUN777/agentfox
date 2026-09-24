@@ -6,7 +6,7 @@ import { ApiDown } from "@/components/ui";
 
 /**
  * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
- * copy of "Nometria Control Plane". See lib/site.ts appPageMetadata.
+ * copy of "AgentFox Control Plane". See lib/site.ts appPageMetadata.
  */
 export const metadata: Metadata = appPageMetadata("Framework");
 

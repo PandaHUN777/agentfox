@@ -1,0 +1,81 @@
+# The issue labels this repository uses, and the only place they are defined.
+#
+# `.github/workflows/labels.yml` applies this file on every push to main that
+# touches it, so a label is created by editing this file rather than by clicking
+# through repository settings. That also means the labels named in
+# `.github/ISSUE_TEMPLATE/*.yml` cannot quietly stop existing: a form whose
+# `labels:` value names a label the repository does not have fails to submit.
+#
+# The sync is additive. It creates what is missing and corrects the colour and
+# description of what is listed here. It never deletes a label, because deleting
+# one strips it from every issue that carries it, and that is not recoverable.
+#
+# GitHub's own defaults (bug, enhancement, documentation, question, duplicate,
+# good first issue, help wanted, invalid, wontfix) and the ones Dependabot
+# creates (dependencies, github_actions, python, javascript) already exist and
+# are deliberately not repeated here.
+
+labels:
+  # --- What kind of report it is ------------------------------------------
+  #
+  # Detection quality is the highest-value report this project can receive: it
+  # is a claim that a verdict was wrong, which is the one thing the maintainer
+  # cannot find by reading the code. It gets its own issue form and its own
+  # label rather than being filed under `bug` with everything else.
+  - name: detection-quality
+    colour: "c5326e"
+    description: A verdict was wrong. The highest-value report this project takes.
+
+  - name: false-positive
+    colour: "e99695"
+    description: Blocked, flagged or escalated something that should have passed.
+
+  - name: false-negative
+    colour: "d93f0b"
+    description: Allowed something that should have been caught.
+
+  - name: security
+    colour: "5319e7"
+    description: Security-relevant, but not a vulnerability report. Those go private, see SECURITY.md.
+
+  - name: benchmark
+    colour: "0e8a16"
+    description: A published number, a results file, or the methodology behind one.
+
+  - name: compliance
+    colour: "006b75"
+    description: Framework mappings, the control catalogue, or evidence packages.
+
+  # --- Which part of the product ------------------------------------------
+  - name: "area:guardrails"
+    colour: "1d76db"
+    description: Detectors, the pipeline, normalisation, provenance and taint.
+
+  - name: "area:enforcement"
+    colour: "1d76db"
+    description: Policy evaluation, capability grants, impact tiers, escalation.
+
+  - name: "area:gateway"
+    colour: "1d76db"
+    description: The control-plane API, the proxy and the playground.
+
+  - name: "area:dashboard"
+    colour: "1d76db"
+    description: The Next.js dashboard and the public marketing pages.
+
+  - name: "area:cli"
+    colour: "1d76db"
+    description: The nometria command line and its output.
+
+  - name: "area:harness"
+    colour: "1d76db"
+    description: The Claude Code plugin, skills, subagents and the MCP server.
+
+  # --- State ---------------------------------------------------------------
+  - name: needs-triage
+    colour: "fbca04"
+    description: Not yet looked at. Applied on arrival, removed once sorted.
+
+  - name: needs-repro
+    colour: "fef2c0"
+    description: Waiting on a reproduction the maintainer can run.

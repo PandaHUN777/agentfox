@@ -34,7 +34,7 @@ export function Wordmark({ size = 22 }: { size?: number }) {
   return (
     <span className="wordmark">
       <Logo size={size} />
-      <span>Nometria</span>
+      <span>AgentFox</span>
     </span>
   );
 }

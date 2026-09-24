@@ -940,7 +940,7 @@ export function Playground({ apiBase }: { apiBase: string }) {
                         controls with evidence in this sandbox are passing.
                       </div>
                       <div className="muted">
-                        {compliance.controls} controls exist in Nometria&apos;s own
+                        {compliance.controls} controls exist in AgentFox&apos;s own
                         catalog. This is not a compliance framework and no
                         framework is selected here.{" "}
                         {(controlCounts.not_implemented ?? 0) > 0 && (
@@ -1097,7 +1097,7 @@ export function Playground({ apiBase }: { apiBase: string }) {
                 <thead>
                   <tr>
                     <th></th>
-                    <th className="num">Nometria</th>
+                    <th className="num">AgentFox</th>
                     <th className="num">llm-guard</th>
                   </tr>
                 </thead>

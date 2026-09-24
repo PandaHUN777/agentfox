@@ -44,7 +44,7 @@ export function BrandLockup({ size = 28, sub = false }: { size?: number; sub?: b
     <span className="mk-brand">
       <BrandMark size={size} />
       <span style={{ display: "grid", lineHeight: 1.15 }}>
-        <span className="mk-brand-name">Nometria</span>
+        <span className="mk-brand-name">AgentFox</span>
         {sub && <span className="mk-brand-sub">Agent control plane</span>}
       </span>
     </span>

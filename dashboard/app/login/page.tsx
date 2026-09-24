@@ -24,7 +24,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = publicPageMetadata({
   title: "Sign in or create a workspace",
   description:
-    "Sign in to Nometria with GitHub, which creates the workspace if you do not have one. The playground and the published benchmarks need no account at all.",
+    "Sign in to AgentFox with GitHub, which creates the workspace if you do not have one. The playground and the published benchmarks need no account at all.",
   path: "/login",
   noIndex: true,
 });
@@ -59,7 +59,7 @@ export default async function Login({
         </small>
         <h1 style={{ fontSize: 20 }}>Sign in or create a workspace</h1>
         <p className="sub" style={{ maxWidth: "none" }}>
-          Nometria keeps a register of every AI agent you run, the rules each one has
+          AgentFox keeps a register of every AI agent you run, the rules each one has
           to follow, and a record of what it actually did. Sign in with GitHub: if
           this is your first time, that creates a new workspace for you.
         </p>

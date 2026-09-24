@@ -43,7 +43,7 @@ export const OG_CONTENT_TYPE = "image/png";
 
 /** Alt text, reused by the `images` entries in app/layout.tsx. */
 export const OG_ALT =
-  "Nometria: every call your agent makes, checked and recorded. Open source, Apache-2.0.";
+  "AgentFox: every call your agent makes, checked and recorded. Open source, Apache-2.0.";
 
 /**
  * The marketing brand mark from components/marketing/brand.tsx, redrawn here
@@ -94,7 +94,7 @@ export function ogImage(): ImageResponse {
           <BrandMarkStatic size={64} />
           <div style={{ display: "flex", flexDirection: "column" }}>
             <span style={{ fontSize: 44, fontWeight: 700, letterSpacing: "-0.02em" }}>
-              Nometria
+              AgentFox
             </span>
             <span style={{ fontSize: 21, color: MK.muted, marginTop: 2 }}>
               Agent control plane

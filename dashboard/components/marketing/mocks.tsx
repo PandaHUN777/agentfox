@@ -181,7 +181,7 @@ function Verdict({
  */
 export function ToolCallMock({ className }: { className?: string }) {
   return (
-    <Frame title="nometria · tool call" className={className}>
+    <Frame title="agentfox · tool call" className={className}>
       <div style={{ display: "grid", gap: 7 }}>
         <span className="mk-label">The call an injection asks for</span>
         <Code>
@@ -229,7 +229,7 @@ export function ToolCallMock({ className }: { className?: string }) {
  */
 export function GrantMock({ className }: { className?: string }) {
   return (
-    <Frame title="nometria · capability grant" className={className}>
+    <Frame title="agentfox · capability grant" className={className}>
       <div style={{ display: "grid", gap: 9 }}>
         <span className="mk-label">The grant</span>
         <Code>
@@ -329,7 +329,7 @@ const FINDINGS: FindingRow[] = [
 
 export function FindingsMock({ className }: { className?: string }) {
   return (
-    <Frame title="nometria · findings" className={className}>
+    <Frame title="agentfox · findings" className={className}>
       <div style={{ display: "grid", gap: 12 }}>
         {FINDINGS.map((f, i) => (
           <div key={f.type} style={{ display: "grid", gap: 7 }}>
@@ -449,7 +449,7 @@ function ChainEntry({ row, broken }: { row: ChainRow; broken?: boolean }) {
 export function ChainMock({ className }: { className?: string }) {
   const [first, second, third] = CHAIN;
   return (
-    <Frame title="nometria · audit chain" className={className}>
+    <Frame title="agentfox · audit chain" className={className}>
       <div className="mk-row" style={{ gap: 8 }}>
         <span className="mk-chip mk-chip-go">verified</span>
         <span style={TIGHT}>3 records, re-hashed from the first just now.</span>
@@ -527,7 +527,7 @@ function ModePanel({
  */
 export function ObserveEnforceMock({ className }: { className?: string }) {
   return (
-    <Frame title="nometria · policy mode" className={className}>
+    <Frame title="agentfox · policy mode" className={className}>
       <div style={{ display: "grid", gap: 7 }}>
         <span className="mk-label">The same message, sent twice</span>
         <Code>{INJECTION}</Code>

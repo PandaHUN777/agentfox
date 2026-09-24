@@ -1,6 +1,6 @@
 name: Wrong verdict / detection quality
 description: It blocked something it should have allowed, or it allowed something it should have stopped.
-labels: ["bug"]
+labels: ["detection-quality", "needs-triage"]
 body:
   - type: markdown
     attributes:

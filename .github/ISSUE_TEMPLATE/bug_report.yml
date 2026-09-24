@@ -1,6 +1,6 @@
 name: Bug report
 description: Something crashed, hung, or did not do what the documentation says it does.
-labels: ["bug"]
+labels: ["bug", "needs-triage"]
 body:
   - type: markdown
     attributes:

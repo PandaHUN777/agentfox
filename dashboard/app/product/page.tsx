@@ -14,11 +14,11 @@ import { Evidence, HowItWorks, FAQ, CTA, Footer } from "@/components/marketing/s
 
 export const dynamic = "force-dynamic";
 
-// layout.tsx appends " | Nometria", so the name is not repeated here. The previous
+// layout.tsx appends " | AgentFox", so the name is not repeated here. The previous
 // description ran to 244 characters and was cut mid-clause in every search result
 // and every unfurl; this one says the same six things inside the ~160 that get shown.
 export const metadata: Metadata = publicPageMetadata({
-  title: "What Nometria does, on real screens",
+  title: "What AgentFox does, on real screens",
   description:
     "The six pillars of the control plane, each with the screen that runs it: guardrails, capability grants, agent discovery, evals, the audit chain and compliance.",
   path: "/product",

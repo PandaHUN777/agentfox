@@ -1,0 +1,41 @@
+name: Labels
+
+# Applies `.github/labels.yml` to the repository's labels.
+#
+# Labels exist here rather than only in repository settings for two reasons. The
+# issue forms in `.github/ISSUE_TEMPLATE/` name labels in their `labels:` field,
+# and a form naming a label the repository does not have fails to submit, so the
+# two have to be kept in step. And a label set that lives in the repository can be
+# reviewed in a pull request like anything else.
+#
+# The sync is additive: it creates and corrects, and never deletes. See the header
+# of `.github/scripts/sync_labels.py`.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/labels.yml"
+      - ".github/scripts/sync_labels.py"
+      - ".github/workflows/labels.yml"
+  workflow_dispatch:
+
+# Labels are issue metadata, so this is the only scope needed. No contents:write,
+# no packages, no id-token.
+permissions:
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install the YAML parser
+        run: python3 -m pip install --quiet pyyaml
+
+      - name: Sync labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: python3 .github/scripts/sync_labels.py

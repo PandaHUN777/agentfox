@@ -30,7 +30,7 @@ const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem("nometria-
  * publish canonicals pointing at production.
  *
  * `title.template` means a page exports just its own name ("Glossary") and gets
- * "Glossary | Nometria" in the tab and the unfurl. `title.default` is what a route
+ * "Glossary | AgentFox" in the tab and the unfurl. `title.default` is what a route
  * with no title of its own inherits.
  *
  * No `verification`, no `category`, and no keyword list beyond the six terms this
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
     default: HOME_TITLE,
-    template: "%s | Nometria",
+    template: "%s | AgentFox",
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
     "LLM guardrails",
     "agent audit trail",
   ],
-  authors: [{ name: "Nometria", url: REPO_URL }],
+  authors: [{ name: "AgentFox", url: REPO_URL }],
   // No `images` key in either block. app/opengraph-image.tsx and
   // app/twitter-image.tsx sit at the root of app/, and the file convention applies
   // them to every route beneath automatically, with a content hash in the URL that
@@ -105,7 +105,7 @@ export const metadata: Metadata = {
  * - "Discover" (Agents, Sources) is pulled out on its own because "Discover"
  *   is the single most consistently-used word across that whole category for
  *   exactly this — an inventory of what exists (agents, MCP servers, data
- *   sources) — not a Nometria-specific choice.
+ *   sources) — not an AgentFox-specific choice.
  * - "Monitor" keeps Findings and Traces, since those are the ongoing-activity
  *   record rather than the inventory itself, and "Monitor" was never actually
  *   flagged as unclear by the research — only "Quality" and the standalone
@@ -208,11 +208,21 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     pathname.startsWith("/how-it-works") ||
     pathname.startsWith("/playground") ||
     pathname.startsWith("/benchmark") ||
+    pathname.startsWith("/compare") ||
+    pathname.startsWith("/support") ||
+    pathname.startsWith("/pricing") ||
     // /product is the long version of the landing page and renders its own
     // MarketingNav and Footer. Without this it came out with the marketing nav
     // nested inside the app sidebar, which is two navigations for one page, and
     // a signed-out visitor could not open it at all (see middleware.ts).
-    pathname.startsWith("/product");
+    pathname.startsWith("/product") ||
+    // The legal pages, for the same two reasons: each renders its own MarketingNav
+    // and Footer, and each has to be readable by someone with no account, since
+    // that is precisely the reader deciding whether to get one.
+    pathname.startsWith("/privacy") ||
+    pathname.startsWith("/terms") ||
+    pathname.startsWith("/security") ||
+    pathname.startsWith("/legal");
 
   let me: any = null;
   let attention: any = null;

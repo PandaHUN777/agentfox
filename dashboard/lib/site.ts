@@ -14,27 +14,27 @@
  * request time is both sufficient and repointable.
  */
 
-/** Production host. Changed from guardrails-dashboard-eight.vercel.app. */
-const FALLBACK_SITE_URL = "https://guardrails-nometria.vercel.app";
+/** Production host. The custom domain, replacing guardrails-nometria.vercel.app. */
+const FALLBACK_SITE_URL = "https://useagentfox.com";
 
 /** No trailing slash, so `new URL(path, SITE_URL)` and template literals agree. */
 export const SITE_URL = (process.env.NOMETRIA_SITE_URL || FALLBACK_SITE_URL).replace(/\/+$/, "");
 
-export const SITE_NAME = "Nometria";
+export const SITE_NAME = "AgentFox";
 
 /**
  * The one-line description of the whole product, used by the root metadata in
  * app/layout.tsx and by "/" itself. Shared so the site default and the homepage
- * cannot say two different things, which is how "Nometria Control Plane" became a
+ * cannot say two different things, which is how "AgentFox Control Plane" became a
  * fourth name for the product alongside the strapline and the body copy.
  *
  * 56 and 151 characters: a title is truncated by Google at roughly 60 and a
  * description at roughly 160, and a sentence that is cut mid-clause reads as
  * carelessness in the one place a stranger is deciding whether to click.
  */
-export const HOME_TITLE = "Nometria: AI agent governance and security control plane";
+export const HOME_TITLE = "AgentFox: AI agent governance and security control plane";
 export const HOME_DESCRIPTION =
-  "Nometria checks every model call and tool call an agent makes against what that agent was granted, refuses the rest, and keeps a tamper-evident record.";
+  "AgentFox checks every model call and tool call an agent makes against what that agent was granted, refuses the rest, and keeps a tamper-evident record.";
 
 /** The site-wide default, for routes that do not describe themselves. */
 export const SITE_DESCRIPTION =
@@ -50,23 +50,6 @@ export const REPO_URL = "https://github.com/architsharm/guardrails";
 
 /** Verified in components/marketing/editions.tsx and components/Playground.tsx. */
 export const SUPPORT_EMAIL = "support@nometria.com";
-
-/**
- * Paths a signed-out visitor can actually open. Kept in step with
- * middleware.ts's PUBLIC_PATHS by hand: middleware.ts is edge runtime and this
- * module is imported by ordinary server code, so they are not shared, but a path
- * in one and not the other is a bug in whichever list is short.
- *
- * Order is the order they appear in sitemap.xml.
- */
-export const PUBLIC_ROUTES = [
-  "/",
-  "/product",
-  "/how-it-works",
-  "/playground",
-  "/benchmark",
-  "/login",
-] as const;
 
 /** Absolute URL for a path, for canonicals and structured data. */
 export function absolute(path: string): string {
@@ -133,7 +116,7 @@ export function publicPageMetadata(opts: {
  * nofollow here would also apply to the public links in the page footer.
  *
  * The `title` is not wasted effort even though no crawler sees it. A signed-in
- * user with nine tabs open currently gets nine tabs reading "Nometria Control
+ * user with nine tabs open currently gets nine tabs reading "AgentFox Control
  * Plane", and the tab title is the only thing that tells them apart.
  */
 export function appPageMetadata(title: string, description?: string) {

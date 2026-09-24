@@ -36,6 +36,13 @@ import { SESSION_COOKIE } from "@/lib/api";
 // first row of the nav on the landing page bounced the visitor to /login. Like
 // /benchmark it is a static page with no session and no API call.
 //
+// /privacy, /terms, /security and /legal are public for a reason that is not really
+// about SEO: a legal page behind a sign-in wall is worse than no legal page. A
+// stranger deciding whether to paste something into the playground has to be able to
+// read what happens to it *before* they have an account, and a visitor who wants to
+// know what the hosted service promises must not have to accept it to find out. Like
+// /product they are static pages with no session and no API call.
+//
 // The generated metadata routes are public because their whole purpose is to be
 // fetched by a crawler or an unfurler, which has no session. /robots.txt and
 // /sitemap.xml are already excluded by the extension rule in the matcher below;
@@ -46,6 +53,13 @@ const PUBLIC_PATHS = [
   "/",
   "/product",
   "/how-it-works",
+  "/compare",
+  "/support",
+  "/pricing",
+  "/privacy",
+  "/terms",
+  "/security",
+  "/legal",
   "/login",
   "/api/auth",
   "/playground",

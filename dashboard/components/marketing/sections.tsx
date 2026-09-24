@@ -340,7 +340,7 @@ const QUESTIONS: { q: string; a: React.ReactNode }[] = [
       <>
         No. A repository scan walks your source with a parser, never imports it, never runs it
         and makes no network call. A local install downloads no weights and needs no API key,
-        and Nometria adds no destination of its own.
+        and AgentFox adds no destination of its own.
       </>
     ),
   },
@@ -392,7 +392,7 @@ const QUESTIONS: { q: string; a: React.ReactNode }[] = [
     q: "Does it work outside Python?",
     a: (
       <>
-        Yes, two ways, neither of which puts Nometria code in your application. Post a single
+        Yes, two ways, neither of which puts AgentFox code in your application. Post a single
         tool call to <code className="mk-mono">/v1/guard/tool_call</code> and read the verdict
         back, or point an existing OpenAI or Anthropic client&rsquo;s base URL at the gateway,
         which speaks the API your code already calls.
@@ -514,17 +514,49 @@ export function CTA() {
 
 /* --- 7. Footer ---------------------------------------------------------- */
 
-const FOOT_INTERNAL: [string, string][] = [
-  ["How it works", "/how-it-works"],
-  ["Playground", "/playground"],
-  ["Benchmarks", "/benchmark"],
+/**
+ * Footer columns. `out` marks a link that leaves the site, which is the only thing
+ * that decides between `next/link` and a plain anchor here.
+ *
+ * The Legal column's four routes are required of a public site rather than chosen:
+ * a privacy notice, terms, a security page and the licence and attribution notices.
+ * They are linked from every page because a visitor looking for them looks in the
+ * footer and nowhere else.
+ */
+type FootLink = { label: string; href: string; out?: boolean };
+
+const FOOT_PRODUCT: FootLink[] = [
+  { label: "Product tour", href: "/product" },
+  { label: "How it works", href: "/how-it-works" },
+  { label: "Compare", href: "/compare" },
+  { label: "Pricing", href: "/pricing" },
+  { label: "Playground", href: "/playground" },
+  { label: "Benchmarks", href: "/benchmark" },
 ];
 
-const FOOT_EXTERNAL: [string, string][] = [
-  ["Source", REPO],
-  ["Licence: Apache-2.0", LICENSE],
-  ["Report a vulnerability", SECURITY],
+const FOOT_PROJECT: FootLink[] = [
+  { label: "Support", href: "/support" },
+  { label: "Source", href: REPO, out: true },
+  { label: "Licence: Apache-2.0", href: LICENSE, out: true },
+  { label: "Report a vulnerability", href: SECURITY, out: true },
 ];
+
+const FOOT_LEGAL: FootLink[] = [
+  { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
+  { label: "Security", href: "/security" },
+  { label: "Legal", href: "/legal" },
+];
+
+const FOOT_COLUMNS: [string, FootLink[]][] = [
+  ["Product", FOOT_PRODUCT],
+  ["Project", FOOT_PROJECT],
+  ["Legal", FOOT_LEGAL],
+];
+
+function FootItem({ label, href, out }: FootLink) {
+  return out ? <Out href={href}>{label}</Out> : <Link href={href}>{label}</Link>;
+}
 
 export function Footer() {
   return (
@@ -534,7 +566,7 @@ export function Footer() {
         style={{ display: "flex", flexWrap: "wrap", gap: 28, justifyContent: "space-between" }}
       >
         <div style={{ maxWidth: "34ch" }}>
-          <span className="mk-brand-name">Nometria</span>
+          <span className="mk-brand-name">AgentFox</span>
           <p className="mk-fine" style={{ margin: "8px 0 0" }}>
             An open-source control plane for AI agents. Maintained in the open by one
             developer.
@@ -547,22 +579,14 @@ export function Footer() {
           aria-label="Footer"
           style={{ display: "flex", flexWrap: "wrap", gap: 40, fontSize: ".9rem" }}
         >
-          <div style={{ display: "grid", gap: 8 }}>
-            <span className="mk-label">Product</span>
-            {FOOT_INTERNAL.map(([label, href]) => (
-              <Link key={href} href={href}>
-                {label}
-              </Link>
-            ))}
-          </div>
-          <div style={{ display: "grid", gap: 8 }}>
-            <span className="mk-label">Project</span>
-            {FOOT_EXTERNAL.map(([label, href]) => (
-              <Out key={href} href={href}>
-                {label}
-              </Out>
-            ))}
-          </div>
+          {FOOT_COLUMNS.map(([heading, links]) => (
+            <div key={heading} style={{ display: "grid", gap: 8, alignContent: "start" }}>
+              <span className="mk-label">{heading}</span>
+              {links.map((link) => (
+                <FootItem key={link.href} {...link} />
+              ))}
+            </div>
+          ))}
         </nav>
       </div>
       <div className="mk-wrap">

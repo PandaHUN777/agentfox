@@ -11,7 +11,7 @@ import { TIER_TONE } from "@/lib/sourceOptions";
 
 /**
  * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
- * copy of "Nometria Control Plane". See lib/site.ts appPageMetadata.
+ * copy of "AgentFox Control Plane". See lib/site.ts appPageMetadata.
  */
 export const metadata: Metadata = appPageMetadata("Verified sources");
 

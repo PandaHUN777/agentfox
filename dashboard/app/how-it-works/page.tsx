@@ -74,7 +74,7 @@ export default function HowItWorks() {
       <div className="bm-doc">
         <h1>How it works</h1>
         <p className="lede">
-          Nometria is a {CATEGORY}. It sits on the path between your agent and
+          AgentFox is a {CATEGORY}. It sits on the path between your agent and
           everything it can act on. This page walks one call through it, then says what
           each of the six areas of the product is for and what you would actually do in
           each one.
@@ -84,7 +84,7 @@ export default function HowItWorks() {
         <p>
           You get on this path in one of three ways. A line in your Python entry point
           that wraps the model clients already running in that process. An HTTP call
-          from any language, asking about a single tool call, with no Nometria code in
+          from any language, asking about a single tool call, with no AgentFox code in
           your application at all. Or the gateway in front of your traffic, which
           speaks the same API your agent already calls, so you point a base URL at it
           and change nothing else. Whichever you pick, the sequence below is the same,

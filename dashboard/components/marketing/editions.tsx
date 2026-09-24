@@ -20,7 +20,7 @@ import type { CSSProperties } from "react";
  *                                       not payment entitlement.
  *   - runs offline, no API key ........ README.md lines 34-35, and
  *                                       src/nometria/providers/echo.py
- *   - no telemetry phoning home ....... no Nometria-owned endpoint appears
+ *   - no telemetry phoning home ....... no AgentFox-owned endpoint appears
  *                                       anywhere in src/nometria/. The only
  *                                       outbound hosts in config.py are the
  *                                       model and tracing providers the operator
@@ -140,6 +140,10 @@ export function Editions() {
               <pre className="mk-mono" style={CODE_BLOCK}>
                 {INSTALL_CMD}
               </pre>
+              <p className="mk-fine" style={{ margin: 0 }}>
+                The package and the CLI are still named <code className="mk-mono">nometria</code>;
+                that rename is in progress.
+              </p>
               <a
                 className="mk-btn mk-btn-outline"
                 href={REPO_HREF}
@@ -248,7 +252,7 @@ const OSS_FACTS: { label: string; body: string; where: string }[] = [
   },
   {
     label: "No telemetry",
-    body: "Nothing calls a Nometria server. Outbound hosts are the ones you configure.",
+    body: "Nothing calls an AgentFox server. Outbound hosts are the ones you configure.",
     where: "src/nometria/config.py",
   },
   {

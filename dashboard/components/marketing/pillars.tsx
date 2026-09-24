@@ -329,8 +329,8 @@ export function Guardrails() {
           <Shot
             src="/shots/findings.webp"
             h={1075}
-            alt="The Findings screen in Nometria, listing problems raised from detector runs with a severity tag, the finding type, the agent it belongs to and when it last occurred."
-            title="nometria · findings"
+            alt="The Findings screen in AgentFox, listing problems raised from detector runs with a severity tag, the finding type, the agent it belongs to and when it last occurred."
+            title="agentfox · findings"
             caption="A single blocked call is routine enforcement, not a finding. A problem that is severe, persistent or part of a pattern is raised as one and ranked by severity."
           />
         </Pair>
@@ -441,15 +441,15 @@ export function Containment() {
           <Shot
             src="/shots/approvals.webp"
             h={958}
-            alt="The Approvals screen in Nometria, showing tool calls suspended pending a human decision, each with the agent, the tool, the rule that escalated it and approve or deny actions."
-            title="nometria · approvals"
+            alt="The Approvals screen in AgentFox, showing tool calls suspended pending a human decision, each with the agent, the tool, the rule that escalated it and approve or deny actions."
+            title="agentfox · approvals"
             caption="An escalated call is suspended, not dropped. It waits for a person, and the decision they make is recorded in the same chain as the call."
           />
           <Shot
             src="/shots/policies.webp"
             h={1075}
-            alt="The Policies screen in Nometria, listing the baseline, tool-containment and EU AI Act high-risk packs with the mode each one is in and the rules it contains."
-            title="nometria · policies"
+            alt="The Policies screen in AgentFox, listing the baseline, tool-containment and EU AI Act high-risk packs with the mode each one is in and the rules it contains."
+            title="agentfox · policies"
             caption="Three packs ship. baseline and eu-ai-act-high-risk start in observe and record what they would have done. tool-containment enforces from the moment you install."
           />
         </Pair>
@@ -518,8 +518,8 @@ export function Discovery() {
           <Shot
             src="/shots/agents.webp"
             h={1075}
-            alt="The Agents screen in Nometria, listing every registered and shadow agent with its owner, risk tier, the tools it holds capability grants for and its current status."
-            title="nometria · agents"
+            alt="The Agents screen in AgentFox, listing every registered and shadow agent with its owner, risk tier, the tools it holds capability grants for and its current status."
+            title="agentfox · agents"
             caption="Every agent, registered or shadow, with an owner against it. An agent with no owner is a finding of its own, and the kill switch on this screen is reversible."
           />
         </div>
@@ -596,8 +596,8 @@ export function Assurance() {
           <Shot
             src="/shots/evals.webp"
             h={1075}
-            alt="The Evaluation screen in Nometria, showing an eval suite run with per-case scores, the scorer that produced each one and the comparison against the suite's recorded baseline."
-            title="nometria · evaluation"
+            alt="The Evaluation screen in AgentFox, showing an eval suite run with per-case scores, the scorer that produced each one and the comparison against the suite's recorded baseline."
+            title="agentfox · evaluation"
             caption="A suite run, case by case, against the baseline it is being compared to. The same run is what the CI gate reads."
           />
         </Pair>
@@ -675,15 +675,15 @@ export function Evidence2() {
           <Shot
             src="/shots/traces.webp"
             h={632}
-            alt="The Traces screen in Nometria, listing governed calls with the agent, the surface, the verdict and the effective verdict for each one."
-            title="nometria · traces"
+            alt="The Traces screen in AgentFox, listing governed calls with the agent, the surface, the verdict and the effective verdict for each one."
+            title="agentfox · traces"
             caption="Every governed call, with the verdict next to the effective verdict, so you can read what enforcing would have cost before you turn it on."
           />
           <Shot
             src="/shots/trace-detail.webp"
             h={1075}
-            alt="One trace opened in Nometria, showing the full execution path of a single call: what was asked, what was retrieved, which rules fired, the tool arguments and the response."
-            title="nometria · trace detail"
+            alt="One trace opened in AgentFox, showing the full execution path of a single call: what was asked, what was retrieved, which rules fired, the tool arguments and the response."
+            title="agentfox · trace detail"
             caption="One call, end to end: what was asked, what was retrieved, which rule fired, what the tool was called with, what came back."
           />
         </Pair>
@@ -693,8 +693,8 @@ export function Evidence2() {
           <Shot
             src="/shots/compliance.webp"
             h={1075}
-            alt="The Compliance screen in Nometria, showing controls grouped by framework with each control's computed status and the telemetry evidence behind it."
-            title="nometria · compliance"
+            alt="The Compliance screen in AgentFox, showing controls grouped by framework with each control's computed status and the telemetry evidence behind it."
+            title="agentfox · compliance"
             caption="Controls by framework, each with the evidence that produced its status and a rationale a person can argue with."
           />
         </Pair>

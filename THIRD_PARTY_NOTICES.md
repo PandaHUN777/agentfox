@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-Nometria is licensed under Apache-2.0. It incorporates or optionally integrates the
+AgentFox is licensed under Apache-2.0. It incorporates or optionally integrates the
 open-source projects below. This file satisfies the attribution requirement in
 Apache-2.0 §4(d) and records the licence review behind each decision.
 

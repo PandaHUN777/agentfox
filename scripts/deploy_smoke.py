@@ -36,7 +36,7 @@ from urllib.parse import urlsplit
 import httpx
 
 DEFAULT_API_URL = "https://guardrails-api.vercel.app"
-DEFAULT_DASHBOARD_URL = "https://guardrails-nometria.vercel.app"
+DEFAULT_DASHBOARD_URL = "https://useagentfox.com"
 DEFAULT_TIMEOUT = 60.0
 
 #: Route families the dashboard and the docs both depend on. This is a spot check of

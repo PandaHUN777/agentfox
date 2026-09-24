@@ -281,7 +281,7 @@ const PILLARS: Pillar[] = [
  */
 export function PillarGrid({ className }: { className?: string }) {
   return (
-    <Frame title="nometria · six pillars" className={className}>
+    <Frame title="agentfox · six pillars" className={className}>
       <Cols min={230} cap={3}>
         {PILLARS.map((p) => (
           <Panel key={p.n}>
@@ -439,7 +439,7 @@ function StatusChip({ status }: { status: DetectorRow["status"] }) {
  */
 export function DetectorPipeline({ className }: { className?: string }) {
   return (
-    <Frame title="nometria · detector pipeline" className={className}>
+    <Frame title="agentfox · detector pipeline" className={className}>
       <div style={{ display: "grid", gap: 7 }}>
         <div className="mk-row" style={{ gap: 8 }}>
           <span className="mk-label">the content</span>
@@ -590,7 +590,7 @@ const REDACTED: RedactionRow[] = [
  */
 export function RedactionMock({ className }: { className?: string }) {
   return (
-    <Frame title="nometria · redaction" className={className}>
+    <Frame title="agentfox · redaction" className={className}>
       <div style={{ display: "grid", gap: 7 }}>
         <span className="mk-label">before</span>
         <Code>
@@ -1146,7 +1146,7 @@ const PROBES: ProbeRow[] = [
  */
 export function RedteamMock({ className }: { className?: string }) {
   return (
-    <Frame title="nometria · red team" className={className}>
+    <Frame title="agentfox · red team" className={className}>
       <div style={{ display: "grid", gap: 6 }}>
         <Field name="agent">payments-ops</Field>
         {/* redteam.py:963-967: probes generated from this deployment's real grants */}
@@ -1336,7 +1336,7 @@ function statusTone(status: ControlRow["status"]) {
  */
 export function CompliancePanel({ className }: { className?: string }) {
   return (
-    <Frame title="nometria · compliance" className={className}>
+    <Frame title="agentfox · compliance" className={className}>
       <div className="mk-row" style={{ gap: 7 }}>
         {/* controls.yaml:14-15 */}
         <span className="mk-chip">catalog v0.1.0-draft</span>

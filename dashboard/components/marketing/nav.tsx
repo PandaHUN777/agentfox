@@ -26,7 +26,7 @@ export function MarketingNav() {
   return (
     <header className="mk-nav">
       <div className="mk-wrap mk-nav-inner">
-        <Link href="/" className="mk-brand" aria-label="Nometria home">
+        <Link href="/" className="mk-brand" aria-label="AgentFox home">
           <BrandLockup size={26} />
         </Link>
         <nav className="mk-nav-links" aria-label="Main">

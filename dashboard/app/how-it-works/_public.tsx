@@ -22,7 +22,7 @@ import { Wordmark } from "@/components/Logo";
  * One category name, used verbatim everywhere these two public pages describe what
  * the product is.
  *
- * Before this there were four in the first viewport: the browser tab said "Nometria
+ * Before this there were four in the first viewport: the browser tab said "AgentFox
  * Control Plane", the strapline said "Governance, security and evidence for AI agents
  * in production", the landing body said "a control plane for AI agents in production"
  * and the API root said "Governance, security and compliance for AI agents". A reader
@@ -141,7 +141,7 @@ export function PublicFooter() {
       </div>
       <div style={{ marginTop: 12, maxWidth: "76ch", color: "var(--faint)" }}>
         <p style={{ margin: "0 0 6px" }}>
-          Nometria, MVP v0.3. Licensed{" "}
+          AgentFox, MVP v0.3. Licensed{" "}
           <a href={`${REPO}/blob/main/LICENSE`} target="_blank" rel="noreferrer">
             Apache-2.0
           </a>

@@ -1,4 +1,4 @@
-/* Nometria control plane — one pane for "all our agents".
+/* AgentFox control plane — one pane for "all our agents".
    Theme-aware: light by default. Dark applies under the system preference, or when
    the user picks it explicitly via the sidebar toggle (data-theme="dark" on <html>,
    set before paint by the inline script in layout.tsx — see ThemeToggle.tsx). An
