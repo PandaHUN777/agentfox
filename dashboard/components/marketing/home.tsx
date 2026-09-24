@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { DecisionPair } from "@/components/marketing/decisions";
+import { BOUNDARIES, DecisionCard } from "@/components/marketing/decisions";
+import { DecisionStream, EstateScan, TraceAnatomy } from "@/components/marketing/product";
 import { REPO } from "@/components/marketing/nav";
 
 /*
@@ -162,15 +163,27 @@ export function Hero() {
         style={{ position: "relative", paddingTop: 72, textAlign: "center" }}
       >
         <span className="mk-eyebrow mk-up">Open source, Apache-2.0</span>
-        <h1 className="mk-h1 mk-up mk-d1" style={{ margin: "16px auto 0", maxWidth: "16ch" }}>
-          AI agents that only do <em>what you allow</em>.
+        {/* "AI agents that only do what you allow" was a permissions headline on a
+            product that also decides what an agent may read and what it may claim.
+            An outside review that had read the PRD made exactly that point. This one
+            names the moment all three checks are for.
+
+            The three verbs in the lede are different because the three checks are:
+            refuses (tool-containment, ships enforcing), withholds (the entitlement
+            filter drops the chunk), tells you (answerability reports while its policy
+            is in observe). Measured, not assumed — see decisions.tsx. */}
+        <h1 className="mk-h1 mk-up mk-d1" style={{ margin: "16px auto 0", maxWidth: "17ch" }}>
+          Know when your agent should <em>stop</em>.
         </h1>
+        {/* Four lines became two. The three boundaries are the section directly
+            below this one, drawn; repeating them here in prose was the page
+            explaining its own next screenful. */}
         <p
           className="mk-lede mk-up mk-d2"
-          style={{ margin: "20px auto 0", maxWidth: "54ch" }}
+          style={{ margin: "20px auto 0", maxWidth: "46ch" }}
         >
-          AgentFox checks the actions your agent takes and refuses the ones it was never
-          given permission for, even after the model has been tricked.
+          It checks the action against what that agent was granted — not the message
+          against a filter. So it holds after the model has been convinced.
         </p>
         <div className="mk-row mk-up mk-d3" style={{ justifyContent: "center", marginTop: 30 }}>
           <Link href="/playground" className="mk-btn mk-btn-primary">
@@ -185,15 +198,14 @@ export function Hero() {
         </p>
       </div>
 
+      {/* Was a 1600px capture of the findings table. At this width it rendered a
+          sidebar, a help paragraph, a filter row and seven columns of 8px grey —
+          a picture of a document, with nothing for the eye to land on. */}
       <div
         className="mk-wrap mk-up mk-d5"
-        style={{ position: "relative", marginTop: 52, paddingBottom: 8 }}
+        style={{ position: "relative", marginTop: 56, paddingBottom: 8, maxWidth: 860 }}
       >
-        <Shot
-          src="/shots/findings.webp"
-          alt="The AgentFox dashboard listing problems it found, each with a severity, the agent responsible and how often it happened."
-          h={1075}
-        />
+        <DecisionStream />
       </div>
     </section>
   );
@@ -233,24 +245,100 @@ export function Stack() {
   );
 }
 
-/* --- 3. The three benefits --------------------------------------------- */
+/* --- 3. The three boundaries -------------------------------------------- */
 
-export function Benefits() {
+/**
+ * The centre of the page, and the thing two outside reviews independently said was
+ * missing: three decisions, side by side, with the agent, the input, the rule and
+ * the reason visible on each.
+ *
+ * What was here before was three benefit sections — containment, evidence,
+ * discovery — which is a product tour. It led a reader to think the product
+ * authorises tool calls and also does some auditing, when the actual shape is one
+ * idea applied at three points in a request: before retrieval, before the answer,
+ * before the action.
+ *
+ * The verbs under each card are different on purpose, because the three checks do
+ * different things and saying "blocks" three times would be false twice. Every
+ * value on the cards was read off this repository's gateway; see the comment above
+ * BOUNDARIES in decisions.tsx.
+ */
+export function Boundaries() {
+  return (
+    <section id="boundaries" className="mk-section mk-band">
+      <div className="mk-wrap">
+        <div className="mk-narrow" style={{ textAlign: "center" }}>
+          <span className="mk-eyebrow mk-up">Three questions, every request</span>
+          <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12 }}>
+            One boundary check, at three different moments.
+          </h2>
+          <p className="mk-lede mk-up mk-d2" style={{ margin: "16px auto 0", maxWidth: "56ch" }}>
+            Not a filter reading the conversation. A check against what this agent, and
+            the person behind it, were actually given.
+          </p>
+        </div>
+
+        <div className="mk-grid mk-grid-3 mk-up mk-d3" style={{ marginTop: 44 }}>
+          {BOUNDARIES.map((b) => (
+            <div
+              key={b.id}
+              style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 14, minWidth: 0 }}
+            >
+              <div>
+                <h3 className="mk-h3">{b.question}</h3>
+                <p className="mk-body" style={{ margin: "6px 0 0", fontSize: ".94rem" }}>
+                  {b.lede}
+                </p>
+              </div>
+              <DecisionCard decision={b.decision} fill />
+            </div>
+          ))}
+        </div>
+
+        {/* The honest edge of the three cards, next to them rather than buried in the
+            limits section. The first two need the operator to have declared something;
+            the third is default-deny and needs nothing. */}
+        {/* Where each one runs, and what it costs you to turn on. Written after an
+            audit of the enforcement paths, because the first draft of this section
+            implied all three happen automatically and only the third does. */}
+        <div className="mk-grid mk-grid-3 mk-up mk-d4" style={{ marginTop: 26 }}>
+          {[
+            [
+              "Read",
+              "You call the filter from your retrieval code, with a registered person and a grant. It returns what they may see; you drop the rest.",
+            ],
+            [
+              "Answer",
+              "Declare a knowledge boundary for the agent. It reports by default and abstains before the model is called once you set that boundary to enforce.",
+            ],
+            [
+              "Act",
+              "Nothing to turn on. A tool the agent was never granted is refused from the first request, whatever mode the policies are in.",
+            ],
+          ].map(([k, v]) => (
+            <p key={k} className="mk-fine" style={{ margin: 0 }}>
+              <strong style={{ color: "var(--mk-text)" }}>{k}.</strong> {v}
+            </p>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* --- 3b. What it keeps -------------------------------------------------- */
+
+/**
+ * Evidence and discovery, demoted.
+ *
+ * They used to be two of the three top sections, which made the implied product an
+ * audit-and-discovery suite with a permission check attached. They are real and
+ * they matter, but they are what the product keeps and finds *around* the checks
+ * above, so they sit under them and share one section instead of owning two.
+ */
+export function Around() {
   return (
     <>
-      <Benefit
-        band
-        eyebrow="Containment"
-        title="Stop the action, not just the text."
-        lede="Other tools scan for the malicious message. If the scan misses once, the action goes through. AgentFox checks the action itself against what that agent was given."
-        ticks={[
-          "Refuses any tool the agent was never granted",
-          "Enforces limits on the arguments, like amounts and recipients",
-          "Knows whether a value came from a person or from a document",
-        ]}
-        visual={<DecisionPair />}
-      />
-
       <BenefitWide
         eyebrow="Evidence"
         title="Know what it did, and prove it."
@@ -260,14 +348,7 @@ export function Benefits() {
           "Auditors verify the log themselves, without trusting us",
           "Compliance status computed from real traffic, not a questionnaire",
         ]}
-        visual={
-          <Shot
-            src="/shots/trace-detail-crop.webp"
-            alt="One request in AgentFox: its span timeline, a provenance table marking both message values untrusted, and a decisions table allowing the input and blocking the tool result."
-            w={1600}
-            h={985}
-          />
-        }
+        visual={<TraceAnatomy />}
       />
 
       <Benefit
@@ -281,14 +362,7 @@ export function Benefits() {
           "Flags agents with no owner as a problem of their own",
           "Red-teams your real configuration, not a model in general",
         ]}
-        visual={
-          <Shot
-            src="/shots/agents-crop.webp"
-            alt="The AgentFox agent registry: four agents, one unregistered and two with no owner, and a table naming the unregistered one as detected from traffic."
-            w={1600}
-            h={835}
-          />
-        }
+        visual={<EstateScan />}
       />
     </>
   );
@@ -332,10 +406,11 @@ export function Proof() {
             42" invites "out of what?", and a proof section that makes the reader
             follow a link to find out is doing the opposite of its job. All four
             figures are from the same run, written up in section 2 of /benchmark. */}
-        <p className="mk-fine mk-up mk-d4" style={{ margin: "20px auto 0", maxWidth: "60ch" }}>
+        <p className="mk-fine mk-up mk-d4" style={{ margin: "20px auto 0", maxWidth: "62ch" }}>
           617 calls: 552 legitimate, and 65 from an agent the attacker had already
           convinced. 42 of those 65 act; the other 23 only read. Three escaped, and
-          all three are read-only.
+          all three are read-only. This measures the third boundary — whether an action
+          runs. It says nothing about the other two.
         </p>
 
         <p className="mk-row mk-up mk-d5" style={{ justifyContent: "center", marginTop: 26 }}>
@@ -353,6 +428,11 @@ export function Proof() {
 /* Kept, and kept short. This product's credibility rests on publishing the numbers
  * that make it look worse, and a reader who finds them elsewhere first will not come
  * back. Three lines, not a grid of four dense cards. */
+/* Four, not three, because the page now claims three boundaries and two of them
+ * depend on things the operator has to declare and on integrations that do not
+ * exist yet. Each is the repository's own assessment, from docs/status.md:
+ * P2 "no live IdP; Entra/Okta integration absent", P10 "OpenFGA adapter is a
+ * declared seam, not an implementation", P8 "catalog ingestion absent". */
 const LIMITS: [string, string][] = [
   [
     "Detection is our weakest layer",
@@ -360,7 +440,11 @@ const LIMITS: [string, string][] = [
   ],
   [
     "It is only as good as your declarations",
-    "A tool you record as read-only, that is not read-only, is not covered by any of this.",
+    "A tool recorded as read-only that is not read-only is not covered. Nor is a person with no principal, or an agent with no knowledge boundary.",
+  ],
+  [
+    "You declare the estate yourself",
+    "No Okta, no DataHub. Principals, grants and source tiers are declared in AgentFox. The seams for those integrations exist; the integrations do not.",
   ],
   [
     "It is MVP v0.3",
@@ -378,7 +462,7 @@ export function Limits() {
             The limits, before you find them yourself.
           </h2>
         </div>
-        <div className="mk-grid mk-grid-3 mk-up mk-d2" style={{ marginTop: 40 }}>
+        <div className="mk-grid mk-grid-quad mk-up mk-d2" style={{ marginTop: 40 }}>
           {LIMITS.map(([t, body]) => (
             <div key={t} className="mk-card">
               <h3 className="mk-h3">{t}</h3>

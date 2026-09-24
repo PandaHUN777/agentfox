@@ -4,7 +4,7 @@ import { CATEGORY_CAP } from "./how-it-works/_public";
 import { SITE_URL, SUPPORT_EMAIL, publicPageMetadata, HOME_TITLE, HOME_DESCRIPTION } from "@/lib/site";
 import { MarketingNav, REPO } from "@/components/marketing/nav";
 import { HowItWorks, FAQ, CTA, Footer } from "@/components/marketing/sections";
-import { Hero, Stack, Benefits, Proof, Limits } from "@/components/marketing/home";
+import { Hero, Stack, Boundaries, Around, Proof, Limits } from "@/components/marketing/home";
 import { Editions } from "@/components/marketing/editions";
 
 export const dynamic = "force-dynamic";
@@ -143,12 +143,18 @@ function Landing() {
             quotes, so they are ours to state plainly rather than theirs to find. */}
         <Hero />
         <Stack />
-        <Benefits />
-        <Proof />
+        {/* Three decisions before anything else, then how you get there, then the
+            evidence for it. Editions moved below the limits: a section about a
+            support relationship and a cloud that does not exist yet was sitting
+            between the proof and the honest caveats, which is the wrong place for
+            it on a page whose job is to be believed. */}
+        <Boundaries />
         <HowItWorks />
-        <Editions />
+        <Proof />
+        <Around />
         <Limits />
         <FAQ n={4} more />
+        <Editions />
         <CTA />
       </main>
       <Footer />

@@ -46,10 +46,15 @@ where genuine, currently-unclaimed differentiation lives (detail in
 These are load-bearing design commitments found consistently enforced in code, not aspiration:
 
 1. **Additive, never a rewrite.** Three integration surfaces (SDK monkey-patch, inline
-   proxy, OTel ingestion — §5) all sit *beside* an agent's existing code. `agentfox.auto()`
-   starts in **observe mode**: nothing is blocked until a human explicitly runs
-   `agentfox policy enforce baseline`. A library that starts refusing production traffic
-   because someone added an import is, in the product's own words, "indefensible."
+   proxy, OTel ingestion — §5) all sit *beside* an agent's existing code. The
+   content policies start in **observe**: `baseline` and `eu-ai-act-high-risk` both
+   ship `mode: observe`, and nothing they detect is blocked until a human runs
+   `agentfox policy enforce baseline`. A library that starts refusing production
+   traffic because someone added an import is, in the product's own words,
+   "indefensible." Tool containment is the deliberate exception: `tool-containment`
+   ships `mode: enforce`, and a capability denial is not a policy opinion at all —
+   `enforcement.py` sets the verdict directly, so it stands whatever mode the packs
+   are in.
 2. **Every wrapped OSS primitive sits behind one interface.** `Detector`, `PolicyEngine`,
    `EvalRunner`, `RedTeamRunner`, `ModelProvider`, `ActionAnalyser`, `EntitlementEngine`,
    `CatalogSource` — eight seams (`docs/PRD.md` §7.2). When a dependency is acquired,

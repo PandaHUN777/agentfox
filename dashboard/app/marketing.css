@@ -513,3 +513,192 @@
 .mk-brand-sub {
   font-size: .7rem; letter-spacing: .02em; color: var(--mk-faint);
 }
+
+
+/* --- Product visuals (.pv-*) ---------------------------------------------
+   The drawn replacements for the screenshots. See components/marketing/product.tsx
+   for why these are DOM.
+
+   The craft here is mostly restraint. One surface, one hairline, one shadow, one
+   accent, and a single moment of motion. The screenshots these replaced had every
+   affordance of a real application — a sidebar, a filter row, a notification bell —
+   competing for attention in a 600px column, which is why none of it read. */
+
+.pv {
+  border: 1px solid var(--mk-border);
+  border-radius: var(--mk-r-lg);
+  background: var(--mk-surface);
+  box-shadow: var(--mk-shadow-pop);
+  overflow: hidden;
+  /* Digits line up down the columns; this is a table of records, even drawn. */
+  font-variant-numeric: tabular-nums;
+}
+.pv-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--mk-border);
+  background: var(--mk-surface-2);
+}
+.pv-bar-label {
+  font-family: var(--mk-code);
+  font-size: .78rem;
+  letter-spacing: 0;
+  color: var(--mk-muted);
+  overflow-wrap: anywhere;
+}
+.pv-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: .68rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--mk-faint);
+  white-space: nowrap;
+}
+.pv-live i {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--mk-good);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--mk-good) 18%, transparent);
+}
+.pv-body { padding: 16px; display: grid; gap: 10px; }
+.pv-body-tight { padding: 10px; }
+
+/* One call. The row is quiet; the blocked one is not. */
+.pv-call {
+  padding: 14px 16px;
+  border: 1px solid transparent;
+  border-radius: var(--mk-r-md);
+  background: var(--mk-surface-2);
+  animation: pv-in .5s cubic-bezier(.2, .7, .3, 1) both;
+}
+.pv-call-stop {
+  background: var(--mk-stop-soft);
+  border-color: color-mix(in srgb, var(--mk-stop) 26%, transparent);
+  box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--mk-stop) 40%, transparent);
+}
+.pv-call-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.pv-tool {
+  font-family: var(--mk-code);
+  font-size: .84rem;
+  color: var(--mk-text);
+  overflow-wrap: anywhere;
+}
+.pv-arg {
+  font-family: var(--mk-code);
+  font-size: .78rem;
+  color: var(--mk-faint);
+  overflow-wrap: anywhere;
+}
+/* The verdict is pushed to the end of the row, which is where an eye scanning a
+   list of outcomes goes looking for it. */
+.pv-v {
+  margin-left: auto;
+  font-family: var(--mk-code);
+  font-size: .72rem;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+.pv-v-go { background: var(--mk-good-soft); color: var(--mk-good); }
+.pv-v-stop { background: var(--mk-stop); color: #fff; }
+.pv-v-hold { background: var(--mk-hold-soft); color: var(--mk-hold); }
+:root:not([data-theme="light"]) .pv-v-stop { color: #1a0d0b; }
+:root[data-theme="dark"] .pv-v-stop { color: #1a0d0b; }
+
+.pv-call-why {
+  display: grid;
+  gap: 4px;
+  margin-top: 9px;
+  padding-top: 9px;
+  border-top: 1px solid color-mix(in srgb, var(--mk-stop) 18%, transparent);
+}
+.pv-rule { font-family: var(--mk-code); font-size: .76rem; color: var(--mk-stop); }
+.pv-reason { font-size: .82rem; line-height: 1.5; color: var(--mk-muted); }
+
+/* The one piece of motion on the page, and it is the point of the page: the
+   records arrive, and the refusal arrives with them. */
+@keyframes pv-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pv-call { animation: none; }
+}
+
+/* --- Trace anatomy -------------------------------------------------------- */
+
+.pv-trace-title {
+  font-family: var(--mk-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  padding: 2px 2px 4px;
+}
+.pv-grid2 { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 620px) { .pv-grid2 { grid-template-columns: 1fr 1fr; } }
+.pv-h {
+  display: block;
+  font-size: .68rem;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--mk-faint);
+  margin-bottom: 7px;
+}
+.pv-span {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--mk-r-sm);
+  background: var(--mk-surface-2);
+}
+.pv-span + .pv-span { margin-top: 5px; }
+.pv-ms { font-family: var(--mk-code); font-size: .72rem; color: var(--mk-faint); }
+.pv-note {
+  display: grid;
+  gap: 4px;
+  padding: 11px 13px;
+  border-radius: var(--mk-r-md);
+  background: var(--mk-stop-soft);
+  border-left: 2.5px solid var(--mk-stop);
+}
+
+/* --- Estate scan ---------------------------------------------------------- */
+
+.pv-tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+@media (min-width: 560px) { .pv-tiles { grid-template-columns: repeat(4, 1fr); } }
+.pv-tile {
+  padding: 12px 13px;
+  border-radius: var(--mk-r-md);
+  background: var(--mk-surface-2);
+  border-left: 2.5px solid transparent;
+}
+.pv-tile b {
+  display: block;
+  font-family: var(--mk-display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -.02em;
+  line-height: 1.1;
+}
+.pv-tile span { display: block; margin-top: 2px; font-size: .74rem; color: var(--mk-faint); }
+.pv-tile-stop { border-left-color: var(--mk-stop); }
+.pv-tile-stop b { color: var(--mk-stop); }
+.pv-tile-hold { border-left-color: var(--mk-hold); }
+.pv-tile-hold b { color: var(--mk-hold); }
+.pv-tile-ok { border-left-color: var(--mk-good); }
+.pv-found {
+  padding: 12px 14px;
+  border-radius: var(--mk-r-md);
+  background: var(--mk-stop-soft);
+  border: 1px solid color-mix(in srgb, var(--mk-stop) 22%, transparent);
+}

@@ -174,6 +174,68 @@ const HERO_ALLOW: Decision = {
   verdict: "allow",
 };
 
+/**
+ * The other two boundaries, and what each one actually returned.
+ *
+ * Every field below was read off this repository's own gateway, running against the
+ * seeded demo database, by calling the endpoint and copying the response. They are
+ * not descriptions of intent, and the verbs are deliberately different from each
+ * other because the three checks do genuinely different things:
+ *
+ *   ACCESS  /api/entitlement/filter removes the chunk. `visible: 1, withheld: 1,
+ *           withheld_sources: ["hr/salaries-2026"]`. Note what this is NOT: the
+ *           filter is an endpoint your retrieval code calls, not something that
+ *           happens on its own. The in-path half of entitlement runs after the
+ *           answer exists and files a finding — tests/test_provenance_integrity.py
+ *           :601 asserts it does not block. Saying "we filter your retrieval"
+ *           would be claiming an integration nobody has written.
+ *   ANSWER  /api/answerability/check returns `answerable: false` and the sentence
+ *           the agent should say instead — but `should_abstain: false`, because the
+ *           policy is in observe. It reports; it does not yet withhold. Saying
+ *           otherwise would be the third time this site overstated a default.
+ *   ACT     /api/playground tool-call returns `block` on `capability.denied`.
+ *
+ * Both of these need something declared first: a principal and a grant for access,
+ * a knowledge boundary for answer. With nothing declared there is nothing to check
+ * against, and the limits section says so.
+ */
+const ACCESS: Decision = {
+  key: "access",
+  outcome: "Withhold",
+  tone: "hold",
+  gist: "The salary record is not in what comes back, so it never reaches the prompt.",
+  rows: [
+    { label: "Asking", value: "alex@example.com", mono: true, note: "support-team" },
+    { label: "Retrieved", value: "2 chunks", mono: true },
+    { label: "Withheld", value: "hr/salaries-2026", mono: true },
+    { label: "Rule", value: "not_entitled", mono: true },
+    {
+      label: "Reason",
+      value: "No grant gives this person that source, so it never reaches the prompt.",
+    },
+  ],
+  verdict: "withhold",
+};
+
+const ANSWER: Decision = {
+  key: "answer",
+  outcome: "Abstain",
+  tone: "hold",
+  gist: "Outside the boundary, with the sentence to say instead.",
+  rows: [
+    { label: "Agent", value: "support-triage", mono: true },
+    { label: "Asked", value: "What will Tesla stock be worth next quarter?" },
+    { label: "Question", value: "prediction", mono: true, note: "allowed: fact, procedure" },
+    { label: "Boundary", value: "help-center-articles", mono: true },
+    {
+      label: "Returns",
+      value:
+        "\u201cThat asks for a projection rather than a recorded fact. I can only report what is in help-center-articles, so I don\u2019t have an answer for it.\u201d",
+    },
+  ],
+  verdict: "answerable: false",
+};
+
 /** The pair, for the containment section: one allowed, one refused. */
 export function DecisionPair() {
   return (
@@ -244,6 +306,29 @@ const HERO: Decision = {
   verdict: "block", // enforcement.py:648
 };
 
+/** The three boundaries, in the order a request meets them. */
+export const BOUNDARIES: { id: string; question: string; lede: string; decision: Decision }[] = [
+  {
+    id: "access",
+    question: "Can it read this?",
+    lede: "Your retrieval code asks who is asking. What they may not see does not come back.",
+    decision: ACCESS,
+  },
+  {
+    id: "answer",
+    question: "Can it answer this?",
+    lede: "A question outside the declared knowledge boundary gets a refusal written for it.",
+    decision: ANSWER,
+  },
+  {
+    id: "act",
+    question: "Can it do this?",
+    lede: "A tool call is checked against what the agent holds, reading none of the text.",
+    decision: HERO,
+  },
+];
+
+
 /* --- Tone ---------------------------------------------------------------- */
 
 const EDGE: Record<Tone, string> = {
@@ -305,10 +390,16 @@ export function DecisionCard({
   decision = HERO,
   wide = false,
   heading = false,
+  fill = false,
 }: {
   decision?: Decision;
   wide?: boolean;
   heading?: boolean;
+  /** Stretch to the row's height and pin the verdict to the bottom edge. Three of
+   *  these side by side have records of different lengths, and a verdict chip that
+   *  floats at a different height in each column reads as three misaligned cards
+   *  rather than three answers to the same question. */
+  fill?: boolean;
 }) {
   const { tone } = decision;
   return (
@@ -318,7 +409,8 @@ export function DecisionCard({
         padding: wide ? 26 : 20,
         display: "grid",
         gap: 16,
-        alignContent: "start",
+        alignContent: fill ? "space-between" : "start",
+        height: fill ? "100%" : undefined,
         boxShadow: wide ? "var(--mk-shadow-float)" : undefined,
         minWidth: 0,
       }}
