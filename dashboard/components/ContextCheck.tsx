@@ -9,7 +9,7 @@ const inputStyle = {
   border: "1px solid var(--border)",
   background: "var(--panel-2)",
   color: "var(--text)",
-  fontSize: 13,
+  fontSize: "var(--t-small)",
   fontFamily: "inherit",
 } as const;
 
@@ -70,7 +70,7 @@ export function ContextCheck() {
           onChange={(e) => setText(e.target.value)}
           placeholder="Paste extracted document text — checks for encoding damage, mojibake, unbalanced code fences, glued-together words from a lost space glyph."
           rows={8}
-          style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--mono)", fontSize: 12.5 }}
+          style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--mono)", fontSize: "var(--t-micro)" }}
         />
       ) : (
         <textarea
@@ -78,7 +78,7 @@ export function ContextCheck() {
           onChange={(e) => setChunksText(e.target.value)}
           placeholder={"Paste chunks as they'd reach the retriever, one per paragraph (blank line between chunks) — checks each for orphan fragments, mid-sentence splits, headings with no body."}
           rows={8}
-          style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--mono)", fontSize: 12.5 }}
+          style={{ ...inputStyle, resize: "vertical", fontFamily: "var(--mono)", fontSize: "var(--t-micro)" }}
         />
       )}
 

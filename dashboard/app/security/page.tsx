@@ -32,7 +32,7 @@ function Ref({ children }: { children: React.ReactNode }) {
   return (
     <p
       className="mk-mono"
-      style={{ color: "var(--mk-faint)", margin: "10px 0 0", overflowWrap: "anywhere" }}
+      style={{ color: "var(--mk-muted)", margin: "10px 0 0", overflowWrap: "anywhere" }}
     >
       {children}
     </p>
@@ -104,14 +104,14 @@ export default function Security() {
               <div className="mk-grid mk-grid-2" style={{ marginTop: 20 }}>
                 <div className="mk-card">
                   <span className="mk-chip mk-chip-go">In scope</span>
-                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: ".95rem" }}>
+                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: "var(--t-body)" }}>
                     This project&rsquo;s own code: the enforcement path, the policy engine,
                     the audit chain and its verifier, the gateway and its authentication,
                     the tenant isolation in{" "}
                     <span className="mk-mono">src/agentfox/tenancy.py</span>, and the
                     public playground on this deployment.
                   </p>
-                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: ".95rem" }}>
+                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: "var(--t-body)" }}>
                     Concretely, a vulnerability is: getting an action through that the
                     declarations should have refused, reading or writing another
                     tenant&rsquo;s data, forging or breaking the audit chain without the
@@ -121,16 +121,16 @@ export default function Security() {
                 </div>
                 <div className="mk-card">
                   <span className="mk-chip mk-chip-hold">Out of scope</span>
-                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: ".95rem" }}>
+                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: "var(--t-body)" }}>
                     Two things, both excluded because the project already says so in public
                     and measures them rather than hiding them.
                   </p>
-                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: ".95rem" }}>
+                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: "var(--t-body)" }}>
                     A prompt injection that a detector misses. Detection here is a speed
                     bump, not a defence, held-out recall is published in the README, and an
                     adaptive attacker gets most caught attacks through eventually.
                   </p>
-                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: ".95rem" }}>
+                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: "var(--t-body)" }}>
                     An attack that gets through when the declarations are wrong. Containment
                     is only as good as the tool declarations and capability grants behind
                     it. A tool declared read-only that moves money is not contained, and the
@@ -265,8 +265,7 @@ export default function Security() {
               <div className="mk-card">
                 <span className="mk-eyebrow">Maturity</span>
                 <h2 className="mk-h2" style={{ marginTop: 16 }}>
-                  Nobody outside this project has checked any of it.
-                </h2>
+                  Nobody outside this project has checked any of it</h2>
                 <p className="mk-body" style={{ marginTop: 14 }}>
                   There has been no third-party security audit. There is no SOC 2 report,
                   Type I or Type II. There has been no penetration test by anyone. There is

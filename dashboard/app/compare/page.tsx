@@ -56,10 +56,9 @@ const TABLE: CSSProperties = {
   width: "100%",
   minWidth: 720,
   borderCollapse: "collapse",
-  fontSize: ".9rem",
+  fontSize: "var(--t-small)",
 };
 const TH: CSSProperties = {
-  textAlign: "left",
   padding: "12px 14px",
   borderBottom: "1px solid var(--mk-border-strong)",
   verticalAlign: "bottom",
@@ -75,7 +74,7 @@ const TD_HEAD: CSSProperties = { ...TD, color: "var(--mk-text)", fontWeight: 500
 
 function Head({ eyebrow, title, lede }: { eyebrow: string; title: string; lede?: string }) {
   return (
-    <div className="mk-narrow mk-up" style={{ textAlign: "center" }}>
+    <div className="mk-narrow mk-up">
       <span className="mk-eyebrow">{eyebrow}</span>
       <h2 className="mk-h2" style={{ marginTop: 14 }}>
         {title}
@@ -128,9 +127,8 @@ const LOSSES: { title: string; body: React.ReactNode; source: string }[] = [
     title: "Detection quality is not where we lead",
     body: (
       <>
-        Cleanlab, Vectara, Galileo and Patronus all do model-based groundedness scoring, and the
-        competitor analysis records them as benchmarked ahead of our lexical scorer. Its own
-        instruction is not to contest that point in a technical evaluation.
+        Cleanlab, Vectara, Galileo and Patronus all do model-based groundedness scoring, and
+        our own competitor analysis records them as benchmarked ahead of our lexical scorer.
       </>
     ),
     source: "docs/competitor-analysis.md, sections 4.3 and 5",
@@ -249,8 +247,7 @@ export default function Compare() {
       <MarketingNav />
       <main>
         <section className="mk-section" style={{ paddingBottom: 0 }}>
-          <div className="mk-wrap" style={{ textAlign: "center" }}>
-            <span className="mk-eyebrow mk-up">Compare</span>
+          <div className="mk-wrap">
             <h1 className="mk-h1 mk-up mk-d1" style={{ margin: "18px auto 0", maxWidth: "19ch" }}>
               Two camps, each with <em>half the problem</em>.
             </h1>
@@ -288,13 +285,13 @@ export default function Compare() {
                   <span className="mk-chip">{c.chip}</span>
                   <div>
                     <span className="mk-label">Good at</span>
-                    <p className="mk-body" style={{ margin: "5px 0 0", fontSize: ".93rem" }}>
+                    <p className="mk-body" style={{ margin: "5px 0 0", fontSize: "var(--t-small)" }}>
                       {c.owns}
                     </p>
                   </div>
                   <div>
                     <span className="mk-label">Thin on</span>
-                    <p className="mk-body" style={{ margin: "5px 0 0", fontSize: ".93rem" }}>
+                    <p className="mk-body" style={{ margin: "5px 0 0", fontSize: "var(--t-small)" }}>
                       {c.lacks}
                     </p>
                   </div>
@@ -306,7 +303,7 @@ export default function Compare() {
             </div>
             <p
               className="mk-fine mk-up mk-d3"
-              style={{ maxWidth: "var(--measure)", margin: "24px auto 0", textAlign: "center" }}
+              style={{ maxWidth: "var(--measure)", margin: "24px auto 0",}}
             >
               The alternative that wins most often is neither camp: 6 of 11 vetted senior
               engineers had already hand-built a guardrail layer inside their employer. The
@@ -331,12 +328,12 @@ export default function Compare() {
                   style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}
                 >
                   <h3 className="mk-h3">{l.title}</h3>
-                  <p className="mk-body" style={{ margin: 0, fontSize: ".93rem" }}>
+                  <p className="mk-body" style={{ margin: 0, fontSize: "var(--t-small)" }}>
                     {l.body}
                   </p>
                   <code
                     className="mk-mono"
-                    style={{ color: "var(--mk-faint)", overflowWrap: "anywhere", marginTop: "auto" }}
+                    style={{ color: "var(--mk-muted)", overflowWrap: "anywhere", marginTop: "auto" }}
                   >
                     {l.source}
                   </code>
@@ -396,7 +393,7 @@ export default function Compare() {
                 <code className="mk-mono">PromptInjection().scan()</code> call in a separate
                 interpreter, not an asserted number.
               </p>
-              <p className="mk-body mk-up mk-d3" style={{ marginTop: 14, fontSize: ".94rem" }}>
+              <p className="mk-body mk-up mk-d3" style={{ marginTop: 14, fontSize: "var(--t-small)" }}>
                 llm-guard wins precision here by 15.1 points, and that cost is ours to carry. The
                 other three tiers in that suite are reported as outside its design rather than
                 scored as a loss for it, because a stateless text scanner has no tool registry, no
@@ -458,7 +455,7 @@ export default function Compare() {
               {DIFFERENT.map((d, i) => (
                 <div key={d.title} className={`mk-card mk-up mk-d${Math.min(i + 1, 5)}`}>
                   <h3 className="mk-h3">{d.title}</h3>
-                  <p className="mk-body" style={{ margin: "8px 0 0", fontSize: ".93rem" }}>
+                  <p className="mk-body" style={{ margin: "8px 0 0", fontSize: "var(--t-small)" }}>
                     {d.body}
                   </p>
                 </div>
@@ -466,7 +463,7 @@ export default function Compare() {
             </div>
             <p
               className="mk-lede mk-up mk-d5"
-              style={{ maxWidth: "58ch", margin: "40px auto 0", textAlign: "center" }}
+              style={{ maxWidth: "58ch", margin: "40px auto 0",}}
             >
               The numbers are on <Link href="/benchmark">the benchmark page</Link>, the mechanism
               on <Link href="/product">the product page</Link>.

@@ -62,7 +62,7 @@ import {
 
 type Item = { label: string; body: ReactNode };
 
-const BODY: CSSProperties = { margin: 0, fontSize: ".95rem" };
+const BODY: CSSProperties = { margin: 0, fontSize: "var(--t-body)" };
 
 /**
  * One half of a split row.
@@ -121,7 +121,6 @@ function Head({
   return (
     <div
       className={center ? "mk-narrow mk-up" : "mk-up"}
-      style={{ textAlign: center ? "center" : "left" }}
     >
       <span className="mk-eyebrow">{eyebrow}</span>
       <h2 className="mk-h2" style={{ marginTop: 14, maxWidth: center ? undefined : "20ch" }}>
@@ -148,7 +147,7 @@ function Items({ items }: { items: Item[] }) {
           <span className="mk-mono" style={{ color: "var(--mk-accent)", overflowWrap: "anywhere" }}>
             {it.label}
           </span>
-          <span className="mk-body" style={{ fontSize: ".92rem" }}>
+          <span className="mk-body" style={{ fontSize: "var(--t-small)" }}>
             {it.body}
           </span>
         </div>
@@ -167,7 +166,7 @@ export function Pillars() {
   return (
     <section id="pillars" className="mk-section">
       <div className="mk-wrap">
-        <Head eyebrow="The whole product" title="Six pillars, one control plane." center>
+        <Head eyebrow="The whole product" title="What each area does" center>
           Each pillar answers a question an organisation has to answer about its agents.
         </Head>
 
@@ -177,7 +176,7 @@ export function Pillars() {
 
         <p
           className="mk-fine mk-up mk-d3"
-          style={{ maxWidth: "var(--measure)", margin: "24px auto 0", textAlign: "center" }}
+          style={{ maxWidth: "var(--measure)", margin: "24px auto 0",}}
         >
           Pillars 1 to 3 and 5 run on the request itself.{" "}
           <Link href="/how-it-works">The path one call takes</Link>
@@ -223,7 +222,7 @@ export function Guardrails() {
       <div className="mk-wrap">
         <Split flip wide>
           <Half>
-            <Head eyebrow="Pillar 3 · Runtime guardrails" title="Detectors read the text. A policy decides.">
+            <Head eyebrow="Pillar 3 · Runtime guardrails" title="Detectors read the text. A policy decides">
               Detectors read input, output, retrieved documents and tool results. Detection is
               the layer we trust least.
             </Head>
@@ -235,7 +234,7 @@ export function Guardrails() {
               <span className="mk-label">What this layer is worth</span>
               {/* Both figures: README.md, "Where a competitor beats us" and the adaptive
                   benchmark line above it. */}
-              <p className="mk-body" style={{ ...BODY, marginTop: 8, fontSize: ".92rem" }}>
+              <p className="mk-body" style={{ ...BODY, marginTop: 8, fontSize: "var(--t-small)" }}>
                 66.7% recall on the held-out injection split. An attacker who reads our verdict
                 and retries gets 73% of what we catch through within 50 attempts. A speed bump,
                 never a defence.
@@ -294,7 +293,7 @@ export function Containment() {
           <Half>
             <Head
               eyebrow="Pillar 2 · Containment"
-              title="The layer that holds when detection fails."
+              title="The layer that holds when detection fails"
             >
               Each tool has an impact tier, each agent explicit grants, each argument its
               provenance.
@@ -396,7 +395,7 @@ export function Discovery() {
           <Half>
             <Head
               eyebrow="Pillar 1 · Discovery and registry"
-              title="Find the agents before you govern them."
+              title="Find the agents before you govern them"
             >
               It never imports or runs your code, and a scan that read no file it understands
               says exactly that instead of reporting clean.
@@ -455,7 +454,7 @@ export function Assurance() {
           <Half>
             <Head
               eyebrow="Pillar 4 · Evaluation and reliability"
-              title="Test this deployment, not a model in general."
+              title="Test this deployment, not a model in general"
             >
               Eval suites gate CI. Red-team probes fire at your own agents&rsquo; grants.
             </Head>
@@ -465,7 +464,7 @@ export function Assurance() {
               style={{ marginTop: 26, background: "var(--mk-surface)", maxWidth: "46ch" }}
             >
               <span className="mk-label">What a campaign result is not</span>
-              <p className="mk-body" style={{ ...BODY, marginTop: 8, fontSize: ".92rem" }}>
+              <p className="mk-body" style={{ ...BODY, marginTop: 8, fontSize: "var(--t-small)" }}>
                 A posture delta, not a pass rate and not a robustness certificate.
               </p>
             </div>
@@ -519,7 +518,7 @@ export function Evidence2() {
           <Half>
             <Head
               eyebrow="Pillars 5 and 6 · Audit and compliance"
-              title="A record that shows when it was edited."
+              title="A record that shows when it was edited"
             >
               Every decision lands in a hash chain. There is no update or delete path for an
               audit entry.
@@ -532,7 +531,7 @@ export function Evidence2() {
               <div className="mk-row" style={{ gap: 8 }}>
                 <span className="mk-chip mk-chip-hold">Draft mappings</span>
               </div>
-              <p className="mk-body" style={{ ...BODY, marginTop: 10, fontSize: ".92rem" }}>
+              <p className="mk-body" style={{ ...BODY, marginTop: 10, fontSize: "var(--t-small)" }}>
                 Produced from framework texts by engineers, not reviewed by compliance counsel.
                 Evidence packages label them DRAFT, UNVERIFIED, NOT LEGAL ADVICE.
               </p>

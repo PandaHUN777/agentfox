@@ -10,7 +10,7 @@ const inputStyle = {
   border: "1px solid var(--border)",
   background: "var(--panel-2)",
   color: "var(--text)",
-  fontSize: 13,
+  fontSize: "var(--t-small)",
   fontFamily: "inherit",
 } as const;
 
@@ -392,7 +392,7 @@ export function PolicyEditor({
           style={{
             width: "100%",
             fontFamily: "var(--mono)",
-            fontSize: 12.5,
+            fontSize: "var(--t-micro)",
             lineHeight: 1.5,
             padding: 14,
             borderRadius: 7,

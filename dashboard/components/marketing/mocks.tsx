@@ -43,12 +43,12 @@ const PAD: CSSProperties = { padding: 16, display: "grid", gap: 14 };
 
 const BODY: CSSProperties = {
   margin: 0,
-  fontSize: ".9rem",
+  fontSize: "var(--t-small)",
   lineHeight: 1.55,
   color: "var(--mk-muted)",
 };
 
-const TIGHT: CSSProperties = { ...BODY, fontSize: ".82rem", color: "var(--mk-faint)" };
+const TIGHT: CSSProperties = { ...BODY, fontSize: "var(--t-small)", color: "var(--mk-muted)" };
 
 const STRONG: CSSProperties = { ...BODY, color: "var(--mk-text)" };
 
@@ -234,14 +234,14 @@ export function GrantMock({ className }: { className?: string }) {
         <span className="mk-label">The grant</span>
         <Code>
           payments.transfer &rarr; payments-ops{" "}
-          <span style={{ color: "var(--mk-faint)" }}>agent:payments-ops</span>
+          <span style={{ color: "var(--mk-muted)" }}>agent:payments-ops</span>
         </Code>
         <div style={{ display: "grid", gap: 6 }}>
           <Field name="actions">*</Field>
           <Field name="limits">amount lt 1000; currency in USD</Field>
           <Field name="provenance">
             user{" "}
-            <span style={{ color: "var(--mk-faint)" }}>
+            <span style={{ color: "var(--mk-muted)" }}>
               arguments the user typed, nothing retrieved
             </span>
           </Field>
@@ -338,14 +338,14 @@ export function FindingsMock({ className }: { className?: string }) {
               <span className={`mk-chip mk-chip-${f.severity === "high" ? "stop" : "hold"}`}>
                 {f.severity}
               </span>
-              <span className="mk-mono" style={{ color: "var(--mk-faint)" }}>
+              <span className="mk-mono" style={{ color: "var(--mk-muted)" }}>
                 {f.type}
               </span>
             </div>
-            <p style={{ ...STRONG, fontSize: ".92rem" }}>{f.title}</p>
+            <p style={{ ...STRONG, fontSize: "var(--t-small)" }}>{f.title}</p>
             <div className="mk-row" style={{ gap: 7 }}>
               <span className="mk-chip mk-chip-accent">{f.agent}</span>
-              <span className="mk-mono" style={{ color: "var(--mk-faint)" }}>
+              <span className="mk-mono" style={{ color: "var(--mk-muted)" }}>
                 occurrences {f.occurrences}
               </span>
             </div>
@@ -416,17 +416,17 @@ function ChainEntry({ row, broken }: { row: ChainRow; broken?: boolean }) {
       }}
     >
       <div className="mk-row" style={{ gap: 7 }}>
-        <span className="mk-mono" style={{ color: "var(--mk-faint)" }}>
+        <span className="mk-mono" style={{ color: "var(--mk-muted)" }}>
           seq {row.seq}
         </span>
         <span className="mk-mono" style={{ color: "var(--mk-text)" }}>
           {row.action}
         </span>
-        <span className="mk-mono" style={{ color: "var(--mk-faint)" }}>
+        <span className="mk-mono" style={{ color: "var(--mk-muted)" }}>
           {row.tool}
         </span>
       </div>
-      <div className="mk-mono" style={{ color: "var(--mk-faint)", overflowWrap: "anywhere" }}>
+      <div className="mk-mono" style={{ color: "var(--mk-muted)", overflowWrap: "anywhere" }}>
         prev {row.prev}&hellip;
       </div>
       <div

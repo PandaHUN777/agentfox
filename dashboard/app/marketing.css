@@ -1,28 +1,32 @@
 /*
  * Marketing design system for the public pages.
  *
- * Apple's three principles, applied literally.
+ * This is a developer-tools system, not a consumer-hardware one. The previous
+ * version said so in its own header — "Apple's three principles, applied
+ * literally" — and an audit of the rendered DOM measured what that produced: a
+ * 70px centred hero on five of nine pages, 980px capsule buttons, 28px tiles,
+ * every product shot floating on a drop shadow, and the first piece of evidence
+ * 1,272px below the fold. A security product for AI agents cannot be sold in the
+ * visual register of a phone launch.
  *
- * Deference: the interface gets out of the way and the content is the thing. The
- * previous version had a paper-grain overlay on every surface and a two-colour
- * radial wash behind the hero, both borrowed from dayotter. Both are gone. Large
- * flat areas of near-white are not a mistake to be textured over; they are the
- * point, and they are what makes a product screenshot read as the only object on
- * the page.
+ * The rules, all of them checkable:
  *
- * Clarity: type does the work. The stack starts at -apple-system, so on a Mac or an
- * iPhone this is literally SF Pro and on everything else it is that platform's own
- * face. Body is 17px because that is the size Apple sets running text at and it is
- * noticeably easier than 16. Display sizes are large with negative tracking and
- * semibold rather than bold weight, which is the single most recognisable thing
- * about Apple's typography.
+ *   Type      Six sizes, whole pixels: 56 / 32 / 20 / 15 / 13 / 12. The rendered
+ *             site had 48, because sizes were written as two-decimal rem against
+ *             a 17px root. Nothing below 12px, ever. No literal font-size outside
+ *             this file.
+ *   Alignment Everything starts at the left edge. A centred heading over
+ *             left-aligned body is the single clearest tell of a template.
+ *   Colour    Four neutrals. #86868b is gone: it measured 3.58:1 on the page
+ *             ground and painted 280 nodes, which is what made the site look
+ *             washed out rather than calm.
+ *   Shape     Four radii, 6/10/14/50%. Hairlines separate things; shadow is the
+ *             exception, not the default, and no artifact floats.
+ *   Evidence  A trace, a verdict, a diff is the interface, shown flush on the
+ *             page at full column width — not a photograph of the interface.
  *
- * Depth: shadows are soft, wide and nearly colourless, borders are hairlines, radii
- * are large. Nothing is outlined in a strong colour to make it look separate.
- *
- * Class names are unchanged from the previous system on purpose: fifteen pages and
- * every React mock are written against this API, so replacing the values restyles
- * all of them at once and none of them had to be touched.
+ * Class names are unchanged on purpose: fifteen pages and every React mock are
+ * written against this API, so replacing the values restyles all of them at once.
  */
 
 :root {
@@ -35,7 +39,7 @@
   --mk-border-strong: #d2d2d7;
   --mk-text: #1d1d1f;
   --mk-muted: #6e6e73;
-  --mk-faint: #86868b;
+  --mk-faint: var(--mk-muted);
 
   /* The brand is the two colours in the mark: navy #012455 and orange #fd4901.
      They are split by job rather than used interchangeably, because the measured
@@ -69,17 +73,20 @@
   --mk-shadow-card: 0 1px 2px rgba(0, 0, 0, .03), 0 4px 12px rgba(0, 0, 0, .04);
   --mk-shadow-raise: 0 4px 16px rgba(0, 0, 0, .06);
   --mk-shadow-pop: 0 18px 48px -12px rgba(0, 0, 0, .12);
-  --mk-shadow-float: 0 28px 70px -20px rgba(0, 0, 0, .18);
+  --mk-shadow-float: none;
 
-  --mk-r-sm: 8px;
-  --mk-r-md: 12px;
-  --mk-r-lg: 18px;
-  --mk-r-xl: 28px;
+  /* Four radii, down from eleven across two unrelated scales. The 28px tile and
+     the 980px capsule were the two loudest "Apple marketing page" signals on a
+     security product; both come down to 10px. */
+  --mk-r-sm: 6px;
+  --mk-r-md: 10px;
+  --mk-r-lg: 14px;
+  --mk-r-xl: 14px;
 
-  --mk-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", system-ui,
-    Roboto, var(--font-geist-sans), "Helvetica Neue", Arial, sans-serif;
-  --mk-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI",
-    system-ui, Roboto, var(--font-geist-sans), "Helvetica Neue", Arial, sans-serif;
+  --mk-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mk-display: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
   --mk-code: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -92,7 +99,7 @@
     --mk-border-strong: #48484a;
     --mk-text: #f5f5f7;
     --mk-muted: #a1a1a6;
-    --mk-faint: #86868b;
+    --mk-faint: var(--mk-muted);
     --mk-brand: #fd4901;
     --mk-navy: #9ab4e2;
     --mk-accent: #ff7a45;
@@ -111,13 +118,13 @@
     --mk-shadow-card: 0 1px 2px rgba(0, 0, 0, .5);
     --mk-shadow-raise: 0 4px 16px rgba(0, 0, 0, .55);
     --mk-shadow-pop: 0 18px 48px -12px rgba(0, 0, 0, .7);
-    --mk-shadow-float: 0 28px 70px -20px rgba(0, 0, 0, .8);
+    --mk-shadow-float: none;
   }
 }
 :root[data-theme="dark"] {
   --mk-bg: #000000; --mk-surface: #1d1d1f; --mk-surface-2: #161617;
   --mk-border: #333336; --mk-border-strong: #48484a;
-  --mk-text: #f5f5f7; --mk-muted: #a1a1a6; --mk-faint: #86868b;
+  --mk-text: #f5f5f7; --mk-muted: #a1a1a6; --mk-faint: var(--mk-muted);
   --mk-brand: #fd4901; --mk-navy: #9ab4e2;
   --mk-accent: #ff7a45; --mk-accent-hover: #ff9066; --mk-accent-fg: #14110e;
   --mk-accent-soft: #2a1408;
@@ -128,7 +135,7 @@
   --mk-shadow-card: 0 1px 2px rgba(0, 0, 0, .5);
   --mk-shadow-raise: 0 4px 16px rgba(0, 0, 0, .55);
   --mk-shadow-pop: 0 18px 48px -12px rgba(0, 0, 0, .7);
-  --mk-shadow-float: 0 28px 70px -20px rgba(0, 0, 0, .8);
+  --mk-shadow-float: none;
 }
 
 /* --- Shell ------------------------------------------------------------- */
@@ -137,7 +144,7 @@
   background: var(--mk-bg);
   color: var(--mk-text);
   font-family: var(--mk-sans);
-  font-size: 17px;
+  font-size: var(--t-body);
   line-height: 1.53;
   letter-spacing: -.01em;
   -webkit-font-smoothing: antialiased;
@@ -150,7 +157,7 @@
 /* Apple's content column is a little under 1000px and the page is centred in it.
    Wider than this and running text stops being comfortable to read. */
 .mk-wrap { max-width: 1120px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
-.mk-narrow { max-width: 700px; margin: 0 auto; }
+.mk-narrow { max-width: 60ch; }
 /* Space is the main compositional device here, so sections are generous and scale
    with the viewport rather than sitting at one fixed value. */
 .mk-section { padding-block: clamp(56px, 7.5vw, 100px); }
@@ -160,40 +167,66 @@
 
 /* Not a pill. Apple sets this as small, tracked-out coloured text directly on the
    ground, which is quieter and stops every section opening with a badge. */
+/* Six sizes. There were 48 rendered across the site and 28 on the home page alone
+   — one new size every 8.4 text nodes — because sizes were declared as two-decimal
+   rem values against a 17px root (.68/.72/.74/.87/.93/.94/1.02rem) and as
+   half-pixel px values in globals.css. A reader cannot perceive a hierarchy with
+   48 levels; they perceive a mistake. Every size below is a whole pixel. */
+:root {
+  --t-display: 56px;
+  --t-title: 32px;
+  --t-subhead: 20px;
+  --t-body: 15px;
+  --t-small: 13px;
+  --t-micro: 12px;
+}
+
+/* UPPERCASE labels only, and 12px is the floor for anything on this site: 368 of
+   1,792 nodes rendered below it, 194 on the product page. Small faint text does
+   not read as technical, it reads as unconsidered. */
 .mk-eyebrow {
   display: inline-block;
   font-family: var(--mk-sans);
-  font-size: .8rem;
+  font-size: var(--t-micro);
   font-weight: 600;
-  letter-spacing: .01em;
+  letter-spacing: .06em;
+  text-transform: uppercase;
   color: var(--mk-accent);
 }
-.mk h1, .mk h2, .mk h3 { text-wrap: balance; margin: 0; font-family: var(--mk-display); }
+.mk h1, .mk h2, .mk h3 {
+  text-wrap: balance;
+  margin: 0;
+  text-align: start;
+  font-family: var(--mk-display);
+}
 .mk-h1 {
-  font-size: clamp(2.6rem, 6vw, 4.4rem);
-  line-height: 1.06;
-  letter-spacing: -.028em;
+  font-size: clamp(2.25rem, 4.4vw, var(--t-display));
+  line-height: 1.05;
+  letter-spacing: -.03em;
   font-weight: 600;
 }
-.mk-h1 em { font-style: normal; color: var(--mk-brand); }
+.mk-h1 em { font-style: normal; color: var(--mk-accent); }
 .mk-h2 {
-  font-size: clamp(1.9rem, 4vw, 2.9rem);
-  line-height: 1.1;
-  letter-spacing: -.024em;
+  font-size: clamp(1.625rem, 2.6vw, var(--t-title));
+  line-height: 1.15;
+  letter-spacing: -.022em;
   font-weight: 600;
 }
-.mk-h3 { font-size: 1.2rem; line-height: 1.28; letter-spacing: -.015em; font-weight: 600; }
-.mk-lede { font-size: clamp(1.1rem, 1.6vw, 1.3rem); line-height: 1.45; color: var(--mk-muted); letter-spacing: -.012em; }
-.mk-body { color: var(--mk-muted); }
-.mk-fine { font-size: .87rem; line-height: 1.5; color: var(--mk-faint); }
-.mk-mono { font-family: var(--mk-code); font-size: .82rem; letter-spacing: 0; }
+.mk-h3 { font-size: var(--t-subhead); line-height: 1.35; letter-spacing: -.015em; font-weight: 600; }
+.mk-lede { font-size: var(--t-subhead); line-height: 1.5; color: var(--mk-muted); letter-spacing: -.01em; font-weight: 400; }
+.mk-body { font-size: var(--t-body); line-height: 1.6; color: var(--mk-muted); }
+/* `--mk-faint` is gone. It measured 3.58:1 on the page ground and painted 280
+   nodes — a WCAG AA failure at volume, and the reason the site looked washed out
+   rather than calm. Everything that used it now uses the muted role. */
+.mk-fine { font-size: var(--t-small); line-height: 1.5; color: var(--mk-muted); }
+.mk-mono { font-family: var(--mk-code); font-size: var(--t-small); letter-spacing: 0; }
 .mk-label {
   font-family: var(--mk-sans);
-  font-size: .72rem;
+  font-size: var(--t-micro);
   font-weight: 600;
   letter-spacing: .04em;
   text-transform: uppercase;
-  color: var(--mk-faint);
+  color: var(--mk-muted);
 }
 .mk a { color: var(--mk-accent); text-underline-offset: 3px; }
 
@@ -206,9 +239,9 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 980px;
-  padding: 12px 22px;
-  font-size: 1rem;
+  border-radius: var(--mk-r-md);
+  padding: 9px 16px;
+  font-size: var(--t-body);
   font-weight: 500;
   letter-spacing: -.01em;
   text-decoration: none;
@@ -241,30 +274,12 @@
    border only appears in dark mode, where a panel and the black ground would
    otherwise have no edge between them. */
 .mk-card {
-  background: var(--mk-surface-2);
-  border: 1px solid transparent;
-  border-radius: var(--mk-r-xl);
-  padding: 28px;
+  background: transparent;
+  border: 1px solid var(--mk-border);
+  border-radius: var(--mk-r-md);
+  padding: 22px;
 }
-/* On black, a grey tile and the ground have no edge between them, so the card
-   lifts to the lighter surface and takes a hairline. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .mk-card {
-    background: var(--mk-surface);
-    border-color: var(--mk-border);
-  }
-}
-:root[data-theme="dark"] .mk-card {
-  background: var(--mk-surface);
-  border-color: var(--mk-border);
-}
-/* A band is also --mk-surface-2, so a grey tile on a grey band disappears. On a
-   band the tile inverts to white, which is exactly what Apple does. */
 .mk-band .mk-card { background: var(--mk-surface); }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .mk-band .mk-card { background: #222224; }
-}
-:root[data-theme="dark"] .mk-band .mk-card { background: #222224; }
 .mk-card-raised { background: var(--mk-surface); box-shadow: var(--mk-shadow-raise); }
 
 /* The frame every product screenshot and React mock sits in. Hairline border, big
@@ -274,7 +289,7 @@
   background: var(--mk-surface);
   border: 1px solid var(--mk-border);
   border-radius: var(--mk-r-lg);
-  box-shadow: var(--mk-shadow-float);
+  box-shadow: none;
   overflow: hidden;
 }
 .mk-frame-bar {
@@ -290,7 +305,37 @@
   width: 9px; height: 9px; border-radius: 50%;
   background: var(--mk-border-strong); display: block;
 }
-.mk-frame-title { font-family: var(--mk-code); font-size: 11px; color: var(--mk-faint); }
+.mk-frame-title { font-family: var(--mk-code); font-size: var(--t-micro); color: var(--mk-muted); }
+
+/* The hero is one screen with two things in it: the sentence and the evidence.
+   Single column below 940px, where the decision stream drops under the copy. */
+.mk-hero {
+  display: grid;
+  gap: 40px;
+  align-items: center;
+  grid-template-columns: 1fr;
+  padding-block: clamp(48px, 6vw, 80px);
+}
+@media (min-width: 940px) {
+  .mk-hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 56px; }
+}
+
+/* The line a reader would actually type, at the size they would read it. */
+.mk-install {
+  margin: 26px 0 0;
+  padding: 12px 14px;
+  display: grid;
+  gap: 4px;
+  background: var(--mk-surface-2);
+  border: 1px solid var(--mk-border);
+  border-radius: var(--mk-r-md);
+  font-family: var(--mk-code);
+  font-size: var(--t-small);
+  line-height: 1.6;
+  overflow-x: auto;
+}
+.mk-install code { color: var(--mk-text); white-space: pre; }
+.mk-install-2 { color: var(--mk-muted); }
 
 .mk-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .mk-grid { display: grid; gap: 20px; }
@@ -325,8 +370,8 @@
 .mk-chip {
   display: inline-flex; align-items: center; gap: 6px;
   font-family: var(--mk-code);
-  font-size: 11px; letter-spacing: .02em;
-  padding: 4px 9px; border-radius: 980px;
+  font-size: var(--t-small); letter-spacing: .01em;
+  padding: 3px 8px; border-radius: var(--mk-r-md);
   background: #e8e8ed; color: var(--mk-muted);
 }
 @media (prefers-color-scheme: dark) {
@@ -367,10 +412,16 @@
 
 /* --- Entrance motion, CSS only ----------------------------------------- */
 
-/* Shorter and smaller than before. Apple moves things a few pixels, not fifteen. */
+/* Movement only, and never opacity.
+   This used to animate `opacity: 0 -> 1` with `fill-mode: both`, which parks the
+   element at zero until the animation runs. A browser throttles animations in a
+   background tab, so a page opened in one — or captured by anything that is not
+   the foreground window — rendered completely blank: 34 elements, all invisible,
+   waiting on a frame that never came. The resting state is now visible by
+   construction, and the animation only moves things eight pixels. */
 @keyframes mk-fade-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
+  from { transform: translateY(8px); }
+  to { transform: none; }
 }
 .mk-up { animation: mk-fade-up .5s cubic-bezier(.32, .72, 0, 1) both; }
 .mk-d1 { animation-delay: .05s; }
@@ -393,7 +444,7 @@
   grid-template-columns: 20px 1fr;
   gap: 12px;
   align-items: start;
-  font-size: 1rem;
+  font-size: var(--t-body);
   color: var(--mk-text);
 }
 .mk-ticks li::before {
@@ -438,7 +489,7 @@
 .mk-strip {
   display: flex; flex-wrap: wrap; justify-content: center;
   gap: 10px 28px;
-  font-size: .95rem; color: var(--mk-muted);
+  font-size: var(--t-body); color: var(--mk-muted);
 }
 .mk-strip span { white-space: nowrap; }
 
@@ -446,7 +497,7 @@
    no list, so the page has a change of pace rather than eight identical grids. */
 .mk-statement {
   font-family: var(--mk-display);
-  font-size: clamp(1.5rem, 2.8vw, 2.1rem);
+  font-size: clamp(1.375rem, 2.2vw, var(--t-title));
   line-height: 1.25;
   letter-spacing: -.02em;
   font-weight: 600;
@@ -464,7 +515,7 @@
 .mk-stat b {
   display: block;
   font-family: var(--mk-display);
-  font-size: clamp(1.7rem, 2.5vw, 2.4rem);
+  font-size: var(--t-title);
   line-height: 1.05;
   letter-spacing: -.03em;
   font-weight: 600;
@@ -474,14 +525,14 @@
 }
 /* Narrower gutters for the five-across band, so the figure gets the width. */
 .mk-grid-5 > .mk-card { padding: 24px 18px; }
-.mk-stat span { display: block; font-size: .9rem; line-height: 1.4; color: var(--mk-muted); margin-top: 8px; }
+.mk-stat span { display: block; font-size: var(--t-small); line-height: 1.45; color: var(--mk-muted); margin-top: 8px; }
 .mk-steps { counter-reset: mkstep; display: grid; gap: 26px; }
 .mk-step { display: flex; gap: 16px; align-items: flex-start; }
 .mk-step-n {
-  flex: 0 0 30px; height: 30px; border-radius: 980px;
+  flex: 0 0 30px; height: 30px; border-radius: var(--mk-r-md);
   background: var(--mk-brand); color: #ffffff;
   display: grid; place-items: center;
-  font-size: 14px; font-weight: 600;
+  font-size: var(--t-small); font-weight: 600;
 }
 .mk-faq { border-top: 1px solid var(--mk-border); padding-block: 26px; }
 .mk-faq:last-child { border-bottom: 1px solid var(--mk-border); }
@@ -489,7 +540,7 @@
   border-top: 1px solid var(--mk-border);
   background: var(--mk-bg);
   padding-block: 48px;
-  font-size: .87rem;
+  font-size: var(--t-small);
 }
 .mk-footer a { color: var(--mk-muted); text-decoration: none; }
 .mk-footer a:hover { color: var(--mk-text); text-decoration: underline; }
@@ -506,12 +557,54 @@
   border-bottom: 1px solid var(--mk-border);
 }
 .mk-nav-inner { display: flex; align-items: center; gap: 20px; height: 52px; }
-.mk-nav-links { display: none; gap: 26px; margin-left: 16px; }
-@media (min-width: 820px) { .mk-nav-links { display: flex; } }
-.mk-nav-links a { color: var(--mk-text); text-decoration: none; font-size: .82rem; opacity: .85; }
+.mk-nav-links { display: none; gap: 22px; margin-left: 18px; }
+@media (min-width: 900px) { .mk-nav-links { display: flex; } }
+.mk-nav-links a { color: var(--mk-text); text-decoration: none; font-size: var(--t-small); opacity: .9; }
 .mk-nav-links a:hover { opacity: 1; }
 .mk-nav-cta { margin-left: auto; display: flex; align-items: center; gap: 10px; }
-.mk-nav-cta .mk-btn { padding: 7px 15px; font-size: .82rem; }
+/* `white-space: nowrap` because "Try it" was wrapping to two lines inside a 53px
+   sticky bar on every page at phone width, and a button that renders as "Try /
+   it" reads as a broken build. */
+.mk-nav-cta .mk-btn { padding: 7px 14px; font-size: var(--t-small); white-space: nowrap; }
+@media (max-width: 420px) { .mk-nav-cta .mk-btn-ghost { display: none; } }
+
+/* The mobile menu. Below the breakpoint the link row is display:none, and until
+   now nothing replaced it: on a phone the only navigation on the whole site was
+   "Try it" and "Sign in". `<details>` needs no client component, which matters
+   because this nav reads the session cookie on the server. */
+.mk-menu { position: relative; }
+@media (min-width: 900px) { .mk-menu { display: none; } }
+.mk-menu > summary {
+  position: absolute;
+  right: 16px;
+  top: -44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--mk-r-md);
+  color: var(--mk-text);
+  cursor: pointer;
+  list-style: none;
+}
+.mk-menu > summary::-webkit-details-marker { display: none; }
+.mk-menu[open] > summary { background: var(--mk-surface-2); }
+.mk-menu-panel {
+  display: grid;
+  gap: 2px;
+  padding: 10px 16px 16px;
+  border-bottom: 1px solid var(--mk-border);
+  background: var(--mk-bg);
+}
+.mk-menu-panel a {
+  padding: 12px 4px;
+  font-size: var(--t-body);
+  color: var(--mk-text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--mk-border);
+}
+.mk-menu-panel a:last-child { border-bottom: 0; }
 
 /* --- Brand ------------------------------------------------------------- */
 
@@ -520,9 +613,9 @@
   display: inline-flex; align-items: center; gap: 9px;
   text-decoration: none; color: var(--mk-text);
 }
-.mk-brand-name { font-family: var(--mk-display); font-weight: 600; letter-spacing: -.02em; font-size: 1.05rem; }
+.mk-brand-name { font-family: var(--mk-display); font-weight: 600; letter-spacing: -.02em; font-size: var(--t-body); }
 .mk-brand-sub {
-  font-size: .7rem; letter-spacing: .02em; color: var(--mk-faint);
+  font-size: var(--t-micro); letter-spacing: .02em; color: var(--mk-muted);
 }
 
 
@@ -539,7 +632,7 @@
   border: 1px solid var(--mk-border);
   border-radius: var(--mk-r-lg);
   background: var(--mk-surface);
-  box-shadow: var(--mk-shadow-pop);
+  box-shadow: none;
   overflow: hidden;
   /* Digits line up down the columns; this is a table of records, even drawn. */
   font-variant-numeric: tabular-nums;
@@ -555,7 +648,7 @@
 }
 .pv-bar-label {
   font-family: var(--mk-code);
-  font-size: .78rem;
+  font-size: var(--t-micro);
   letter-spacing: 0;
   color: var(--mk-muted);
   overflow-wrap: anywhere;
@@ -564,10 +657,10 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: .68rem;
+  font-size: var(--t-micro);
   letter-spacing: .07em;
   text-transform: uppercase;
-  color: var(--mk-faint);
+  color: var(--mk-muted);
   white-space: nowrap;
 }
 .pv-live i {
@@ -589,7 +682,6 @@
 .pv-call-stop {
   background: var(--mk-stop-soft);
   border-color: color-mix(in srgb, var(--mk-stop) 26%, transparent);
-  box-shadow: 0 6px 18px -8px color-mix(in srgb, var(--mk-stop) 40%, transparent);
 }
 .pv-call-head {
   display: flex;
@@ -599,14 +691,14 @@
 }
 .pv-tool {
   font-family: var(--mk-code);
-  font-size: .84rem;
+  font-size: var(--t-small);
   color: var(--mk-text);
   overflow-wrap: anywhere;
 }
 .pv-arg {
   font-family: var(--mk-code);
-  font-size: .78rem;
-  color: var(--mk-faint);
+  font-size: var(--t-micro);
+  color: var(--mk-muted);
   overflow-wrap: anywhere;
 }
 /* The verdict is pushed to the end of the row, which is where an eye scanning a
@@ -614,7 +706,7 @@
 .pv-v {
   margin-left: auto;
   font-family: var(--mk-code);
-  font-size: .72rem;
+  font-size: var(--t-micro);
   padding: 3px 9px;
   border-radius: 999px;
   white-space: nowrap;
@@ -632,8 +724,8 @@
   padding-top: 9px;
   border-top: 1px solid color-mix(in srgb, var(--mk-stop) 18%, transparent);
 }
-.pv-rule { font-family: var(--mk-code); font-size: .76rem; color: var(--mk-stop); }
-.pv-reason { font-size: .82rem; line-height: 1.5; color: var(--mk-muted); }
+.pv-rule { font-family: var(--mk-code); font-size: var(--t-small); color: var(--mk-stop); }
+.pv-reason { font-size: var(--t-small); line-height: 1.5; color: var(--mk-muted); }
 
 /* The one piece of motion on the page, and it is the point of the page: the
    records arrive, and the refusal arrives with them. */
@@ -649,7 +741,7 @@
 
 .pv-trace-title {
   font-family: var(--mk-display);
-  font-size: 1.15rem;
+  font-size: var(--t-subhead);
   font-weight: 600;
   letter-spacing: -.02em;
   padding: 2px 2px 4px;
@@ -658,10 +750,10 @@
 @media (min-width: 620px) { .pv-grid2 { grid-template-columns: 1fr 1fr; } }
 .pv-h {
   display: block;
-  font-size: .68rem;
+  font-size: var(--t-micro);
   letter-spacing: .07em;
   text-transform: uppercase;
-  color: var(--mk-faint);
+  color: var(--mk-muted);
   margin-bottom: 7px;
 }
 .pv-span {
@@ -673,7 +765,7 @@
   background: var(--mk-surface-2);
 }
 .pv-span + .pv-span { margin-top: 5px; }
-.pv-ms { font-family: var(--mk-code); font-size: .72rem; color: var(--mk-faint); }
+.pv-ms { font-family: var(--mk-code); font-size: var(--t-micro); color: var(--mk-muted); }
 .pv-note {
   display: grid;
   gap: 4px;
@@ -696,12 +788,12 @@
 .pv-tile b {
   display: block;
   font-family: var(--mk-display);
-  font-size: 1.5rem;
+  font-size: var(--t-title);
   font-weight: 600;
   letter-spacing: -.02em;
   line-height: 1.1;
 }
-.pv-tile span { display: block; margin-top: 2px; font-size: .74rem; color: var(--mk-faint); }
+.pv-tile span { display: block; margin-top: 2px; font-size: var(--t-micro); color: var(--mk-muted); }
 .pv-tile-stop { border-left-color: var(--mk-stop); }
 .pv-tile-stop b { color: var(--mk-stop); }
 .pv-tile-hold { border-left-color: var(--mk-hold); }

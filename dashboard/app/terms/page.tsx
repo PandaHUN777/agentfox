@@ -58,8 +58,7 @@ export default function Terms() {
               <div className="mk-card mk-card-raised">
                 <span className="mk-eyebrow">Read this first</span>
                 <h2 className="mk-h2" style={{ marginTop: 16 }}>
-                  Nothing here narrows the licence.
-                </h2>
+                  Nothing here narrows the licence</h2>
                 <p className="mk-body" style={{ marginTop: 14 }}>
                   The AgentFox software is licensed under the{" "}
                   <a href={LICENCE_URL} target="_blank" rel="noreferrer">
@@ -145,7 +144,7 @@ export default function Terms() {
               <div className="mk-grid mk-grid-2" style={{ marginTop: 20 }}>
                 <div className="mk-card">
                   <span className="mk-chip mk-chip-go">Encouraged</span>
-                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: ".95rem" }}>
+                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: "var(--t-body)" }}>
                     Attack the sandboxed agent as hard as you like. Prompt injection,
                     indirect injection through the document you are given to edit,
                     multi-turn payload splitting, obfuscation, jailbreaks, attempts to make
@@ -156,7 +155,7 @@ export default function Terms() {
                 </div>
                 <div className="mk-card">
                   <span className="mk-chip mk-chip-stop">Not allowed</span>
-                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: ".95rem" }}>
+                  <p className="mk-body" style={{ margin: "12px 0 0", fontSize: "var(--t-body)" }}>
                     Attacking the infrastructure rather than the target. Do not attempt to
                     reach another tenant&rsquo;s or another visitor&rsquo;s data, guess or
                     enumerate sandbox ids, escalate a token&rsquo;s permissions, break out

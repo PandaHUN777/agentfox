@@ -31,12 +31,12 @@ const PAD: CSSProperties = { padding: 16, display: "grid", gap: 14 };
 
 const BODY: CSSProperties = {
   margin: 0,
-  fontSize: ".9rem",
+  fontSize: "var(--t-small)",
   lineHeight: 1.55,
   color: "var(--mk-muted)",
 };
 
-const TIGHT: CSSProperties = { ...BODY, fontSize: ".82rem", color: "var(--mk-faint)" };
+const TIGHT: CSSProperties = { ...BODY, fontSize: "var(--t-small)", color: "var(--mk-muted)" };
 
 const STRONG: CSSProperties = { ...BODY, color: "var(--mk-text)" };
 
@@ -292,7 +292,7 @@ export function PillarGrid({ className }: { className?: string }) {
             <h3 className="mk-h3" style={{ overflowWrap: "anywhere" }}>
               {p.name}
             </h3>
-            <p style={{ ...STRONG, fontSize: ".88rem" }}>{p.answers}</p>
+            <p style={{ ...STRONG, fontSize: "var(--t-small)" }}>{p.answers}</p>
             <Rule />
             <div style={{ display: "grid", gap: 5 }}>
               <span className="mk-label">built on</span>
@@ -310,8 +310,7 @@ export function PillarGrid({ className }: { className?: string }) {
 
       <p style={TIGHT}>
         {/* README.md:469-470 */}
-        Roughly 20% of the engineering integrates OSS primitives; 80% is proprietary logic
-        above them. Every wrapped project sits behind a swappable adapter.
+        Every wrapped project sits behind a swappable adapter.
       </p>
     </Frame>
   );
@@ -636,7 +635,7 @@ export function RedactionMock({ className }: { className?: string }) {
           >
             <div className="mk-row" style={{ gap: 7 }}>
               <span className="mk-chip mk-chip-accent">{row.entity}</span>
-              <span className="mk-mono" style={{ color: "var(--mk-faint)" }}>
+              <span className="mk-mono" style={{ color: "var(--mk-muted)" }}>
                 {row.detector}
               </span>
             </div>
@@ -795,13 +794,13 @@ export function DiscoveryMock({ className }: { className?: string }) {
           <div key={row.where} style={{ display: "grid", gap: 4 }}>
             <div className="mk-row" style={{ gap: 7 }}>
               <SeverityMark severity={row.severity} governed={row.governed} />
-              <span className="mk-mono" style={{ color: "var(--mk-faint)" }}>
+              <span className="mk-mono" style={{ color: "var(--mk-muted)" }}>
                 {row.kind}
               </span>
             </div>
             <span
               className="mk-mono"
-              style={{ color: "var(--mk-faint)", overflowWrap: "anywhere" }}
+              style={{ color: "var(--mk-muted)", overflowWrap: "anywhere" }}
             >
               {row.where}
             </span>
@@ -1379,7 +1378,7 @@ export function CompliancePanel({ className }: { className?: string }) {
                 {c.key}
               </span>
             </div>
-            <p style={{ ...STRONG, fontSize: ".92rem" }}>{c.title}</p>
+            <p style={{ ...STRONG, fontSize: "var(--t-small)" }}>{c.title}</p>
             <p style={TIGHT}>{c.rationale}</p>
             <div className="mk-row" style={{ gap: 6 }}>
               {c.frameworks.map((f) => (

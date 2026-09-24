@@ -70,7 +70,7 @@ export function SourceRowActions({ source }: { source: any }) {
               <button
                 type="submit"
                 className="row-menu-item bad"
-                title="Permanently removes the record. Unlike deprecating, this drops the 'do not trust' signal — an answer grounded in it afterward looks unverified, not flagged."
+                title="Permanently removes the record. Unlike deprecating, this drops the 'do not trust' signal — an answer grounded in it afterward looks unverified, not flagged"
               >
                 Delete permanently
               </button>
@@ -126,7 +126,7 @@ export function SourceRowActions({ source }: { source: any }) {
               </label>
             )}
             <div className="row" style={{ gap: 8 }}>
-              <button type="submit" className="btn-primary" style={{ fontSize: 12 }}>
+              <button type="submit" className="btn-primary" style={{ fontSize: "var(--t-micro)" }}>
                 Save
               </button>
               <button type="button" className="btn-cancel" onClick={() => setPanel(null)}>
@@ -165,7 +165,7 @@ export function SourceRowActions({ source }: { source: any }) {
             </div>
             {connectionType === "database" ? <DatabaseFields /> : <ApiFields />}
             <div className="row" style={{ gap: 8 }}>
-              <button type="submit" className="btn-primary" style={{ fontSize: 12 }}>
+              <button type="submit" className="btn-primary" style={{ fontSize: "var(--t-micro)" }}>
                 Connect
               </button>
               <button type="button" className="btn-cancel" onClick={() => setPanel(null)}>

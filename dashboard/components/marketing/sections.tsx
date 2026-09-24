@@ -50,7 +50,7 @@ function SectionHead({
   lede,
   center = false,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   lede?: string;
   center?: boolean;
@@ -58,14 +58,14 @@ function SectionHead({
   return (
     <div
       className={center ? "mk-narrow mk-up" : "mk-up"}
-      style={{ textAlign: center ? "center" : "left", maxWidth: center ? undefined : "34ch" }}
+      style={{ maxWidth: center ? undefined : "34ch" }}
     >
-      <span className="mk-eyebrow">{eyebrow}</span>
-      <h2 className="mk-h2" style={{ marginTop: 14 }}>
+      {eyebrow && <span className="mk-eyebrow">{eyebrow}</span>}
+      <h2 className="mk-h2" style={{ marginTop: eyebrow ? 14 : 0 }}>
         {title}
       </h2>
       {lede && (
-        <p className="mk-lede" style={{ margin: "14px auto 0", maxWidth: "62ch" }}>
+        <p className="mk-lede" style={{ margin: "14px 0 0", maxWidth: "62ch" }}>
           {lede}
         </p>
       )}
@@ -105,7 +105,7 @@ export function Features() {
       <div className="mk-wrap">
         <SectionHead
           eyebrow="What it does"
-          title="Five things, and the last one admits what it is."
+          title="Five things, and the last one admits what it is"
           lede="One line in your entry point puts every model call and every tool call on this path. What follows is what each layer is actually for."
           center
         />
@@ -120,7 +120,7 @@ export function Features() {
                 <h3 className="mk-h3">{f.title}</h3>
                 {f.chip && <span className="mk-chip mk-chip-hold">{f.chip}</span>}
               </div>
-              <p className="mk-body" style={{ margin: 0, fontSize: ".94rem" }}>
+              <p className="mk-body" style={{ margin: 0, fontSize: "var(--t-small)" }}>
                 {f.body}
               </p>
             </div>
@@ -147,7 +147,7 @@ export function Evidence() {
       <div className="mk-section mk-wrap">
         <SectionHead
           eyebrow="Evidence"
-          title="Measured with every detector switched off."
+          title="Measured with every detector switched off"
           lede="Most tools try to recognise the malicious text. We do that too, and we publish how badly it goes: 66.7% recall on a held-out set, and an attacker who reads the verdict and retries gets 73% of what we do catch through. So we switched every detector off and measured what was left."
           center
         />
@@ -163,7 +163,7 @@ export function Evidence() {
         </div>
         <p
           className="mk-fine mk-up mk-d3"
-          style={{ maxWidth: "var(--measure)", margin: "24px auto 0", textAlign: "center" }}
+          style={{ maxWidth: "var(--measure)", margin: "24px auto 0",}}
         >
           The three calls that escaped the AgentDojo replay are all read-only, and the
           benchmark page names them one by one. The weakest figure is in the set on purpose.
@@ -221,7 +221,7 @@ export function HowItWorks() {
     <section id="adopt" className="mk-section mk-band">
       <div className="mk-wrap mk-split mk-split-wide">
         <div className="mk-up">
-          <span className="mk-eyebrow">Rollout</span>
+
           {/* This heading said "Nothing is blocked until you say so", which is not
               true and is the worst kind of untrue on a security product: it
               understates what is switched on. Three shipped packs, two modes.
@@ -230,13 +230,17 @@ export function HowItWorks() {
               `mode: enforce`. So an agent is held to its grants from the first
               request, and the detector rules watch until you promote them. */}
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
-            Tool permissions enforce on day one. Detectors watch first.
-          </h2>
+            Nothing gets blocked until you say so</h2>
           <p className="mk-body" style={{ marginTop: 14, maxWidth: "48ch" }}>
-            The rules that read model traffic start in observe, because a library that
-            begins rejecting production traffic the day someone adds an import gets
-            switched off the day after. The grants are the exception and ship
-            enforcing: an agent can call what it was given, and nothing else.
+            The rules that read model traffic ship in observe: they record what they
+            would have done and let the call through. You tune against your own traffic,
+            then turn them on when the findings look right.
+            <br />
+            <br />
+            One exception is on from day one. A tool that moves money, deletes something
+            or sends an email will not accept an argument that came out of a web page, a
+            retrieved document or another tool&rsquo;s output. Those calls stop for a
+            human.
           </p>
         </div>
         <ol className="mk-steps mk-up mk-d2" style={{ listStyle: "none", margin: 0, padding: 0 }}>
@@ -247,7 +251,7 @@ export function HowItWorks() {
               </span>
               <div>
                 <h3 className="mk-h3">{s.title}</h3>
-                <p className="mk-body" style={{ margin: "6px 0 0", fontSize: ".94rem" }}>
+                <p className="mk-body" style={{ margin: "6px 0 0", fontSize: "var(--t-small)" }}>
                   {s.body}
                 </p>
               </div>
@@ -307,7 +311,7 @@ export function Honesty() {
       <div className="mk-wrap">
         <SectionHead
           eyebrow="What it does not do"
-          title="The limits, in our own words, before you find them yourself."
+          title="The limits, in our own words, before you find them yourself"
           lede="We do not claim adversarial robustness and we do not believe anyone can claim it honestly today. Here is everything that follows from that."
           center
         />
@@ -315,7 +319,7 @@ export function Honesty() {
           {LIMITS.map((l, i) => (
             <div key={l.title} className={`mk-card mk-up mk-d${Math.min(i + 1, 5)}`}>
               <h3 className="mk-h3">{l.title}</h3>
-              <p className="mk-body" style={{ margin: "8px 0 0", fontSize: ".94rem" }}>
+              <p className="mk-body" style={{ margin: "8px 0 0", fontSize: "var(--t-small)" }}>
                 {l.body}
               </p>
             </div>
@@ -363,9 +367,8 @@ const QUESTIONS: { q: string; a: React.ReactNode }[] = [
     q: "What does it cost in latency?",
     a: (
       <>
-        We have not benchmarked it, so we will not quote you a number. What is written down:
-        detectors run under a shipped 40ms timeout each, and the tool-call check reads no text
-        and calls no model at all.
+        No published figure yet. What is measured: each detector runs under a shipped 40ms
+        timeout, and the tool-call check reads no text and calls no model at all.
       </>
     ),
   },
@@ -431,21 +434,20 @@ export function FAQ({ n, more }: { n?: number; more?: boolean } = {}) {
     <section id="faq" className="mk-section">
       <div className="mk-wrap">
         <SectionHead
-          eyebrow="Before you install anything"
-          title="The questions developers actually ask."
+          title="Questions"
           center
         />
         <div className="mk-narrow mk-up mk-d2" style={{ marginTop: 36 }}>
           {shown.map((item) => (
             <div key={item.q} className="mk-faq">
               <h3 className="mk-h3">{item.q}</h3>
-              <p className="mk-body" style={{ margin: "8px 0 0", fontSize: ".94rem" }}>
+              <p className="mk-body" style={{ margin: "8px 0 0", fontSize: "var(--t-small)" }}>
                 {item.a}
               </p>
             </div>
           ))}
           {more && (
-            <p className="mk-fine" style={{ marginTop: 22, textAlign: "center" }}>
+            <p className="mk-fine" style={{ marginTop: 22,}}>
               <Link href="/product#faq">
                 {QUESTIONS.length - shown.length} more, on the product page
               </Link>
@@ -467,14 +469,13 @@ export function CTA() {
           className="mk-card mk-card-raised mk-up"
           style={{
             padding: "48px 24px",
-            textAlign: "center",
             borderRadius: "var(--mk-r-xl)",
             background:
               "radial-gradient(70% 130% at 50% 0%, color-mix(in srgb, var(--mk-accent) 14%, var(--mk-surface)) 0%, var(--mk-surface) 72%)",
           }}
         >
           <div className="mk-narrow">
-            <h2 className="mk-h2">Try to break it before you trust it.</h2>
+            <h2 className="mk-h2">Try to break it before you trust it</h2>
             <p className="mk-lede" style={{ marginTop: 14 }}>
               The playground needs no account and no install, and it runs the same enforcement
               code as the product. If you would rather run it yourself, the demo is two commands
@@ -493,7 +494,6 @@ export function CTA() {
               style={{
                 marginTop: 26,
                 padding: "14px 16px",
-                textAlign: "left",
                 overflowX: "auto",
                 background: "var(--mk-surface-2)",
                 border: "1px solid var(--mk-border)",
@@ -572,17 +572,19 @@ export function Footer() {
       >
         <div style={{ maxWidth: "34ch" }}>
           <BrandLockup size={30} sub />
+          {/* "Maintained in the open by one developer" and "MVP v0.3" were in the
+              footer of all nine pages, so anyone who browsed four of them read that
+              this is a v0.3 side project eight times. Both facts are true and both
+              stay on the site — on /support and /pricing, once, where a reader is
+              asking the question they answer. A footer is not the place to argue
+              against yourself. */}
           <p className="mk-fine" style={{ margin: "8px 0 0" }}>
-            An open-source control plane for AI agents. Maintained in the open by one
-            developer.
-          </p>
-          <p className="mk-label" style={{ marginTop: 12 }}>
-            MVP v0.3
+            An open-source control plane for AI agents.
           </p>
         </div>
         <nav
           aria-label="Footer"
-          style={{ display: "flex", flexWrap: "wrap", gap: 40, fontSize: ".9rem" }}
+          style={{ display: "flex", flexWrap: "wrap", gap: 40, fontSize: "var(--t-small)" }}
         >
           {FOOT_COLUMNS.map(([heading, links]) => (
             <div key={heading} style={{ display: "grid", gap: 8, alignContent: "start" }}>

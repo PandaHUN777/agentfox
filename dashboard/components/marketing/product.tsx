@@ -98,7 +98,7 @@ export function DecisionStream() {
           <div
             key={c.tool}
             className={c.verdict === "block" ? "pv-call pv-call-stop" : "pv-call"}
-            style={{ animationDelay: `${0.5 + i * 0.16}s` }}
+            style={{ animationDelay: `${0.12 + i * 0.09}s` }}
           >
             <div className="pv-call-head">
               <span className="pv-tool">{c.tool}</span>

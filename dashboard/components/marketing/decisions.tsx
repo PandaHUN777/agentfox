@@ -370,7 +370,7 @@ function choice(tone: "go" | "stop"): CSSProperties {
   return {
     borderRadius: 980,
     padding: "6px 16px",
-    fontSize: ".85rem",
+    fontSize: "var(--t-small)",
     fontWeight: 500,
     background: WASH[tone],
     color: EDGE[tone],
@@ -446,7 +446,7 @@ export function DecisionCard({
               className={row.mono ? "mk-mono" : undefined}
               style={{
                 color: row.mono ? "var(--mk-text)" : "var(--mk-muted)",
-                fontSize: row.mono ? undefined : ".88rem",
+                fontSize: row.mono ? undefined : "var(--t-small)",
                 lineHeight: row.mono ? 1.45 : 1.5,
                 overflowWrap: "anywhere",
                 minWidth: 0,
@@ -454,7 +454,7 @@ export function DecisionCard({
             >
               {row.value}
               {row.note ? (
-                <span className="mk-mono" style={{ color: "var(--mk-faint)" }}>
+                <span className="mk-mono" style={{ color: "var(--mk-muted)" }}>
                   {" "}
                   {row.note}
                 </span>
@@ -510,8 +510,7 @@ export function Decisions() {
       <div className="mk-wrap">
         <span className="mk-eyebrow">Tool calls</span>
         <h2 className="mk-h2" style={{ marginTop: 12, maxWidth: "18ch" }}>
-          One call, four possible outcomes.
-        </h2>
+          One call, four possible outcomes</h2>
         <p className="mk-lede" style={{ margin: "16px 0 0", maxWidth: "58ch" }}>
           The same agent and the same tool each time. The argument is what changes the
           answer.

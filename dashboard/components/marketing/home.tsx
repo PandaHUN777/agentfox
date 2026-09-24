@@ -50,7 +50,7 @@ function Benefit({
   flip,
   band,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   lede: string;
   ticks: string[];
@@ -65,11 +65,11 @@ function Benefit({
         style={flip ? { direction: "rtl" } : undefined}
       >
         <div className="mk-up" style={flip ? { direction: "ltr" } : undefined}>
-          <span className="mk-eyebrow">{eyebrow}</span>
-          <h2 className="mk-h2" style={{ marginTop: 12 }}>
+          {eyebrow && <span className="mk-eyebrow">{eyebrow}</span>}
+          <h2 className="mk-h2" style={{ marginTop: eyebrow ? 12 : 0 }}>
             {title}
           </h2>
-          <p className="mk-body" style={{ marginTop: 16, fontSize: "1.05rem", maxWidth: "46ch" }}>
+          <p className="mk-body" style={{ marginTop: 16, fontSize: "var(--t-body)", maxWidth: "46ch" }}>
             {lede}
           </p>
           <Ticks items={ticks} />
@@ -101,7 +101,7 @@ function BenefitWide({
   visual,
   band,
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   lede: string;
   ticks: string[];
@@ -113,12 +113,12 @@ function BenefitWide({
       <div className="mk-wrap">
         <div className="mk-head mk-up">
           <div>
-            <span className="mk-eyebrow">{eyebrow}</span>
-            <h2 className="mk-h2" style={{ marginTop: 12 }}>
+            {eyebrow && <span className="mk-eyebrow">{eyebrow}</span>}
+            <h2 className="mk-h2" style={{ marginTop: eyebrow ? 12 : 0 }}>
               {title}
             </h2>
           </div>
-          <p className="mk-body" style={{ margin: 0, fontSize: "1.05rem" }}>
+          <p className="mk-body" style={{ margin: 0, fontSize: "var(--t-body)" }}>
             {lede}
           </p>
         </div>
@@ -133,58 +133,61 @@ function BenefitWide({
 
 /* --- 1. Hero ------------------------------------------------------------ */
 
+/**
+ * One screen, two elements: the sentence and the evidence.
+ *
+ * The rendered DOM measured the old hero as a 70px centred sentence, a 21px lede
+ * and three capsule buttons, with the first refused tool call 1,272px down the
+ * page — below the fold on every laptop. A developer-tools buyer decides in the
+ * first screen, and the first screen contained no evidence, only a claim.
+ *
+ * So: left edge, display size, no full stop, the install line the reader would
+ * actually type, and the live decision stream beside it already showing a call
+ * being refused. Two CTAs, because the audit found nine on this page with four of
+ * them styled primary — when four things are primary, nothing is.
+ */
 export function Hero() {
   return (
     <section style={{ position: "relative", overflow: "hidden" }}>
       <div className="mk-wash" aria-hidden />
-      <div
-        className="mk-wrap"
-        style={{ position: "relative", paddingTop: 72, textAlign: "center" }}
-      >
-        <span className="mk-eyebrow mk-up">Open source, Apache-2.0</span>
-        {/* "AI agents that only do what you allow" was a permissions headline on a
-            product that also decides what an agent may read and what it may claim.
-            An outside review that had read the PRD made exactly that point. This one
-            names the moment all three checks are for.
-
-            The three verbs in the lede are different because the three checks are:
-            refuses (tool-containment, ships enforcing), withholds (the entitlement
-            filter drops the chunk), tells you (answerability reports while its policy
-            is in observe). Measured, not assumed — see decisions.tsx. */}
-        <h1 className="mk-h1 mk-up mk-d1" style={{ margin: "16px auto 0", maxWidth: "17ch" }}>
-          Know when your agent should <em>stop</em>.
-        </h1>
-        {/* Four lines became two. The three boundaries are the section directly
-            below this one, drawn; repeating them here in prose was the page
-            explaining its own next screenful. */}
-        <p
-          className="mk-lede mk-up mk-d2"
-          style={{ margin: "20px auto 0", maxWidth: "46ch" }}
-        >
-          It checks the action against what that agent was granted — not the message
-          against a filter. So it holds after the model has been convinced.
-        </p>
-        <div className="mk-row mk-up mk-d3" style={{ justifyContent: "center", marginTop: 30 }}>
-          <Link href="/playground" className="mk-btn mk-btn-primary">
-            Try it, no account
-          </Link>
-          <a href={REPO} target="_blank" rel="noreferrer" className="mk-btn mk-btn-outline">
-            View the source
-          </a>
+      <div className="mk-wrap mk-hero" style={{ position: "relative" }}>
+        <div>
+          {/* Plain, and deliberately not clever. "The injection worked. The
+              transfer didn't." was the previous attempt and it failed the only
+              test that matters: a stranger has to understand it cold. It needs
+              the reader to already know what a prompt injection is, and "the
+              transfer" refers to nothing they have seen yet. */}
+          <h1 className="mk-h1 mk-up mk-d1">
+            Your agent can only call the tools <em>you gave it</em>
+          </h1>
+          <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "46ch" }}>
+            Before a tool runs, AgentFox checks the tool, the action, and the argument
+            ceilings you set. It reads no prompt text, so it holds when the model has
+            been talked into something.
+          </p>
+          <pre className="mk-install mk-up mk-d3">
+            <code>pip install agentfox</code>
+            <code className="mk-install-2">import agentfox; agentfox.auto()</code>
+          </pre>
+          <div className="mk-row mk-up mk-d4" style={{ marginTop: 24 }}>
+            <Link href="/playground" className="mk-btn mk-btn-primary">
+              Try it, no account
+            </Link>
+            <a href={REPO} target="_blank" rel="noreferrer" className="mk-btn mk-btn-outline">
+              View the source
+            </a>
+          </div>
+          <p className="mk-fine mk-up mk-d5" style={{ marginTop: 16 }}>
+            One line of Python · Offline, no API key · Apache-2.0
+          </p>
         </div>
-        <p className="mk-fine mk-up mk-d4" style={{ marginTop: 16 }}>
-          One line in Python · Runs offline, no API key · Free forever
-        </p>
-      </div>
 
-      {/* Was a 1600px capture of the findings table. At this width it rendered a
-          sidebar, a help paragraph, a filter row and seven columns of 8px grey —
-          a picture of a document, with nothing for the eye to land on. */}
-      <div
-        className="mk-wrap mk-up mk-d5"
-        style={{ position: "relative", marginTop: 56, paddingBottom: 8, maxWidth: 860 }}
-      >
-        <DecisionStream />
+        {/* Was a 1600px capture of the findings table. At this width it rendered a
+            sidebar, a help paragraph, a filter row and seven columns of 8px grey —
+            a picture of a document, with nothing for the eye to land on. */}
+        <div className="mk-up mk-d3">
+          <DecisionStream />
+        </div>
       </div>
     </section>
   );
@@ -210,7 +213,7 @@ const STACK = [
 export function Stack() {
   return (
     <section className="mk-section-tight">
-      <div className="mk-wrap" style={{ textAlign: "center" }}>
+      <div className="mk-wrap">
         <p className="mk-label" style={{ marginBottom: 18 }}>
           Works with what you already run
         </p>
@@ -246,14 +249,10 @@ export function Boundaries() {
   return (
     <section id="boundaries" className="mk-section mk-band">
       <div className="mk-wrap">
-        <div className="mk-narrow" style={{ textAlign: "center" }}>
-          <span className="mk-eyebrow mk-up">Three questions, every request</span>
-          <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12 }}>
-            One boundary check, at three different moments.
-          </h2>
-          <p className="mk-lede mk-up mk-d2" style={{ margin: "16px auto 0", maxWidth: "56ch" }}>
-            Not a filter reading the conversation. A check against what this agent, and
-            the person behind it, were actually given.
+        <div className="mk-narrow">
+          <h2 className="mk-h2 mk-up">Three places a request can be stopped</h2>
+          <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16, maxWidth: "56ch" }}>
+            Each one checks what this agent, and the person behind it, were granted.
           </p>
         </div>
 
@@ -265,7 +264,7 @@ export function Boundaries() {
             >
               <div>
                 <h3 className="mk-h3">{b.question}</h3>
-                <p className="mk-body" style={{ margin: "6px 0 0", fontSize: ".94rem" }}>
+                <p className="mk-body" style={{ margin: "6px 0 0", fontSize: "var(--t-small)" }}>
                   {b.lede}
                 </p>
               </div>
@@ -319,8 +318,7 @@ export function Around() {
   return (
     <>
       <BenefitWide
-        eyebrow="Evidence"
-        title="Know what it did, and prove it."
+        title="Every decision lands in a chain you can verify without us"
         lede="Every prompt, retrieval, tool call and decision is recorded as one auditable object, in a log that cannot be edited without the edit showing."
         ticks={[
           "One page per request, with every check that ran",
@@ -333,8 +331,7 @@ export function Around() {
       <Benefit
         band
         flip
-        eyebrow="Discovery"
-        title="Find the agents nobody told you about."
+        title="Find the agents nobody told you about"
         lede="Point it at a repository or a running API. It reports what talks to a model, what is ungoverned, and who owns each one."
         ticks={[
           "Scans source without running it",
@@ -362,19 +359,16 @@ const PROOF: [string, string][] = [
 export function Proof() {
   return (
     <section id="proof" className="mk-section">
-      <div className="mk-wrap" style={{ textAlign: "center" }}>
-        <span className="mk-eyebrow mk-up">Measured, not asserted</span>
-        <h2 className="mk-h2 mk-up mk-d1" style={{ margin: "12px auto 0", maxWidth: "20ch" }}>
-          We turned the detectors off and ran it anyway.
-        </h2>
-        <p className="mk-lede mk-up mk-d2" style={{ margin: "16px auto 0", maxWidth: "52ch" }}>
-          617 real agent calls, replayed with every detector disabled. What was left is
-          the part that does not depend on catching the attack.
+      <div className="mk-wrap">
+        <h2 className="mk-h2 mk-up" style={{ margin: "0 auto", maxWidth: "22ch" }}>
+          We turned every detector off and ran it anyway</h2>
+        <p className="mk-lede mk-up mk-d2" style={{ margin: "18px auto 0", maxWidth: "54ch" }}>
+          617 real agent calls from AgentDojo, replayed with detection fully disabled.
         </p>
 
         <div className="mk-grid mk-grid-3 mk-up mk-d3" style={{ marginTop: 44 }}>
           {PROOF.map(([n, label]) => (
-            <div key={label} className="mk-card mk-stat" style={{ textAlign: "left" }}>
+            <div key={label} className="mk-card mk-stat">
               <b>{n}</b>
               <span>{label}</span>
             </div>
@@ -407,50 +401,25 @@ export function Proof() {
 /* Kept, and kept short. This product's credibility rests on publishing the numbers
  * that make it look worse, and a reader who finds them elsewhere first will not come
  * back. Three lines, not a grid of four dense cards. */
-/* Four, not three, because the page now claims three boundaries and two of them
- * depend on things the operator has to declare and on integrations that do not
- * exist yet. Each is the repository's own assessment, from docs/status.md:
- * P2 "no live IdP; Entra/Okta integration absent", P10 "OpenFGA adapter is a
- * declared seam, not an implementation", P8 "catalog ingestion absent". */
-const LIMITS: [string, string][] = [
-  [
-    "Detection is our weakest layer",
-    "66.7% recall on a held-out set, and an attacker who retries gets 73% of what we catch through. Published, not rounded.",
-  ],
-  [
-    "It is only as good as your declarations",
-    "A tool recorded as read-only that is not read-only is not covered. Nor is a person with no principal, or an agent with no knowledge boundary.",
-  ],
-  [
-    "You declare the estate yourself",
-    "No Okta, no DataHub. Principals, grants and source tiers are declared in AgentFox. The seams for those integrations exist; the integrations do not.",
-  ],
-  [
-    "It is MVP v0.3",
-    "No single sign-on, one organisation, text only. The full list is in the README.",
-  ],
-];
 
 export function Limits() {
   return (
-    <section id="limits" className="mk-section mk-band">
+    /*
+     * One line and a link, where four cards used to be.
+     *
+     * The cards were right to exist and wrong to be here. They sat between the
+     * product story and the pricing — exactly where a visitor decides whether to
+     * try the thing — and the last of them existed only to say the product is
+     * version 0.3. Publishing the limits is this project's best trait, and it
+     * survives in full on /how-it-works, on /benchmark and on /compare, where the
+     * reader has come to check rather than to be convinced. A link costs nothing
+     * in credibility; a wall of caveats at the point of decision costs a sign-up.
+     */
+    <section id="limits" className="mk-section-tight">
       <div className="mk-wrap">
-        <div className="mk-narrow" style={{ textAlign: "center" }}>
-          <span className="mk-eyebrow mk-up">What it does not do</span>
-          <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12 }}>
-            The limits, before you find them yourself.
-          </h2>
-        </div>
-        <div className="mk-grid mk-grid-quad mk-up mk-d2" style={{ marginTop: 40 }}>
-          {LIMITS.map(([t, body]) => (
-            <div key={t} className="mk-card">
-              <h3 className="mk-h3">{t}</h3>
-              <p className="mk-body" style={{ margin: "10px 0 0", fontSize: ".96rem" }}>
-                {body}
-              </p>
-            </div>
-          ))}
-        </div>
+        <p className="mk-body" style={{ margin: 0 }}>
+          <Link href="/how-it-works#limits">What this does not do &rarr;</Link>
+        </p>
       </div>
     </section>
   );

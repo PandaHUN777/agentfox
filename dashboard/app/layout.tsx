@@ -1,10 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
-import { Albert_Sans } from "next/font/google";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 
-const albertSans = Albert_Sans({ subsets: ["latin"], variable: "--font-sans" });
 import { cookies, headers } from "next/headers";
 import { SESSION_COOKIE, safeApi } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -249,7 +247,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       lang="en-GB"
       data-theme="light"
       suppressHydrationWarning
-      className={`${albertSans.variable} ${GeistMono.variable} ${GeistSans.variable}`}
+      className={`${GeistMono.variable} ${GeistSans.variable}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />

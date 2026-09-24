@@ -3,9 +3,8 @@ import Link from "next/link";
 import { CATEGORY_CAP } from "./how-it-works/_public";
 import { SITE_URL, SUPPORT_EMAIL, publicPageMetadata, HOME_TITLE, HOME_DESCRIPTION } from "@/lib/site";
 import { MarketingNav, REPO } from "@/components/marketing/nav";
-import { HowItWorks, FAQ, CTA, Footer } from "@/components/marketing/sections";
+import { CTA, Footer } from "@/components/marketing/sections";
 import { Hero, Stack, Boundaries, Around, Proof, Limits } from "@/components/marketing/home";
-import { Editions } from "@/components/marketing/editions";
 
 export const dynamic = "force-dynamic";
 
@@ -141,20 +140,19 @@ function Landing() {
             cost, and what will go wrong. The limits are near the end on purpose:
             they are the last thing a buyer checks and the first thing a competitor
             quotes, so they are ours to state plainly rather than theirs to find. */}
+        {/* Four sections, not nine. A copy audit of the rendered text found 32
+            verbatim blocks shared between this page and /product — the whole
+            rollout sequence, the whole FAQ, the whole pricing table — which is
+            why the page ran to 8,016px and 1,464 words. A reader who wants the
+            rollout steps is a reader who has already decided; they can click
+            through. Rollout and the FAQ now live only on /product, the editions
+            table only on /pricing. */}
         <Hero />
         <Stack />
-        {/* Three decisions before anything else, then how you get there, then the
-            evidence for it. Editions moved below the limits: a section about a
-            support relationship and a cloud that does not exist yet was sitting
-            between the proof and the honest caveats, which is the wrong place for
-            it on a page whose job is to be believed. */}
         <Boundaries />
-        <HowItWorks />
         <Proof />
         <Around />
         <Limits />
-        <FAQ n={4} more />
-        <Editions />
         <CTA />
       </main>
       <Footer />

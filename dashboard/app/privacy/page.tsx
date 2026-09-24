@@ -36,7 +36,7 @@ function Ref({ children }: { children: React.ReactNode }) {
   return (
     <p
       className="mk-mono"
-      style={{ color: "var(--mk-faint)", margin: "10px 0 0", overflowWrap: "anywhere" }}
+      style={{ color: "var(--mk-muted)", margin: "10px 0 0", overflowWrap: "anywhere" }}
     >
       {children}
     </p>
@@ -219,7 +219,7 @@ export default function Privacy() {
               <div className="mk-grid mk-grid-2" style={{ marginTop: 18 }}>
                 <div className="mk-card">
                   <p className="mk-label">nometria_session</p>
-                  <p className="mk-body" style={{ margin: "10px 0 0", fontSize: ".95rem" }}>
+                  <p className="mk-body" style={{ margin: "10px 0 0", fontSize: "var(--t-body)" }}>
                     The API token minted for you at sign-in, which is what the control
                     plane checks on every request. <span className="mk-mono">httpOnly</span>
                     , <span className="mk-mono">secure</span>,{" "}
@@ -230,7 +230,7 @@ export default function Privacy() {
                 </div>
                 <div className="mk-card">
                   <p className="mk-label">gh_oauth_state</p>
-                  <p className="mk-body" style={{ margin: "10px 0 0", fontSize: ".95rem" }}>
+                  <p className="mk-body" style={{ margin: "10px 0 0", fontSize: "var(--t-body)" }}>
                     The one-shot value that ties your sign-in redirect back to the request
                     that started it, so a forged callback is rejected. Deleted the moment
                     the sign-in completes.
@@ -285,7 +285,7 @@ export default function Privacy() {
               <div className="mk-grid" style={{ marginTop: 18 }}>
                 <div className="mk-card">
                   <p className="mk-h3">Vercel</p>
-                  <p className="mk-body" style={{ margin: "8px 0 0", fontSize: ".95rem" }}>
+                  <p className="mk-body" style={{ margin: "8px 0 0", fontSize: "var(--t-body)" }}>
                     Hosts both halves of this site: the dashboard you are reading and the
                     control-plane API behind it. Everything described on this page passes
                     through their infrastructure.
@@ -294,7 +294,7 @@ export default function Privacy() {
                 </div>
                 <div className="mk-card">
                   <p className="mk-h3">Neon</p>
-                  <p className="mk-body" style={{ margin: "8px 0 0", fontSize: ".95rem" }}>
+                  <p className="mk-body" style={{ margin: "8px 0 0", fontSize: "var(--t-body)" }}>
                     The Postgres database. Playground sandboxes, accounts, traces, findings
                     and the audit chain all live here.
                   </p>
@@ -302,7 +302,7 @@ export default function Privacy() {
                 </div>
                 <div className="mk-card">
                   <p className="mk-h3">GitHub</p>
-                  <p className="mk-body" style={{ margin: "8px 0 0", fontSize: ".95rem" }}>
+                  <p className="mk-body" style={{ margin: "8px 0 0", fontSize: "var(--t-body)" }}>
                     Only if you sign in. The sign-in exchange and the profile lookup go to{" "}
                     <span className="mk-mono">github.com</span> and{" "}
                     <span className="mk-mono">api.github.com</span>, and later repository
@@ -429,8 +429,7 @@ export default function Privacy() {
               <div className="mk-card mk-card-raised">
                 <span className="mk-eyebrow">The part that matters most</span>
                 <h2 className="mk-h2" style={{ marginTop: 16 }}>
-                  A copy you run yourself sends us nothing.
-                </h2>
+                  A copy you run yourself sends us nothing</h2>
                 <p className="mk-body" style={{ marginTop: 14 }}>
                   Nothing on this page applies to a self-hosted install. There is no
                   licence check, no activation call, no usage ping, no crash reporter and

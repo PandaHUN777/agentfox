@@ -209,9 +209,14 @@ const AGENTS: Record<string, { holds: string; tries: Suggestion[] }> = {
 function VerdictLine({
   v,
   window: w,
+  surface,
 }: {
   v: EnforcementVerdict;
   window?: EnforcementVerdict;
+  /** What was checked. Without this the two checks are indistinguishable, and a
+   *  visitor who types the home page's own example into the composer gets `allow`
+   *  — correct for text, and read as the product not working. */
+  surface?: string;
 }) {
   const held = v.effective_verdict !== v.verdict;
   const caughtByWindow =
@@ -228,6 +233,7 @@ function VerdictLine({
           <Verdict value={v.verdict} />
         )}
         {caughtByWindow && <span className="tag escalate">caught across messages</span>}
+        {surface && <span className="pg-surface">{surface}</span>}
         <span className="pg-why">why</span>
       </summary>
       <div className="pg-verdict-body">
@@ -258,7 +264,7 @@ function ActionCard({ t }: { t: Extract<Turn, { kind: "action" }> }) {
       </div>
       {t.pending && <span className="pg-pending">checking…</span>}
       {t.error && <span className="tag bad">{t.error}</span>}
-      {t.verdict && <VerdictLine v={t.verdict} />}
+      {t.verdict && <VerdictLine v={t.verdict} surface="the action" />}
     </div>
   );
 }
@@ -467,9 +473,10 @@ export function Playground({ apiBase }: { apiBase: string }) {
   // component cannot import `next/headers`.
   return (
     <div className="mk-wrap">
-          <h1 className="pg-h1">Try to break a real agent.</h1>
+          <h1 className="pg-h1">Try to break a real agent</h1>
           <p className="pg-lede">
-            Pick an agent and send it something. Every verdict is the real one.
+            Pick an agent. The chips run a real tool call; the box checks the text you
+            type. Both verdicts come from the same enforcement code.
           </p>
 
           <div className="pg-agents" role="tablist" aria-label="Agent">
@@ -556,7 +563,7 @@ export function Playground({ apiBase }: { apiBase: string }) {
                             <span className="pg-msg-note">scripted reply, no model ran</span>
                           )}
                           {t.text}
-                          {t.verdict && <VerdictLine v={t.verdict} window={t.windowVerdict} />}
+                          {t.verdict && <VerdictLine v={t.verdict} window={t.windowVerdict} surface="message text" />}
                         </div>
                       );
                     })

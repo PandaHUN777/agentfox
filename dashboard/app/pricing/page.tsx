@@ -39,8 +39,7 @@ export default function Pricing() {
       <MarketingNav />
       <main>
         <section className="mk-section" style={{ paddingBottom: 0 }}>
-          <div className="mk-wrap" style={{ textAlign: "center" }}>
-            <span className="mk-eyebrow mk-up">Pricing</span>
+          <div className="mk-wrap">
             <h1 className="mk-h1 mk-up mk-d1" style={{ margin: "18px auto 0", maxWidth: "16ch" }}>
               Free to self-host, <em>forever</em>.
             </h1>

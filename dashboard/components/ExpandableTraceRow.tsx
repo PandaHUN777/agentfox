@@ -161,7 +161,7 @@ function TraceExpansion({ detail: d }: { detail: any }) {
                           <div key={i}>
                             <span className="mono">{f.entity_type}</span>{" "}
                             <span className="muted">{f.score?.toFixed(2)}</span>
-                            <div className="muted mono" style={{ fontSize: 11 }}>{f.sample}</div>
+                            <div className="muted mono" style={{ fontSize: "var(--t-micro)" }}>{f.sample}</div>
                           </div>
                         ))
                       )}

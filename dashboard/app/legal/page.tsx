@@ -87,7 +87,7 @@ export default function Legal() {
                         <Link href={row.href}>{row.title}</Link>
                       )}
                     </h2>
-                    <p className="mk-body" style={{ margin: "8px 0 0", fontSize: ".95rem" }}>
+                    <p className="mk-body" style={{ margin: "8px 0 0", fontSize: "var(--t-body)" }}>
                       {row.blurb}
                     </p>
                   </div>

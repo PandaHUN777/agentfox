@@ -64,7 +64,7 @@ const COLUMN: CSSProperties = {
 
 const ITEM_BODY: CSSProperties = {
   margin: "5px 0 0",
-  fontSize: ".92rem",
+  fontSize: "var(--t-small)",
   lineHeight: 1.5,
 };
 
@@ -94,17 +94,16 @@ export function Editions() {
   return (
     <section id="editions" className="mk-section">
       <div className="mk-wrap">
-        <div className="mk-narrow mk-up" style={{ textAlign: "center" }}>
+        <div className="mk-narrow mk-up">
           <span className="mk-eyebrow">Editions</span>
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
-            Free forever, supported, or waiting.
-          </h2>
+            Free forever. Support if you want it</h2>
           <p className="mk-lede" style={{ margin: "14px auto 0", maxWidth: "62ch" }}>
-            Same software in all three. What you pay for is a support relationship.
+            Same software either way. What you pay for is a person to call.
           </p>
         </div>
 
-        <div className="mk-grid mk-grid-3" style={{ marginTop: 44 }}>
+        <div className="mk-grid mk-grid-2" style={{ marginTop: 44, maxWidth: 760, marginInline: "auto" }}>
           {/* 1. Open source */}
           <div className="mk-card mk-up mk-d1" style={COLUMN}>
             <div className="mk-row" style={{ gap: 8 }}>
@@ -151,10 +150,7 @@ export function Editions() {
             <Item label="Who it is for">
               Teams putting this in front of an auditor who want a named person to call.
             </Item>
-            <Item label="Cost">
-              Talk to us. Not priced yet, and we would rather agree it with the first
-              few teams than guess.
-            </Item>
+            <Item label="Cost">Talk to us — we will agree a price with you.</Item>
 
             <div style={ACTION_FOOT}>
               <span className="mk-label">Start here</span>
@@ -168,35 +164,15 @@ export function Editions() {
             </div>
           </div>
 
-          {/* 3. Managed cloud, in development */}
-          <div className="mk-card mk-up mk-d3" style={COLUMN}>
-            <div className="mk-row" style={{ gap: 8 }}>
-              <h3 className="mk-h3">Managed cloud (in development)</h3>
-              <span className="mk-chip mk-chip-hold">In development</span>
-            </div>
-
-            <Item label="What you get">
-              Nothing yet. It is in development and you cannot sign up today.
-            </Item>
-            <Item label="Who it is for">
-              Teams who would rather not run it themselves, once it exists.
-            </Item>
-            <Item label="Cost">
-              Nothing is priced, because nothing is running.
-            </Item>
-
-            <div style={ACTION_FOOT}>
-              <span className="mk-label">Start here</span>
-              <a
-                className="mk-btn mk-btn-outline"
-                href={CLOUD_HREF}
-                style={{ justifyContent: "center" }}
-              >
-                Join the waitlist
-              </a>
-            </div>
-          </div>
+          {/* The third card was a third of this section given to a product that does
+              not exist, described in four negations: "Nothing yet", "you cannot sign
+              up today", "Nothing is priced, because nothing is running". It is one
+              line below the grid now. The fact is unchanged; it just no longer takes
+              up a third of the page arguing against itself. */}
         </div>
+        <p className="mk-fine mk-up mk-d3" style={{ margin: "22px auto 0",}}>
+          A hosted version is coming. <a href={CLOUD_HREF}>Join the waitlist.</a>
+        </p>
       </div>
     </section>
   );
@@ -218,12 +194,12 @@ export function OpenSourcePromise() {
               style={{ padding: 20, display: "grid", gap: 6, minWidth: 0 }}
             >
               <span className="mk-label">{f.label}</span>
-              <p className="mk-body" style={{ margin: 0, fontSize: ".9rem", lineHeight: 1.5 }}>
+              <p className="mk-body" style={{ margin: 0, fontSize: "var(--t-small)", lineHeight: 1.5 }}>
                 {f.body}
               </p>
               <code
                 className="mk-mono"
-                style={{ color: "var(--mk-faint)", overflowWrap: "anywhere" }}
+                style={{ color: "var(--mk-muted)", overflowWrap: "anywhere" }}
               >
                 {f.where}
               </code>
@@ -282,8 +258,7 @@ export function WhyOpen() {
         <div className="mk-up" style={{ maxWidth: "34ch" }}>
           <span className="mk-eyebrow">Why open</span>
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
-            The core is open, and stays open.
-          </h2>
+            The core is open, and stays open</h2>
         </div>
 
         <div className="mk-grid mk-grid-3" style={{ marginTop: 36 }}>
@@ -294,7 +269,7 @@ export function WhyOpen() {
               style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}
             >
               <h3 className="mk-h3">{w.title}</h3>
-              <p className="mk-body" style={{ margin: 0, fontSize: ".94rem" }}>
+              <p className="mk-body" style={{ margin: 0, fontSize: "var(--t-small)" }}>
                 {w.body}
               </p>
             </div>

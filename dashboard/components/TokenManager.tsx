@@ -10,7 +10,7 @@ const inputStyle = {
   border: "1px solid var(--border)",
   background: "var(--panel-2)",
   color: "var(--text)",
-  fontSize: 13,
+  fontSize: "var(--t-small)",
   fontFamily: "inherit",
 } as const;
 
@@ -156,7 +156,7 @@ export function TokenManager() {
                     <button
                       type="button"
                       className="btn-reject"
-                      style={{ fontSize: 12 }}
+                      style={{ fontSize: "var(--t-micro)" }}
                       onClick={() => revoke(t.id)}
                     >
                       Revoke

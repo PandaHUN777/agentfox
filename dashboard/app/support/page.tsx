@@ -48,7 +48,7 @@ function Out({ href, children }: { href: string; children: React.ReactNode }) {
 
 function Head({ eyebrow, title, lede }: { eyebrow: string; title: string; lede?: string }) {
   return (
-    <div className="mk-narrow mk-up" style={{ textAlign: "center" }}>
+    <div className="mk-narrow mk-up">
       <span className="mk-eyebrow">{eyebrow}</span>
       <h2 className="mk-h2" style={{ marginTop: 14 }}>
         {title}
@@ -67,10 +67,9 @@ const TABLE: CSSProperties = {
   width: "100%",
   minWidth: 620,
   borderCollapse: "collapse",
-  fontSize: ".9rem",
+  fontSize: "var(--t-small)",
 };
 const TH: CSSProperties = {
-  textAlign: "left",
   padding: "12px 14px",
   borderBottom: "1px solid var(--mk-border-strong)",
   verticalAlign: "bottom",
@@ -179,14 +178,13 @@ export default function Support() {
       <MarketingNav />
       <main>
         <section className="mk-section" style={{ paddingBottom: 0 }}>
-          <div className="mk-wrap" style={{ textAlign: "center" }}>
-            <span className="mk-eyebrow mk-up">Support</span>
+          <div className="mk-wrap">
             <h1 className="mk-h1 mk-up mk-d1" style={{ margin: "18px auto 0", maxWidth: "18ch" }}>
-              One maintainer, <em>best effort</em>, no SLA.
+              Every report gets <em>read</em>.
             </h1>
             <p className="mk-lede mk-up mk-d2" style={{ margin: "20px auto 0", maxWidth: "58ch" }}>
-              This is one developer&rsquo;s project. Every route below gets read, and none
-              carries a promised response time.
+              This is one developer&rsquo;s project, so none of the routes below carries a
+              promised response time. All of them are read.
             </p>
             <div className="mk-row mk-up mk-d3" style={{ justifyContent: "center", marginTop: 26, gap: 10 }}>
               <a href={NEW_ISSUE} target="_blank" rel="noreferrer" className="mk-btn mk-btn-primary">
@@ -220,11 +218,8 @@ export default function Support() {
                 <span className="mk-label" style={{ color: "var(--mk-stop)" }}>
                   Redact first
                 </span>
-                <p className="mk-body" style={{ margin: 0, fontSize: ".94rem", color: "var(--mk-text)" }}>
-                  Do not paste real prompts, tool arguments, retrieved documents, audit rows or
-                  trace payloads. Replace names, account numbers, URLs and secrets with obvious
-                  placeholders. A reduced reproduction with made-up values is more useful, because
-                  it can be run here.
+                <p className="mk-body" style={{ margin: 0, fontSize: "var(--t-small)", color: "var(--mk-text)" }}>
+                  Do not paste real prompts, tool arguments, retrieved documents or audit rows. Replace names, accounts, URLs and secrets with obvious placeholders. A reduced reproduction with made-up values runs here.
                 </p>
               </div>
               <ol className="mk-steps mk-up mk-d2" style={{ listStyle: "none", margin: "24px 0 0", padding: 0 }}>
@@ -237,7 +232,7 @@ export default function Support() {
                       <code className="mk-mono" style={{ overflowWrap: "anywhere" }}>
                         {b.cmd}
                       </code>
-                      <p className="mk-body" style={{ margin: "5px 0 0", fontSize: ".93rem" }}>
+                      <p className="mk-body" style={{ margin: "5px 0 0", fontSize: "var(--t-small)" }}>
                         {b.why}
                       </p>
                     </div>
@@ -285,8 +280,7 @@ export default function Support() {
             <div className="mk-up">
               <span className="mk-eyebrow">The one that matters most</span>
               <h2 className="mk-h2" style={{ marginTop: 14 }}>
-                A wrong verdict is the best report we get.
-              </h2>
+                A wrong verdict is the best report we get</h2>
               <p className="mk-body" style={{ marginTop: 14, maxWidth: "48ch" }}>
                 A false positive costs you an afternoon. A false negative is the thing the product
                 exists to prevent. There is a template for both.
@@ -299,7 +293,7 @@ export default function Support() {
             <div className="mk-card mk-up mk-d2" style={{ display: "grid", gap: 14, minWidth: 0 }}>
               <div>
                 <span className="mk-label">It asks for</span>
-                <p className="mk-body" style={{ margin: "5px 0 0", fontSize: ".93rem" }}>
+                <p className="mk-body" style={{ margin: "5px 0 0", fontSize: "var(--t-small)" }}>
                   Which way it went wrong, the trace id, the rule id, the policy pack and its
                   mode, and which surface was being checked: input, output, tool arguments, tool
                   result, a memory write or an agent message.
@@ -307,14 +301,14 @@ export default function Support() {
               </div>
               <div>
                 <span className="mk-label">And if a tool was involved</span>
-                <p className="mk-body" style={{ margin: "5px 0 0", fontSize: ".93rem" }}>
+                <p className="mk-body" style={{ margin: "5px 0 0", fontSize: "var(--t-small)" }}>
                   The tool&rsquo;s impact tier and the capability grant that applied. Containment is
                   exactly as good as the declarations behind it.
                 </p>
               </div>
               <div>
                 <span className="mk-label">Not a vulnerability</span>
-                <p className="mk-body" style={{ margin: "5px 0 0", fontSize: ".93rem" }}>
+                <p className="mk-body" style={{ margin: "5px 0 0", fontSize: "var(--t-small)" }}>
                   A prompt injection a detector missed goes here, not through the private advisory
                   route. SECURITY.md says so itself: detection is a speed bump, not a defence.
                 </p>
@@ -331,10 +325,10 @@ export default function Support() {
               style={{ display: "grid", gap: 12, minWidth: 0 }}
             >
               <div className="mk-row" style={{ gap: 8 }}>
-                <h2 className="mk-h3">Found a vulnerability?</h2>
+                <h2 className="mk-h2">Found a vulnerability?</h2>
                 <span className="mk-chip mk-chip-stop">Private route only</span>
               </div>
-              <p className="mk-body" style={{ margin: 0, fontSize: ".94rem" }}>
+              <p className="mk-body" style={{ margin: 0, fontSize: "var(--t-small)" }}>
                 Do not open a public issue for a security problem, and do not email the details.{" "}
                 <Out href={SECURITY_MD}>SECURITY.md</Out> holds the private reporting route, what
                 is in scope, and the two things this project says in public are not
@@ -368,14 +362,14 @@ export default function Support() {
             <div className="mk-grid mk-grid-3" style={{ marginTop: 40 }}>
               <div className="mk-card mk-up mk-d1" style={{ display: "grid", gap: 8, minWidth: 0 }}>
                 <span className="mk-label">Free tier</span>
-                <p className="mk-body" style={{ margin: 0, fontSize: ".93rem" }}>
+                <p className="mk-body" style={{ margin: 0, fontSize: "var(--t-small)" }}>
                   GitHub Issues and Discussions, answered on a best-effort basis by one developer.
                   No service level, and no promised response time.
                 </p>
               </div>
               <div className="mk-card mk-up mk-d2" style={{ display: "grid", gap: 8, minWidth: 0 }}>
                 <span className="mk-label">Supported self-hosted</span>
-                <p className="mk-body" style={{ margin: 0, fontSize: ".93rem" }}>
+                <p className="mk-body" style={{ margin: 0, fontSize: "var(--t-small)" }}>
                   A support relationship, not different software. Email{" "}
                   <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> and say what you are
                   rolling out.
@@ -383,7 +377,7 @@ export default function Support() {
               </div>
               <div className="mk-card mk-up mk-d3" style={{ display: "grid", gap: 8, minWidth: 0 }}>
                 <span className="mk-label">Managed cloud</span>
-                <p className="mk-body" style={{ margin: 0, fontSize: ".93rem" }}>
+                <p className="mk-body" style={{ margin: 0, fontSize: "var(--t-small)" }}>
                   In development. It does not exist and you cannot sign up today. Editions are on{" "}
                   <Link href="/pricing">the pricing page</Link>.
                 </p>
@@ -404,7 +398,7 @@ export default function Support() {
               {DOCS.map((d, i) => (
                 <div key={d.title} className={`mk-card mk-up mk-d${Math.min(i + 1, 5)}`}>
                   <h3 className="mk-h3">{d.title}</h3>
-                  <p className="mk-body" style={{ margin: "8px 0 0", fontSize: ".93rem" }}>
+                  <p className="mk-body" style={{ margin: "8px 0 0", fontSize: "var(--t-small)" }}>
                     {d.body}
                   </p>
                 </div>

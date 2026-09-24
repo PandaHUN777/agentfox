@@ -16,11 +16,16 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 // Three in-page anchors and three real pages. The anchors are what a visitor who
 // wants to know what this does actually needs; the pages are the two things that
 // need no account plus the source.
+/* Four of the nine pages were reachable only from the footer, and "Open source"
+   was a mislabelled anchor into a pricing block on the home page. These are the
+   pages, named the way they are titled. */
 const LINKS: [string, string][] = [
   ["Product", "/product"],
-  ["Open source", "/#editions"],
+  ["How it works", "/how-it-works"],
   ["Playground", "/playground"],
   ["Benchmarks", "/benchmark"],
+  ["Compare", "/compare"],
+  ["Pricing", "/pricing"],
 ];
 
 export const REPO = "https://github.com/architsharm/agentfox";
@@ -68,6 +73,25 @@ export async function MarketingNav() {
           </Link>
         </div>
       </div>
+
+      <details className="mk-menu">
+        <summary aria-label="Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+            <path d="M4 7h16M4 12h16M4 17h16" />
+          </svg>
+        </summary>
+        <div className="mk-menu-panel">
+          {LINKS.map(([label, href]) => (
+            <Link key={href} href={href}>
+              {label}
+            </Link>
+          ))}
+          <a href={REPO} target="_blank" rel="noreferrer">
+            Source
+          </a>
+          <Link href="/support">Support</Link>
+        </div>
+      </details>
     </header>
   );
 }

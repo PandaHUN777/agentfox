@@ -40,7 +40,7 @@ export default function Product() {
       <MarketingNav />
       <main>
         <section className="mk-section" style={{ paddingBottom: 0 }}>
-          <div className="mk-wrap" style={{ textAlign: "center" }}>
+          <div className="mk-wrap">
             <span className="mk-eyebrow mk-up">The long version</span>
             <h1 className="mk-h1 mk-up mk-d1" style={{ margin: "18px auto 0", maxWidth: "17ch" }}>
               Every layer, on a <em>real screen</em>.

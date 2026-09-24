@@ -86,7 +86,7 @@ export default async function Login({
             </span>
           </Link>
 
-          <h1>Sign in, or start a workspace.</h1>
+          <h1>Sign in, or start a workspace</h1>
           <p className="sub">
             AgentFox keeps a register of every AI agent you run, the rules each one has
             to follow, and a record of what it actually did. Signing in with GitHub
@@ -134,7 +134,7 @@ export default async function Login({
       <aside className="auth-wall" aria-label="What AgentFox does">
         <div className="auth-wall-inner">
           <span className="auth-wall-eyebrow">Measured, not asserted</span>
-          <h2>We turned the detectors off and ran it anyway.</h2>
+          <h2>We turned the detectors off and ran it anyway</h2>
           <p>
             617 real agent calls, replayed with every detector disabled. What was left
             is the part that does not depend on catching the attack.

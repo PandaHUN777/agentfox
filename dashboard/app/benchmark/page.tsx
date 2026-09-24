@@ -92,13 +92,11 @@ export default function BenchmarkPage() {
         <section className="mk-section-tight">
           <div className="mk-wrap">
             <div style={{ maxWidth: 760 }}>
-              <span className="mk-eyebrow">Benchmarks</span>
               <h1
-                className="mk-h2"
-                style={{ marginTop: 12, fontSize: "clamp(2rem, 4.4vw, 3rem)" }}
+                className="mk-h1"
+                style={{ marginTop: 12, fontSize: "clamp(2.25rem, 4.4vw, var(--t-display))" }}
               >
-                What was measured, and what it does not show.
-              </h1>
+                What was measured, and what it does not show</h1>
               <p className="mk-lede" style={{ marginTop: 18, maxWidth: "58ch" }}>
                 Five benchmarks, written up in full. Some of them make this product look
                 good and some of them do not, and they are here for the same reason: a

@@ -55,13 +55,13 @@ function Area({
 }) {
   return (
     <div className="panel body" style={{ marginBottom: 12 }}>
-      <strong style={{ display: "block", fontSize: 13.5 }}>
+      <strong style={{ display: "block", fontSize: "var(--t-small)" }}>
         {n}. {title}
       </strong>
-      <span style={{ display: "block", fontSize: 12.5, color: "var(--faint)", margin: "3px 0 8px" }}>
+      <span style={{ display: "block", fontSize: "var(--t-micro)", color: "var(--faint)", margin: "3px 0 8px" }}>
         {question}
       </span>
-      <span style={{ display: "block", fontSize: 13, color: "var(--muted)", lineHeight: 1.55 }}>
+      <span style={{ display: "block", fontSize: "var(--t-small)", color: "var(--muted)", lineHeight: 1.55 }}>
         {children}
       </span>
     </div>
@@ -80,13 +80,11 @@ export default function HowItWorks() {
         <section className="mk-section-tight">
           <div className="mk-wrap">
             <div style={{ maxWidth: 760 }}>
-              <span className="mk-eyebrow">How it works</span>
               <h1
-                className="mk-h2"
-                style={{ marginTop: 12, fontSize: "clamp(2rem, 4.4vw, 3rem)" }}
+                className="mk-h1"
+                style={{ marginTop: 12, fontSize: "clamp(2.25rem, 4.4vw, var(--t-display))" }}
               >
-                One call, all the way through.
-              </h1>
+                One call, all the way through</h1>
               <p className="mk-lede" style={{ marginTop: 18, maxWidth: "58ch" }}>
                 AgentFox is a {CATEGORY}. It sits between your agent and everything it
                 can act on.
@@ -100,11 +98,7 @@ export default function HowItWorks() {
 
         <h2>The path one call takes</h2>
         <p>
-          Three ways on: a line in your Python entry point that wraps the model clients
-          in that process; an HTTP call from any language about a single tool call; or
-          the gateway, which speaks the API your agent already calls. The sequence is
-          the same for all three, and covers tool calls and retrieval steps as well as
-          model calls.
+          Three ways on: one line in Python, an HTTP call from any language, or the gateway. The sequence below is the same for all three.
         </p>
         <ol>
           <Step title="A call arrives, and we work out who is behind it">
@@ -207,12 +201,12 @@ export default function HowItWorks() {
         <div style={{ margin: "-4px 0 12px" }}>
           <DraftCaveat />
         </div>
-        <p style={{ fontSize: 13, color: "var(--muted)", marginTop: -4 }}>
+        <p style={{ fontSize: "var(--t-small)", color: "var(--muted)", marginTop: -4 }}>
           That warning is on every compliance screen inside the product, and the draft
           mappings ship inside evidence packages carrying the same chip.
         </p>
 
-        <h2>What this does not do</h2>
+        <h2 id="limits">What this does not do</h2>
         <ul>
           <li>
             It does not make your agent robust to attack. Detection loses to an
@@ -230,14 +224,32 @@ export default function HowItWorks() {
           <li>
             It does not block anything you have not asked it to block. The policy that
             governs model traffic ships in observe mode: it records what it would have
-            done and lets the call through. One exception is on from the first day. The
-            tool-containment pack refuses calls in one situation only: a tool that can do
-            real damage, such as moving money, deleting something or sending an email, is
-            about to be passed a value that came not from the person using the agent but
-            from content nobody vouches for, such as a web page, a retrieved document or
-            another tool&rsquo;s output. Those calls are refused or sent to a human.
+            done and lets the call through.
+          </li>
+          <li>
+            One exception is on from the first day. A tool that can move money, delete
+            something or send an email will not accept an argument that came out of a web
+            page, a retrieved document or another tool&rsquo;s output. Those calls stop
+            for a human.
           </li>
         </ul>
+        <ul>
+          <li>
+            <strong>Detection is the weakest layer.</strong> 66.7% recall on a held-out
+            set, and an attacker who reads the verdict and retries gets 73% of what we do
+            catch through. Published, not rounded.
+          </li>
+          <li>
+            <strong>You declare the estate yourself.</strong> There is no Okta connector
+            and no DataHub connector. Principals, grants and source tiers live in
+            AgentFox. The seams exist; the integrations do not.
+          </li>
+          <li>
+            <strong>Version 0.3, and the gaps are listed in the repository</strong> No single sign-on, one organisation, text
+            only. The full list is in the README.
+          </li>
+        </ul>
+
         <div className="note-panel">
           <strong>What all of this rests on.</strong> Grants, impact tiers, ceilings and
           downstream triggers are declared by whoever operates the agent, and the checks
@@ -264,7 +276,6 @@ export default function HowItWorks() {
               minHeight: 32,
               padding: "7px 16px",
               whiteSpace: "normal",
-              textAlign: "center",
               textDecoration: "none",
             }}
           >
