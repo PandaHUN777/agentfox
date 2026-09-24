@@ -27,7 +27,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = publicPageMetadata({
   title: "Support and how to get help",
   description:
-    "Which issue template to use, where questions go, the private route for a vulnerability, where the docs live, and what one maintainer can honestly promise.",
+    "Which issue template to use, where questions go, the private route for a vulnerability, and what one maintainer can honestly promise.",
   path: "/support",
 });
 
@@ -105,12 +105,12 @@ const ROUTES: [string, string, string][] = [
   [
     "The product cannot do a thing you need",
     "Feature request",
-    "What you were governing and where it ran out of road, not a wish list.",
+    "What you were governing and where it ran out of road.",
   ],
   [
     "How do I, is this the right tool, does this design hold",
     "Discussions",
-    "Questions and ideas, so the issue tracker stays a list of things to fix.",
+    "Questions and ideas, so the issue tracker stays a list of fixes.",
   ],
   [
     "You found a vulnerability",
@@ -122,15 +122,15 @@ const ROUTES: [string, string, string][] = [
 const BEFORE: { cmd: string; why: string }[] = [
   {
     cmd: "agentfox doctor",
-    why: "Grades the runtime configuration and the quality of your tool declarations. It explains a surprising verdict on its own often enough to be worth running first.",
+    why: "Grades the runtime configuration and the quality of your tool declarations. Often explains a surprising verdict on its own.",
   },
   {
     cmd: "agentfox version",
-    why: "Every template asks for it. The first line is enough, or the commit SHA if you run from a clone.",
+    why: "Every template asks for it. The first line is enough, or the commit SHA from a clone.",
   },
   {
     cmd: "agentfox policy list",
-    why: "Prints which packs are bound and whether each is in observe or enforce. A verdict report is hard to read without it.",
+    why: "Prints which packs are bound and whether each is in observe or enforce.",
   },
 ];
 
@@ -140,8 +140,7 @@ const DOCS: { title: string; body: React.ReactNode }[] = [
     body: (
       <>
         <Out href={GETTING_STARTED}>docs/getting-started.md</Out> goes from an empty directory to
-        one of your own agents under enforcement. Every command in it was run before it was
-        written down.
+        one of your own agents under enforcement. Every command in it was run first.
       </>
     ),
   },
@@ -149,8 +148,8 @@ const DOCS: { title: string; body: React.ReactNode }[] = [
     title: "What the thing actually does",
     body: (
       <>
-        <Link href="/how-it-works">How it works</Link> is the public explanation, and{" "}
-        <Link href="/product">the product page</Link> walks each layer on a real screen.
+        <Link href="/how-it-works">How it works</Link> is the public explanation.{" "}
+        <Link href="/product">The product page</Link> walks each layer on a real screen.
       </>
     ),
   },
@@ -168,7 +167,7 @@ const DOCS: { title: string; body: React.ReactNode }[] = [
     body: (
       <>
         The <Out href={HARNESS}>harness</Out> packages the product as skills, commands, subagents
-        and safety hooks, so an agent can do the setup without learning 17 CLI groups first.
+        and safety hooks, so an agent can do the setup without learning 17 CLI groups.
       </>
     ),
   },
@@ -186,9 +185,8 @@ export default function Support() {
               One maintainer, <em>best effort</em>, no SLA.
             </h1>
             <p className="mk-lede mk-up mk-d2" style={{ margin: "20px auto 0", maxWidth: "58ch" }}>
-              This is one developer&rsquo;s project. Everything below is a real route that gets
-              read, and none of it carries a promised response time, because there is nobody to
-              promise it on.
+              This is one developer&rsquo;s project. Every route below gets read, and none
+              carries a promised response time.
             </p>
             <div className="mk-row mk-up mk-d3" style={{ justifyContent: "center", marginTop: 26, gap: 10 }}>
               <a href={NEW_ISSUE} target="_blank" rel="noreferrer" className="mk-btn mk-btn-primary">
@@ -207,7 +205,7 @@ export default function Support() {
             <Head
               eyebrow="Before you file"
               title="Three commands, and one warning"
-              lede="A report for this product is unusually likely to contain production data, and a GitHub issue is public."
+              lede="A report for this product is likely to contain production data, and a GitHub issue is public."
             />
             <div className="mk-narrow" style={{ marginTop: 36 }}>
               <div
@@ -223,10 +221,10 @@ export default function Support() {
                   Redact first
                 </span>
                 <p className="mk-body" style={{ margin: 0, fontSize: ".94rem", color: "var(--mk-text)" }}>
-                  Do not paste real prompts, real tool arguments, real retrieved documents, real
-                  audit rows or real trace payloads. Replace names, account numbers, URLs and
-                  secrets with obvious placeholders. A reduced reproduction with made-up values is
-                  more useful than a real one, because it can be run here.
+                  Do not paste real prompts, tool arguments, retrieved documents, audit rows or
+                  trace payloads. Replace names, account numbers, URLs and secrets with obvious
+                  placeholders. A reduced reproduction with made-up values is more useful, because
+                  it can be run here.
                 </p>
               </div>
               <ol className="mk-steps mk-up mk-d2" style={{ listStyle: "none", margin: "24px 0 0", padding: 0 }}>
@@ -256,7 +254,7 @@ export default function Support() {
             <Head
               eyebrow="Where it goes"
               title="Which template, for which problem"
-              lede="Blank issues are switched off, so the form you pick is the form that gets you the right questions."
+              lede="Blank issues are switched off, so the form you pick asks the right questions."
             />
             <div className="mk-card mk-up mk-d2" style={{ ...SCROLLER, marginTop: 36 }}>
               <table style={TABLE}>
@@ -291,11 +289,11 @@ export default function Support() {
               </h2>
               <p className="mk-body" style={{ marginTop: 14, maxWidth: "48ch" }}>
                 A false positive costs you an afternoon. A false negative is the thing the product
-                exists to prevent. Both are worth filing, and there is a template just for them.
+                exists to prevent. There is a template for both.
               </p>
               <p className="mk-fine" style={{ marginTop: 18, maxWidth: "48ch" }}>
-                The trace id and the rule id are what is needed. The payload usually is not, so
-                redact it and keep the structure.
+                The trace id and the rule id are what is needed, not the payload. Redact it and
+                keep the structure.
               </p>
             </div>
             <div className="mk-card mk-up mk-d2" style={{ display: "grid", gap: 14, minWidth: 0 }}>
@@ -311,8 +309,7 @@ export default function Support() {
                 <span className="mk-label">And if a tool was involved</span>
                 <p className="mk-body" style={{ margin: "5px 0 0", fontSize: ".93rem" }}>
                   The tool&rsquo;s impact tier and the capability grant that applied. Containment is
-                  exactly as good as the declarations behind it, so a surprising verdict is often a
-                  declaration rather than a detector.
+                  exactly as good as the declarations behind it.
                 </p>
               </div>
               <div>
@@ -338,14 +335,13 @@ export default function Support() {
                 <span className="mk-chip mk-chip-stop">Private route only</span>
               </div>
               <p className="mk-body" style={{ margin: 0, fontSize: ".94rem" }}>
-                Please do not open a public issue for a security problem, and please do not email
-                the details either. <Out href={SECURITY_MD}>SECURITY.md</Out> holds the private
-                reporting route, what is in scope, and the two things this project says in public
-                are not vulnerabilities.
+                Do not open a public issue for a security problem, and do not email the details.{" "}
+                <Out href={SECURITY_MD}>SECURITY.md</Out> holds the private reporting route, what
+                is in scope, and the two things this project says in public are not
+                vulnerabilities.
               </p>
               <p className="mk-fine" style={{ margin: 0 }}>
-                It is the only description of that process, deliberately. A second copy is a
-                chance for someone to follow the out-of-date one.
+                It is the only description of that process, deliberately.
               </p>
               <div className="mk-row" style={{ marginTop: 4 }}>
                 <a
@@ -373,14 +369,14 @@ export default function Support() {
               <div className="mk-card mk-up mk-d1" style={{ display: "grid", gap: 8, minWidth: 0 }}>
                 <span className="mk-label">Free tier</span>
                 <p className="mk-body" style={{ margin: 0, fontSize: ".93rem" }}>
-                  GitHub Issues and Discussions, read and answered on a best-effort basis by one
-                  developer. No service level, and no promised response time.
+                  GitHub Issues and Discussions, answered on a best-effort basis by one developer.
+                  No service level, and no promised response time.
                 </p>
               </div>
               <div className="mk-card mk-up mk-d2" style={{ display: "grid", gap: 8, minWidth: 0 }}>
                 <span className="mk-label">Supported self-hosted</span>
                 <p className="mk-body" style={{ margin: 0, fontSize: ".93rem" }}>
-                  A support relationship rather than different software. Email{" "}
+                  A support relationship, not different software. Email{" "}
                   <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> and say what you are
                   rolling out.
                 </p>
@@ -388,8 +384,8 @@ export default function Support() {
               <div className="mk-card mk-up mk-d3" style={{ display: "grid", gap: 8, minWidth: 0 }}>
                 <span className="mk-label">Managed cloud</span>
                 <p className="mk-body" style={{ margin: 0, fontSize: ".93rem" }}>
-                  In development. It does not exist and you cannot sign up today. The editions are
-                  laid out on <Link href="/pricing">the pricing page</Link>.
+                  In development. It does not exist and you cannot sign up today. Editions are on{" "}
+                  <Link href="/pricing">the pricing page</Link>.
                 </p>
               </div>
             </div>
@@ -402,7 +398,7 @@ export default function Support() {
             <Head
               eyebrow="Read first"
               title="Where the documentation lives"
-              lede="Most questions have an answer in one of these four, and they are all faster than waiting on a reply."
+              lede="Most questions have an answer in one of these four."
             />
             <div className="mk-grid mk-grid-4" style={{ marginTop: 40 }}>
               {DOCS.map((d, i) => (

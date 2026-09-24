@@ -227,7 +227,7 @@ const ROWS: [string, string, string, string][] = [
 const DIFFERENT: { title: string; body: string }[] = [
   {
     title: "Containment does not wait for a detector",
-    body: "A value that came out of a retrieved document is structurally blocked from an irreversible tool, whether or not any detector fired. Measured with the detectors switched off entirely, which is a total bypass rather than a simulated miss.",
+    body: "A value out of a retrieved document is structurally blocked from an irreversible tool, whether or not any detector fired. Measured with the detectors switched off entirely, which is a total bypass rather than a simulated miss.",
   },
   {
     title: "Vendor neutral by construction",
@@ -239,7 +239,7 @@ const DIFFERENT: { title: string; body: string }[] = [
   },
   {
     title: "Apache-2.0, including the part that decides",
-    body: "The enforcement path, the policy engine and the audit verifier are all readable. Nothing is behind a licence key and nothing is gated behind a paid tier.",
+    body: "The enforcement path, the policy engine and the audit verifier are all readable. Nothing is behind a licence key or a paid tier.",
   },
 ];
 
@@ -255,15 +255,14 @@ export default function Compare() {
               Two camps, each with <em>half the problem</em>.
             </h1>
             <p className="mk-lede mk-up mk-d2" style={{ margin: "20px auto 0", maxWidth: "60ch" }}>
-              One camp owns policy and framework mapping. The other owns runtime guardrails.
-              This page says what each is good at, then where each beats us, then what is
-              actually different here.
+              One camp owns policy and framework mapping. The other owns runtime
+              guardrails.
             </p>
             <p className="mk-fine mk-up mk-d3" style={{ marginTop: 18, maxWidth: "62ch", marginInline: "auto" }}>
               Every competitor statement below comes from{" "}
-              <Out href={ANALYSIS}>docs/competitor-analysis.md</Out> or from a benchmark in this
-              repository, and the source is named next to the claim. No vendor is scored from its
-              own marketing pages.
+              <Out href={ANALYSIS}>docs/competitor-analysis.md</Out> or a benchmark in this
+              repository, named next to the claim. No vendor is scored from its own marketing
+              pages.
             </p>
           </div>
         </section>
@@ -274,7 +273,7 @@ export default function Compare() {
             <Head
               eyebrow="The landscape"
               title="What each camp genuinely owns"
-              lede="Both descriptions are the README’s own, written before this page existed and not softened for it."
+              lede="Both descriptions are the README’s own, not softened for this page."
             />
             <div className="mk-grid mk-grid-2" style={{ marginTop: 40 }}>
               {CAMPS.map((c, i) => (
@@ -309,10 +308,9 @@ export default function Compare() {
               className="mk-fine mk-up mk-d3"
               style={{ maxWidth: "var(--measure)", margin: "24px auto 0", textAlign: "center" }}
             >
-              The analysis also names the alternative that wins most often, and it is neither
-              camp: 6 of 11 vetted senior engineers had already hand-built a guardrail layer
-              inside their employer. Its phrase for that is competing with{" "}
-              <code className="mk-mono">git init</code>.
+              The alternative that wins most often is neither camp: 6 of 11 vetted senior
+              engineers had already hand-built a guardrail layer inside their employer. The
+              analysis calls that competing with <code className="mk-mono">git init</code>.
             </p>
           </div>
         </section>
@@ -323,7 +321,7 @@ export default function Compare() {
             <Head
               eyebrow="Concessions"
               title="Where a competitor beats us"
-              lede="Stated before a buyer makes us state it, with the number and the document each one came from."
+              lede="With the number and the document each one came from."
             />
             <div className="mk-grid mk-grid-2" style={{ marginTop: 40 }}>
               {LOSSES.map((l, i) => (
@@ -354,7 +352,7 @@ export default function Compare() {
             <Head
               eyebrow="The one measured comparison"
               title="Against a real llm-guard install"
-              lede="The only vendor named with numbers on this page, because this is the only one we installed and scored ourselves."
+              lede="The only vendor we installed and scored ourselves."
             />
             <div className="mk-narrow" style={{ marginTop: 36 }}>
               <p className="mk-fine mk-up" style={{ margin: "0 0 12px" }}>
@@ -396,7 +394,7 @@ export default function Compare() {
                 Source: <Out href={TIER_README}>benchmarks/agent_security/README.md</Out>, Tier B.
                 Every llm-guard figure came from a real{" "}
                 <code className="mk-mono">PromptInjection().scan()</code> call in a separate
-                interpreter, not from an asserted number.
+                interpreter, not an asserted number.
               </p>
               <p className="mk-body mk-up mk-d3" style={{ marginTop: 14, fontSize: ".94rem" }}>
                 llm-guard wins precision here by 15.1 points, and that cost is ours to carry. The
@@ -414,7 +412,7 @@ export default function Compare() {
             <Head
               eyebrow="Category by category"
               title="Capabilities, by camp rather than by vendor"
-              lede="Columns are categories. Putting ticks against a named company would mean trusting that company’s marketing page, which we cannot check."
+              lede="Columns are categories. Ticks against a named company would mean trusting that company’s marketing page, which we cannot check."
             />
             <div className="mk-card mk-up mk-d2" style={{ ...SCROLLER, marginTop: 36 }}>
               <table style={TABLE}>
@@ -454,7 +452,7 @@ export default function Compare() {
             <Head
               eyebrow="The difference"
               title="What is actually different here"
-              lede="Four things, each of which a reader can check in the repository rather than take on trust."
+              lede="Four things, each checkable in the repository."
             />
             <div className="mk-grid mk-grid-4" style={{ marginTop: 40 }}>
               {DIFFERENT.map((d, i) => (
@@ -470,8 +468,8 @@ export default function Compare() {
               className="mk-lede mk-up mk-d5"
               style={{ maxWidth: "58ch", margin: "40px auto 0", textAlign: "center" }}
             >
-              The numbers behind all of this are on <Link href="/benchmark">the benchmark page</Link>,
-              and the mechanism is on <Link href="/product">the product page</Link>.
+              The numbers are on <Link href="/benchmark">the benchmark page</Link>, the mechanism
+              on <Link href="/product">the product page</Link>.
             </p>
           </div>
         </section>

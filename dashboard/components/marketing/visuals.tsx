@@ -457,8 +457,7 @@ export function DetectorPipeline({ className }: { className?: string }) {
         </Code>
         <p style={TIGHT}>
           {/* redteam.py:154-155 */}
-          Indirect injection arriving through retrieved content, the highest-severity
-          realistic attack on an agent.
+          Indirect injection, arriving inside retrieved content.
         </p>
       </div>
 
@@ -485,28 +484,29 @@ export function DetectorPipeline({ className }: { className?: string }) {
               }`,
             }}
           >
+            {/* Seven rows, each previously carrying a version number, two chips and a
+                sentence of commentary — a specification rendered as a picture. The
+                row that caught something keeps its sentence; the six that ran and
+                found nothing are allowed to be one quiet line, which is what makes
+                the one that fired visible at a glance. */}
             <div className="mk-row" style={{ gap: 7 }}>
               <span className="mk-mono" style={{ color: "var(--mk-text)" }}>
                 {d.key}
               </span>
-              <span className="mk-mono" style={{ color: "var(--mk-faint)" }}>
-                v{d.version}
-              </span>
-              <span className={`mk-chip ${d.tier === "default" ? "mk-chip-accent" : ""}`}>
-                {d.tier}
-              </span>
               <StatusChip status={d.status} />
             </div>
             {d.raised.length ? (
-              <div className="mk-row" style={{ gap: 6 }}>
-                {d.raised.map((entity) => (
-                  <span key={entity} className="mk-chip mk-chip-stop">
-                    {entity}
-                  </span>
-                ))}
-              </div>
+              <>
+                <div className="mk-row" style={{ gap: 6 }}>
+                  {d.raised.map((entity) => (
+                    <span key={entity} className="mk-chip mk-chip-stop">
+                      {entity}
+                    </span>
+                  ))}
+                </div>
+                <p style={TIGHT}>{d.note}</p>
+              </>
             ) : null}
-            <p style={TIGHT}>{d.note}</p>
           </div>
         ))}
       </div>
@@ -523,9 +523,8 @@ export function DetectorPipeline({ className }: { className?: string }) {
       <Verdict tone="hold" verdict="degraded">
         <p style={STRONG}>
           {/* pipeline.py:206-217; status vocabulary base.py:77 */}
-          One detector is recorded as degraded rather than silently skipped. A control that
-          quietly stops running while reporting effective is the failure mode that makes
-          compliance products worthless.
+          Degraded, not silently skipped. A control that stops running while reporting
+          effective is the failure worth designing against.
         </p>
       </Verdict>
 

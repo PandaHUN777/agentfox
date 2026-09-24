@@ -75,7 +75,7 @@ export default async function Login({
   }
 
   return (
-    <div className="auth">
+    <main className="auth">
       <div className="auth-form">
         <div className="auth-inner">
           <Link href="/" className="auth-brand">
@@ -149,6 +149,6 @@ export default async function Login({
           </div>
         </div>
       </aside>
-    </div>
+    </main>
   );
 }

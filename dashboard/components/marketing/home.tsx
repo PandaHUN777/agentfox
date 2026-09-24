@@ -17,7 +17,8 @@ import { REPO } from "@/components/marketing/nav";
  *   1. Every section heading states a benefit, not a mechanism. The mechanism is
  *      allowed in the supporting line, never in the heading.
  *   2. Three ticks beat a paragraph. A reader scans ticks and skips prose.
- *   3. One picture per section, large, and it is the product rather than a drawing.
+ *   3. One picture per section, large, and drawn rather than captured: a
+ *      screenshot of a dense dashboard at column width is a picture of a document.
  *   4. Sections alternate shape and ground, so the page has a rhythm instead of
  *      eight identical grids.
  *   5. No jargon before its plain-English meaning has been given.
@@ -25,28 +26,6 @@ import { REPO } from "@/components/marketing/nav";
 
 /* --- Shared ------------------------------------------------------------- */
 
-/** A screenshot in window chrome. Real captures of a running instance. */
-function Shot({ src, alt, w = 1600, h }: { src: string; alt: string; w?: number; h: number }) {
-  return (
-    <div className="mk-frame">
-      <div className="mk-frame-bar">
-        <span className="mk-frame-dots">
-          <i />
-          <i />
-          <i />
-        </span>
-      </div>
-      <img
-        src={src}
-        alt={alt}
-        loading="lazy"
-        width={w}
-        height={h}
-        style={{ width: "100%", height: "auto", display: "block" }}
-      />
-    </div>
-  );
-}
 
 function Ticks({ items, row }: { items: string[]; row?: boolean }) {
   return (

@@ -256,7 +256,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body>
         {!isAppPage ? (
-          <main className="login-main">{children}</main>
+          /* A div, not a <main>. Every public page renders its own <main>, so this
+             was nesting one inside another — invalid, and it silently applied the
+             app's `max-width: 1400px` and 32px side padding to the whole marketing
+             site. The hero's full-bleed wash stopped 52px short of each edge and
+             nobody could see why. */
+          <div className="login-main">{children}</div>
         ) : (
           <div className="shell">
             <nav className="side">

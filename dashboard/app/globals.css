@@ -185,11 +185,12 @@ a:hover { text-decoration: underline; }
 
 /* --- Auth pages ------------------------------------------------------------- */
 
-/* `main` above carries the app's page padding and a 1400px measure. A sign-in
-   split and a marketing page both run to the viewport edge, so the chromeless
-   wrapper gives all of it back. Without this the navy wall stops short of the
-   right edge and sits in a white margin. */
-.login-main { display: block; width: 100%; max-width: none; padding: 0; margin: 0; }
+/* The wrapper for everything that is not the app: the public site and sign-in.
+   It is a plain block and deliberately carries no measure and no padding — each
+   of those pages renders its own <main> and owns its own layout. It used to be a
+   <main> itself, which nested one inside another and handed the app's 1400px cap
+   to the marketing site. */
+.login-main { display: block; width: 100%; }
 
 /* The sign-in page.
    It was a 380px card, centred, with every line of it centred inside that —
@@ -455,7 +456,11 @@ nav.side a.active svg { opacity: 1; }
  * own margin-left/margin-right at equal CSS specificity later in this file,
  * which silently won and left content pinned to the left instead).
  */
-main { width: 100%; min-width: 0; padding: 28px 32px 64px; max-width: 1400px; margin: 0 auto; }
+/* Scoped to the app shell. As a bare `main` this also caught the <main> every
+   public page renders for itself, so the marketing site silently inherited the
+   app's 1400px measure and 32px side padding — which is why a full-bleed hero
+   wash stopped 52px short of each edge. */
+.shell main { width: 100%; min-width: 0; padding: 28px 32px 64px; max-width: 1400px; margin: 0 auto; }
 
 h1 { font-size: 25px; margin: 0; letter-spacing: -0.022em; font-weight: 660; }
 

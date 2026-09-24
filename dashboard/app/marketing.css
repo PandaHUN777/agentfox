@@ -343,15 +343,26 @@
 /* Was a two-colour radial wash in the accent. Apple does not tint the ground behind
    a product; it lightens it very slightly so the object sits in a soft field. This
    is a single neutral gradient and should be almost impossible to point at. */
+/* The light behind the hero.
+   This was a flat grey that ran to `transparent` at exactly 620px, which produced
+   a visible horizontal edge across the page — the hero read as a grey box sitting
+   on white rather than as light falling on it. Two layers now: a faint brand-tinted
+   glow behind the headline, and a neutral gradient that is fully transparent well
+   before the element ends, so there is no edge to see. */
 .mk-wash {
   position: absolute;
   inset-inline: 0;
-  top: 0;
-  height: 620px;
+  top: -60px;
+  height: 820px;
   pointer-events: none;
   z-index: 0;
-  background: linear-gradient(180deg, var(--mk-surface-2) 0%, transparent 100%);
-  opacity: .8;
+  background:
+    radial-gradient(
+      62% 52% at 50% 6%,
+      color-mix(in srgb, var(--mk-brand) 7%, transparent) 0%,
+      transparent 68%
+    ),
+    linear-gradient(180deg, var(--mk-surface-2) 0%, transparent 78%);
 }
 
 /* --- Entrance motion, CSS only ----------------------------------------- */

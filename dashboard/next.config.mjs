@@ -6,5 +6,12 @@ const nextConfig = {
   // request time instead — which is what makes the same container work in dev,
   // docker-compose and a customer's VPC without a rebuild.
   output: "standalone",
+  // A dev server and a production build in the same working tree otherwise share
+  // one `.next`, and whichever writes second leaves the other serving a directory
+  // whose manifests have just been deleted — the symptom is a live page suddenly
+  // 500ing with ENOENT on `routes-manifest.json`, or rendering completely
+  // unstyled. `NEXT_DIST_DIR=.next-dev npm run dev` keeps them apart. Unset, this
+  // is exactly the previous behaviour, so CI and Vercel are unaffected.
+  distDir: process.env.NEXT_DIST_DIR || ".next",
 };
 export default nextConfig;

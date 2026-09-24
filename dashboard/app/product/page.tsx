@@ -46,12 +46,10 @@ export default function Product() {
               Every layer, on a <em>real screen</em>.
             </h1>
             <p className="mk-lede mk-up mk-d2" style={{ margin: "20px auto 0", maxWidth: "58ch" }}>
-              Six pillars, each with the part of the product that does the work. The
-              screenshots are captures of a running instance, not drawings of one.
+              Six pillars, each with the part of the product that does the work.
             </p>
             <p className="mk-fine mk-up mk-d3" style={{ marginTop: 18 }}>
-              Prefer to watch it happen? <Link href="/playground">The playground</Link> needs no
-              account.
+              <Link href="/playground">The playground</Link> needs no account.
             </p>
           </div>
         </section>
