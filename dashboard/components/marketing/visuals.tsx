@@ -177,12 +177,29 @@ function Panel({ children, style }: { children: ReactNode; style?: CSSProperties
   );
 }
 
-/** A grid that collapses to one column well above 360px. */
-function Cols({ min, children }: { min: number; children: ReactNode }) {
+/**
+ * A grid that collapses to one column well above 360px.
+ *
+ * `cap` bounds the column count. Six pillars under a plain auto-fit became four and
+ * then two, which reads as a five-item list with a straggler rather than as six.
+ */
+function Cols({
+  min,
+  cap,
+  children,
+}: {
+  min: number;
+  cap?: number;
+  children: ReactNode;
+}) {
+  const track = `repeat(auto-fit, minmax(min(100%, ${min}px), 1fr))`;
   return (
     <div
       className="mk-grid"
-      style={{ gridTemplateColumns: `repeat(auto-fit, minmax(min(100%, ${min}px), 1fr))` }}
+      style={{
+        gridTemplateColumns: track,
+        ...(cap ? { maxWidth: cap * 260, marginInline: "auto", width: "100%" } : null),
+      }}
     >
       {children}
     </div>
@@ -265,7 +282,7 @@ const PILLARS: Pillar[] = [
 export function PillarGrid({ className }: { className?: string }) {
   return (
     <Frame title="nometria · six pillars" className={className}>
-      <Cols min={230}>
+      <Cols min={230} cap={3}>
         {PILLARS.map((p) => (
           <Panel key={p.n}>
             <div className="mk-row" style={{ gap: 8 }}>
