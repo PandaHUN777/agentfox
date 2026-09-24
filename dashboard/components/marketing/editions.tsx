@@ -172,8 +172,8 @@ export function Editions() {
               named person to call.
             </Item>
             <Item label="Cost">
-              Talk to us. There is no published price, because every rollout we
-              have costed so far looked different.
+              Talk to us. Support is not priced yet, and we would rather
+              agree it with the first few teams than guess at a number.
             </Item>
 
             <div style={ACTION_FOOT}>
