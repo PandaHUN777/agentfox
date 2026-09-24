@@ -1,6 +1,6 @@
 # AgentFox
 
-[![CI](https://github.com/architsharm/guardrails/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/architsharm/guardrails/actions/workflows/ci.yml)
+[![CI](https://github.com/architsharm/agentfox/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/architsharm/agentfox/actions/workflows/ci.yml)
 [![Licence: Apache-2.0](https://img.shields.io/badge/licence-Apache--2.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
 
@@ -30,7 +30,7 @@ its own verification state as you go.
 **2. Locally, two commands after install:**
 
 ```bash
-pip install git+https://github.com/architsharm/guardrails.git
+pip install git+https://github.com/architsharm/agentfox.git
 agentfox init && agentfox demo
 ```
 
@@ -42,7 +42,7 @@ enforcement path demonstrable with nothing installed.
 **3. Point it at your own code, without installing anything permanently:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/architsharm/guardrails/main/scripts/quickscan.sh | bash
+curl -fsSL https://raw.githubusercontent.com/architsharm/agentfox/main/scripts/quickscan.sh | bash
 ```
 
 No account, no clone, no config. It installs into a throwaway virtualenv (removed on exit), scans
@@ -397,7 +397,7 @@ and safety hooks, so "get my support agent governed" or "get me ready for the au
 learning every command first. Install it as a Claude Code plugin:
 
 ```bash
-claude plugin marketplace add architsharm/guardrails
+claude plugin marketplace add architsharm/agentfox
 claude plugin install agentfox@agentfox
 ```
 

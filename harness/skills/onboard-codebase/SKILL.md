@@ -19,7 +19,7 @@ agentfox version
 ```
 
 - **Exits 127:** install the package into the *project's* environment (its venv, uv project or
-  poetry env), not globally. The install line is `pip install "git+https://github.com/architsharm/guardrails.git"`.
+  poetry env), not globally. The install line is `pip install "git+https://github.com/architsharm/agentfox.git"`.
 - **Separate database:** ask whether they want one per project. The default is a
   `agentfox.db` next to the package. For a project-local DB, export
   `NOMETRIA_DATABASE_URL=sqlite:///$PWD/.agentfox/agentfox.db` and add `.agentfox/` to

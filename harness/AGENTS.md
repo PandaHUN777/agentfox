@@ -77,5 +77,5 @@ Skills write commands as `agentfox <args>`. If `agentfox` isn't on PATH:
   installed CLI or a checkout, or prints the install line.
 
 Paths such as `src/…` and `docs/…` refer to the AgentFox repository
-(https://github.com/architsharm/guardrails). They are local only when you're working inside
+(https://github.com/architsharm/agentfox). They are local only when you're working inside
 a checkout of it.

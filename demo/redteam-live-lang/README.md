@@ -517,7 +517,7 @@ not assumed; see `web.py`'s docstring).
 
 1. A Vercel project with **Root Directory** set to `demo/redteam-live-lang` (same
    pattern as the already-deployed `guardrails-api` project, whose Root Directory is
-   `api`) — importing `architsharm/guardrails` a second time as a separate project.
+   `api`) — importing `architsharm/agentfox` a second time as a separate project.
 2. A Postgres database bound to it — this demo uses its own, freshly-created Neon
    database via Vercel's Storage tab (native integration, already connected to this
    Vercel account for `guardrails-api`), **not** `guardrails-api`'s own `guardrails-db`

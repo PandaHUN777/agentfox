@@ -47,7 +47,7 @@ agentfox eval gate <suite> --baseline <run_id> --junit reports/eval.xml --sarif 
 
 ## 4. Add the CI workflow
 
-Copy [templates/nometria-governance.yml](templates/nometria-governance.yml) to
+Copy [templates/agentfox-governance.yml](templates/agentfox-governance.yml) to
 `.github/workflows/`. Adapt the install line to the user's project, and the suite and
 baseline to theirs. Each step fails the build for a different reason:
 

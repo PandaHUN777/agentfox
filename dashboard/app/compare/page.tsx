@@ -35,9 +35,9 @@ export const metadata: Metadata = publicPageMetadata({
   path: "/compare",
 });
 
-const ANALYSIS = "https://github.com/architsharm/guardrails/blob/main/docs/competitor-analysis.md";
+const ANALYSIS = "https://github.com/architsharm/agentfox/blob/main/docs/competitor-analysis.md";
 const TIER_README =
-  "https://github.com/architsharm/guardrails/blob/main/benchmarks/agent_security/README.md";
+  "https://github.com/architsharm/agentfox/blob/main/benchmarks/agent_security/README.md";
 
 function Out({ href, children }: { href: string; children: React.ReactNode }) {
   return (

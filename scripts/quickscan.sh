@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # AgentFox Quickscan — one command, no account, nothing leaves this machine.
 #
-#   curl -fsSL https://raw.githubusercontent.com/architsharm/guardrails/main/scripts/quickscan.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/architsharm/agentfox/main/scripts/quickscan.sh | bash
 #
 # Installs AgentFox into a throwaway virtualenv (removed on exit either way) and runs
 # `agentfox quickscan` against the current directory. It's the same package
@@ -11,7 +11,7 @@
 
 set -euo pipefail
 
-REPO_URL="https://github.com/architsharm/guardrails.git"
+REPO_URL="https://github.com/architsharm/agentfox.git"
 TARGET_DIR="${1:-.}"
 
 info() { printf '%s\n' "$*" >&2; }

@@ -20,5 +20,5 @@ if [[ -n "$root" && -f "$root/pyproject.toml" ]] && grep -q '^name = "agentfox"'
   fi
 fi
 echo "agentfox is not installed. Install it with:" >&2
-echo '  pip install "git+https://github.com/architsharm/guardrails.git"' >&2
+echo '  pip install "git+https://github.com/architsharm/agentfox.git"' >&2
 exit 127

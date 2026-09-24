@@ -23,7 +23,7 @@ const LINKS: [string, string][] = [
   ["Benchmarks", "/benchmark"],
 ];
 
-export const REPO = "https://github.com/architsharm/guardrails";
+export const REPO = "https://github.com/architsharm/agentfox";
 
 /**
  * Reads the session cookie, which makes this async and keeps it a Server

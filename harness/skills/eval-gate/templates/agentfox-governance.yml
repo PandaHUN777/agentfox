@@ -18,7 +18,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install agentfox
-        run: pip install "git+https://github.com/architsharm/guardrails.git"
+        run: pip install "git+https://github.com/architsharm/agentfox.git"
       - name: Initialise (offline, idempotent)
         run: agentfox init --env test
       - name: Every model call is governed

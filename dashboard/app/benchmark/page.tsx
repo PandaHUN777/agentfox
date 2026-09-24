@@ -8,7 +8,7 @@ import { Footer } from "@/components/marketing/sections";
  * Public, unauthenticated evidence page for the number the playground quotes.
  *
  * It exists because the playground's "Read the full benchmark" link used to point
- * at `github.com/architsharm/guardrails/blob/main/benchmarks/agent_security/README.md`,
+ * at `github.com/architsharm/agentfox/blob/main/benchmarks/agent_security/README.md`,
  * a private repository: every visitor who followed the one quantitative claim on
  * that page got a 404. Inviting scrutiny and then losing the evidence is worse
  * than making no claim at all, so the methodology lives here instead.
@@ -50,7 +50,7 @@ function Source({ children }: { children: React.ReactNode }) {
   return <p className="source">Source: {children}</p>;
 }
 
-const REPO = "https://github.com/architsharm/guardrails";
+const REPO = "https://github.com/architsharm/agentfox";
 
 /**
  * The five write-ups, in the order the page makes them, and the one figure each

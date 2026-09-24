@@ -51,7 +51,7 @@ const CLOUD_HREF =
   `mailto:${SUPPORT_EMAIL}` +
   "?subject=Managed%20cloud%20waitlist%20(in%20development)";
 
-const REPO_HREF = "https://github.com/architsharm/guardrails";
+const REPO_HREF = "https://github.com/architsharm/agentfox";
 
 /* --- Shared furniture --------------------------------------------------- */
 

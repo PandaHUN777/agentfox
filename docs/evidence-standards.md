@@ -59,7 +59,7 @@ tools and policies are different. Every script here runs against your own databa
 
 ## If you get past it, tell us
 
-We would rather know. Open an issue at <https://github.com/architsharm/guardrails/issues> with the payload
+We would rather know. Open an issue at <https://github.com/architsharm/agentfox/issues> with the payload
 and the surface it reached. Findings that defeat a shipped detector are added to
 [`tests/corpus/injection.py`](../tests/corpus/injection.py) **when they are found, not when they are
 fixed**, which is the rule that keeps the corpus honest — a known miss sitting in the corpus failing is

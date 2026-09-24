@@ -143,7 +143,7 @@ export function ogImage(): ImageResponse {
           </span>
           <span style={{ display: "flex" }}>Open source</span>
           <span style={{ display: "flex", color: MK.border }}>·</span>
-          <span style={{ display: "flex" }}>github.com/architsharm/guardrails</span>
+          <span style={{ display: "flex" }}>github.com/architsharm/agentfox</span>
         </div>
       </div>
     ),

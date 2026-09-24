@@ -23,7 +23,7 @@ import { BrandLockup } from "@/components/marketing/brand";
  */
 
 /** Duplicated rather than imported: nav.tsx owns its own copy and is edited elsewhere. */
-const REPO = "https://github.com/architsharm/guardrails";
+const REPO = "https://github.com/architsharm/agentfox";
 const LICENSE = `${REPO}/blob/main/LICENSE`;
 const SECURITY = `${REPO}/blob/main/SECURITY.md`;
 
@@ -502,7 +502,7 @@ export function CTA() {
                 lineHeight: 1.7,
               }}
             >
-              {`pip install git+https://github.com/architsharm/guardrails.git\nagentfox init && agentfox demo`}
+              {`pip install git+https://github.com/architsharm/agentfox.git\nagentfox init && agentfox demo`}
             </pre>
             <p className="mk-fine" style={{ marginTop: 12 }}>
               <code className="mk-mono">init</code> creates a SQLite database and loads 43

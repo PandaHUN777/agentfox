@@ -31,7 +31,7 @@ export const metadata: Metadata = publicPageMetadata({
   path: "/support",
 });
 
-const REPO = "https://github.com/architsharm/guardrails";
+const REPO = "https://github.com/architsharm/agentfox";
 const SECURITY_MD = `${REPO}/blob/main/SECURITY.md`;
 const DISCUSSIONS = `${REPO}/discussions`;
 const NEW_ISSUE = `${REPO}/issues/new/choose`;

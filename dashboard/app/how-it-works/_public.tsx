@@ -29,7 +29,7 @@ export const CATEGORY = "governance and security control plane for AI agents in 
 export const CATEGORY_CAP = "Governance and security control plane for AI agents in production";
 
 /** The repository is about to be public, and the pages cite it constantly. */
-export const REPO = "https://github.com/architsharm/guardrails";
+export const REPO = "https://github.com/architsharm/agentfox";
 
 const LINKS: [string, string][] = [
   ["How it works", "/how-it-works"],

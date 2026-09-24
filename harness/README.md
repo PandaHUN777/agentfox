@@ -10,7 +10,7 @@ Without it, they'd have to learn 17 CLI groups, 150+ API routes and 43 docs firs
 **Claude Code, from GitHub:**
 
 ```bash
-claude plugin marketplace add architsharm/guardrails
+claude plugin marketplace add architsharm/agentfox
 ```
 
 ```bash
@@ -31,7 +31,7 @@ The harness drives the `agentfox` CLI, so the product has to be installed where 
 runs:
 
 ```bash
-pip install "git+https://github.com/architsharm/guardrails.git"
+pip install "git+https://github.com/architsharm/agentfox.git"
 ```
 
 ## What you get
