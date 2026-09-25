@@ -224,13 +224,13 @@ const ANSWER: Decision = {
   gist: "Outside the boundary, with the sentence to say instead.",
   rows: [
     { label: "Agent", value: "support-triage", mono: true },
-    { label: "Asked", value: "What will Tesla stock be worth next quarter?" },
+    { label: "Asked", value: "Will this customer\u2019s refund definitely be approved?" },
     { label: "Question", value: "prediction", mono: true, note: "allowed: fact, procedure" },
     { label: "Boundary", value: "help-center-articles", mono: true },
     {
       label: "Returns",
       value:
-        "\u201cThat asks for a projection rather than a recorded fact. I can only report what is in help-center-articles, so I don\u2019t have an answer for it.\u201d",
+        "\u201cI can tell you what the refund policy says and where this request is in the queue, but I can\u2019t promise an outcome. That decision isn\u2019t mine to make.\u201d",
     },
   ],
   verdict: "answerable: false",
@@ -311,7 +311,7 @@ export const BOUNDARIES: { id: string; question: string; lede: string; decision:
   {
     id: "access",
     question: "Can it read this?",
-    lede: "Your retrieval code asks who is asking. What they may not see does not come back.",
+    lede: "Your retrieval code asks who is asking. What they may not see never comes back.",
     decision: ACCESS,
   },
   {
@@ -323,7 +323,7 @@ export const BOUNDARIES: { id: string; question: string; lede: string; decision:
   {
     id: "act",
     question: "Can it do this?",
-    lede: "A tool call is checked against what the agent holds, reading none of the text.",
+    lede: "The call is checked against the agent\u2019s grants, not against the text.",
     decision: HERO,
   },
 ];
@@ -427,9 +427,10 @@ export function DecisionCard({
       ) : null}
 
       <div style={{ display: "grid", gap: wide ? 10 : 9 }}>
-        {decision.rows.map((row) => (
+        {decision.rows.map((row, i) => (
           <div
             key={row.label}
+            className="dc-row"
             style={
               wide
                 ? {
@@ -437,8 +438,9 @@ export function DecisionCard({
                     gridTemplateColumns: "minmax(78px, auto) 1fr",
                     gap: "2px 14px",
                     alignItems: "baseline",
+                    animationDelay: `${0.08 + i * 0.11}s`,
                   }
-                : { display: "grid", gap: 3 }
+                : { display: "grid", gap: 3, animationDelay: `${0.08 + i * 0.11}s` }
             }
           >
             <span className="mk-label">{row.label}</span>
@@ -465,7 +467,9 @@ export function DecisionCard({
       </div>
 
       <div
+        className="dc-verdict"
         style={{
+          animationDelay: `${0.08 + decision.rows.length * 0.11 + 0.1}s`,
           background: WASH[tone],
           // The hairline goes on first so the coloured left edge below overrides it.
           border: tone === "neutral" ? "1px solid var(--mk-border)" : undefined,

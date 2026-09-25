@@ -185,8 +185,8 @@ export function Hero() {
               payoff is that being tricked does not get the model an exception. */}
           <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "50ch" }}>
             Your agents can move money, delete records and send email. AgentFox checks
-            each of those calls against the limits you set, so a tricked model still
-            can&rsquo;t act outside them.
+            each call against the limits you set, so a tricked model still can&rsquo;t
+            act outside them.
           </p>
           {/* The install block used to read `pip install …` / `import agentfox;
               agentfox.auto()` directly beside the stream showing payments.transfer
@@ -199,10 +199,7 @@ export function Hero() {
               reader has not actually wired up is the worst error available, so the
               hero no longer pairs an import with a refusal. The two paths are named
               on /how-it-works, and the one action here is the playground. */}
-          <pre className="mk-install mk-up mk-d3">
-            <code>pip install git+https://github.com/architsharm/agentfox.git</code>
-          </pre>
-          <div className="mk-row mk-up mk-d4" style={{ marginTop: 24 }}>
+          <div className="mk-row mk-up mk-d4" style={{ marginTop: 26 }}>
             <Link href="/playground" className="mk-btn mk-btn-primary">
               Try it, no account
             </Link>
@@ -221,8 +218,8 @@ export function Hero() {
         <div className="mk-up mk-d3">
           <DecisionStream />
           <p className="mk-fine" style={{ marginTop: 12, maxWidth: "46ch" }}>
-            The refusal above uses this agent&rsquo;s grants and the call&rsquo;s own
-            arguments. It does not depend on recognising a malicious prompt.
+            Refused on this agent&rsquo;s grants and the call&rsquo;s own arguments —
+            no prompt recognition involved.
           </p>
         </div>
       </div>
@@ -287,9 +284,9 @@ export function Boundaries() {
     <section id="boundaries" className="mk-section mk-band">
       <div className="mk-wrap">
         <div className="mk-narrow">
-          <h2 className="mk-h2 mk-up">Three places a request can be stopped</h2>
+          <h2 className="mk-h2 mk-up">Stop the call before it spends, sends or deletes</h2>
           <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16, maxWidth: "56ch" }}>
-            Each one checks what this agent, and the person behind it, were granted.
+            Three checks, each against what this agent and the person behind it hold.
           </p>
         </div>
 
@@ -310,26 +307,14 @@ export function Boundaries() {
           ))}
         </div>
 
-        {/* The honest edge of the three cards, next to them rather than buried in the
-            limits section. The first two need the operator to have declared something;
-            the third is default-deny and needs nothing. */}
-        {/* Where each one runs, and what it costs you to turn on. Written after an
-            audit of the enforcement paths, because the first draft of this section
-            implied all three happen automatically and only the third does. */}
-        <div className="mk-grid mk-grid-3 mk-up mk-d4" style={{ marginTop: 26 }}>
+        {/* What each one costs to turn on. Kept, because a copy audit found the page
+            implying all three happen automatically when only the third does — but
+            the conditions fit in half the words they were using. */}
+        <div className="mk-grid mk-grid-3 mk-up mk-d4" style={{ marginTop: 24 }}>
           {[
-            [
-              "Read",
-              "You call the filter from your retrieval code, with a registered person and a grant. It returns what they may see; you drop the rest.",
-            ],
-            [
-              "Answer",
-              "Declare a knowledge boundary for the agent. It reports by default and abstains before the model is called once you set that boundary to enforce.",
-            ],
-            [
-              "Act",
-              "On a governed tool path, a call the agent holds no grant for is refused from the first request. Tool containment ships in enforce mode; the detector policies ship in observe.",
-            ],
+            ["Read", "You call the filter from your retrieval code. It returns what that person may see."],
+            ["Answer", "Declare a knowledge boundary. It reports until you set it to enforce, then abstains before the model runs."],
+            ["Act", "On a governed tool path, an ungranted call is refused from the first request. Containment ships enforcing, detectors observing."],
           ].map(([k, v]) => (
             <p key={k} className="mk-fine" style={{ margin: 0 }}>
               <strong style={{ color: "var(--mk-text)" }}>{k}.</strong> {v}
@@ -341,43 +326,43 @@ export function Boundaries() {
   );
 }
 
-/* --- 3b. What it keeps -------------------------------------------------- */
+/* --- 3b. What it keeps --------------------------------------------------- */
 
 /**
- * Evidence and discovery, demoted.
+ * Audit and discovery, in one section instead of two.
  *
- * They used to be two of the three top sections, which made the implied product an
- * audit-and-discovery suite with a permission check attached. They are real and
- * they matter, but they are what the product keeps and finds *around* the checks
- * above, so they sit under them and share one section instead of owning two.
+ * They were two full benefit sections, 195 words between them, which made the
+ * page read as three products stacked on one URL. They are one idea — what the
+ * product knows about your estate once the checks above are running — so they
+ * are one section with two panels, and the reader gets both in a screen.
  */
 export function Around() {
   return (
-    <>
-      <BenefitWide
-        title="Every decision lands in a chain you can verify without us"
-        lede="Calls routed through AgentFox produce one auditable object per request: the checks that ran, the verdict, and the reason. The chain behind it is tamper-evident and has an independent verifier."
-        ticks={[
-          "One page per request, with every check that ran",
-          "Auditors verify the log themselves, without trusting us",
-          "Compliance status computed from real traffic, not a questionnaire",
-        ]}
-        visual={<TraceAnatomy />}
-      />
+    <section className="mk-section mk-band">
+      <div className="mk-wrap">
+        <div className="mk-narrow">
+          <h2 className="mk-h2 mk-up">Prove what happened, and find what you missed</h2>
+          <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16, maxWidth: "56ch" }}>
+            Every governed call leaves a record an auditor can check without us.
+          </p>
+        </div>
 
-      <Benefit
-        band
-        flip
-        title="Find the agents nobody told you about"
-        lede="Point it at a repository or a running API. It reports what talks to a model, what is ungoverned, and who owns each one."
-        ticks={[
-          "Scans source without running it",
-          "Flags agents with no owner as a problem of their own",
-          "Red-teams your real configuration, not a model in general",
-        ]}
-        visual={<EstateScan />}
-      />
-    </>
+        <div className="mk-split mk-up mk-d2" style={{ marginTop: 36, gap: 28 }}>
+          <div>
+            <TraceAnatomy />
+            <p className="mk-fine" style={{ marginTop: 10 }}>
+              One page per request. Tamper-evident, with an independent verifier.
+            </p>
+          </div>
+          <div>
+            <EstateScan />
+            <p className="mk-fine" style={{ marginTop: 10 }}>
+              Reads source without running it. An agent with no owner is a finding.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -452,13 +437,12 @@ export function Proof() {
     <section id="proof" className="mk-section">
       <div className="mk-wrap">
         <span className="mk-eyebrow mk-up">Measured with every detector switched off</span>
-        <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12, maxWidth: "26ch" }}>
-          What still got blocked when detection was off
+        <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12, maxWidth: "24ch" }}>
+          Detection can fail. Permissions still hold.
         </h2>
         <p className="mk-lede mk-up mk-d2" style={{ marginTop: 16, maxWidth: "56ch" }}>
           617 ground-truth tool calls from AgentDojo, replayed through the same
-          tool-call guard with every detector disabled. The compromised agent is the
-          benchmark&rsquo;s premise, not something this run demonstrates.
+          tool-call guard with every detector disabled.
         </p>
 
         <div className="mk-threats mk-up mk-d3">
@@ -483,10 +467,9 @@ export function Proof() {
               reader follow a link to find out is doing the opposite of its job. */}
           <div className="mk-threat-foot">
             <p>
-              552 of 552 legitimate calls still ran. Of the 65 the attacker sent, 42
-              act and 23 only read — three reads got through, and all three were
-              things the agent already held a grant for. This measures whether an
-              action runs, and nothing else.
+              552 of 552 legitimate calls still ran. Three attacker reads got through,
+              each one something the agent already held a grant for. The compromised
+              agent is the benchmark&rsquo;s premise, not a result of this run.
             </p>
             <div className="mk-row" style={{ gap: 6 }}>
               {FRAMEWORKS.map((f) => (

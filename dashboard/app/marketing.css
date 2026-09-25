@@ -1148,3 +1148,44 @@
 .mk-notify h3 { margin: 0; }
 .mk-notify p { margin: 6px 0 0; max-width: 54ch; font-size: var(--t-small); }
 .mk-notify .wl { flex: 0 0 auto; min-width: min(100%, 22rem); }
+
+/* --- The decision card, arriving in the order the check runs ---------------
+ *
+ * Three deliberate motion moments on the home page, not animation on every
+ * element: the hero stream, these three decisions, and the audit chain being
+ * verified. What the motion says is the thing the card exists to say — the
+ * inputs are gathered, and then the verdict lands on them.
+ *
+ * `both` fill means the final state is the resting state, so the card is
+ * complete and legible the moment the animation ends, and identical to how it
+ * renders with motion disabled. */
+.dc-row,
+.dc-verdict { animation: dc-in .45s cubic-bezier(.25, .8, .35, 1) both; }
+@keyframes dc-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: none; }
+}
+/* The verdict is the payload, so it gets the one flourish: a brief bloom on its
+   own coloured edge as it lands. Colour only, no layout, no size change. */
+.dc-verdict { animation-name: dc-in, dc-land; animation-duration: .45s, .9s; }
+@keyframes dc-land {
+  0%, 40% { box-shadow: none; }
+  60%     { box-shadow: -3px 0 0 0 currentColor; }
+  100%    { box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dc-row, .dc-verdict { animation: none; }
+}
+
+/* The audit chain, linking. Each entry carries the hash of the one before it, so
+   the motion that teaches the mechanism is entry after entry, in order. */
+.chain-entry { animation: dc-in .4s cubic-bezier(.25, .8, .35, 1) both; }
+.chain-entry-broken { animation: dc-in .4s cubic-bezier(.25, .8, .35, 1) both, chain-break 1.1s ease-out .45s 1; }
+@keyframes chain-break {
+  0%, 30% { border-color: var(--mk-border); }
+  55%     { border-color: var(--mk-stop); }
+  100%    { border-color: color-mix(in srgb, var(--mk-stop) 45%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chain-entry, .chain-entry-broken { animation: none; }
+}

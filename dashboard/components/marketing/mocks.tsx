@@ -403,10 +403,12 @@ const CHAIN: ChainRow[] = [
 /** The digest seq 2 recomputes to once its recorded verdict is edited to "allow". */
 const TAMPERED_DIGEST = "958e900804910494";
 
-function ChainEntry({ row, broken }: { row: ChainRow; broken?: boolean }) {
+function ChainEntry({ row, broken, i = 0 }: { row: ChainRow; broken?: boolean; i?: number }) {
   return (
     <div
+      className={broken ? "chain-entry chain-entry-broken" : "chain-entry"}
       style={{
+        animationDelay: `${0.15 + i * 0.35}s`,
         border: "1px solid var(--mk-border)",
         borderRadius: "var(--mk-r-sm)",
         background: "var(--mk-surface-2)",
@@ -456,16 +458,16 @@ export function ChainMock({ className }: { className?: string }) {
       </div>
 
       <div style={{ display: "grid", gap: 8 }}>
-        <ChainEntry row={first} />
-        <ChainEntry row={second} />
-        <ChainEntry row={third} />
+        <ChainEntry row={first} i={0} />
+        <ChainEntry row={second} i={1} />
+        <ChainEntry row={third} i={2} />
       </div>
 
       <Rule />
 
       <div style={{ display: "grid", gap: 8 }}>
         <span className="mk-label">Someone edits seq 2 to read allow</span>
-        <ChainEntry row={{ ...second, digest: TAMPERED_DIGEST }} broken />
+        <ChainEntry row={{ ...second, digest: TAMPERED_DIGEST }} broken i={0} />
         <Verdict tone="stop" verdict="check failed">
           <p style={STRONG}>seq 2: entry digest does not match its contents</p>
           <p style={STRONG}>
