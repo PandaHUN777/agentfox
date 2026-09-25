@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/site";
+import { PageHeader } from "@/components/PageHeader";
+import { GlossaryFilter } from "@/components/GlossaryFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -45,37 +47,53 @@ const NOM_PREFIXES: [string, string][] = [
   ["NOM-GOV", "Governance & Compliance (Pillar 6) — policy-as-code, framework mappings, risk register"],
 ];
 
+/**
+ * What the filter reports as the denominator. Counted here rather than in the
+ * component because the component filters the DOM and would otherwise be
+ * counting whatever happened to render — including, during the first paint,
+ * nothing. Concepts (23) + pillars (15) + NOM prefixes (6) + detector
+ * libraries (6) + the two prose-only schemes.
+ */
+const TERM_COUNT = 23 + PILLARS.length + NOM_PREFIXES.length + 6 + 2;
+
 export default function Glossary() {
   return (
     <>
-      <h1>Glossary</h1>
-      <p className="sub">
-        Every word and code this interface actually shows you, decoded once instead of
-        assumed: the concepts first, then the coding schemes used across Policies,
-        Guardrails, Compliance and Board view. Every individual control still shows its
-        own plain-language objective where it appears, so this page is for the
-        vocabulary itself rather than a restatement of every control. For what each <em>area</em> of the
-        product is for, that is{" "}
-        <a href="/app/start?tab=map">What&rsquo;s in here</a> on the Start here page.
-      </p>
+      {/* Was an <h1> and a six-line paragraph explaining what a glossary is,
+          on a page nobody arrives at to read about glossaries. PageHeader for
+          consistency with every other page, and the sub says the one thing that
+          is not obvious from the title: where to go for the other question. */}
+      <PageHeader
+        title="Glossary"
+        sub={
+          <>
+            Every word and code this interface shows you, decoded once. For what each{" "}
+            <em>area</em> of the product is for, that is{" "}
+            <a href="/app/start?tab=map">What&rsquo;s in here</a>.
+          </>
+        }
+      />
 
+      <GlossaryFilter total={TERM_COUNT} />
+
+      <section data-gl-section>
       <h2>Concepts</h2>
       <p className="small muted" style={{ maxWidth: "var(--measure)" }}>
-        The coding schemes below are the least of it — these are the words the product
-        itself uses that don't explain themselves on first read.
+        The words the product itself uses that don&rsquo;t explain themselves on first
+        read. The coding schemes are below.
       </p>
       <div className="panel scroll-x">
         <table>
           <thead><tr><th>term</th><th>means</th></tr></thead>
           <tbody>
-            <tr>
+            <tr id="detectors-guardrails" data-term="detectors / guardrails">
               <td className="mono small">Detectors / Guardrails</td>
               <td className="small">
                 Runtime checks that run on every request as it happens — prompt injection,
                 PII, secrets, unsafe content. See <a href="/app/policies?tab=guardrails">Guardrails</a>.
               </td>
             </tr>
-            <tr>
+            <tr id="policies" data-term="policies">
               <td className="mono small">Policies</td>
               <td className="small">
                 The rules that decide what a detector's result actually does — allow,
@@ -84,7 +102,7 @@ export default function Glossary() {
                 (actually blocks) — see <a href="/app/policies">Policies</a>.
               </td>
             </tr>
-            <tr>
+            <tr id="controls" data-term="controls">
               <td className="mono small">Controls</td>
               <td className="small">
                 The compliance framing of the same underlying capabilities — "is this
@@ -92,7 +110,7 @@ export default function Glossary() {
                 self-attested checkbox — see <a href="/app/compliance">Compliance</a>.
               </td>
             </tr>
-            <tr>
+            <tr id="scorers" data-term="scorers">
               <td className="mono small">Scorers</td>
               <td className="small">
                 Offline judges that grade an agent's past output after the fact —
@@ -101,7 +119,7 @@ export default function Glossary() {
                 happens — see <a href="/app/evals">Evaluation</a>.
               </td>
             </tr>
-            <tr>
+            <tr id="decisions-verdicts" data-term="decisions / verdicts">
               <td className="mono small">Decisions / Verdicts</td>
               <td className="small">
                 A <strong>Decision</strong> is the logged record of one policy evaluation —
@@ -112,7 +130,7 @@ export default function Glossary() {
                 blocked call is expected, routine enforcement working correctly.
               </td>
             </tr>
-            <tr>
+            <tr id="findings" data-term="findings">
               <td className="mono small">Findings</td>
               <td className="small">
                 How a Detector run and a Decision turn into something that needs a
@@ -123,7 +141,7 @@ export default function Glossary() {
                 <a href="/app/findings">Findings</a>.
               </td>
             </tr>
-            <tr>
+            <tr id="observe-enforce" data-term="observe / enforce">
               <td className="mono small">Observe / enforce</td>
               <td className="small">
                 The two modes a policy can be in. In{" "}
@@ -135,7 +153,7 @@ export default function Glossary() {
                 anything.
               </td>
             </tr>
-            <tr>
+            <tr id="effective-verdict" data-term="effective verdict">
               <td className="mono small">Effective verdict</td>
               <td className="small">
                 What the policy <em>would</em> have done, recorded whatever mode it is
@@ -146,7 +164,7 @@ export default function Glossary() {
                 enforcing would cost you before you turn it on.
               </td>
             </tr>
-            <tr>
+            <tr id="canary" data-term="canary">
               <td className="mono small">Canary</td>
               <td className="small">
                 A policy change put live for a slice of traffic rather than all of it,
@@ -156,7 +174,7 @@ export default function Glossary() {
                 is as suspect as one that over-blocks.
               </td>
             </tr>
-            <tr>
+            <tr id="proposal" data-term="proposal">
               <td className="mono small">Proposal</td>
               <td className="small">
                 One change to governance configuration, filed with its diff, the
@@ -169,7 +187,7 @@ export default function Glossary() {
                 <a href="/app/policies">Policies page</a>.
               </td>
             </tr>
-            <tr>
+            <tr id="capability-grant" data-term="capability grant">
               <td className="mono small">Capability grant</td>
               <td className="small">
                 A declaration that one agent may call one tool, with limits on the
@@ -180,7 +198,7 @@ export default function Glossary() {
                 the <a href="/app/agents">Agents page</a>.
               </td>
             </tr>
-            <tr>
+            <tr id="obligation" data-term="obligation">
               <td className="mono small">Obligation</td>
               <td className="small">
                 A dated duty a regulation puts on you, such as a filing or a review
@@ -190,7 +208,7 @@ export default function Glossary() {
                 the calendar is a reminder, not proof the duty was met.
               </td>
             </tr>
-            <tr>
+            <tr id="fingerprint-occurrences" data-term="fingerprint / occurrences">
               <td className="mono small">Fingerprint / occurrences</td>
               <td className="small">
                 A finding&rsquo;s <strong>fingerprint</strong> is computed from its
@@ -206,7 +224,7 @@ export default function Glossary() {
                 these pages yet.
               </td>
             </tr>
-            <tr>
+            <tr id="access-control" data-term="access control">
               <td className="mono small">Access Control</td>
               <td className="small">
                 Whether an agent's answer contains only what the specific person asking
@@ -214,7 +232,7 @@ export default function Glossary() {
                 <a href="/app/entitlement">Access Control</a>.
               </td>
             </tr>
-            <tr>
+            <tr id="escalation" data-term="escalation">
               <td className="mono small">Escalation</td>
               <td className="small">
                 A whole conversation getting handed off to a human — distinct from{" "}
@@ -223,7 +241,7 @@ export default function Glossary() {
                 <a href="/app/approvals">Approvals</a>.
               </td>
             </tr>
-            <tr>
+            <tr id="tool-containment" data-term="tool containment">
               <td className="mono small">Tool containment</td>
               <td className="small">
                 Deciding whether a tool call is allowed to run, from the call itself
@@ -240,7 +258,7 @@ export default function Glossary() {
                 <a href="/app/policies">Policies</a> and <a href="/app/agents">Agents</a>.
               </td>
             </tr>
-            <tr>
+            <tr id="impact-tier" data-term="impact tier">
               <td className="mono small">Impact tier</td>
               <td className="small">
                 How much damage one tool can do, declared per tool and the axis every
@@ -253,7 +271,7 @@ export default function Glossary() {
                 <span className="mono">agentfox tools declare --impact</span>.
               </td>
             </tr>
-            <tr>
+            <tr id="argument-provenance-taint" data-term="argument provenance / taint">
               <td className="mono small">Argument provenance / taint</td>
               <td className="small">
                 Where the values in a tool call came from — typed by the user, pulled
@@ -262,7 +280,7 @@ export default function Glossary() {
                 an attacker planted in content the agent read.
               </td>
             </tr>
-            <tr>
+            <tr id="provenance" data-term="provenance">
               <td className="mono small">Provenance</td>
               <td className="small">
                 Being able to point to exactly which source document backed a specific
@@ -270,7 +288,7 @@ export default function Glossary() {
                 the first place.
               </td>
             </tr>
-            <tr>
+            <tr id="knowledge-boundary" data-term="knowledge boundary">
               <td className="mono small">Knowledge boundary</td>
               <td className="small">
                 An explicit declaration of what an agent is and isn't supposed to answer,
@@ -278,14 +296,14 @@ export default function Glossary() {
                 agent inventing an answer to something it has no data for.
               </td>
             </tr>
-            <tr>
+            <tr id="groundedness" data-term="groundedness">
               <td className="mono small">Groundedness</td>
               <td className="small">
                 Whether an agent's answer is actually supported by the context it was
                 given, rather than invented — a scorer, not a runtime detector.
               </td>
             </tr>
-            <tr>
+            <tr id="blast-radius" data-term="blast radius">
               <td className="mono small">Blast radius</td>
               <td className="small">
                 How many other agents, tools or models are reachable from one agent
@@ -293,7 +311,7 @@ export default function Glossary() {
                 a compromise or a bad decision here could actually spread.
               </td>
             </tr>
-            <tr>
+            <tr id="policy-hierarchy" data-term="policy hierarchy">
               <td className="mono small">Policy hierarchy</td>
               <td className="small">
                 Org, team, agent and user-level policies compose together — extending,
@@ -306,6 +324,9 @@ export default function Glossary() {
         </table>
       </div>
 
+      </section>
+
+      <section data-gl-section>
       <h2>P#-# — PRD pillar references</h2>
       <p className="small muted" style={{ maxWidth: "var(--measure)" }}>
         This product's build is organized into 15 numbered "pillars," each a distinct
@@ -318,7 +339,7 @@ export default function Glossary() {
           <thead><tr><th>pillar</th><th>covers</th></tr></thead>
           <tbody>
             {PILLARS.map(([n, d]) => (
-              <tr key={n}>
+              <tr key={n} data-term={`${n.toLowerCase()} ${d.toLowerCase()}`}>
                 <td className="mono small">{n}</td>
                 <td className="small">{d}</td>
               </tr>
@@ -327,6 +348,9 @@ export default function Glossary() {
         </table>
       </div>
 
+      </section>
+
+      <section data-gl-section>
       <h2>NOM-XXX-## — this product's own control codes</h2>
       <p className="small muted" style={{ maxWidth: "var(--measure)" }}>
         Every control on the <a href="/app/compliance">Compliance</a> page and every rule in a{" "}
@@ -338,7 +362,7 @@ export default function Glossary() {
           <thead><tr><th>prefix</th><th>area</th></tr></thead>
           <tbody>
             {NOM_PREFIXES.map(([n, d]) => (
-              <tr key={n}>
+              <tr key={n} data-term={`${n.toLowerCase()} ${d.toLowerCase()}`}>
                 <td className="mono small">{n}-##</td>
                 <td className="small">{d}</td>
               </tr>
@@ -347,6 +371,9 @@ export default function Glossary() {
         </table>
       </div>
 
+      </section>
+
+      <section data-gl-section data-term="owasp llm top 10 prompt injection sensitive information disclosure llm01 llm02">
       <h2>OWASP LLM Top 10</h2>
       <p className="small muted" style={{ maxWidth: "var(--measure)" }}>
         The industry-standard risk list for LLM applications (OWASP Top 10 for LLM
@@ -359,6 +386,9 @@ export default function Glossary() {
         </a>.
       </p>
 
+      </section>
+
+      <section data-gl-section data-term="mitre atlas att&ck adversarial tactics techniques">
       <h2>MITRE ATLAS</h2>
       <p className="small muted" style={{ maxWidth: "var(--measure)" }}>
         MITRE's adversarial-tactics knowledge base for AI systems (the AI-specific sibling
@@ -368,6 +398,9 @@ export default function Glossary() {
         <a href="https://atlas.mitre.org/" target="_blank" rel="noreferrer">atlas.mitre.org</a>.
       </p>
 
+      </section>
+
+      <section data-gl-section>
       <h2>Detector library names</h2>
       <p className="small muted" style={{ maxWidth: "var(--measure)" }}>
         The <a href="/app/policies?tab=guardrails">Guardrails</a> and <a href="/app/policies">Policies</a> pages
@@ -378,15 +411,16 @@ export default function Glossary() {
         <table>
           <thead><tr><th>library</th><th>used for</th></tr></thead>
           <tbody>
-            <tr><td className="mono small">Presidio</td><td className="small">Microsoft's PII detection and anonymization engine</td></tr>
-            <tr><td className="mono small">spaCy</td><td className="small">NLP toolkit Presidio uses for entity recognition</td></tr>
-            <tr><td className="mono small">Colang / NeMo Guardrails</td><td className="small">NVIDIA's conversational-rail definition language and runtime</td></tr>
-            <tr><td className="mono small">Granite Guardian</td><td className="small">IBM's safety-classification model</td></tr>
-            <tr><td className="mono small">garak</td><td className="small">Open-source LLM vulnerability scanner (probes used in red-team campaigns)</td></tr>
-            <tr><td className="mono small">pyrit</td><td className="small">Microsoft's Python Risk Identification Tool, another red-team probe source</td></tr>
+            <tr id="presidio" data-term="presidio"><td className="mono small">Presidio</td><td className="small">Microsoft's PII detection and anonymization engine</td></tr>
+            <tr id="spacy" data-term="spacy"><td className="mono small">spaCy</td><td className="small">NLP toolkit Presidio uses for entity recognition</td></tr>
+            <tr id="colang-nemo-guardrails" data-term="colang / nemo guardrails"><td className="mono small">Colang / NeMo Guardrails</td><td className="small">NVIDIA's conversational-rail definition language and runtime</td></tr>
+            <tr id="granite-guardian" data-term="granite guardian"><td className="mono small">Granite Guardian</td><td className="small">IBM's safety-classification model</td></tr>
+            <tr id="garak" data-term="garak"><td className="mono small">garak</td><td className="small">Open-source LLM vulnerability scanner (probes used in red-team campaigns)</td></tr>
+            <tr id="pyrit" data-term="pyrit"><td className="mono small">pyrit</td><td className="small">Microsoft's Python Risk Identification Tool, another red-team probe source</td></tr>
           </tbody>
         </table>
       </div>
+      </section>
     </>
   );
 }

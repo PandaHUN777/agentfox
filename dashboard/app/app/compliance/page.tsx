@@ -158,11 +158,24 @@ export default async function Compliance({
               </div>
             )}
           </h2>
-          <p className="small muted" style={{ marginTop: -6, marginBottom: 14, maxWidth: "var(--measure)" }}>
+          <p className="sub">
             Every control this product can check, and whether your own telemetry says it
-            is holding. Work the red and amber rows.
+            is holding.
             <InfoTip text="The rationale column says what the telemetry actually found, which is usually enough to tell whether the fix is a configuration change or more traffic. Grey is not a bad score, it means no assessment has been made yet." />
           </p>
+
+          {/* The instruction here used to be "Work the red and amber rows", above a
+              43-row catalogue sorted by control id, with the five rows in question
+              scattered through it at positions 8, 16, 24, 31 and 38. Telling someone
+              to work a subset and then making them find it is not a flow.
+
+              So the subset is the block, and the catalogue underneath is what it has
+              always been: the reference. Each row links to its own anchor in that
+              table, which already carried `id={c.key}`. The objective column is
+              dropped here on purpose — deciding what to do about a control that is
+              failing needs what the telemetry FOUND, not a restatement of what the
+              control is for. */}
+          <NeedsWork controls={controls.controls} />
           <div className="panel scroll-x">
             <table>
               <thead>
@@ -776,5 +789,59 @@ async function BoardTab() {
 
       <DraftCaveat text={v.caveat} />
     </>
+  );
+}
+
+/**
+ * The controls whose telemetry says something is wrong, lifted out of the
+ * catalogue and put where the instruction to work them is.
+ *
+ * Failing before degraded, and within each, catalogue order — a stable sort, so
+ * a row does not move between refreshes for any reason except its own status
+ * changing. Nothing here is new data: every row is in the table below, and this
+ * block links to it rather than restating it.
+ *
+ * Renders nothing when everything holds. An empty "Needs work" panel saying
+ * "nothing needs work" is a panel earning its border by being congratulated —
+ * the status bar above already says 88% and the catalogue is right there.
+ */
+function NeedsWork({ controls }: { controls: any[] }) {
+  const rank: Record<string, number> = { failing: 0, degraded: 1 };
+  const rows = controls
+    .map((c, i) => ({ c, i }))
+    .filter(({ c }) => c.status in rank)
+    .sort((a, b) => rank[a.c.status] - rank[b.c.status] || a.i - b.i)
+    .map(({ c }) => c);
+
+  if (rows.length === 0) return null;
+
+  const failing = rows.filter((c) => c.status === "failing").length;
+
+  return (
+    <section className="needs-work">
+      <h3>
+        <span className="nw-n">{rows.length}</span>
+        control{rows.length === 1 ? "" : "s"} your telemetry contradicts
+        <span className="nw-split">
+          {failing > 0 && `${failing} failing`}
+          {failing > 0 && rows.length - failing > 0 && " · "}
+          {rows.length - failing > 0 && `${rows.length - failing} degraded`}
+        </span>
+      </h3>
+      <ol className="nw-list">
+        {rows.map((c) => (
+          <li key={c.key} className={`nw-row nw-${c.status}`}>
+            <div className="nw-head">
+              <ControlStatus value={c.status} />
+              <a href={`#${c.key}`} className="nw-title">
+                {c.title}
+              </a>
+              <span className="mono nw-key">{c.key}</span>
+            </div>
+            <p className="nw-why">{c.rationale || "No rationale recorded."}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }

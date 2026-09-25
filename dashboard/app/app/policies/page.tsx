@@ -215,21 +215,38 @@ async function RulesTab({ agent }: { agent?: string }) {
         )}
       </div>
 
-      <p className="small muted" style={{ marginTop: 10 }}>
+      <p className="page-foot">
         Simulate a change before promoting it:{" "}
         <code className="mono">agentfox policy simulate -f candidate.yaml</code> exits
         non-zero when it would newly block production traffic.
       </p>
 
+      {/* Was a heading whose entire body was one sentence pointing at another tab
+          — a section that contained no section. The three numbers in that sentence
+          are the only content it had, so they are the row now, and each one is the
+          link it was describing. */}
       <h2>Detectors</h2>
-      <p className="sub">
-        {detectors.detectors.filter((d: any) => d.enabled && d.available).length} of{" "}
-        {detectors.detectors.length} available checks are turned on here
-        {detectors.detectors.filter((d: any) => !d.available).length > 0 && (
-          <> ({detectors.detectors.filter((d: any) => !d.available).length} not
-          installed)</>
-        )}
-        . Cost, precision and suppressions are on the{" "}
+      <InventoryStrip
+        items={[
+          {
+            n: detectors.detectors.filter((d: any) => d.enabled && d.available).length,
+            label: "turned on here",
+            href: "/app/policies?tab=guardrails",
+          },
+          {
+            n: detectors.detectors.filter((d: any) => !d.enabled && d.available).length,
+            label: "available, not turned on",
+            href: "/app/policies?tab=guardrails",
+          },
+          {
+            n: detectors.detectors.filter((d: any) => !d.available).length,
+            label: "not installed",
+            href: "/app/policies?tab=guardrails",
+          },
+        ]}
+      />
+      <p className="page-foot">
+        Cost, precision and suppressions for each are on the{" "}
         <Link href="/app/policies?tab=guardrails">Guardrail tuning tab</Link>.
       </p>
 
@@ -270,7 +287,7 @@ async function RulesTab({ agent }: { agent?: string }) {
         </table>
         )}
       </div>
-      <p className="small muted" style={{ marginTop: 10 }}>
+      <p className="page-foot">
         Wrapped runners:{" "}
         {Object.entries(probes.runners || {}).map(([n, ok]) => (
           <span key={n} className={`tag ${ok ? "ok" : ""}`} style={{ marginRight: 6 }}>
@@ -296,26 +313,18 @@ function ChangeProposals() {
       <h2>Change proposals</h2>
       <p className="sub">
         This product proposes changes to its own configuration rather than making
-        them. No screen yet: use the command line or the HTTP API.
+        them. There is no screen for them yet — each step is a command, below.{" "}
+        <Link href="/app/glossary#proposal">What a proposal carries</Link>.
       </p>
+      {/* Was three paragraphs in a note-panel, and all three were already in the
+          Glossary's own Proposal entry — the page restated the definition next to
+          the commands rather than linking to it. Only one of the three facts
+          changes what an operator does, so only that one is a callout now. */}
       <div className="note-panel" style={{ marginTop: 0 }}>
-        <p style={{ marginTop: 0 }}>
-          A <strong>proposal</strong> is one change to a policy, a rule threshold or
-          another piece of governance configuration.
-          <InfoTip text="It carries the diff, the evidence that prompted it, and every decision taken on it. It moves from proposed to proven, approved, canary, applied and verified, or ends rejected, rolled back or superseded." />
-        </p>
-        <p>
-          Each proposal is labelled by <strong>direction</strong>: whether it tightens a
-          control, loosens one, or does neither.{" "}
-          <strong>A loosening change is never applied automatically.</strong>
-          <InfoTip text="The direction is computed from the diff against the live configuration, not taken from whoever filed it. A loosening at org level needs two different approvers, and undoing a tightening counts as a loosening, so only a person can do that too." />
-        </p>
-        <p style={{ marginBottom: 0 }}>
-          Approving a proposal is not evidence that it worked.{" "}
-          <span className="mono">proposals verify</span> records whether the applied
-          change did what it promised.
-          <InfoTip text="A verification marked failed rolls the change back, unless rolling back would itself loosen a control." />
-        </p>
+        <strong>A loosening change is never applied automatically.</strong> Direction
+        is computed from the diff against live configuration, not taken from whoever
+        filed it.{" "}
+        <InfoTip text="A loosening at org level needs two different approvers. Undoing a tightening counts as a loosening, so only a person can do that too." />
       </div>
       <div className="panel scroll-x" style={{ marginTop: 14 }}>
         <table>
@@ -349,20 +358,27 @@ function ChangeProposals() {
               <td className="mono small muted">POST /api/proposals/{"{id}"}/rollback</td>
             </tr>
             <tr>
-              <td className="small">Record whether it worked</td>
+              <td className="small">
+                Record whether it worked
+                <InfoTip text="Approving a proposal is not evidence that it worked. A verification marked failed rolls the change back, unless rolling back would itself loosen a control." />
+              </td>
               <td className="mono small">agentfox proposals verify ID --actor you</td>
               <td className="mono small muted">POST /api/proposals/{"{id}"}/verify</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p className="small muted" style={{ marginTop: 10, maxWidth: "var(--measure)" }}>
-        Apply, rollback and verify need the <span className="mono">policy_production</span>{" "}
-        permission.
-        <InfoTip text="The actor is taken from whoever is authenticated, not from a field you fill in." />{" "}
-        False positives labelled on the{" "}
-        <Link href="/app/policies?tab=guardrails">Guardrail tuning tab</Link> become
-        proposed rule changes.
+      {/* Two unrelated sentences were glued into one trailing line: who may run
+          these, and where proposals come from. They answer different questions,
+          so they are two lines. */}
+      <p className="page-foot">
+        Apply, rollback and verify need the{" "}
+        <span className="mono">policy_production</span> permission.
+        <InfoTip text="The actor is taken from whoever is authenticated, not from a field you fill in." />
+        <br />
+        False positives you label on the{" "}
+        <Link href="/app/policies?tab=guardrails">Guardrail tuning tab</Link> arrive
+        here as proposed rule changes.
       </p>
     </>
   );

@@ -33,8 +33,20 @@
   color-scheme: light;
 
   /* One reading measure for the whole app. It was 78ch in this file, 78ch
-     inline in nine components and 70ch in two more. */
-  --measure: 78ch;
+     inline in nine components and 70ch in two more.
+
+     In PIXELS, not ch, and that is the whole point. `ch` resolves against each
+     element's OWN font-size, so a single `78ch` rule produced three different
+     widths on one page: 672px on a 13px .sub, 621px on a 12px note, 703px on
+     15px body copy. Three right-hand edges down one column of prose, from one
+     token that looked shared. (The same rule produced six widths on
+     /benchmark before it was replaced with a pixel rail — see .bm-rail.)
+
+     A constant character count is the better typographic measure and the worse
+     page: what a reader actually sees is the ragged edge, not the count. One
+     pixel value gives every block the same edge, and 680px is ~76 characters
+     at 13px, where nearly all of this app's prose is set. */
+  --measure: 680px;
 
   --bg: #fbfbfd;
   --panel: #ffffff;
@@ -181,6 +193,50 @@ body {
 
 a { color: inherit; text-decoration: none; }
 a:hover { text-decoration: underline; }
+
+/* Links inside running text have to LOOK like links.
+ *
+ * The rule above is right for the things that are links only structurally — a
+ * sidebar item, a tab, a whole card, a table row — where the surrounding shape
+ * already says "clickable" and colouring it would just add noise. But it was
+ * the only link rule in the file, so it also caught every cross-reference in
+ * prose: "Guardrail tuning tab", "the Agents page", "raises a finding". Those
+ * are the app's entire navigation between related ideas, and they rendered as
+ * plain body text with nothing to distinguish them until the pointer happened
+ * to land on one.
+ *
+ * Scoped to prose containers so the structural links keep inheriting. The
+ * underline is offset and thin rather than the browser default, which at 13px
+ * otherwise cuts through the descenders. --accent measures 5.05:1 light and
+ * 6.51:1 dark on its worst ground, so this is legible as text, not only as a
+ * colour difference — and the underline carries it for anyone who cannot see
+ * the hue at all. */
+.sub a,
+.page-foot a,
+.note-panel a,
+.hero a,
+.prose a,
+td.wrap a,
+p a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+.sub a:hover,
+.page-foot a:hover,
+.note-panel a:hover,
+.hero a:hover,
+.prose a:hover,
+td.wrap a:hover,
+p a:hover { text-decoration-color: var(--accent); }
+
+/* A link that IS a table row's identifier: the name of the policy, agent or
+   source that row is about. Not underlined — a column of underlines reads as a
+   column of errors — but no longer the same colour as the cell beside it. */
+td a { color: var(--accent); }
+td a:hover { text-decoration: underline; text-underline-offset: 2px; }
 
 .shell { display: flex; min-height: 100vh; }
 
@@ -672,7 +728,7 @@ pre {
   background: var(--elevated);
   box-shadow: var(--e-1);
 }
-.hero > * { max-width: 70ch; }
+.hero > * { max-width: var(--measure); }
 .hero.empty { border-style: dashed; box-shadow: none; }
 .hero.ok { border-color: var(--ok); }
 .hero-title { font-size: var(--t-body); font-weight: 660; margin-bottom: 8px; letter-spacing: -0.01em; }
@@ -767,7 +823,7 @@ ol.steps li.done .step-title { color: var(--muted); }
 }
 /* The measure goes on the text, not on the panel. As a max-width on the panel it
    made a full-width page end in a block half the width of the table above it. */
-.note-panel > * { max-width: 78ch; }
+.note-panel > * { max-width: var(--measure); }
 .note-panel strong { color: var(--text); }
 
 /* --- Modal ---------------------------------------------------------------- */
@@ -2059,15 +2115,18 @@ td .mono { overflow-wrap: anywhere; }
 .inv-bad  b { color: var(--bad); }
 
 /* A closing note that is a sentence, not a panel. Two stacked bordered callouts
-   at the foot of a page is one more border than the page has anything to say. */
+   at the foot of a page is one more border than the page has anything to say.
+
+   No rule above it, which is a change: it had a border-top capped at --measure,
+   so under a full-width table it drew a 680px line across a 1010px column — a
+   divider that stopped two thirds of the way and divided nothing. Space does
+   the same job here without drawing a shape that has to line up with anything. */
 .page-foot {
-  margin: 22px 0 0;
-  padding-top: 14px;
-  border-top: 1px solid var(--hairline);
+  margin: 14px 0 0;
   font-size: var(--t-small);
   line-height: 1.55;
   color: var(--muted);
-  max-width: 88ch;
+  max-width: var(--measure);
 }
 
 /* Tool-call arguments as pairs. See components/ui.tsx: JSON.stringify in a 260px
@@ -2146,7 +2205,7 @@ td .mono { overflow-wrap: anywhere; }
    not read as loudly as a count that wants attention. */
 .sbar-zero { opacity: .55; }
 
-.sbar-total { margin: 0; font-size: var(--t-small); line-height: 1.5; color: var(--muted); max-width: 88ch; }
+.sbar-total { margin: 0; font-size: var(--t-small); line-height: 1.5; color: var(--muted); max-width: var(--measure); }
 .sbar-total b {
   font-size: var(--t-subhead);
   font-weight: 600;
@@ -2164,3 +2223,115 @@ td .mono { overflow-wrap: anywhere; }
   font-size: var(--t-small);
   color: var(--muted);
 }
+
+/* --- Controls that need work (Compliance) ---------------------------------- */
+/*
+ * The five rows out of forty-three that the page is actually asking someone to
+ * do something about. Deliberately NOT a table and NOT a row of cards: a table
+ * is for comparing many rows on the same axes, and this is a short worklist
+ * where each item is read on its own. So it is a list, with the severity on the
+ * left edge as a stripe rather than a border around each item — four borders
+ * stacked down a page read as four separate objects, and these are four
+ * instances of one thing.
+ */
+.needs-work { margin: 4px 0 26px; }
+.needs-work h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  margin: 0 0 10px;
+  font-size: var(--t-small);
+  font-weight: 600;
+  color: var(--text);
+}
+.needs-work .nw-n {
+  font-size: var(--t-subhead);
+  font-weight: 640;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--bad);
+}
+.needs-work .nw-split { margin-left: auto; font-weight: 400; color: var(--muted); font-size: var(--t-micro); }
+
+.nw-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); border-radius: var(--r-3); overflow: hidden; }
+.nw-row { background: var(--elevated); padding: 12px 15px 13px; border-left: 3px solid transparent; }
+.nw-failing { border-left-color: var(--bad); }
+.nw-degraded { border-left-color: var(--warn); }
+.nw-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.nw-title { font-size: var(--t-small); font-weight: 560; color: var(--text); }
+.nw-title:hover { color: var(--accent); }
+.nw-key { font-size: var(--t-micro); color: var(--muted); margin-left: auto; }
+/* The rationale is the reason this row is here, so it gets the measure and a
+   real line height rather than being squeezed into a cell. */
+.nw-why { margin: 5px 0 0; font-size: var(--t-small); line-height: 1.55; color: var(--muted); max-width: var(--measure); }
+
+/* The one piece of motion on this page, and it is doing a job: the worklist
+   arrives a beat after the status bar it follows, top row first, so the eye is
+   led from "88% effective" down to "and here is the 12%". Resting state is the
+   final state (`both`), so nothing is invisible if the animation never runs —
+   and under reduced motion it never does. */
+@media (prefers-reduced-motion: no-preference) {
+  .nw-row { animation: nw-in .32s cubic-bezier(.2,.7,.3,1) both; }
+  .nw-row:nth-child(1) { animation-delay: .04s; }
+  .nw-row:nth-child(2) { animation-delay: .09s; }
+  .nw-row:nth-child(3) { animation-delay: .14s; }
+  .nw-row:nth-child(4) { animation-delay: .19s; }
+  .nw-row:nth-child(n+5) { animation-delay: .24s; }
+}
+@keyframes nw-in {
+  from { opacity: 0; transform: translateY(5px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* --- Glossary filter -------------------------------------------------------- */
+/*
+ * One input, sized to what it holds rather than to the column. A full-width
+ * search bar across 1010px promises a search over the whole application; this
+ * one filters a list on one page, and looking like what it is prevents that.
+ */
+.gl-find { margin: 2px 0 22px; }
+.gl-find-box {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: min(100%, 380px);
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-2);
+  background: var(--panel);
+  color: var(--muted);
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.gl-find-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.gl-find-box svg { flex: 0 0 auto; }
+.gl-find-box input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  font-size: var(--t-small);
+  color: var(--text);
+}
+.gl-find-box input:focus { outline: none; }
+/* Safari draws its own clear button on type=search; we have our own, and two
+   is one too many. */
+.gl-find-box input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
+.gl-find-clear {
+  flex: 0 0 auto;
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+  font: inherit;
+  font-size: var(--t-micro);
+  color: var(--muted);
+  cursor: pointer;
+}
+.gl-find-clear:hover { color: var(--text); text-decoration: underline; }
+/* Reserves its line whether or not there is a count, so the tables below do not
+   jump up and down by 20px on every keystroke. */
+.gl-find-count { margin: 7px 0 0; min-height: 1.3em; font-size: var(--t-micro); color: var(--muted); }
