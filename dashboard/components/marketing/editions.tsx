@@ -87,7 +87,14 @@ function Item({ label, children }: { label: string; children: string }) {
 
 /* --- Editions ----------------------------------------------------------- */
 
-export function Editions() {
+export function Editions({
+  notice,
+  error,
+}: {
+  /** Set by dashboard/app/api/waitlist/route.ts after a form post. */
+  notice?: string;
+  error?: string;
+} = {}) {
   return (
     <section id="editions" className="mk-section">
       <div className="mk-wrap">
@@ -193,7 +200,20 @@ export function Editions() {
 
             <div style={ACTION_FOOT}>
               <span className="mk-label">Join the waitlist</span>
-              <WaitlistForm />
+              {notice ? (
+                <p className="wl-done" role="status">
+                  {notice}
+                </p>
+              ) : (
+                <>
+                  {error ? (
+                    <p className="wl-error" role="alert">
+                      {error}
+                    </p>
+                  ) : null}
+                  <WaitlistForm />
+                </>
+              )}
             </div>
           </div>
         </div>

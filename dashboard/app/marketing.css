@@ -1067,3 +1067,25 @@
    lengths still start their bodies on the same line. */
 .ed-head { display: grid; gap: 7px; justify-items: start; margin-bottom: 4px; }
 .ed-head .mk-h3 { margin: 0; }
+
+/* What the reader sees after submitting. The form is replaced rather than kept
+   beside a message, because leaving a filled-in form under "you're on the list"
+   invites a second submit. */
+.wl-done {
+  margin: 0;
+  padding: 11px 13px;
+  border: 1px solid color-mix(in srgb, var(--mk-good) 40%, transparent);
+  border-radius: var(--mk-r-md);
+  background: var(--mk-good-soft);
+  color: var(--mk-good);
+  font-size: var(--t-small);
+  line-height: 1.5;
+  font-weight: 600;
+}
+.wl-error {
+  margin: 0 0 4px;
+  font-size: var(--t-small);
+  line-height: 1.5;
+  color: var(--mk-stop);
+  font-weight: 600;
+}

@@ -33,7 +33,12 @@ export const metadata: Metadata = publicPageMetadata({
   path: "/pricing",
 });
 
-export default function Pricing() {
+export default async function Pricing({
+  searchParams,
+}: {
+  searchParams: Promise<{ waitlist_notice?: string; waitlist_error?: string }>;
+}) {
+  const { waitlist_notice, waitlist_error } = await searchParams;
   return (
     <div className="mk">
       <MarketingNav />
@@ -52,7 +57,7 @@ export default function Pricing() {
             </p>
           </div>
         </section>
-        <Editions />
+        <Editions notice={waitlist_notice} error={waitlist_error} />
         <OpenSourcePromise />
         <WhyOpen />
       </main>
