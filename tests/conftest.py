@@ -8,6 +8,29 @@ catch.
 
 from __future__ import annotations
 
+import os
+
+# Set before anything imports the CLI, because Rich decides whether to emit colour
+# from the environment it finds, and conftest is imported before any test module.
+#
+# Rich treats CI as a colour-capable terminal, so on GitHub Actions `agentfox --help`
+# comes back as '\x1b[2m│\x1b[0m \x1b[1;36manalyse-action\x1b[0m …' where locally it
+# is a plain '│ analyse-action …'. Two tests in test_cli_experience.py parse that
+# output — one looks for a leading box character, one for option flags — so both
+# passed on every developer machine and failed on every CI run.
+#
+# `TERM=dumb` and not `NO_COLOR`, which is the counterintuitive part and was measured
+# rather than assumed. With CI=true and TERM=xterm-256color:
+#
+#   NO_COLOR=1             -> still emits ANSI
+#   TERM=dumb              -> no ANSI
+#   NO_COLOR=1 TERM=dumb   -> emits ANSI again
+#
+# Assigned rather than setdefault: CI exports its own TERM, so a default would never
+# win, which is exactly the case this exists to fix. Width is 80 either way, so the
+# wrapping the tests read is unchanged.
+os.environ["TERM"] = "dumb"
+
 from collections.abc import Iterator
 
 import pytest
