@@ -48,10 +48,19 @@ FROM deps AS weights
 RUN mkdir -p /var/nometria/hf-cache
 
 # Permissive tier — Apache-2.0/MIT, no licence gate, no secret needed.
+#
+# granite-guardian-3.0-2b declares architectures: ["GraniteForCausalLM"], so
+# AutoModelForSequenceClassification raises "Unrecognized configuration class
+# GraniteConfig for this kind of AutoModel" and takes the whole layer with it. The
+# other three genuinely are sequence-classification or embedding models.
+#
+# This had never built. ci.yml's docker-smoke targets `deps`, one stage earlier, so
+# nothing in CI ever reached this line — it surfaced the first time a workflow tried
+# to publish the finished image.
 RUN python -c "\
-from transformers import AutoModelForSequenceClassification, AutoTokenizer, AutoModel; \
+from transformers import AutoModelForSequenceClassification, AutoModelForCausalLM, AutoTokenizer, AutoModel; \
 AutoTokenizer.from_pretrained('ibm-granite/granite-guardian-3.0-2b'); \
-AutoModelForSequenceClassification.from_pretrained('ibm-granite/granite-guardian-3.0-2b'); \
+AutoModelForCausalLM.from_pretrained('ibm-granite/granite-guardian-3.0-2b'); \
 AutoTokenizer.from_pretrained('leolee99/PIGuard', trust_remote_code=True); \
 AutoModelForSequenceClassification.from_pretrained('leolee99/PIGuard', trust_remote_code=True); \
 AutoTokenizer.from_pretrained('protectai/deberta-v3-base-prompt-injection-v2'); \
