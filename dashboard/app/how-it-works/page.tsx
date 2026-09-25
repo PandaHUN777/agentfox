@@ -5,7 +5,8 @@ import { CATEGORY, REPO } from "./_public";
 import { MarketingNav } from "@/components/marketing/nav";
 import { Footer } from "@/components/marketing/sections";
 import { RequestPath } from "@/components/marketing/path";
-import { TraceAnatomy } from "@/components/marketing/product";
+import { Pane, TraceAnatomy } from "@/components/marketing/product";
+import { FollowRequest } from "@/components/marketing/follow";
 
 /**
  * Public explainer for someone who has never seen this product, reached from the
@@ -120,16 +121,86 @@ export default function HowItWorks() {
           Three of its eight steps can end a call before it reaches anything.
         </p>
 
-        {/* The record the eight stations are describing, beside them rather than
-            three screens further down. At desktop width this column was empty,
-            which is most of why the page read as documentation. */}
+        {/* The same request, at whichever stage you are reading about. The panel
+            advances with you; without JavaScript it shows the completed record,
+            which is what the static version showed. See follow.tsx. */}
+        <FollowRequest
+          frames={[
+            {
+              at: 0,
+              label: "who is behind this call",
+              body: (
+                <Pane label="agentfox · identity" status="governed">
+                  <div className="fr-rows">
+                    <div>
+                      <span className="mk-label">agent</span>
+                      <code className="mk-mono">support-triage</code>
+                    </div>
+                    <div>
+                      <span className="mk-label">acting for</span>
+                      <code className="mk-mono">alex@example.com</code>
+                    </div>
+                    <div>
+                      <span className="mk-label">quarantined</span>
+                      <code className="mk-mono">no</code>
+                    </div>
+                  </div>
+                </Pane>
+              ),
+            },
+            {
+              at: 2,
+              label: "what retrieval returned",
+              body: (
+                <Pane label="agentfox · retrieval" status="filtered">
+                  <ul className="seq-rows">
+                    <li className="seq-row seq-row-kept">
+                      <span className="mk-mono">billing/refund-policy</span>
+                      <i>returned</i>
+                    </li>
+                    <li className="seq-row seq-row-kept">
+                      <span className="mk-mono">orders/ord_88213</span>
+                      <i>returned</i>
+                    </li>
+                    <li className="seq-row seq-row-cut">
+                      <span className="mk-mono">hr/salaries-2026</span>
+                      <i>withheld</i>
+                    </li>
+                  </ul>
+                </Pane>
+              ),
+            },
+            {
+              at: 5,
+              label: "the action, checked before it runs",
+              body: (
+                <Pane label="agentfox · tool call" status="blocked">
+                  <ul className="seq-rows">
+                    <li className="seq-row seq-row-blocked">
+                      <span className="mk-mono">payments.transfer</span>
+                      <i>block</i>
+                    </li>
+                    <li className="seq-row seq-row-quiet">
+                      <span className="mk-mono">amount: 5000   to: acct_x</span>
+                    </li>
+                    <li className="seq-row seq-row-quiet">
+                      <span>argument value came from tool_result</span>
+                    </li>
+                  </ul>
+                  <p className="fr-rule">
+                    <code className="mk-mono">capability.denied</code>
+                  </p>
+                </Pane>
+              ),
+            },
+            {
+              at: 7,
+              label: "the record it produces",
+              body: <TraceAnatomy />,
+            },
+          ]}
+        >
         <RequestPath
-          aside={
-            <>
-              <span className="mk-label">the record it produces</span>
-              <TraceAnatomy />
-            </>
-          }
           stations={[
             {
               title: "A call arrives",
@@ -210,6 +281,7 @@ export default function HowItWorks() {
             },
           ]}
         />
+        </FollowRequest>
 
         <p>
           Steps 1 to 5 are what most products in this space also do. Step 6 is what the

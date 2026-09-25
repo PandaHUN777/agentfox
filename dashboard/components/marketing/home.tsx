@@ -184,9 +184,9 @@ export function Hero() {
               records and send mail, which is why any of this matters, and the
               payoff is that being tricked does not get the model an exception. */}
           <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "50ch" }}>
-            Your agents can move money, delete records and send email. AgentFox checks
-            each call against the limits you set, so a tricked model still can&rsquo;t
-            act outside them.
+            Your agents read customer data, answer on your behalf, and move money.
+            AgentFox checks each of those against what you allowed, and stops the ones
+            that fall outside.
           </p>
           {/* The install block used to read `pip install …` / `import agentfox;
               agentfox.auto()` directly beside the stream showing payments.transfer

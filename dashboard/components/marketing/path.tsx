@@ -69,6 +69,7 @@ function RequestPathList({ stations }: { stations: Station[] }) {
       {stations.map((s, i) => (
         <li
           key={s.title}
+          data-station={i}
           className={
             "rp-station" +
             (s.stops ? " rp-station-stop" : "") +
