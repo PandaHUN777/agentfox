@@ -173,10 +173,18 @@ export function Hero() {
           <h1 className="mk-h1 mk-up mk-d1">
             <em>Runtime firewall</em> for AI agents
           </h1>
+          {/* Three things were wrong with the line this replaces. "so it cannot be
+              argued with" is a clever closer hung off an em-dash pivot, which is the
+              most recognisable tell there is. "grants" is our internal word — the
+              reader has not met it yet and will not until /product. And the fragment
+              opener ("One line of Python.") was doing rhetorical work that the
+              install block six inches below does literally.
+              Three short sentences instead, each stating one fact, in the words a
+              reader would use to repeat it to someone else. */}
           <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "50ch" }}>
-            One line of Python. Every tool call is checked against that agent&rsquo;s
-            grants before it runs — and no prompt text is read, so it cannot be argued
-            with.
+            AgentFox sits between your agent and its tools. Every call is checked
+            against the permissions you set, and anything outside them is refused
+            before it runs. The prompt is never read.
           </p>
           <pre className="mk-install mk-up mk-d3">
             <code>pip install git+https://github.com/architsharm/agentfox.git</code>
