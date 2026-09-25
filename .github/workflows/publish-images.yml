@@ -1,0 +1,89 @@
+name: Publish images
+
+# Publishes the two runnable images to GitHub Container Registry, which is why the
+# repository's Packages section was empty: ci.yml already builds the gateway image on
+# every PR (`docker-smoke`) and then throws it away. Nothing ever pushed one.
+#
+# This matters more than filling in a tab. `deploy/docker-compose.yml` currently
+# BUILDS both services, and the gateway build pre-fetches 1-2GB of model weights — so
+# the documented "self-host it in one command" path actually costs a first-time user a
+# long multi-gigabyte build before they see anything. With these published, compose
+# pulls instead, and the README's one-command claim becomes true.
+#
+# Runs on a release tag, and on main so `:edge` always reflects the default branch.
+# Not on pull requests: a fork's PR must never be able to push an image to our registry.
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+# Only what pushing to GHCR needs. `contents: read` because the build reads the repo;
+# `packages: write` because it writes exactly one thing.
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  # A tag and its merge commit can arrive together. Build the later one; there is no
+  # value in two identical images racing to the same tag.
+  group: publish-images-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      # One failing image should not hide whether the other built.
+      fail-fast: false
+      matrix:
+        include:
+          - name: gateway
+            dockerfile: deploy/Dockerfile
+            context: .
+          - name: dashboard
+            dockerfile: deploy/Dockerfile.dashboard
+            context: ./dashboard
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Sign in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          # The job token, not a PAT. It is scoped to this repository and expires with
+          # the run, so there is no long-lived credential to rotate or leak.
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Work out the tags
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ matrix.name }}
+          # `edge` tracks main; a vX.Y.Z tag also moves `latest` and publishes the
+          # major.minor so a deployment can pin how precisely it wants to.
+          tags: |
+            type=raw,value=edge,enable={{is_default_branch}}
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ startsWith(github.ref, 'refs/tags/v') }}
+          labels: |
+            org.opencontainers.image.title=agentfox-${{ matrix.name }}
+            org.opencontainers.image.description=AgentFox ${{ matrix.name }} — runtime firewall for AI agents
+            org.opencontainers.image.licenses=Apache-2.0
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Shared with ci.yml's docker-smoke, so a PR that already built this layer
+          # set does not make the publish pay for it again.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

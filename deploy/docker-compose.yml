@@ -53,6 +53,9 @@ services:
       - "8181:8181"
 
   gateway:
+    # Published by .github/workflows/publish-images.yml. Pulled by default; run
+    # `docker compose build gateway` to build from source instead.
+    image: ghcr.io/architsharm/agentfox/gateway:latest
     build:
       context: ..
       dockerfile: deploy/Dockerfile
@@ -110,6 +113,7 @@ services:
       retries: 10
 
   dashboard:
+    image: ghcr.io/architsharm/agentfox/dashboard:latest
     build:
       context: ../dashboard
       dockerfile: ../deploy/Dockerfile.dashboard

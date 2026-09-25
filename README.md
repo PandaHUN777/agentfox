@@ -382,6 +382,14 @@ docker compose -f deploy/docker-compose.yml up -d
 # dashboard on :3000, gateway on :8080
 ```
 
+It pulls prebuilt images rather than building them —
+[`ghcr.io/architsharm/agentfox/gateway`](https://github.com/architsharm/agentfox/pkgs/container/agentfox%2Fgateway)
+and
+[`ghcr.io/architsharm/agentfox/dashboard`](https://github.com/architsharm/agentfox/pkgs/container/agentfox%2Fdashboard),
+published on every release and tracked at `:edge` on `main`. `docker compose build` builds from
+source instead, which takes a while: the gateway image pre-fetches 1–2GB of detector weights so the
+running container never needs network access for them.
+
 [`deploy/docker-compose.yml`](deploy/docker-compose.yml) is commented line by line, including which
 values you must change before a real deployment — `NOMETRIA_AUDIT_SIGNING_KEY` above all, since the
 audit chain is only as trustworthy as the key that signs it.
@@ -403,9 +411,8 @@ its own header, is [`deploy/fly.dashboard.toml`](deploy/fly.dashboard.toml).
 
 ## Contributing
 
-Ready-to-start work is in [`docs/TASKS.md`](docs/TASKS.md) and
-[labelled on the tracker](https://github.com/architsharm/agentfox/labels/good%20first%20issue) —
-each task names the file to change, the pattern to copy from, and how to verify it. [`CONTRIBUTING.md`](CONTRIBUTING.md) has
+Start with a [good first issue](https://github.com/architsharm/agentfox/labels/good%20first%20issue) —
+each one names the file to change, the pattern to copy from, and how to verify the result. [`CONTRIBUTING.md`](CONTRIBUTING.md) has
 setup, conventions and the PR flow.
 
 The test suite is the contract: `uv sync --extra dev && pytest tests/ -q`. Anything that changes a
