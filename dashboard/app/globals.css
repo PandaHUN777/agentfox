@@ -2641,3 +2641,17 @@ td .mono { overflow-wrap: anywhere; }
    the start of a wrapped line the ⓘ reads as a stray glyph, not as part of the
    sentence. */
 .nowrap { white-space: nowrap; }
+
+/* A section heading with its own action on the right. The button belongs to the
+   section it acts on, so it sits on that section's heading rather than on the
+   page header (which would say nothing about which of two tables it adds to). */
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 28px 0 12px;
+}
+.section-head h2 { margin: 0; }
+.section-head .sub { flex: 1 1 100%; margin: 0; }

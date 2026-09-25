@@ -4,6 +4,7 @@ import Link from "next/link";
 import { api, apiErrorProps } from "@/lib/api";
 import { ApiDown, Empty, InfoTip, Panel, Stat } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
+import { Modal } from "@/components/Modal";
 
 /**
  * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
@@ -123,7 +124,46 @@ export default async function Entitlement() {
         </>
       )}
 
-      <h2>Callers</h2>
+      {/* Both "add" forms were permanently open panels — four fields and a
+          submit for a person, two fields and five checkboxes for a grant — and
+          together they filled roughly 60% of a page whose actual content was one
+          caller and one grant. Registering a principal is something you do once
+          in a while, not something the page should be posed for. Same Modal
+          pattern the Sources page already uses for "+ Add a source". */}
+      <div className="section-head">
+        <h2>Callers</h2>
+        <Modal trigger="+ Add a person or group" triggerClassName="btn-primary" title="Add a person or group">
+        <form action="/api/entitlement/principals" method="POST" className="body stack">
+          <div>
+            <label htmlFor="ent-principal-subject" className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              Email or team name
+            </label>
+            <input type="text" id="ent-principal-subject" name="subject" required placeholder="alice@yourcompany.com" style={inputStyle} />
+          </div>
+          <div>
+            <label htmlFor="ent-principal-display" className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              Display name (optional)
+            </label>
+            <input type="text" id="ent-principal-display" name="display" placeholder="Alice from Support" style={inputStyle} />
+          </div>
+          <div>
+            <label htmlFor="ent-principal-groups" className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              Teams they belong to (comma-separated)
+            </label>
+            <input type="text" id="ent-principal-groups" name="groups" placeholder="support-team, all-staff" style={inputStyle} />
+          </div>
+          <div>
+            <label htmlFor="ent-principal-clearances" className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              Sensitive categories they're cleared to see (comma-separated, leave blank if none)
+            </label>
+            <input type="text" id="ent-principal-clearances" name="clearances" placeholder="pii_sensitive" style={inputStyle} />
+          </div>
+          <div>
+            <button type="submit" className="btn-primary">Add person or group</button>
+          </div>
+        </form>
+        </Modal>
+      </div>
       <div className="panel">
         {principals.principals?.length ? (
           <table>
@@ -164,44 +204,51 @@ export default async function Entitlement() {
         )}
       </div>
 
-      <div style={{ marginTop: 16, marginBottom: 24 }}>
-        <Panel title="Add a person or group">
-          <form action="/api/entitlement/principals" method="POST" className="body stack">
-            <div>
-              <label htmlFor="ent-principal-subject" className="small muted" style={{ display: "block", marginBottom: 4 }}>
-                Email or team name
+      <div className="section-head">
+        <h2>
+          Grants
+          <InfoTip text="A resource here is the same identifier space as a source's key on the Verified sources page — that page tells you whether the resource itself is trustworthy; this one tells you who's allowed to see it." />
+        </h2>
+        <Modal trigger="+ Add a grant" triggerClassName="btn-primary" title="Add a grant — who can see which source">
+        <form action="/api/entitlement/grants" method="POST" className="body stack">
+          <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label htmlFor="ent-grant-resource" className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                Which source can they see?
               </label>
-              <input type="text" id="ent-principal-subject" name="subject" required placeholder="alice@yourcompany.com" style={inputStyle} />
+              <input type="text" id="ent-grant-resource" name="resource" required placeholder="price-book" style={inputStyle} />
             </div>
-            <div>
-              <label htmlFor="ent-principal-display" className="small muted" style={{ display: "block", marginBottom: 4 }}>
-                Display name (optional)
+            <div style={{ flex: 1, minWidth: 200 }}>
+              <label htmlFor="ent-grant-principal" className="small muted" style={{ display: "block", marginBottom: 4 }}>
+                Person or team (must match a name above)
               </label>
-              <input type="text" id="ent-principal-display" name="display" placeholder="Alice from Support" style={inputStyle} />
+              <input type="text" id="ent-grant-principal" name="principal" required placeholder="support-team" style={inputStyle} />
             </div>
-            <div>
-              <label htmlFor="ent-principal-groups" className="small muted" style={{ display: "block", marginBottom: 4 }}>
-                Teams they belong to (comma-separated)
-              </label>
-              <input type="text" id="ent-principal-groups" name="groups" placeholder="support-team, all-staff" style={inputStyle} />
+          </div>
+          <input type="hidden" name="principal_kind" value="group" />
+          {/* A <label> pointing at nothing does not name these five checkboxes;
+              a fieldset's legend does, so each one is read as "insider-only,
+              within sensitive categories" rather than as a loose checkbox. */}
+          <fieldset style={{ border: "none", padding: 0, margin: 0, minWidth: 0 }}>
+            <legend className="small muted" style={{ padding: 0, marginBottom: 4 }}>
+              Sensitive categories this grant covers{" "}
+              <InfoTip text="Only needed if the source contains sensitive data, and they still need a matching clearance above." />
+            </legend>
+            <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
+              {CLASS_OPTIONS.map((c) => (
+                <label key={c.value} className="small" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                  <input type="checkbox" name="classes" value={c.value} />
+                  {c.label}
+                </label>
+              ))}
             </div>
-            <div>
-              <label htmlFor="ent-principal-clearances" className="small muted" style={{ display: "block", marginBottom: 4 }}>
-                Sensitive categories they're cleared to see (comma-separated, leave blank if none)
-              </label>
-              <input type="text" id="ent-principal-clearances" name="clearances" placeholder="pii_sensitive" style={inputStyle} />
-            </div>
-            <div>
-              <button type="submit" className="btn-primary">Add person or group</button>
-            </div>
-          </form>
-        </Panel>
+          </fieldset>
+          <div>
+            <button type="submit" className="btn-primary">Add grant</button>
+          </div>
+        </form>
+        </Modal>
       </div>
-
-      <h2>
-        Grants
-        <InfoTip text="A resource here is the same identifier space as a source's key on the Verified sources page — that page tells you whether the resource itself is trustworthy; this one tells you who's allowed to see it." />
-      </h2>
       <p className="sub">
         Default-deny: a resource with no grant is invisible. Names match source keys on{" "}
         <Link href="/app/sources">Verified sources</Link>.{" "}
@@ -243,47 +290,6 @@ export default async function Entitlement() {
         )}
       </div>
 
-      <div style={{ marginTop: 16 }}>
-        <Panel title="Add a grant" note="who can see which source">
-          <form action="/api/entitlement/grants" method="POST" className="body stack">
-            <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <label htmlFor="ent-grant-resource" className="small muted" style={{ display: "block", marginBottom: 4 }}>
-                  Which source can they see?
-                </label>
-                <input type="text" id="ent-grant-resource" name="resource" required placeholder="price-book" style={inputStyle} />
-              </div>
-              <div style={{ flex: 1, minWidth: 200 }}>
-                <label htmlFor="ent-grant-principal" className="small muted" style={{ display: "block", marginBottom: 4 }}>
-                  Person or team (must match a name above)
-                </label>
-                <input type="text" id="ent-grant-principal" name="principal" required placeholder="support-team" style={inputStyle} />
-              </div>
-            </div>
-            <input type="hidden" name="principal_kind" value="group" />
-            {/* A <label> pointing at nothing does not name these five checkboxes;
-                a fieldset's legend does, so each one is read as "insider-only,
-                within sensitive categories" rather than as a loose checkbox. */}
-            <fieldset style={{ border: "none", padding: 0, margin: 0, minWidth: 0 }}>
-              <legend className="small muted" style={{ padding: 0, marginBottom: 4 }}>
-                Sensitive categories this grant covers{" "}
-                <InfoTip text="Only needed if the source contains sensitive data, and they still need a matching clearance above." />
-              </legend>
-              <div className="row" style={{ gap: 12, flexWrap: "wrap" }}>
-                {CLASS_OPTIONS.map((c) => (
-                  <label key={c.value} className="small" style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                    <input type="checkbox" name="classes" value={c.value} />
-                    {c.label}
-                  </label>
-                ))}
-              </div>
-            </fieldset>
-            <div>
-              <button type="submit" className="btn-primary">Add grant</button>
-            </div>
-          </form>
-        </Panel>
-      </div>
     </>
   );
 }
