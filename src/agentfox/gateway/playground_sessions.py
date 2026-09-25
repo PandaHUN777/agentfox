@@ -48,7 +48,7 @@ from sqlalchemy.exc import (
 from sqlalchemy.orm import Session
 
 from ..db import get_sessionmaker
-from ..models import Base, PlaygroundSandbox, as_aware, utcnow
+from ..models import Base, PlaygroundSandbox, TenantScoped, as_aware, utcnow
 from ..seed import seed as seed_world
 from ..tenancy import bind_session, system_scope
 
@@ -163,6 +163,13 @@ def _purge_sandbox(session: Session, org_id: str) -> None:
     )
     for mapper in mappers:
         model = mapper.class_
+        # Skip the tables that hold no tenant's rows — `models.TenantExempt`, today just
+        # the waitlist. They have no `org_id` to compare, so this loop would raise on
+        # them, and a sweep that raises is a sandbox that never expires. Filtering on
+        # `TenantScoped` rather than naming the table keeps that true for the next one:
+        # "delete this tenant's rows" can only mean the tables that have a tenant.
+        if not issubclass(model, TenantScoped):
+            continue
         session.execute(delete(model).where(model.org_id == org_id))
 
 

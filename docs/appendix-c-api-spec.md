@@ -99,7 +99,7 @@ from the code. Regenerate after changing any route:
 
 <!-- BEGIN GENERATED ROUTES: scripts/api_routes.py --write -->
 
-190 operations, generated from the running app's OpenAPI document. Request and response schemas: `GET /openapi.json` or the interactive `/docs`.
+191 operations, generated from the running app's OpenAPI document. Request and response schemas: `GET /openapi.json` or the interactive `/docs`.
 
 ### Inline enforcement (`/v1`)
 
@@ -359,6 +359,7 @@ from the code. Regenerate after changing any route:
 | `POST` | `/api/proposals/{proposal_id}/decide` | Approve or reject; an org-level loosening needs two different approvers. |
 | `POST` | `/api/proposals/{proposal_id}/rollback` | Undo an applied or canaried proposal through its applier. |
 | `POST` | `/api/proposals/{proposal_id}/verify` | Record whether an applied change worked; ``verified: false`` rolls it back. |
+| `POST` | `/api/waitlist` | Record an address. Unauthenticated, idempotent, and it sends nothing anywhere. |
 | `GET` | `/health` | The same payload as `/api/health`, at the path probes default to. |
 
 <!-- END GENERATED ROUTES -->

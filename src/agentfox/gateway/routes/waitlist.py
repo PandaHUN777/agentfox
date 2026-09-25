@@ -141,8 +141,7 @@ def join_waitlist(
     if not waitlist_limiter.check(_client_key(request)):
         raise HTTPException(
             429,
-            "Too many waitlist signups from this address recently — please try again "
-            "in a while.",
+            "Too many waitlist signups from this address recently — please try again in a while.",
         )
 
     # No `system_scope` and no tenant binding: `WaitlistSignup` is not `TenantScoped`,
