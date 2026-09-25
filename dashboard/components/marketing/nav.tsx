@@ -53,7 +53,7 @@ export async function MarketingNav() {
             </Link>
           ))}
           <a href={REPO} target="_blank" rel="noreferrer">
-            Source
+            GitHub
           </a>
         </nav>
         <div className="mk-nav-cta">
@@ -87,7 +87,7 @@ export async function MarketingNav() {
             </Link>
           ))}
           <a href={REPO} target="_blank" rel="noreferrer">
-            Source
+            GitHub
           </a>
           <Link href="/support">Support</Link>
         </div>

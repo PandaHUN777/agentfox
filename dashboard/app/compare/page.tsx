@@ -80,7 +80,7 @@ function Head({ eyebrow, title, lede }: { eyebrow: string; title: string; lede?:
         {title}
       </h2>
       {lede && (
-        <p className="mk-lede" style={{ margin: "14px auto 0", maxWidth: "62ch" }}>
+        <p className="mk-lede" style={{ marginTop: 14, maxWidth: "62ch" }}>
           {lede}
         </p>
       )}
@@ -248,10 +248,10 @@ export default function Compare() {
       <main>
         <section className="mk-section" style={{ paddingBottom: 0 }}>
           <div className="mk-wrap">
-            <h1 className="mk-h1 mk-up mk-d1" style={{ margin: "18px auto 0", maxWidth: "19ch" }}>
+            <h1 className="mk-h1 mk-up mk-d1" style={{ marginTop: 18, maxWidth: "19ch" }}>
               Two camps, each with <em>half the problem</em>.
             </h1>
-            <p className="mk-lede mk-up mk-d2" style={{ margin: "20px auto 0", maxWidth: "60ch" }}>
+            <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "60ch" }}>
               One camp owns policy and framework mapping. The other owns runtime
               guardrails.
             </p>
@@ -303,7 +303,7 @@ export default function Compare() {
             </div>
             <p
               className="mk-fine mk-up mk-d3"
-              style={{ maxWidth: "var(--measure)", margin: "24px auto 0",}}
+              style={{ maxWidth: "var(--measure)", marginTop: 24,}}
             >
               The alternative that wins most often is neither camp: 6 of 11 vetted senior
               engineers had already hand-built a guardrail layer inside their employer. The
@@ -463,7 +463,7 @@ export default function Compare() {
             </div>
             <p
               className="mk-lede mk-up mk-d5"
-              style={{ maxWidth: "58ch", margin: "40px auto 0",}}
+              style={{ maxWidth: "58ch", marginTop: 40,}}
             >
               The numbers are on <Link href="/benchmark">the benchmark page</Link>, the mechanism
               on <Link href="/product">the product page</Link>.

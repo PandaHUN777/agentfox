@@ -125,7 +125,7 @@ function Head({
       {children ? (
         <p
           className="mk-body"
-          style={{ marginTop: 14, maxWidth: center ? "64ch" : "46ch", marginInline: center ? "auto" : undefined }}
+          style={{ marginTop: 14, maxWidth: center ? "64ch" : "46ch", marginInline: undefined }}
         >
           {children}
         </p>

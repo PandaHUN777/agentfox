@@ -163,7 +163,7 @@ export function Evidence() {
         </div>
         <p
           className="mk-fine mk-up mk-d3"
-          style={{ maxWidth: "var(--measure)", margin: "24px auto 0",}}
+          style={{ maxWidth: "var(--measure)", marginTop: 24,}}
         >
           The three calls that escaped the AgentDojo replay are all read-only, and the
           benchmark page names them one by one. The weakest figure is in the set on purpose.

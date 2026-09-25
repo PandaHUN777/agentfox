@@ -1649,7 +1649,17 @@ input[type="checkbox"], input[type="radio"] {
    its own card so the numbers separate from the prose around them. The page chrome
    around this article is the marketing layer's, so the route a reader arrives on
    from the home page does not change design system halfway. */
-.bm-doc { max-width: 760px; }
+.bm-doc { max-width: 1072px; }
+.bm-doc > p,
+.bm-doc > ul,
+.bm-doc > ol,
+.bm-doc > h2,
+.bm-doc > h3,
+.bm-doc > .source,
+.bm-doc > .callout,
+.bm-doc > .bm-limits,
+.bm-doc > .bm-method,
+.bm-doc > .hero-code { max-width: 74ch; }
 .bm-doc h2,
 .mk .bm-doc h2 {
   margin: 64px 0 0;
@@ -1939,6 +1949,6 @@ input[type="checkbox"], input[type="radio"] {
    readable line; a chart is not a line, and at 760 the AgentDojo composition
    bar renders its three escapes four pixels wide. The wrap is 1120, so 940
    fits with room and keeps the left edge shared with the prose. */
-@media (min-width: 1120px) {
-  .bm-fig { width: 940px; }
-}
+/* Figures, tables and the index take the full rail; only running text is
+   capped at a measure. */
+.bm-fig { width: auto; }

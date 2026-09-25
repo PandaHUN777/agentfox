@@ -152,21 +152,27 @@ export function Hero() {
       <div className="mk-wash" aria-hidden />
       <div className="mk-wrap mk-hero" style={{ position: "relative" }}>
         <div>
-          {/* Plain, and deliberately not clever. "The injection worked. The
-              transfer didn't." was the previous attempt and it failed the only
-              test that matters: a stranger has to understand it cold. It needs
-              the reader to already know what a prompt injection is, and "the
-              transfer" refers to nothing they have seen yet. */}
+          {/* Third attempt, and the first one that names the thing a reader is
+              already looking for.
+                "The injection worked. The transfer didn't." was a riddle: it
+              needs you to know what a prompt injection is before the sentence
+              parses, and "the transfer" referred to nothing on screen yet.
+                "Your agent can only call the tools you gave it" was plain but
+              inert — it describes how anyone would assume agents already work,
+              so it reads as a restatement rather than a product.
+                This one names the threat, which is the term a buyer searches
+              for, and says where we stop it, which is the thing no text scanner
+              can claim. The subhead carries the mechanism. */}
           <h1 className="mk-h1 mk-up mk-d1">
-            Your agent can only call the tools <em>you gave it</em>
+            Prompt injection stops at the <em>tool call</em>
           </h1>
-          <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "46ch" }}>
-            Before a tool runs, AgentFox checks the tool, the action, and the argument
-            ceilings you set. It reads no prompt text, so it holds when the model has
-            been talked into something.
+          <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "48ch" }}>
+            AgentFox checks every tool call against what the agent was granted, before
+            it runs — the tool, the action, the argument ceilings. It never reads the
+            prompt, so it holds when the model has already been talked into something.
           </p>
           <pre className="mk-install mk-up mk-d3">
-            <code>pip install agentfox</code>
+            <code>pip install git+https://github.com/architsharm/agentfox.git</code>
             <code className="mk-install-2">import agentfox; agentfox.auto()</code>
           </pre>
           <div className="mk-row mk-up mk-d4" style={{ marginTop: 24 }}>
@@ -346,49 +352,112 @@ export function Around() {
 
 /* --- 4. Proof ----------------------------------------------------------- */
 
-/* Three figures, not five. All three are one experiment: the AgentDojo replay with
- * every detector switched off (README.md, "What we claim, and what we don't", bound
- * to benchmarks/agentdojo_e2e/results by scripts/claims.py). The third is the
- * interesting one and it is why the other two mean anything. */
-const PROOF: [string, string][] = [
-  ["42 of 42", "attacker calls that act, contained"],
-  ["552 of 552", "legitimate calls still allowed"],
-  ["0", "detectors switched on"],
+/**
+ * The same run, said in the reader's vocabulary instead of the benchmark's.
+ *
+ * This section used to be three tiles reading "42 of 42", "552 of 552" and "0
+ * detectors switched on". Those are the right numbers and they were the wrong
+ * unit: a denominator only means something to someone who already knows what
+ * AgentDojo is, and "0 detectors switched on" reads as a missing feature to
+ * anyone who does not yet know that is the whole point.
+ *
+ * So the left column is the attack shape, in the words the reader would use for
+ * it, and the number sits beside it as the evidence. Every row is a real
+ * scenario from a results file, not a category invented for a marketing grid:
+ *
+ *   Prompt injection -> tool call   the 42/42 acting-call result,
+ *                                   benchmarks/agentdojo_e2e/results
+ *   Exfiltration via a tool         containment cb1, capability.denied
+ *   Unauthorised transfer           containment cb2/cb3, taint.irreversible_tool
+ *                                   and the value constraint
+ *   Destructive DELETE              containment cb5, sql.unbounded_mutation
+ *                                   and cascade.reaches_destructive
+ *
+ * The framework line is not decoration either: every identifier on it is a key
+ * in src/agentfox/compliance_data/controls.yaml. LLM01 Prompt Injection, LLM02
+ * Sensitive Information Disclosure and LLM06 Excessive Agency are the three
+ * that map to what this section shows; ATLAS and the Art. 14 rule are named
+ * because they are the ones a security reviewer asks about first.
+ */
+const THREATS: { threat: string; detail: string; result: string }[] = [
+  {
+    threat: "Prompt injection reaching a tool call",
+    detail: "The model is already convinced; the call is refused anyway",
+    result: "42 of 42 contained",
+  },
+  {
+    threat: "Data exfiltration through a tool argument",
+    detail: "A tool the agent was never granted",
+    result: "contained",
+  },
+  {
+    threat: "Unauthorised transfer",
+    detail: "Destination or amount taken from attacker-controlled text",
+    result: "contained",
+  },
+  {
+    threat: "Destructive delete",
+    detail: "An unbounded DELETE carried in a tool argument",
+    result: "contained",
+  },
+];
+
+/* Framework ids, each one a key in compliance_data/controls.yaml. Written out
+   rather than abbreviated because a reviewer scans for the exact string. */
+const FRAMEWORKS = [
+  "OWASP LLM01 Prompt Injection",
+  "LLM02 Sensitive Information Disclosure",
+  "LLM06 Excessive Agency",
+  "MITRE ATLAS",
+  "EU AI Act Art. 14",
 ];
 
 export function Proof() {
   return (
     <section id="proof" className="mk-section">
       <div className="mk-wrap">
-        <h2 className="mk-h2 mk-up" style={{ margin: "0 auto", maxWidth: "22ch" }}>
-          We turned every detector off and ran it anyway</h2>
-        <p className="mk-lede mk-up mk-d2" style={{ margin: "18px auto 0", maxWidth: "54ch" }}>
-          617 real agent calls from AgentDojo, replayed with detection fully disabled.
+        <span className="mk-eyebrow mk-up">Measured with every detector switched off</span>
+        <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12, maxWidth: "24ch" }}>
+          What a compromised agent still could not do
+        </h2>
+        <p className="mk-lede mk-up mk-d2" style={{ marginTop: 16, maxWidth: "56ch" }}>
+          617 real agent calls replayed from AgentDojo, with our detection disabled
+          entirely, against an agent the attacker had already talked round.
         </p>
 
-        <div className="mk-grid mk-grid-3 mk-up mk-d3" style={{ marginTop: 44 }}>
-          {PROOF.map(([n, label]) => (
-            <div key={label} className="mk-card mk-stat">
-              <b>{n}</b>
-              <span>{label}</span>
+        <div className="mk-threats mk-up mk-d3">
+          {THREATS.map((t) => (
+            <div key={t.threat} className="mk-threat">
+              <div>
+                <b>{t.threat}</b>
+                <span>{t.detail}</span>
+              </div>
+              <span className="mk-threat-verdict">{t.result}</span>
             </div>
+          ))}
+        </div>
+
+        <div className="mk-row mk-up mk-d4" style={{ marginTop: 18, gap: 6 }}>
+          {FRAMEWORKS.map((f) => (
+            <span key={f} className="mk-chip">
+              {f}
+            </span>
           ))}
         </div>
 
         {/* The denominator, beside the numbers rather than one click away. "42 of
             42" invites "out of what?", and a proof section that makes the reader
-            follow a link to find out is doing the opposite of its job. All four
-            figures are from the same run, written up in section 2 of /benchmark. */}
-        <p className="mk-fine mk-up mk-d4" style={{ margin: "20px auto 0", maxWidth: "62ch" }}>
-          617 calls: 552 legitimate, and 65 from an agent the attacker had already
-          convinced. 42 of those 65 act; the other 23 only read. Three escaped, and
-          all three are read-only. This measures the third boundary — whether an action
-          runs. It says nothing about the other two.
+            follow a link to find out is doing the opposite of its job. */}
+        <p className="mk-fine mk-up mk-d5" style={{ marginTop: 20, maxWidth: "64ch" }}>
+          552 of 552 legitimate calls still ran. Of the 65 the attacker sent, 42 act
+          and 23 only read; three reads got through, and all three were things the
+          agent already held a grant for. This measures whether an action runs, and
+          nothing else.
         </p>
 
-        <p className="mk-row mk-up mk-d5" style={{ justifyContent: "center", marginTop: 26 }}>
+        <p className="mk-row mk-up mk-d5" style={{ marginTop: 24 }}>
           <Link href="/benchmark" className="mk-btn mk-btn-outline">
-            Every number, and how to reproduce it
+            See every number
           </Link>
         </p>
       </div>

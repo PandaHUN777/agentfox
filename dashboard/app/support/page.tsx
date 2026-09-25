@@ -54,7 +54,7 @@ function Head({ eyebrow, title, lede }: { eyebrow: string; title: string; lede?:
         {title}
       </h2>
       {lede && (
-        <p className="mk-lede" style={{ margin: "14px auto 0", maxWidth: "62ch" }}>
+        <p className="mk-lede" style={{ marginTop: 14, maxWidth: "62ch" }}>
           {lede}
         </p>
       )}
@@ -179,10 +179,10 @@ export default function Support() {
       <main>
         <section className="mk-section" style={{ paddingBottom: 0 }}>
           <div className="mk-wrap">
-            <h1 className="mk-h1 mk-up mk-d1" style={{ margin: "18px auto 0", maxWidth: "18ch" }}>
+            <h1 className="mk-h1 mk-up mk-d1" style={{ marginTop: 18, maxWidth: "18ch" }}>
               Every report gets <em>read</em>.
             </h1>
-            <p className="mk-lede mk-up mk-d2" style={{ margin: "20px auto 0", maxWidth: "58ch" }}>
+            <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "58ch" }}>
               This is one developer&rsquo;s project, so none of the routes below carries a
               promised response time. All of them are read.
             </p>

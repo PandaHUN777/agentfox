@@ -98,7 +98,7 @@ export function Editions() {
           <span className="mk-eyebrow">Editions</span>
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
             Free forever. Support if you want it</h2>
-          <p className="mk-lede" style={{ margin: "14px auto 0", maxWidth: "62ch" }}>
+          <p className="mk-lede" style={{ marginTop: 14, maxWidth: "62ch" }}>
             Same software either way. What you pay for is a person to call.
           </p>
         </div>
@@ -170,7 +170,7 @@ export function Editions() {
               line below the grid now. The fact is unchanged; it just no longer takes
               up a third of the page arguing against itself. */}
         </div>
-        <p className="mk-fine mk-up mk-d3" style={{ margin: "22px auto 0",}}>
+        <p className="mk-fine mk-up mk-d3" style={{ marginTop: 22,}}>
           A hosted version is coming. <a href={CLOUD_HREF}>Join the waitlist.</a>
         </p>
       </div>
