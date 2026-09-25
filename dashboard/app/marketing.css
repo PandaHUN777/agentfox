@@ -313,9 +313,10 @@
   display: grid;
   gap: 40px;
   align-items: center;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   padding-block: clamp(48px, 6vw, 80px);
 }
+.mk-hero > * { min-width: 0; }
 @media (min-width: 940px) {
   .mk-hero { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 56px; }
 }
@@ -605,6 +606,10 @@
    it" reads as a broken build. */
 .mk-nav-cta .mk-btn { padding: 7px 14px; font-size: var(--t-small); white-space: nowrap; }
 @media (max-width: 420px) { .mk-nav-cta .mk-btn-ghost { display: none; } }
+@media (max-width: 899px) {
+  .mk-nav-inner { gap: 10px; }
+  .mk-nav-cta { gap: 8px; padding-right: 44px; }
+}
 
 /* The mobile menu. Below the breakpoint the link row is display:none, and until
    now nothing replaced it: on a phone the only navigation on the whole site was

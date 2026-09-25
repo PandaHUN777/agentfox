@@ -1685,7 +1685,7 @@ input[type="checkbox"], input[type="radio"] {
 .bm-doc li > strong, .bm-doc li > b { color: var(--text); }
 .bm-doc a,
 .mk .bm-doc a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-.bm-doc code.mono { font-size: 1em; }
+.bm-doc code.mono { font-size: 1em; overflow-wrap: anywhere; }
 
 /* Tables are the evidence, so they get an edge of their own rather than floating
    in the prose at a smaller size than it. */
