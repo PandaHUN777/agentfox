@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, safeApi, apiErrorProps } from "@/lib/api";
-import { ApiDown, Empty, InfoTip, Panel, Severity, Stat, agentName } from "@/components/ui";
+import { ApiDown, Empty, InfoTip, InventoryStrip, Panel, Severity, Stat, agentName } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { Countdown } from "@/components/Countdown";
 
@@ -88,16 +88,9 @@ async function RulesTab({ agent }: { agent?: string }) {
       <div className="note-panel" style={{ marginTop: 14 }}>
         <strong>Tool containment: the rule that holds after a filter is fooled.</strong>{" "}
         Most rules here read the text of a request. This one reads the action, so an
-        irreversible tool called with arguments out of a retrieved document or another
-        tool's output needs a human.
-        <InfoTip text="Containment reasons over which tool is called, its arguments, where they came from, and how much damage it can do. It holds whether or not a detector flagged the text, so an injection can convince the model and still not get the action executed." />{" "}
-        It is only as good as the declarations behind it: a tool recorded as{" "}
-        <code className="mono">read</code> that actually moves money is not contained by
-        anything. The four impact tiers are <code className="mono">read</code>,{" "}
-        <code className="mono">write</code>, <code className="mono">high_impact</code>{" "}
-        and <code className="mono">irreversible</code>, declared per tool. See{" "}
-        <Link href="/app/agents">Agents</Link> for yours and the{" "}
-        <Link href="/app/glossary">Glossary</Link> for the terms.
+        irreversible tool called with arguments out of a retrieved document needs a
+        human.{" "}
+        <InfoTip text="It is only as good as the declarations behind it: a tool recorded as read that actually moves money is not contained by anything. The four impact tiers are read, write, high_impact and irreversible, declared per tool. See Agents for yours and the Glossary for the terms." />
       </div>
 
       {proposed.length > 0 && (
@@ -426,36 +419,55 @@ async function GuardrailTuningTab({ agent }: { agent?: string }) {
         {agent && <Link href="/app/policies?tab=guardrails" className="chip">clear agent ×</Link>}
       </form>
 
-      <div className="cards">
-        <Stat
-          n={detectors.detectors.filter((d: any) => d.available).length}
-          label="checks turned on"
-          hint="How many built-in safety checks are installed and running in this deployment."
-        />
-        <Stat
-          n={`${(degraded * 100).toFixed(1)}%`}
-          label="checks that ran late or got skipped"
-          tone={degraded > 0.01 ? "warn" : "ok"}
-          hint="A check that took too long (degraded, only partly ran) or got skipped to keep the agent responsive. High here means the safety net has holes, not that anything caught a real problem."
-        />
-        <Stat
-          n={latency.runs}
-          label={`checks run, last ${latency.window_days} days`}
-          hint="How much traffic these checks have looked at."
-        />
-        <Stat
-          n={health.active || 0}
-          label="checks someone turned off for a specific case"
-          tone={health.never_hit?.length ? "warn" : "ok"}
-          hint="Someone silenced this check for a specific agent or pattern after deciding it was wrong often enough. Worth reviewing, so a silenced check does not stay silenced by accident."
-        />
-        <Stat
-          n={health.expiring_within_7_days?.length || 0}
-          label="of those expiring this week"
-          tone={health.expiring_within_7_days?.length ? "warn" : undefined}
-          hint="Suppressions are time-boxed on purpose: these start enforcing again automatically unless someone renews them."
-        />
-      </div>
+      {/* Five tiles, three of them zero, and `tone="ok"` painted the zeros green
+          — so "0 checks turned off" and "0.0% ran late" glowed as loudly as a
+          real number. A tile is for something that wants a person; none of these
+          do until they are non-zero, and then only two of them. */}
+      {(degraded > 0.01 || (health.expiring_within_7_days?.length || 0) > 0) && (
+        <div className="cards">
+          {degraded > 0.01 && (
+            <Stat
+              n={`${(degraded * 100).toFixed(1)}%`}
+              label="checks that ran late or got skipped"
+              tone="warn"
+              hint="A check that took too long (degraded, only partly ran) or got skipped to keep the agent responsive. High here means the safety net has holes, not that anything caught a real problem."
+            />
+          )}
+          {(health.expiring_within_7_days?.length || 0) > 0 && (
+            <Stat
+              n={health.expiring_within_7_days.length}
+              label="suppressions expiring this week"
+              tone="warn"
+              hint="Suppressions are time-boxed on purpose: these start enforcing again automatically unless someone renews them."
+            />
+          )}
+        </div>
+      )}
+
+      <InventoryStrip
+        items={[
+          {
+            n: detectors.detectors.filter((d: any) => d.available).length,
+            label: "checks turned on",
+            href: "/app/policies?tab=guardrails",
+          },
+          {
+            n: latency.runs,
+            label: `checks run, last ${latency.window_days} days`,
+            href: "/app/traces",
+          },
+          {
+            n: `${(degraded * 100).toFixed(1)}%`,
+            label: "ran late or skipped",
+            href: "/app/policies?tab=guardrails",
+          },
+          {
+            n: health.active || 0,
+            label: "suppressed for a specific case",
+            href: "/app/policies?tab=guardrails",
+          },
+        ]}
+      />
 
       <h2>How much each check slows things down</h2>
       <p className="sub">
