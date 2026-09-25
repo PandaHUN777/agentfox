@@ -13,7 +13,7 @@ the file it came from.
 
 Nothing yet.
 
-## [0.3.0] - not yet tagged
+## [0.3.0] - 2026-09-25
 
 The MVP described in the README. The package was declared `0.1.0` while every document
 said `MVP v0.3`; they now agree on `0.3.0`, which is what `pyproject.toml`,
