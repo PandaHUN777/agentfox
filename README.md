@@ -395,8 +395,9 @@ uvicorn agentfox.gateway.app:app --host 0.0.0.0 --port 8080
 ```
 
 **After any of them:** create a GitHub OAuth app and set its callback to
-`https://<your-host>/api/auth/github/callback`. Full runbook, including Fly.io and bare metal:
-[`deploy/README-dashboard.md`](deploy/README-dashboard.md).
+`https://<your-host>/api/auth/github/callback`. The dashboard runbook is
+[`deploy/README-dashboard.md`](deploy/README-dashboard.md); a Fly.io config, with its commands in
+its own header, is [`deploy/fly.dashboard.toml`](deploy/fly.dashboard.toml).
 
 <br />
 
