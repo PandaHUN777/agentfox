@@ -76,15 +76,21 @@ print('permissive-tier weights cached')"
 # BuildKit secret mounts don't persist in the final image or `docker history`.
 # Build with: DOCKER_BUILDKIT=1 docker build --secret id=hf_token,env=HF_TOKEN ...
 # (docker compose: see deploy/docker-compose.yml's `secrets:` block).
+# Skipped, not failed, when no token is mounted. Two reasons. A build without a
+# token is the normal case — anyone building this image who has not accepted Meta's
+# licence, including the public image workflow, which must never bake gated weights
+# into something we publish. And an empty secret does not fail cleanly: huggingface_hub
+# sends `Authorization: Bearer ` and httpx rejects it as an illegal header value,
+# so the build died on a confusing protocol error rather than a missing credential.
+# `safety.restricted` then loads its weights at runtime, or stays unavailable.
 RUN --mount=type=secret,id=hf_token \
-    HF_TOKEN="$(cat /run/secrets/hf_token)" python -c "\
-import os; \
-from huggingface_hub import login; \
-login(token=os.environ['HF_TOKEN']); \
-from transformers import AutoModelForSequenceClassification, AutoTokenizer; \
-AutoTokenizer.from_pretrained('meta-llama/Llama-Guard-3-8B'); \
-AutoModelForSequenceClassification.from_pretrained('meta-llama/Llama-Guard-3-8B'); \
-print('restricted-tier weights cached')"
+    sh -eu -c 'HF_TOKEN="$(cat /run/secrets/hf_token 2>/dev/null || true)"; \
+    if [ -z "$HF_TOKEN" ]; then \
+      echo "no hf_token mounted - skipping the licence-gated restricted tier"; \
+      exit 0; \
+    fi; \
+    export HF_TOKEN; \
+    python -c "import os; from huggingface_hub import login; login(token=os.environ[\"HF_TOKEN\"]); from transformers import AutoModelForCausalLM, AutoTokenizer; AutoTokenizer.from_pretrained(\"meta-llama/Llama-Guard-3-8B\"); AutoModelForCausalLM.from_pretrained(\"meta-llama/Llama-Guard-3-8B\"); print(\"restricted-tier weights cached\")"'
 
 RUN useradd --create-home --uid 10001 nometria \
  && mkdir -p /var/nometria/evidence \
