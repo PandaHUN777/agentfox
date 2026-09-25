@@ -81,18 +81,13 @@ async function RulesTab({ agent }: { agent?: string }) {
 
   return (
     <>
-      {/* The product's own claim, stated where a reader is actually looking at
-          policies, instead of only in a paragraph on Start here. Written to be
-          checkable: it says what containment reasons over, and what it depends
-          on, rather than promising that injections cannot get through. */}
-      <div className="note-panel" style={{ marginTop: 14 }}>
-        <strong>Tool containment: the rule that holds after a filter is fooled.</strong>{" "}
-        Most rules here read the text of a request. This one reads the action, so an
-        irreversible tool called with arguments out of a retrieved document needs a
-        human.{" "}
-        <InfoTip text="It is only as good as the declarations behind it: a tool recorded as read that actually moves money is not contained by anything. The four impact tiers are read, write, high_impact and irreversible, declared per tool. See Agents for yours and the Glossary for the terms." />
-      </div>
-
+      {/* Removed: a callout at the top of every load that said what the mode
+          column's own tooltip already says — "tool containment ships in enforce:
+          it reads no text, so it has no false positives to tune, and it is the
+          control meant to hold when a content filter has already been fooled".
+          The claim is worth making; making it twice, one of them in a bordered
+          box above the table on every visit, is not. The row it is about is in
+          the table, and says `enforce` where the others say `observe`. */}
       {proposed.length > 0 && (
         <>
           <h2>Pending review</h2>
@@ -190,6 +185,10 @@ async function RulesTab({ agent }: { agent?: string }) {
                 <InfoTip text="Observe records what a policy would have blocked without blocking it, so you can check it is not too trigger-happy before promoting it — a policy that blocks the moment it is turned on is how a real safety rule ends up disabled by an annoyed engineer. The content policies ship in observe for that reason. Tool containment ships in enforce: it reads no text, so it has no false positives to tune, and it is the control meant to hold when a content filter has already been fooled." />
               </th>
               <th className="num">rules</th>
+              {/* A policy row linked only from its name, so "these are editable"
+                  was something you found out by clicking a title and noticing a
+                  button on the next page. Named action, every row. */}
+              <th />
             </tr>
           </thead>
           <tbody>
@@ -208,6 +207,9 @@ async function RulesTab({ agent }: { agent?: string }) {
                   </span>
                 </td>
                 <td className="num">{p.rules}</td>
+                <td className="small" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
+                  <Link href={`/app/policies/${p.key}`}>Review &amp; edit &rarr;</Link>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -250,13 +252,24 @@ async function RulesTab({ agent }: { agent?: string }) {
         <Link href="/app/policies?tab=guardrails">Guardrail tuning tab</Link>.
       </p>
 
-      <h2>Attack simulations available</h2>
+      {/* Was a heading, a sentence pointing elsewhere, and a 22-row reference
+          table open on every load — a catalogue you could read but not act on.
+          The action is now on the heading, and the catalogue is behind it. */}
+      <div className="section-head">
+        <h2>
+          Attack simulations
+          <InfoTip text="Scripted attempts to break an agent: getting it to leak a secret, ignore its instructions, or say something it shouldn't." />
+        </h2>
+        <Link href="/app/evals#redteam" className="btn-primary">
+          Run these against an agent &rarr;
+        </Link>
+      </div>
       <p className="sub">
-        Scripted attempts to break an agent.
-        <InfoTip text="Getting it to leak a secret, ignore its instructions, or say something it shouldn't." />{" "}
-        Run them against any agent from the{" "}
-        <Link href="/app/evals">Evaluation</Link> page.
+        {probes.probes.length} probes ship with the product and run through the same
+        enforcement path as live traffic.
       </p>
+      <details className="rt-more">
+        <summary>The full probe catalogue ({probes.probes.length})</summary>
       <div className="panel scroll-x">
         {/* This list comes from a `safeApi` fallback, so an empty array here is
             just as likely to mean the probes call failed as it is to mean there
@@ -287,6 +300,7 @@ async function RulesTab({ agent }: { agent?: string }) {
         </table>
         )}
       </div>
+      </details>
       <p className="page-foot">
         Wrapped runners:{" "}
         {Object.entries(probes.runners || {}).map(([n, ok]) => (

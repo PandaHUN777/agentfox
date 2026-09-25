@@ -9,6 +9,7 @@ function score(v: unknown): string {
   return typeof v === "number" && Number.isFinite(v) ? v.toFixed(2) : "—";
 }
 import { PageHeader } from "@/components/PageHeader";
+import { Explainer } from "@/components/Explainer";
 
 /**
  * Behind the sign-in wall: `noindex`, plus a tab title that is not the fourth
@@ -333,7 +334,7 @@ export default async function Evals({
         </div>
       </div>
 
-      <h2>Red-team posture</h2>
+      <h2 id="redteam">Red-team posture</h2>
       <p className="sub">
         A campaign runs the built-in attack probes against one agent and reports how
         many got through.
@@ -405,77 +406,85 @@ export default async function Evals({
         )}
       </div>
 
-      <h2>Scorers</h2>
-      <div className="panel scroll-x">
-        <table>
-          <thead><tr><th>scorer</th><th>kind</th><th>direction</th><th className="num">threshold</th></tr></thead>
-          <tbody>
-            {scorers.scorers.map((s: any) => (
-              <tr key={s.key}>
-                <td className="mono small">{s.key}</td>
-                <td className="small muted">{s.kind}</td>
-                <td className="small muted">
-                  {s.higher_is_better ? "higher is better" : "lower is better"}
-                </td>
-                <td className="num small">{s.threshold ?? "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* "Scorers" and "Failing a build on a regression" were two more open
+          sections at the foot of this page: a read-only registry table, and a
+          four-row command reference. Neither is something you come to this page
+          to do — they are what you read once to understand how the page works.
+          One button, both behind it, and the page ends on its own content. */}
+      <div className="section-head">
+        <h2>How scoring and gating work</h2>
+        <Explainer label="Scorers and the CI gate" title="Scorers and the CI gate">
+          <p>
+            A <strong>scorer</strong> is one judgement applied to an answer — accuracy,
+            groundedness, safety. They ship with the product and are fixed: the
+            threshold below is each scorer&rsquo;s built-in default, not a setting.
+            The number you actually choose is a <strong>reliability objective</strong>,
+            set per agent against a scorer, and visible on an agent&rsquo;s{" "}
+            <Link href="/app/agents">Activity tab</Link>.
+          </p>
 
-      <EvalGate />
+          <h4>Scorers that ship</h4>
+          <div className="panel scroll-x">
+            <table>
+              <thead><tr><th>scorer</th><th>kind</th><th>direction</th><th className="num">default threshold</th></tr></thead>
+              <tbody>
+                {scorers.scorers.map((s: any) => (
+                  <tr key={s.key}>
+                    <td className="mono small">{s.key}</td>
+                    <td className="small muted">{s.kind}</td>
+                    <td className="small muted">
+                      {s.higher_is_better ? "higher is better" : "lower is better"}
+                    </td>
+                    <td className="num small">{s.threshold ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <h4>Failing a build on a regression</h4>
+          <p>
+            The same suite, run from your build against a baseline, exiting non-zero
+            when the score drops. It is a command, not a screen — runs otherwise
+            happen when someone remembers, and a gate fails the pull request instead
+            of a person noticing later.
+          </p>
+          <div className="panel scroll-x">
+            <table>
+              <thead>
+                <tr><th>step</th><th>command</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td className="small">Record the run to be judged against</td>
+                  <td className="mono small">agentfox eval baseline RUN_ID --label main</td>
+                </tr>
+                <tr>
+                  <td className="small">Gate a build on it</td>
+                  <td className="mono small">agentfox eval gate SUITE --baseline RUN_ID</td>
+                </tr>
+                <tr>
+                  <td className="small">Or gate on an absolute floor instead</td>
+                  <td className="mono small">agentfox eval gate SUITE --min-pass-rate 0.9</td>
+                </tr>
+                <tr>
+                  <td className="small">Write results your CI already reads</td>
+                  <td className="mono small">--junit results.xml --sarif results.sarif</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            The gate exits 1 on a regression and takes a suite, not an agent. The
+            default model provider is <span className="mono">echo</span> — offline,
+            answering with a fixed stub — so a gate left on the default tells you the
+            pipeline runs and nothing about a real model. A passing gate says this
+            suite did not get worse; it says nothing about the cases nobody wrote.
+            Also over HTTP as <span className="mono">POST /api/eval/gate</span>.
+          </p>
+        </Explainer>
+      </div>
     </>
   );
 }
 
-/**
- * The one thing on this page that stops a bad change reaching production is the
- * CI gate, and it is the one thing with no presence here at all — a reader would
- * conclude evaluation is something you remember to do by hand.
- */
-function EvalGate() {
-  return (
-    <>
-      <h2>Failing a build on a regression</h2>
-      <p className="sub">
-        The same suite, run from your build against a baseline, exiting non-zero when
-        the score drops. It is a command, not a screen.
-        <InfoTip text="Runs otherwise happen when someone remembers; a gate fails the pull request instead of a person noticing later." />
-      </p>
-      <div className="panel scroll-x">
-        <table>
-          <thead>
-            <tr><th>step</th><th>command</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="small">Record the run you want to be judged against</td>
-              <td className="mono small">agentfox eval baseline RUN_ID --label main</td>
-            </tr>
-            <tr>
-              <td className="small">Gate a build on it</td>
-              <td className="mono small">agentfox eval gate SUITE --baseline RUN_ID</td>
-            </tr>
-            <tr>
-              <td className="small">Or gate on an absolute floor instead</td>
-              <td className="mono small">agentfox eval gate SUITE --min-pass-rate 0.9</td>
-            </tr>
-            <tr>
-              <td className="small">Write results your CI already knows how to read</td>
-              <td className="mono small">--junit results.xml --sarif results.sarif</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p className="small muted" style={{ marginTop: 10, maxWidth: "var(--measure)" }}>
-        The gate exits 1 on a regression, and takes a suite, not an agent. The default
-        model provider is <span className="mono">echo</span>, offline and answering with
-        a fixed stub, so a gate left on the default tells you the pipeline runs and
-        nothing about a real model. Also over HTTP as{" "}
-        <span className="mono">POST /api/eval/gate</span>.
-        <InfoTip text="A passing gate says this suite did not get worse; it says nothing about the cases nobody wrote." />
-      </p>
-    </>
-  );
-}
