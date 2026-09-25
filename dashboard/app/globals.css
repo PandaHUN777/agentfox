@@ -2609,3 +2609,35 @@ td .mono { overflow-wrap: anywhere; }
 .queue-clear h3 { margin: 0 0 8px; font-size: var(--t-body); font-weight: 620; letter-spacing: -0.012em; }
 .queue-clear p { margin: 0 0 10px; font-size: var(--t-small); line-height: 1.6; color: var(--muted); }
 .queue-clear .qc-links { margin: 0; font-size: var(--t-micro); }
+
+/* The draft status of the framework mappings, as a line rather than a warning
+   panel. See components/ui.tsx DraftCaveat: a box the reader meets on every
+   load is a box they stop reading, and a shouted disclaimer reads as less
+   confident rather than more careful. */
+.draft-note {
+  /* Inline flow, not flex. As a flex container the sentence and its ⓘ were two
+     separate items, so the tooltip wrapped onto a line of its own. */
+  margin: 14px 0 18px;
+  font-size: var(--t-small);
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: var(--measure);
+}
+.draft-tag {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 7px;
+  border: 1px solid var(--warn);
+  border-radius: var(--r-pill);
+  color: var(--warn);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.gaps-list { margin: 0; padding-left: 18px; font-size: var(--t-small); line-height: 1.6; color: var(--muted); max-width: var(--measure); }
+.gaps-list li { margin-bottom: 4px; }
+
+/* Keeps a trailing InfoTip on the same line as the word it belongs to. Alone at
+   the start of a wrapped line the ⓘ reads as a stray glyph, not as part of the
+   sentence. */
+.nowrap { white-space: nowrap; }

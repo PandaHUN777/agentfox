@@ -243,27 +243,71 @@ export function FindingType({ value }: { value: string }) {
  * a product that presents unreviewed regulatory mappings as authoritative fails its
  * first serious audit conversation (Appendix B §B.6).
  */
+/**
+ * That the framework mappings are unreviewed.
+ *
+ * This was an amber warning panel with a shouted heading ("Framework mappings
+ * are DRAFT") and three sentences of hedging, at the top of the page, on every
+ * load. Every word of it was true and none of it needed that much volume: a
+ * warning box the reader sees every single time is a banner they stop reading,
+ * and shouting a disclaimer reads as less confident, not more careful.
+ *
+ * One line, in the page's own voice, with the precise wording — which matters,
+ * because it is what an evidence package is stamped with — kept in full on the
+ * tooltip. Same information, same honesty, said once.
+ */
+const DRAFT_DETAIL =
+  "They have not been reviewed by compliance counsel or a certification body, and they are not legal advice. Evidence packages built from them are stamped DRAFT — UNVERIFIED / NOT LEGAL ADVICE until a named reviewer confirms each mapping.";
+
 export function DraftCaveat({ text }: { text?: string }) {
   return (
-    <div className="caveat">
-      <strong>Framework mappings are DRAFT</strong>
-      {text ||
-        "These are informed engineering drafts produced from the framework texts. They are not legal advice, have not been reviewed by compliance counsel or a certification body, and ship inside evidence packages tagged DRAFT — UNVERIFIED / NOT LEGAL ADVICE until reviewed."}
-    </div>
+    <p className="draft-note">
+      <span className="draft-tag">Draft</span>
+      {text ? (
+        <>
+          {text}
+          <InfoTip text={DRAFT_DETAIL} />
+        </>
+      ) : (
+        <>
+          Framework mappings are engineering&rsquo;s reading of the published texts, not
+          a reviewed compliance{" "}
+          {/* The final word and the tooltip are bound together: on its own the ⓘ
+              wrapped to a line of its own under the sentence and read as a stray
+              glyph rather than as part of it. */}
+          <span className="nowrap">
+            opinion.
+            <InfoTip text={DRAFT_DETAIL} />
+          </span>
+        </>
+      )}
+    </p>
   );
 }
 
-export function Gaps({ gaps }: { gaps: string[] }) {
+/**
+ * What this product does not cover, per framework.
+ *
+ * Kept, because a compliance page that only lists what it does cover is the
+ * dishonest version — but behind a control rather than stacked loose under the
+ * frameworks table as a run of bare <h3>s and bullet lists. Someone reading
+ * coverage should be able to reach the gaps in one click and not have to scroll
+ * past them to leave.
+ */
+export function Gaps({ gaps, title }: { gaps: string[]; title?: string }) {
   if (!gaps?.length) return null;
   return (
-    <>
-      <h3>Declared gaps — not covered by this product</h3>
-      <ul className="small muted" style={{ marginTop: 0 }}>
+    <details className="rt-more" style={{ marginTop: 14 }}>
+      <summary>
+        {title ? `${title}: ` : ""}
+        {gaps.length} thing{gaps.length === 1 ? "" : "s"} this product does not cover
+      </summary>
+      <ul className="gaps-list">
         {gaps.map((g) => (
           <li key={g}>{g}</li>
         ))}
       </ul>
-    </>
+    </details>
   );
 }
 

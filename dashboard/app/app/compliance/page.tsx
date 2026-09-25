@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, apiErrorProps } from "@/lib/api";
-import { ApiDown, ControlStatus, DraftCaveat, InfoTip, InventoryStrip, Panel, Stat, StatLink, StatusBar, pct, ts } from "@/components/ui";
+import { ApiDown, ControlStatus, DraftCaveat, Gaps, InfoTip, InventoryStrip, Panel, Stat, StatLink, StatusBar, pct, ts } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { PrintButton } from "@/components/PrintButton";
 
@@ -251,16 +251,12 @@ export default async function Compliance({
             </table>
           </div>
 
-          {frameworks.frameworks.map((f: any) =>
-            f.declared_gaps?.length ? (
-              <div key={f.framework} style={{ marginTop: 18 }}>
-                <h3>{f.title} — declared gaps</h3>
-                <ul className="small muted" style={{ marginTop: 0 }}>
-                  {f.declared_gaps.map((g: string) => <li key={g}>{g}</li>)}
-                </ul>
-              </div>
-            ) : null,
-          )}
+          {/* Was a run of bare <h3>s and bullet lists stacked under the table,
+              which a reader had to scroll through to get past. One control per
+              framework instead — still one click from the coverage it qualifies. */}
+          {frameworks.frameworks.map((f: any) => (
+            <Gaps key={f.framework} gaps={f.declared_gaps} title={f.title} />
+          ))}
         </>
       )}
 
