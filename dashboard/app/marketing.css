@@ -1130,3 +1130,21 @@
   color: var(--mk-muted);
 }
 .mk-threat .mk-mono { font-family: var(--mk-code); font-size: var(--t-small); }
+
+/* The pricing-announcement capture, under the editions grid rather than inside a
+   card: it is about all three editions, not one of them. */
+.mk-notify {
+  margin-top: 22px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 28px;
+  padding: 20px 22px;
+  border: 1px solid var(--mk-border);
+  border-radius: var(--mk-r-md);
+  background: var(--mk-surface-2);
+}
+.mk-notify h3 { margin: 0; }
+.mk-notify p { margin: 6px 0 0; max-width: 54ch; font-size: var(--t-small); }
+.mk-notify .wl { flex: 0 0 auto; min-width: min(100%, 22rem); }

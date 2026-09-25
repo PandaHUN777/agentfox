@@ -29,7 +29,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = publicPageMetadata({
   title: "Pricing and editions",
   description:
-    "Everything is Apache-2.0 and free to self-host forever, with nothing gated. Supported self-hosted is a support relationship. Managed cloud is in development.",
+    "Everything is Apache-2.0 and free to self-host forever, with nothing gated. The hosted version is open and free while in preview: sign in with GitHub, no card.",
   path: "/pricing",
 });
 
@@ -49,7 +49,9 @@ export default async function Pricing({
               Free to self-host, <em>forever</em></h1>
             <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "58ch" }}>
               Everything in the repository is Apache-2.0 and nothing is gated behind a paid tier.
-              What a paid arrangement buys is a support relationship, and it is not priced yet.
+              The hosted version is open and free while it is in preview — sign in with
+              GitHub and you have a workspace in about ten seconds. Nothing is priced
+              yet, and no card is taken anywhere on this site.
             </p>
             <p className="mk-fine mk-up mk-d3" style={{ marginTop: 18 }}>
               Questions about a rollout? <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>, or

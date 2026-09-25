@@ -20,6 +20,10 @@
 export function WaitlistForm({ returnTo = "/pricing#editions" }: { returnTo?: string }) {
   return (
     <form action="/api/waitlist" method="POST" className="wl">
+      {/* Was "hosted-cloud": a queue for a product that turned out to already be
+          open to anyone with a GitHub account. What is actually unknown is when
+          billing starts, so that is what this list is for now. */}
+      <input type="hidden" name="source" value="pricing-launch" />
       <label className="wl-sr" htmlFor="waitlist-email">
         Work email
       </label>
@@ -39,7 +43,7 @@ export function WaitlistForm({ returnTo = "/pricing#editions" }: { returnTo?: st
       </div>
       <input type="hidden" name="return_to" value={returnTo} />
       <p className="wl-fine">
-        We will email you once, when it opens. Nothing else, and no card today.
+        One email when pricing is announced. Nothing else.
       </p>
     </form>
   );

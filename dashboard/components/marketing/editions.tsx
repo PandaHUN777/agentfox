@@ -101,9 +101,9 @@ export function Editions({
         <div className="mk-narrow mk-up">
           <span className="mk-eyebrow">Editions</span>
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
-            Free forever. Support if you want it</h2>
+            Free either way. Run it yourself, or let us run it</h2>
           <p className="mk-lede" style={{ marginTop: 14, maxWidth: "62ch" }}>
-            Same software either way. What you pay for is a person to call.
+            The same control plane in all three. Nothing is priced yet and no card is taken anywhere on this site.
           </p>
         </div>
 
@@ -168,54 +168,74 @@ export function Editions({
             </div>
           </div>
 
-          {/* 3. Hosted cloud. Previously one mailto line under the grid, because a
-              card describing a product that does not exist was arguing against
-              itself in four negations ("Nothing yet", "you cannot sign up today",
-              "Nothing is priced, because nothing is running"). The answer to that
-              was never to hide it: who wants the hosted version is the most useful
-              thing this site can learn before launch. So it is a card again, with
-              one thing a visitor can do in it, and it says plainly what is running
-              and what is not.
+          {/* 3. Hosted.
+              This card said "In development" and offered a waitlist, while the nav
+              beside it offered "Sign in" and routes/integrations.py provisions a
+              brand-new org for any GitHub identity that has never been seen —
+              "new GitHub identity and new tenant are the same event", role owner,
+              no invite flow and no allowlist. The hosted product has been live and
+              open this whole time; the page was the only thing saying otherwise.
 
-              No Stripe code exists in this repository, so there is deliberately no
-              "start trial" button here that would go nowhere. The seven free days
-              are stated as the terms of the offer, which is a commitment, not a
-              claim that something is live. */}
+              What genuinely does not exist is billing: there is no plan, trial,
+              subscription or Stripe code anywhere under src/agentfox. So the card
+              cannot say "14 days free" as a description of today, because there is
+              no clock and no paywall to be free of — a visitor would reasonably
+              read it as losing access on day 15. It says what is true now (free,
+              open, no card) and what the 14 days is (the first thing that happens
+              when paid plans arrive). */}
           <div className="mk-card mk-up mk-d3" style={COLUMN}>
             <div className="ed-head">
               <h3 className="mk-h3">Hosted</h3>
-              <span className="mk-chip mk-chip-hold">In development</span>
+              <span className="mk-chip mk-chip-go">Free while in preview</span>
             </div>
 
             <Item label="What you get">
-              The same control plane, run by us, with upgrades and backups handled.
+              The same control plane, run by us. Sign in with GitHub and you have a
+              workspace of your own in about ten seconds.
             </Item>
             <Item label="Who it is for">
               Teams who want this in front of an auditor without running a database.
             </Item>
             <Item label="Cost">
-              First 7 days free. Nothing is charged before it opens, and no card is
-              taken today.
+              Nothing today, and no card. When paid plans arrive your first 14 days on
+              one are free, and we will tell you before anything changes.
             </Item>
 
             <div style={ACTION_FOOT}>
-              <span className="mk-label">Join the waitlist</span>
-              {notice ? (
-                <p className="wl-done" role="status">
-                  {notice}
-                </p>
-              ) : (
-                <>
-                  {error ? (
-                    <p className="wl-error" role="alert">
-                      {error}
-                    </p>
-                  ) : null}
-                  <WaitlistForm />
-                </>
-              )}
+              <span className="mk-label">Start here</span>
+              <a className="mk-btn mk-btn-primary" href="/login" style={{ justifyContent: "center" }}>
+                Start free
+              </a>
             </div>
           </div>
+        </div>
+
+        {/* The waitlist is not gone, it is pointed at the thing that is actually
+            unknown. Nobody needs to queue for the product — they can sign in — but
+            "tell me before you start charging" is a real request, and it is the one
+            this form now collects. */}
+        <div className="mk-notify mk-up mk-d4">
+          {notice ? (
+            <p className="wl-done" role="status">
+              {notice}
+            </p>
+          ) : (
+            <>
+              <div>
+                <h3 className="mk-h3">Tell me when pricing is announced</h3>
+                <p className="mk-body">
+                  One email, before any plan or paywall exists. Not a queue for
+                  access — that is open now.
+                </p>
+                {error ? (
+                  <p className="wl-error" role="alert">
+                    {error}
+                  </p>
+                ) : null}
+              </div>
+              <WaitlistForm />
+            </>
+          )}
         </div>
       </div>
     </section>

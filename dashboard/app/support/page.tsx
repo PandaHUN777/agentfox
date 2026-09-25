@@ -356,7 +356,7 @@ export default function Support() {
             <Head
               eyebrow="Commercial support"
               title="A named person to call"
-              lede="The identical software, plus help with rollout and priority on fixes. It is not priced yet."
+              lede="The identical software, plus help with rollout and priority on fixes. Not priced yet."
             />
             <div className="mk-grid mk-grid-3" style={{ marginTop: 40 }}>
               <div className="mk-card mk-up mk-d1" style={{ display: "grid", gap: 8, minWidth: 0 }}>
@@ -377,7 +377,7 @@ export default function Support() {
               <div className="mk-card mk-up mk-d3" style={{ display: "grid", gap: 8, minWidth: 0 }}>
                 <span className="mk-label">Managed cloud</span>
                 <p className="mk-body" style={{ margin: 0, fontSize: "var(--t-small)" }}>
-                  In development. It does not exist and you cannot sign up today. Editions are on{" "}
+                  Open and free while in preview: sign in with GitHub, no card. Editions are on{" "}
                   <Link href="/pricing">the pricing page</Link>.
                 </p>
               </div>
