@@ -22,10 +22,15 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 const LINKS: [string, string][] = [
   ["Product", "/product"],
   ["How it works", "/how-it-works"],
-  ["Playground", "/playground"],
   ["Benchmarks", "/benchmark"],
-  ["Compare", "/compare"],
   ["Pricing", "/pricing"],
+];
+
+/** Reachable from the mobile menu and the footer, not the header row. */
+const MENU_EXTRA: [string, string][] = [
+  ["Playground", "/playground"],
+  ["Compare", "/compare"],
+  ["Support", "/support"],
 ];
 
 export const REPO = "https://github.com/architsharm/agentfox";
@@ -61,8 +66,8 @@ export async function MarketingNav() {
               pages are the ones a visitor meets first, and the choice they make
               here is the one they keep after signing in — same key, same control. */}
           <ThemeToggle compact />
-          <Link href="/playground" className="mk-btn mk-btn-ghost">
-            Try it
+          <Link href="/playground" className="mk-btn mk-btn-outline mk-nav-try">
+            Try the playground
           </Link>
           <Link
             href={signedIn ? "/app" : "/login"}
@@ -86,10 +91,14 @@ export async function MarketingNav() {
               {label}
             </Link>
           ))}
+          {MENU_EXTRA.map(([label, href]) => (
+            <Link key={href} href={href}>
+              {label}
+            </Link>
+          ))}
           <a href={REPO} target="_blank" rel="noreferrer">
             GitHub
           </a>
-          <Link href="/support">Support</Link>
         </div>
       </details>
     </header>

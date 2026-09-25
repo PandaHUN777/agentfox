@@ -79,18 +79,46 @@ const CONTENTS: { id: string; title: string }[] = [
 ];
 
 /**
- * The four figures the page is cited for, lifted out of the opening paragraph so a
- * reader who came to check one number finds it without reading the write-up first.
+ * Three claims, not four numbers.
  *
- * The fourth is here for the same reason the other three are: it is the number a
- * competitor would quote at us, and it is better said in our own type than found
- * in someone else's. Every one is restated in full, with its method, below.
+ * This was four stat tiles — 42 of 42, 552 of 552, 8 of 8, 66.7% — set side by
+ * side as if they measured the same thing. They do not: the first two are one
+ * AgentDojo replay, the third is a separate eight-scenario suite, and the fourth
+ * is a detection score on a third dataset entirely.
+ *
+ * The fourth tile also carried a real error, and it sat in the first screen of
+ * the page whose whole purpose is to be checked: "66.7% held-out injection
+ * recall, where llm-guard gets 81.8%". Those are different metrics on different
+ * data. 66.7% is our RECALL on the deepset held-out split of 116
+ * (benchmarks/REPORT.md, heuristic_classifier row: 100.0% precision, 66.7%
+ * recall). 81.8% is llm-guard's PRECISION on the 20-case Tier B indirect
+ * injection comparison (benchmarks/agent_security/README.md), where our own
+ * precision is — coincidentally, and this is what caused the mix-up — also
+ * 66.7%, against our 100% recall and llm-guard's 90%.
+ *
+ * So each card now states the question it answers, the result, and the limit
+ * that travels with it. A number whose denominator is not beside it is not
+ * evidence, and this page cannot afford to be the place that forgets that.
  */
-const HEADLINE: { n: string; label: string; weak?: boolean }[] = [
-  { n: "42 of 42", label: "AgentDojo attacker calls that act, contained" },
-  { n: "552 of 552", label: "legitimate calls still allowed in that run" },
-  { n: "8 of 8", label: "attacks contained with every detector off" },
-  { n: "66.7%", label: "held-out injection recall, where llm-guard gets 81.8%", weak: true },
+const CLAIMS: { question: string; result: string; detail: string; limit: string }[] = [
+  {
+    question: "Does containment depend on detection?",
+    result: "8 of 8",
+    detail: "attack scenarios contained with every detector disabled, and 4 of 4 legitimate calls still allowed",
+    limit: "Eight constructed scenarios, one per containment mechanism. Only as good as the grants and impact tiers declared for the agent.",
+  },
+  {
+    question: "Does it hold at scale, without blocking real work?",
+    result: "42 of 42 · 552 of 552",
+    detail: "attacker calls that act, contained; legitimate calls still allowed, across a 617-call AgentDojo replay",
+    limit: "Ground-truth replay: no live model was persuaded. Three of the 23 attacker read calls were allowed, each one something the agent already held a grant for.",
+  },
+  {
+    question: "How good is our detection on its own?",
+    result: "66.7%",
+    detail: "recall at 100% precision on the deepset held-out split of 116",
+    limit: "A different test from the llm-guard comparison in section 3, which measures precision on 20 indirect-injection cases. An adaptive attacker gets 72.9% of what we do catch through within 50 attempts.",
+  },
 ];
 
 export default function BenchmarkPage() {
@@ -113,11 +141,14 @@ export default function BenchmarkPage() {
               </p>
             </div>
 
-            <div className="mk-grid mk-grid-quad bm-rail" style={{ marginTop: 40 }}>
-              {HEADLINE.map((h) => (
-                <div key={h.label} className="mk-card mk-stat">
-                  <b style={{ color: h.weak ? "var(--mk-muted)" : "var(--mk-text)" }}>{h.n}</b>
-                  <span>{h.label}</span>
+            <div className="bm-claims bm-rail">
+              {CLAIMS.map((c) => (
+                <div key={c.question} className="bm-claim">
+                  <h2 className="mk-h3">{c.question}</h2>
+                  <p className="bm-claim-result">
+                    <b>{c.result}</b> <span>{c.detail}</span>
+                  </p>
+                  <p className="bm-claim-limit">{c.limit}</p>
                 </div>
               ))}
             </div>
@@ -166,8 +197,8 @@ export default function BenchmarkPage() {
           attacker calls that act contained, 552 of 552 legitimate calls
           allowed, identical with detectors disabled. Three escaped, all
           read-only. On detection, a real installed{" "}
-          <code className="mono">llm-guard</code> beats us on the same 20 cases,
-          81.8% against 66.7%, and an adaptive attacker gets 72.9% of what we do
+          <code className="mono">llm-guard</code> is more precise on the same 20
+          indirect-injection cases, 81.8% against 66.7%, and an adaptive attacker gets 72.9% of what we do
           catch through within 50 attempts.
         </p>
       </div>

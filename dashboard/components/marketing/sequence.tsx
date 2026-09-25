@@ -1,47 +1,51 @@
 /*
- * One request, three boundaries.
+ * One request, three boundaries — shown, not described.
  *
- * What this replaces: three DecisionCards side by side, each a self-contained
- * example with its own agent, its own question and its own verdict. Three cards
- * teach three facts. The reader has to work out for themselves that these are
- * the same mechanism at three moments of one request — which is the single most
- * important thing this product has to say, and the page was leaving it as an
- * inference.
+ * The first version of this replaced three cards with one journey, which was the
+ * right structure and the wrong execution: each stage still explained itself in
+ * two paragraphs of prose. Roughly 135 words of "retrieval returns three chunks,
+ * two come back, the third does not". Nobody reads that while scrolling, and it
+ * is describing something we can simply show.
  *
- * So it is one journey now. Same agent, same session, same customer, three
- * stages in the order they actually happen, with the stakes climbing: a document
- * the requester may not see is held back, a question the agent has no standing
- * to answer is refused, and finally a tool call that arrived inside retrieved
- * text is blocked. The third stage is the product's whole argument, and it only
- * lands because the reader watched the first two happen to the same request.
+ * So each stage now renders the artefacts themselves. The three retrieved
+ * documents are three rows, and the one that is withheld is visibly struck out
+ * and marked. The proposed answer is a row that gets replaced by the abstention.
+ * The tool call is a row with its real arguments, and `block` lands on it. The
+ * prose that remains per stage is one short line: what the operator has to have
+ * done for that stage to exist, which a previous accuracy audit established the
+ * page cannot leave out.
  *
- * Every value is real. The rules (`not_entitled`, `answerable: false`,
- * `capability.denied`) and the verdict vocabulary are the ones the gateway
- * emits; see decisions.tsx, whose Decision records carry the same values in the
- * card format used elsewhere on the site.
+ * Every value is the one the gateway emits — `not_entitled`, `answerable:
+ * false`, `capability.denied`, and the verdict vocabulary — matching the
+ * Decision records in decisions.tsx.
  *
- * Motion: a pulse travels the rail and each stage's verdict lands as it passes.
- * The scene is complete and legible before the first frame plays — the withheld
- * chunk is already shown as withheld, every verdict is already on screen — so
- * the animation only decides the ORDER things are noticed in, never whether they
- * are there. That matters more here than anywhere else on the site: this is the
- * section a reader screenshots, and a screenshot catches one frame.
+ * Motion carries the meaning rather than decorating it: the withheld row strikes
+ * through and fades back, the proposed answer is crossed out as the abstention
+ * arrives, and the blocked call is marked last. All of it resolves to the
+ * resting state, so a screenshot of any frame is still true and the scene reads
+ * identically with motion disabled.
  */
 
-import type { ReactNode } from "react";
+type Row = {
+  /** The thing itself: a document path, a question, a tool call. */
+  text: string;
+  /** Mono for identifiers and arguments, prose for sentences people say. */
+  mono?: boolean;
+  /** How this row ends up once the check has run. */
+  state: "kept" | "cut" | "blocked" | "answer" | "quiet";
+  /** The short word rendered against it. */
+  mark?: string;
+};
 
 type Stage = {
   n: string;
-  /** The question this boundary answers, in the reader's words. */
   question: string;
-  /** What arrives at this stage. */
-  input: ReactNode;
-  /** What the check did about it. */
-  outcome: ReactNode;
+  label: string;
+  rows: Row[];
   rule: string;
   verdict: string;
   tone: "hold" | "stop";
-  /** What the operator has to have done for this stage to exist. */
+  /** What the operator must have done. Kept per the accuracy audit. */
   requires: string;
 };
 
@@ -49,18 +53,12 @@ const STAGES: Stage[] = [
   {
     n: "01",
     question: "Can it read this?",
-    input: (
-      <>
-        <code className="mk-mono">alex@example.com</code> asks the agent to pull
-        everything on a customer. Retrieval returns three chunks.
-      </>
-    ),
-    outcome: (
-      <>
-        Two come back. <code className="mk-mono">hr/salaries-2026</code> does not —
-        no grant gives this person that source, so it never reaches the prompt.
-      </>
-    ),
+    label: "retrieved for alex@example.com",
+    rows: [
+      { text: "billing/refund-policy", mono: true, state: "kept", mark: "returned" },
+      { text: "orders/ord_88213", mono: true, state: "kept", mark: "returned" },
+      { text: "hr/salaries-2026", mono: true, state: "cut", mark: "withheld" },
+    ],
     rule: "not_entitled",
     verdict: "withhold",
     tone: "hold",
@@ -69,18 +67,16 @@ const STAGES: Stage[] = [
   {
     n: "02",
     question: "Can it answer this?",
-    input: (
-      <>
-        &ldquo;Will this customer&rsquo;s refund definitely be approved?&rdquo; The
-        agent holds the refund policy, and the question asks for an outcome.
-      </>
-    ),
-    outcome: (
-      <>
-        Outside <code className="mk-mono">help-center-articles</code>, so it says
-        what it can support and stops there. No model call is made.
-      </>
-    ),
+    label: "asked",
+    rows: [
+      { text: "Will this customer's refund definitely be approved?", state: "quiet" },
+      { text: "Yes — based on the policy it should go through.", state: "cut", mark: "not supported" },
+      {
+        text: "I can tell you what the policy says and where this request is in the queue, but I can't promise an outcome.",
+        state: "answer",
+        mark: "sent instead",
+      },
+    ],
     rule: "answerable: false",
     verdict: "abstain",
     tone: "hold",
@@ -89,20 +85,12 @@ const STAGES: Stage[] = [
   {
     n: "03",
     question: "Can it do this?",
-    input: (
-      <>
-        One retrieved document carries an instruction the model follows:{" "}
-        <code className="mk-mono">payments.transfer</code>,{" "}
-        <code className="mk-mono">amount: 5000</code>, destination taken from that
-        same document.
-      </>
-    ),
-    outcome: (
-      <>
-        The agent holds no grant for that tool, and the argument&rsquo;s value came
-        from tool output. Refused without reading the text that caused it.
-      </>
-    ),
+    label: "requested, from text inside a retrieved document",
+    rows: [
+      { text: "payments.transfer", mono: true, state: "blocked", mark: "block" },
+      { text: "amount: 5000   to: acct_x", mono: true, state: "quiet" },
+      { text: "argument value came from tool_result", state: "quiet" },
+    ],
     rule: "capability.denied",
     verdict: "block",
     tone: "stop",
@@ -114,9 +102,9 @@ export function BoundarySequence() {
   return (
     <div className="seq">
       {/* The rail sits behind the stages and the pulse travels it, so the reader
-          sees one request moving rather than three things that happen to be
-          next to each other. Desktop only: stacked on a phone, the numbering
-          already carries the sequence and a horizontal rail would be a lie. */}
+          sees one request moving rather than three things that happen to be next
+          to each other. Desktop only: over a stacked column a horizontal rail
+          would describe a direction the layout does not have. */}
       <div className="seq-rail" aria-hidden>
         <span className="seq-pulse" />
       </div>
@@ -126,24 +114,33 @@ export function BoundarySequence() {
           <li
             key={s.n}
             className={s.tone === "stop" ? "seq-stage seq-stage-stop" : "seq-stage"}
-            style={{ ["--d" as string]: `${0.5 + i * 0.9}s` }}
+            style={{ ["--d" as string]: `${0.45 + i * 0.85}s` }}
           >
             <div className="seq-head">
               <span className="seq-n">{s.n}</span>
               <h3 className="mk-h3">{s.question}</h3>
             </div>
 
-            <p className="seq-in">{s.input}</p>
-            <p className="seq-out">{s.outcome}</p>
+            <span className="mk-label">{s.label}</span>
+
+            <ul className="seq-rows">
+              {s.rows.map((r, j) => (
+                <li
+                  key={r.text}
+                  className={`seq-row seq-row-${r.state}`}
+                  style={{ ["--rd" as string]: `${0.55 + i * 0.85 + j * 0.12}s` }}
+                >
+                  <span className={r.mono ? "mk-mono" : undefined}>{r.text}</span>
+                  {r.mark ? <i>{r.mark}</i> : null}
+                </li>
+              ))}
+            </ul>
 
             <div className="seq-verdict">
               <span className="seq-chip">{s.verdict}</span>
               <code className="mk-mono">{s.rule}</code>
             </div>
 
-            {/* The condition, on the stage it applies to. A copy audit found the
-                page implying all three of these happen automatically when only
-                the third does. */}
             <p className="seq-req">{s.requires}</p>
           </li>
         ))}

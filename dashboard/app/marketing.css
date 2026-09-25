@@ -605,7 +605,7 @@
    sticky bar on every page at phone width, and a button that renders as "Try /
    it" reads as a broken build. */
 .mk-nav-cta .mk-btn { padding: 7px 14px; font-size: var(--t-small); white-space: nowrap; }
-@media (max-width: 420px) { .mk-nav-cta .mk-btn-ghost { display: none; } }
+@media (max-width: 620px) { .mk-nav-cta .mk-nav-try { display: none; } }
 @media (max-width: 899px) {
   .mk-nav-inner { gap: 10px; }
   .mk-nav-cta { gap: 8px; padding-right: 44px; }
@@ -1192,11 +1192,10 @@
 
 /* --- One request, three boundaries ----------------------------------------
  *
- * See components/marketing/sequence.tsx for why this replaced three cards.
- * Layout: stacked on a phone with the numbering carrying the order, three
- * columns on a wide screen with a rail running through them and a pulse
- * travelling it. The rail is desktop-only on purpose — drawn horizontally over
- * a stacked column it would describe a direction the layout does not have.
+ * See components/marketing/sequence.tsx. Each stage shows its own artefacts —
+ * the documents, the answer, the tool call — and the state each ends in. The
+ * rows carry the meaning; the words around them are a heading and one line of
+ * condition.
  */
 .seq { position: relative; margin-top: 36px; }
 
@@ -1205,49 +1204,76 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 28px;
+  gap: 30px;
   grid-template-columns: minmax(0, 1fr);
 }
 @media (min-width: 900px) {
-  .seq-stages { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+  .seq-stages { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px; }
 }
 
 .seq-stage {
   display: grid;
   gap: 10px;
-  align-content: start;
-  padding-top: 22px;
+  padding-top: 20px;
   border-top: 2px solid var(--mk-border);
 }
-/* The stage that refuses outright owns the accent edge. One of three, so it
-   reads as the escalation it is rather than as three equal warnings. */
+@media (min-width: 900px) {
+  .seq-stage { grid-template-rows: auto auto 1fr auto auto; }
+  .seq-rows { align-self: start; }
+}
+/* Only the stage that refuses outright takes the stop colour, so the sequence
+   reads as the escalation it is rather than three equal warnings. */
 .seq-stage-stop { border-top-color: var(--mk-stop); }
 
 .seq-head { display: flex; align-items: baseline; gap: 10px; }
-.seq-n {
-  font-family: var(--mk-code);
-  font-size: var(--t-micro);
-  font-weight: 600;
-  color: var(--mk-muted);
-  flex: 0 0 auto;
-}
+.seq-n { font-family: var(--mk-code); font-size: var(--t-micro); font-weight: 600; color: var(--mk-muted); flex: 0 0 auto; }
 .seq-head .mk-h3 { margin: 0; }
 
-.seq-in,
-.seq-out,
-.seq-req { margin: 0; font-size: var(--t-small); line-height: 1.55; }
-.seq-in { color: var(--mk-muted); }
-.seq-out { color: var(--mk-text); }
-.seq-req {
-  margin-top: 2px;
-  padding-top: 10px;
-  border-top: 1px solid var(--mk-border);
-  color: var(--mk-muted);
-  font-size: var(--t-micro);
-}
+/* --- The artefacts -------------------------------------------------------- */
 
-/* The verdict, in the same vocabulary the gateway emits and the same colours
-   the rest of the site uses for it. */
+.seq-rows {
+  list-style: none;
+  margin: 2px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  background: var(--mk-border);
+  border: 1px solid var(--mk-border);
+  border-radius: var(--mk-r-sm);
+  overflow: hidden;
+}
+.seq-row {
+  background: var(--mk-bg);
+  padding: 9px 11px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  font-size: var(--t-small);
+  line-height: 1.45;
+  color: var(--mk-text);
+}
+.seq-row > span { min-width: 0; overflow-wrap: anywhere; }
+.seq-row > i {
+  font-style: normal;
+  flex: 0 0 auto;
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: .03em;
+  color: var(--mk-muted);
+}
+.seq-row-kept > i { color: var(--mk-good); }
+.seq-row-quiet > span { color: var(--mk-muted); }
+/* What was taken away is shown as taken away, not described as taken away. */
+.seq-row-cut > span { color: var(--mk-muted); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--mk-stop) 70%, transparent); }
+.seq-row-cut > i { color: var(--mk-stop); }
+.seq-row-answer { background: var(--mk-good-soft); }
+.seq-row-answer > i { color: var(--mk-good); }
+.seq-row-blocked { background: var(--mk-stop-soft); }
+.seq-row-blocked > span { color: var(--mk-stop); font-weight: 600; }
+.seq-row-blocked > i { color: var(--mk-stop); font-weight: 700; }
+
 .seq-verdict { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
 .seq-chip {
   font-family: var(--mk-code);
@@ -1261,47 +1287,57 @@
 .seq-stage-stop .seq-chip { background: var(--mk-stop); color: #fff; }
 .seq-verdict .mk-mono { color: var(--mk-muted); }
 
+.seq-req {
+  margin: 2px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--mk-border);
+  font-size: var(--t-micro);
+  line-height: 1.5;
+  color: var(--mk-muted);
+}
+
 /* --- Motion ---------------------------------------------------------------
- * The scene is complete before the first frame: every verdict is already on
- * screen, the withheld chunk is already described as withheld. The animation
- * only decides the order things are noticed in. */
+ * Each row arrives, then the one that loses is struck out and the verdict lands.
+ * The keyframes end on the resting state, so any single frame a screenshot
+ * catches is still true and the scene is identical with motion disabled. */
 .seq-rail { display: none; }
 @media (min-width: 900px) {
-  .seq-rail {
-    display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-    pointer-events: none;
-  }
+  .seq-rail { display: block; position: absolute; top: 0; left: 0; right: 0; height: 2px; pointer-events: none; }
   .seq-pulse {
     position: absolute;
     top: -3px;
     left: 0;
-    width: 8px;
-    height: 8px;
+    width: 8px; height: 8px;
     border-radius: 50%;
     background: var(--mk-accent);
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--mk-accent) 22%, transparent);
-    animation: seq-travel 4.2s cubic-bezier(.4, 0, .5, 1) infinite;
+    animation: seq-travel 5.4s cubic-bezier(.4, 0, .5, 1) infinite;
   }
   @keyframes seq-travel {
     0%   { left: 0%;   opacity: 0; }
-    8%   { opacity: 1; }
-    88%  { opacity: 1; }
+    7%   { opacity: 1; }
+    90%  { opacity: 1; }
     100% { left: 100%; opacity: 0; }
   }
-  /* Each verdict lands as the pulse reaches its column. */
-  .seq-verdict { animation: seq-land 4.2s ease-out var(--d, 0s) infinite; }
+  .seq-row { animation: seq-row-in 5.4s ease-out var(--rd, 0s) infinite; }
+  @keyframes seq-row-in {
+    0%, 3%  { opacity: .25; transform: translateY(3px); }
+    9%, 100% { opacity: 1; transform: none; }
+  }
+  /* The strike-through is drawn as the check runs, rather than being there from
+     the start — that stroke is the moment the document is taken away. */
+  .seq-row-cut > span { animation: seq-strike 5.4s ease-out var(--rd, 0s) infinite; }
+  @keyframes seq-strike {
+    0%, 12%  { text-decoration-color: transparent; }
+    20%, 100% { text-decoration-color: color-mix(in srgb, var(--mk-stop) 70%, transparent); }
+  }
+  .seq-verdict { animation: seq-land 5.4s ease-out var(--d, 0s) infinite; }
   @keyframes seq-land {
-    0%, 4%  { transform: none; }
-    9%      { transform: translateY(-2px); }
-    16%     { transform: none; }
-    100%    { transform: none; }
+    0%, 4% { transform: none; }
+    9%     { transform: translateY(-2px); }
+    16%, 100% { transform: none; }
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .seq-pulse, .seq-verdict { animation: none; }
+  .seq-pulse, .seq-row, .seq-row-cut > span, .seq-verdict { animation: none; }
 }
