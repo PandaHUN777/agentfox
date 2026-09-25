@@ -173,23 +173,20 @@ export function Hero() {
           <h1 className="mk-h1 mk-up mk-d1">
             <em>Runtime firewall</em> for AI agents
           </h1>
-          {/* Three things were wrong with the line this replaces. "so it cannot be
-              argued with" is a clever closer hung off an em-dash pivot, which is the
-              most recognisable tell there is. "grants" is our internal word — the
-              reader has not met it yet and will not until /product. And the fragment
-              opener ("One line of Python.") was doing rhetorical work that the
-              install block six inches below does literally.
-              Two sentences, in the words a reader would use to repeat it.
-              "The prompt is never read." was a third, and it was an orphan: a
-              true fact with no stated consequence, sitting on its own where the
-              reader has not yet been told that reading the prompt is what every
-              other product does. As a trailing clause it earns its place —
-              "whatever the prompt said" answers the question the second
-              sentence raises, which is what happens when the model is fooled. */}
+          {/* Every version of this line before it failed the same way: it described
+              the mechanism. "Sits between your agent and its tools, checks each
+              call against the permissions you set" is the dictionary definition of
+              the word in the headline — a reader who understood "firewall" already
+              knew all of it, so the subhead cost them four lines and told them
+              nothing.
+              A subhead's job is to add what the headline cannot carry. Here that is
+              stakes and concreteness: the tools in question move money, delete
+              records and send mail, which is why any of this matters, and the
+              payoff is that being tricked does not get the model an exception. */}
           <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "50ch" }}>
-            AgentFox sits between your agent and its tools. Every call is checked
-            against the permissions you set, and anything outside them is refused
-            before it runs, whatever the prompt said.
+            Your agents can move money, delete records and send email. AgentFox checks
+            each of those calls against the limits you set, so a tricked model still
+            can&rsquo;t act outside them.
           </p>
           <pre className="mk-install mk-up mk-d3">
             <code>pip install git+https://github.com/architsharm/agentfox.git</code>
