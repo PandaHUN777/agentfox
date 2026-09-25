@@ -403,8 +403,9 @@ its own header, is [`deploy/fly.dashboard.toml`](deploy/fly.dashboard.toml).
 
 ## Contributing
 
-Good first issues are [labelled on the tracker](https://github.com/architsharm/agentfox/labels/good%20first%20issue)
-— each one names the file to change and how to verify it. [`CONTRIBUTING.md`](CONTRIBUTING.md) has
+Ready-to-start work is in [`docs/TASKS.md`](docs/TASKS.md) and
+[labelled on the tracker](https://github.com/architsharm/agentfox/labels/good%20first%20issue) —
+each task names the file to change, the pattern to copy from, and how to verify it. [`CONTRIBUTING.md`](CONTRIBUTING.md) has
 setup, conventions and the PR flow.
 
 The test suite is the contract: `uv sync --extra dev && pytest tests/ -q`. Anything that changes a
