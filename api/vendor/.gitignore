@@ -1,0 +1,15 @@
+# Build artefacts, except the one wheel that has to ship.
+#
+# This directory was `*`, which is why the deployment rotted silently: the Vercel
+# function installs `../vendor/agentfox-0.3.0-py3-none-any.whl` by name from
+# api/requirements.txt, but that file was ignored, so no rebuild ever reached the
+# repository. What was actually committed here was `nometria-0.1.0-py3-none-any.whl`
+# — the package name from before the rename — force-added once and then frozen,
+# while every later `uv build` landed only on the machine that ran it.
+#
+# Negating the one named wheel means a rebuild shows up in `git status` like any
+# other change, and the next person to add a route does not have to know this
+# procedure exists to have their route deployed.
+*
+!.gitignore
+!agentfox-0.3.0-py3-none-any.whl
