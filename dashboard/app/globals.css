@@ -1649,17 +1649,22 @@ input[type="checkbox"], input[type="radio"] {
    its own card so the numbers separate from the prose around them. The page chrome
    around this article is the marketing layer's, so the route a reader arrives on
    from the home page does not change design system halfway. */
-.bm-doc { max-width: 1072px; }
-.bm-doc > p,
-.bm-doc > ul,
-.bm-doc > ol,
-.bm-doc > h2,
-.bm-doc > h3,
-.bm-doc > .source,
-.bm-doc > .callout,
-.bm-doc > .bm-limits,
-.bm-doc > .bm-method,
-.bm-doc > .hero-code { max-width: 74ch; }
+/* One rail. Not two, and definitely not six.
+ *
+ * The previous attempt capped running text at `74ch` inside a 1072px column, which
+ * looked right in the stylesheet and measured as SIX different widths on the page:
+ * `ch` resolves against each element's own font-size, so the same rule gave an h3
+ * 1011px, a lede 981px, a paragraph 736px, a source line 638px and a code block
+ * 577px. Every one of those is a different right edge, which is why the text read
+ * as stopping in arbitrary places.
+ *
+ * A single pixel width is the only thing that makes a heading, a paragraph, a table
+ * and a chart share an edge. 820px is ~78 characters at the 15px body token — long
+ * for a novel, right for a technical document, and wide enough that the benchmark
+ * tables are readable without scrolling. Anything that genuinely cannot fit is in a
+ * .scroll-x of its own. */
+.bm-doc,
+.bm-rail { max-width: var(--bm-rail, 820px); }
 .bm-doc h2,
 .mk .bm-doc h2 {
   margin: 64px 0 0;

@@ -100,20 +100,20 @@ export default function BenchmarkPage() {
       <main>
         <section className="mk-section-tight">
           <div className="mk-wrap">
-            <div style={{ maxWidth: 760 }}>
+            <div className="bm-rail">
               <h1
                 className="mk-h1"
                 style={{ marginTop: 12, fontSize: "clamp(2.25rem, 4.4vw, var(--t-display))" }}
               >
                 What was measured, and what it does not show</h1>
-              <p className="mk-lede" style={{ marginTop: 18, maxWidth: "58ch" }}>
+              <p className="mk-lede" style={{ marginTop: 18 }}>
                 Five benchmarks, written up in full. Some of them make this product look
                 good and some of them do not, and they are here for the same reason: a
                 claim only the vendor can reproduce is not evidence.
               </p>
             </div>
 
-            <div className="mk-grid mk-grid-quad" style={{ marginTop: 40 }}>
+            <div className="mk-grid mk-grid-quad bm-rail" style={{ marginTop: 40 }}>
               {HEADLINE.map((h) => (
                 <div key={h.label} className="mk-card mk-stat">
                   <b style={{ color: h.weak ? "var(--mk-muted)" : "var(--mk-text)" }}>{h.n}</b>
@@ -122,7 +122,7 @@ export default function BenchmarkPage() {
               ))}
             </div>
 
-            <nav className="bm-index" style={{ marginTop: 18 }} aria-label="Sections">
+            <nav className="bm-index bm-rail" style={{ marginTop: 18 }} aria-label="Sections">
               {CONTENTS.map((c, i) => (
                 <a key={c.id} href={`#${c.id}`}>
                   <i>{String(i + 1).padStart(2, "0")}</i>

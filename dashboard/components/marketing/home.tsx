@@ -152,24 +152,31 @@ export function Hero() {
       <div className="mk-wash" aria-hidden />
       <div className="mk-wrap mk-hero" style={{ position: "relative" }}>
         <div>
-          {/* Third attempt, and the first one that names the thing a reader is
-              already looking for.
-                "The injection worked. The transfer didn't." was a riddle: it
+          {/* Four attempts to get this line right, and what each one got wrong:
+                "The injection worked. The transfer didn't." was a riddle — it
               needs you to know what a prompt injection is before the sentence
               parses, and "the transfer" referred to nothing on screen yet.
                 "Your agent can only call the tools you gave it" was plain but
-              inert — it describes how anyone would assume agents already work,
+              inert: it describes how anyone would assume agents already work,
               so it reads as a restatement rather than a product.
-                This one names the threat, which is the term a buyer searches
-              for, and says where we stop it, which is the thing no text scanner
-              can claim. The subhead carries the mechanism. */}
+                "Prompt injection stops at the tool call" named the threat, but
+              in a practitioner's vocabulary — a CISO reads it cold, a VP Eng
+              skims past it.
+                This one borrows a category every buyer already understands and
+              does the differentiating in one word. "Runtime" is what separates
+              it from both neighbours a reader might file it under: a WAF reads
+              HTTP at the edge, a text scanner grades a string offline, and this
+              sits inline on the call itself. See /compare, which draws the line
+              against an actual network firewall — the two pages have to agree,
+              so that passage says "not a network firewall, an action-layer one"
+              rather than "not a firewall". */}
           <h1 className="mk-h1 mk-up mk-d1">
-            Prompt injection stops at the <em>tool call</em>
+            <em>Runtime firewall</em> for AI agents
           </h1>
-          <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "48ch" }}>
-            AgentFox checks every tool call against what the agent was granted, before
-            it runs — the tool, the action, the argument ceilings. It never reads the
-            prompt, so it holds when the model has already been talked into something.
+          <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "50ch" }}>
+            One line of Python. Every tool call is checked against that agent&rsquo;s
+            grants before it runs — and no prompt text is read, so it cannot be argued
+            with.
           </p>
           <pre className="mk-install mk-up mk-d3">
             <code>pip install git+https://github.com/architsharm/agentfox.git</code>
@@ -184,7 +191,7 @@ export function Hero() {
             </a>
           </div>
           <p className="mk-fine mk-up mk-d5" style={{ marginTop: 16 }}>
-            One line of Python · Offline, no API key · Apache-2.0
+            Runs offline · No API key · Apache-2.0
           </p>
         </div>
 
@@ -435,25 +442,26 @@ export function Proof() {
               <span className="mk-threat-verdict">{t.result}</span>
             </div>
           ))}
-        </div>
 
-        <div className="mk-row mk-up mk-d4" style={{ marginTop: 18, gap: 6 }}>
-          {FRAMEWORKS.map((f) => (
-            <span key={f} className="mk-chip">
-              {f}
-            </span>
-          ))}
+          {/* The denominator sits with the numbers rather than one click away: "42
+              of 42" invites "out of what?", and a proof section that makes the
+              reader follow a link to find out is doing the opposite of its job. */}
+          <div className="mk-threat-foot">
+            <p>
+              552 of 552 legitimate calls still ran. Of the 65 the attacker sent, 42
+              act and 23 only read — three reads got through, and all three were
+              things the agent already held a grant for. This measures whether an
+              action runs, and nothing else.
+            </p>
+            <div className="mk-row" style={{ gap: 6 }}>
+              {FRAMEWORKS.map((f) => (
+                <span key={f} className="mk-chip">
+                  {f}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
-
-        {/* The denominator, beside the numbers rather than one click away. "42 of
-            42" invites "out of what?", and a proof section that makes the reader
-            follow a link to find out is doing the opposite of its job. */}
-        <p className="mk-fine mk-up mk-d5" style={{ marginTop: 20, maxWidth: "64ch" }}>
-          552 of 552 legitimate calls still ran. Of the 65 the attacker sent, 42 act
-          and 23 only read; three reads got through, and all three were things the
-          agent already held a grant for. This measures whether an action runs, and
-          nothing else.
-        </p>
 
         <p className="mk-row mk-up mk-d5" style={{ marginTop: 24 }}>
           <Link href="/benchmark" className="mk-btn mk-btn-outline">
@@ -486,9 +494,18 @@ export function Limits() {
      */
     <section id="limits" className="mk-section-tight">
       <div className="mk-wrap">
-        <p className="mk-body" style={{ margin: 0 }}>
-          <Link href="/how-it-works#limits">What this does not do &rarr;</Link>
-        </p>
+        <div className="mk-honest mk-up">
+          <div>
+            <h2 className="mk-h3">We publish what this does not do</h2>
+            <p className="mk-body">
+              Every limit of the benchmark above, and the detection numbers where a
+              competing scanner is more precise than ours.
+            </p>
+          </div>
+          <Link href="/how-it-works#limits" className="mk-btn mk-btn-outline">
+            Read the limits
+          </Link>
+        </div>
       </div>
     </section>
   );

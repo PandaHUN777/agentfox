@@ -358,9 +358,10 @@ const QUESTIONS: { q: string; a: React.ReactNode }[] = [
     q: "Where does this sit relative to a gateway or a web application firewall?",
     a: (
       <>
-        A firewall reads HTTP at the edge; a gateway routes and rate-limits it. Neither knows
-        which agent made the call, what it was granted, or where an argument&rsquo;s value came
-        from. This works one layer in, on the agent&rsquo;s own actions, and replaces neither.
+        A network firewall reads HTTP at the edge; a gateway routes and rate-limits it.
+        Neither knows which agent made the call, what it was granted, or where an
+        argument&rsquo;s value came from. AgentFox is a firewall one layer in, on the
+        agent&rsquo;s own actions rather than on its traffic, and it replaces neither.
       </>
     ),
   },

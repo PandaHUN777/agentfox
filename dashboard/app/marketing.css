@@ -1089,3 +1089,34 @@
   color: var(--mk-stop);
   font-weight: 600;
 }
+
+/* The facts about the table, inside the table. Same edges, one object. */
+.mk-threat-foot {
+  background: var(--mk-surface-2);
+  padding: 15px 18px;
+  display: grid;
+  gap: 12px;
+}
+.mk-threat-foot p {
+  margin: 0;
+  font-size: var(--t-small);
+  line-height: 1.55;
+  color: var(--mk-muted);
+}
+
+/* Publishing the limits is this project's best trait, and it was a bare link
+   floating in an empty section. Same width as the proof table above it. */
+.mk-honest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 28px;
+  padding: 20px 22px;
+  border: 1px solid var(--mk-border);
+  border-left: 3px solid var(--mk-accent);
+  border-radius: var(--mk-r-md);
+}
+.mk-honest h2 { margin: 0; }
+.mk-honest p { margin: 6px 0 0; max-width: 62ch; font-size: var(--t-small); }
+.mk-honest .mk-btn { flex: 0 0 auto; }
