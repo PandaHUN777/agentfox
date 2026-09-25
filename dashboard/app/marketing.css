@@ -1341,3 +1341,115 @@
 @media (prefers-reduced-motion: reduce) {
   .seq-pulse, .seq-row, .seq-row-cut > span, .seq-verdict { animation: none; }
 }
+
+/* --- A grant, and a call that does not fit inside it -----------------------
+ * See components/marketing/grant.tsx. The bar runs past the limit line and stops
+ * being green; that crossing is the product's whole argument in one picture. */
+.gl {
+  border: 1px solid var(--mk-border);
+  border-radius: var(--mk-r-lg);
+  background: var(--mk-surface);
+  padding: 22px 24px 20px;
+  display: grid;
+  gap: 18px;
+}
+.gl-head { display: grid; gap: 6px; }
+.gl-head .mk-mono { font-size: var(--t-body); color: var(--mk-text); overflow-wrap: anywhere; }
+
+.gl-terms { margin: 0; display: grid; gap: 7px; }
+.gl-terms > div { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; }
+.gl-terms dt {
+  flex: 0 0 auto;
+  min-width: 9ch;
+  font-size: var(--t-micro);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--mk-muted);
+}
+.gl-terms dd { margin: 0; font-size: var(--t-small); color: var(--mk-text); overflow-wrap: anywhere; }
+
+/* The measurement. */
+.gl-scale { display: grid; gap: 8px; margin-top: 14px; }
+.gl-track {
+  position: relative;
+  margin-top: 20px;
+  height: 34px;
+  border-radius: var(--mk-r-sm);
+  background: var(--mk-surface-2);
+  overflow: visible;
+}
+/* The region the grant actually permits. */
+.gl-allowed {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: var(--mk-r-sm) 0 0 var(--mk-r-sm);
+  background: color-mix(in srgb, var(--mk-good) 16%, transparent);
+}
+/* The attempt. Green until it reaches the ceiling, red past it — one gradient
+   with a hard stop at the limit, so the colour change IS the limit. */
+.gl-bar {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  width: var(--w);
+  border-radius: 3px;
+  background: linear-gradient(
+    to right,
+    var(--mk-good) 0 16.6667%,
+    var(--mk-stop) 16.6667% 100%
+  );
+  animation: gl-grow 3.6s cubic-bezier(.3, .9, .4, 1) infinite;
+}
+@keyframes gl-grow {
+  0%       { width: 0; }
+  32%, 88% { width: var(--w); }
+  100%     { width: var(--w); }
+}
+.gl-limit { position: absolute; top: -6px; bottom: -6px; width: 0; }
+.gl-limit i {
+  position: absolute;
+  inset: 0 auto 0 -1px;
+  width: 2px;
+  background: var(--mk-text);
+  border-radius: 1px;
+}
+.gl-limit em {
+  position: absolute;
+  left: 8px;
+  top: -19px;
+  font-style: normal;
+  font-size: var(--t-micro);
+  white-space: nowrap;
+  color: var(--mk-muted);
+}
+.gl-limit em b { color: var(--mk-text); font-variant-numeric: tabular-nums; }
+
+.gl-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--t-micro);
+  color: var(--mk-muted);
+  font-variant-numeric: tabular-nums;
+}
+.gl-call { margin: 6px 0 0; display: grid; gap: 5px; }
+.gl-call .mk-mono { color: var(--mk-muted); overflow-wrap: anywhere; }
+.gl-call .mk-mono b { color: var(--mk-stop); font-weight: 700; }
+
+.gl-verdict { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+.gl-chip {
+  font-family: var(--mk-code);
+  font-size: var(--t-small);
+  font-weight: 600;
+  padding: 4px 11px;
+  border-radius: var(--mk-r-sm);
+  background: var(--mk-stop);
+  color: #fff;
+}
+.gl-verdict .mk-mono { color: var(--mk-muted); }
+.gl-why { margin: -8px 0 0; font-size: var(--t-small); line-height: 1.55; color: var(--mk-muted); max-width: 62ch; }
+.gl-why b { color: var(--mk-text); }
+
+@media (prefers-reduced-motion: reduce) {
+  .gl-bar { animation: none; width: var(--w); }
+}

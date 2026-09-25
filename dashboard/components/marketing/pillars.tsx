@@ -1,7 +1,8 @@
 import Link from "next/link";
 import type { CSSProperties, ReactNode } from "react";
 
-import { GrantMock, ChainMock } from "@/components/marketing/mocks";
+import { ChainMock } from "@/components/marketing/mocks";
+import { GrantLimit } from "@/components/marketing/grant";
 import {
   PillarGrid,
   DetectorPipeline,
@@ -280,74 +281,63 @@ export function Containment() {
   return (
     <section id="containment" className="mk-band">
       <div className="mk-section mk-wrap">
-        <Split wide>
-          <Half>
-            <Head
-              eyebrow="Area 2 · Containment"
-              title="The layer that holds when detection fails"
-            >
-              Each tool has an impact tier, each agent explicit grants, each argument its
-              provenance.
-            </Head>
+        <div className="mk-narrow">
+          <span className="mk-eyebrow">Area 2 · Containment</span>
+          <h2 className="mk-h2" style={{ marginTop: 12, maxWidth: "20ch" }}>
+            A convinced agent still needs permission
+          </h2>
+          <p className="mk-lede" style={{ marginTop: 14, maxWidth: "56ch" }}>
+            Each tool has an impact tier, each agent explicit grants, each argument its
+            provenance. None of it reads the text that produced the call.
+          </p>
+        </div>
 
-            <div style={{ display: "grid", gap: 10, marginTop: 24, maxWidth: "46ch" }}>
-              <span className="mk-label">Impact tier, declared per tool</span>
-              <div className="mk-row" style={{ gap: 6 }}>
-                {/* dashboard/app/glossary/page.tsx, "Impact tier". */}
-                <span className="mk-chip mk-chip-go">read</span>
-                <span className="mk-chip">write</span>
-                <span className="mk-chip mk-chip-hold">high_impact</span>
-                <span className="mk-chip mk-chip-stop">irreversible</span>
-              </div>
-              <span className="mk-label" style={{ marginTop: 6 }}>
-                Provenance an argument can carry
-              </span>
-              <div className="mk-row" style={{ gap: 6 }}>
-                {/* README.md "Commands": the --max-taint ladder, worst first at the right. */}
-                <span className="mk-chip">none</span>
-                <span className="mk-chip">user</span>
-                <span className="mk-chip">retrieved</span>
-                <span className="mk-chip">tool_result</span>
-                <span className="mk-chip">subagent</span>
-                <span className="mk-chip">memory</span>
-              </div>
+        {/* The measurement gets the full column. This is the case that defeats the
+            obvious objection — "so don't give the agent the tool" — and it only
+            works if the reader sees that the agent DOES hold the tool. */}
+        <div className="mk-up mk-d2" style={{ marginTop: 32, maxWidth: 760 }}>
+          <GrantLimit />
+        </div>
+
+        <div className="mk-grid mk-grid-2" style={{ marginTop: 28, gap: 26 }}>
+          <div style={{ display: "grid", gap: 10, maxWidth: "46ch" }}>
+            <span className="mk-label">Impact tier, declared per tool</span>
+            <div className="mk-row" style={{ gap: 6 }}>
+              {/* dashboard/app/glossary/page.tsx, "Impact tier". */}
+              <span className="mk-chip mk-chip-go">read</span>
+              <span className="mk-chip">write</span>
+              <span className="mk-chip mk-chip-hold">high_impact</span>
+              <span className="mk-chip mk-chip-stop">irreversible</span>
             </div>
+            <span className="mk-label" style={{ marginTop: 6 }}>
+              Provenance an argument can carry
+            </span>
+            <div className="mk-row" style={{ gap: 6 }}>
+              {/* README.md "Commands": the --max-taint ladder, worst first at the right. */}
+              <span className="mk-chip">none</span>
+              <span className="mk-chip">user</span>
+              <span className="mk-chip">retrieved</span>
+              <span className="mk-chip">tool_result</span>
+              <span className="mk-chip">subagent</span>
+              <span className="mk-chip">memory</span>
+            </div>
+          </div>
 
+          <div>
             <Items items={CONTAINMENT_ITEMS} />
+          </div>
+        </div>
 
-            <div
-              className="mk-card"
-              style={{ marginTop: 26, background: "var(--mk-surface)", maxWidth: "46ch" }}
-            >
-              <span className="mk-label">Measured with every detector switched off</span>
-              {/* Both rows: README.md, "What we do claim is that the blast radius is
-                  bounded when detection fails." */}
-              <div className="mk-grid mk-grid-2" style={{ marginTop: 12, gap: 14 }}>
-                <div className="mk-stat">
-                  <b>8 of 8</b>
-                  <span>attacks contained, 4 of 4 legitimate calls still allowed</span>
-                </div>
-                <div className="mk-stat">
-                  <b>42 of 42</b>
-                  <span>AgentDojo attacker calls that act, contained, over 617 ground-truth calls</span>
-                </div>
-              </div>
-              <p className="mk-fine" style={{ marginTop: 12 }}>
-                Containment is only as good as the declarations behind it. A destructive tool
-                declared read is not contained.
-              </p>
-            </div>
-          </Half>
-
-          <Half className="mk-up mk-d2">
-            <GrantMock />
-          </Half>
-        </Split>
-
+        <p className="mk-fine" style={{ marginTop: 24, maxWidth: "62ch" }}>
+          Containment is only as good as the declarations behind it. A destructive tool
+          declared <span className="mk-mono">read</span> is not contained.{" "}
+          <Link href="/benchmark">What it measured, with detection switched off &rarr;</Link>
+        </p>
       </div>
     </section>
   );
 }
+
 
 /* --- 4. Discovery -------------------------------------------------------- */
 

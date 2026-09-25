@@ -40,21 +40,21 @@ export default function Product() {
       <main>
         <section className="mk-section" style={{ paddingBottom: 0 }}>
           <div className="mk-wrap">
-            <h1 className="mk-h1 mk-up" style={{ maxWidth: "17ch" }}>
-              Every layer, on a <em>real screen</em>
+            <h1 className="mk-h1 mk-up" style={{ maxWidth: "19ch" }}>
+              Every decision, on a <em>real screen</em>
             </h1>
-            <p className="mk-lede mk-up mk-d1" style={{ marginTop: 18, maxWidth: "52ch" }}>
-              Six areas, each shown with the part of the product that does the work.{" "}
-              <Link href="/playground">The playground</Link> needs no account.
+            <p className="mk-lede mk-up mk-d1" style={{ marginTop: 18, maxWidth: "54ch" }}>
+              What the product actually shows you when an agent reads, answers and
+              acts. <Link href="/playground">The playground</Link> needs no account.
             </p>
           </div>
         </section>
-        <Pillars />
-        <Guardrails />
         <Containment />
+        <Guardrails />
         <Discovery />
         <Assurance />
         <Evidence />
+        <Pillars />
         <HowItWorks />
         <FAQ />
         <CTA />
