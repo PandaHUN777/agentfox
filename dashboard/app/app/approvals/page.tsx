@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, safeApi, apiErrorProps } from "@/lib/api";
-import { AgentLink, ApiDown, ArgsCell, Empty, InfoTip, Severity, ts } from "@/components/ui";
+import { AgentLink, ApiDown, ArgsCell, Empty, InfoTip, InventoryStrip, Severity, ts } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { Countdown } from "@/components/Countdown";
 
@@ -104,15 +104,32 @@ export default async function Approvals({
 async function ApprovalsTab({ status: rawStatus }: { status?: string }) {
   const status = STATUSES.includes(rawStatus || "") ? rawStatus! : "pending";
 
-  let approvals: any, agents: any;
+  let approvals: any, agents: any, others: any[];
   try {
-    [approvals, agents] = await Promise.all([
+    // The other three statuses are fetched too, only for their counts. On a
+    // healthy estate the default view (pending) is legitimately empty, and the
+    // page then said so in one line and stopped — a filter bar whose four
+    // options all look identical, above nothing, with no indication that three
+    // of them have rows. Counts on the chips cost three small requests and turn
+    // a dead end into a direction.
+    const rest = STATUSES.filter((x) => x !== status);
+    const [self, agentList, ...restRes] = await Promise.all([
       api(`/api/approvals?status=${status}`),
       safeApi("/api/agents", { agents: [] }),
+      ...rest.map((x) => safeApi<any>(`/api/approvals?status=${x}`, { approvals: [] })),
     ]);
+    approvals = self;
+    agents = agentList;
+    others = restRes;
   } catch (e: any) {
     return <ApiDown {...apiErrorProps(e)} />;
   }
+
+  const counts: Record<string, number> = { [status]: approvals.approvals?.length || 0 };
+  STATUSES.filter((x) => x !== status).forEach((x, i) => {
+    counts[x] = others[i]?.approvals?.length || 0;
+  });
+  const answered = counts.approved + counts.denied + counts.expired;
 
   const agentSlug: Record<string, string> = {};
   for (const a of agents.agents || []) agentSlug[a.id] = a.slug;
@@ -129,10 +146,15 @@ async function ApprovalsTab({ status: rawStatus }: { status?: string }) {
             aria-current={status === s ? "true" : undefined}
           >
             {s}
+            <span className="chip-n">{counts[s]}</span>
           </Link>
         ))}
       </div>
 
+      {/* The panel is skipped entirely on an empty pending queue: the block
+          below already says it, and "No pending approvals." in a box directly
+          above "Nothing is waiting on you" is the same sentence twice. */}
+      {(approvals.approvals?.length > 0 || status !== "pending") && (
       <div className="panel scroll-x">
         {approvals.approvals?.length ? (
           <table>
@@ -185,11 +207,41 @@ async function ApprovalsTab({ status: rawStatus }: { status?: string }) {
             </tbody>
           </table>
         ) : (
-          <Empty>
-            No {status} approvals. {status === "pending" && "Every governed tool call was allowed outright or already answered."}
-          </Empty>
+          <Empty>No {status} approvals.</Empty>
         )}
       </div>
+      )}
+
+      {/* An empty pending queue is the healthy state, and it was rendered as one
+          sentence in a box on an otherwise blank page — a page that looks broken
+          rather than one that looks quiet. It says what it means instead: nothing
+          is waiting, here is what would put something here, and here is where the
+          answered ones are. */}
+      {status === "pending" && !approvals.approvals?.length && (
+        <div className="queue-clear">
+          <h3>Nothing is waiting on you</h3>
+          <p>
+            Every governed tool call was either allowed outright or already
+            answered. A call arrives here when the capability grant behind it says{" "}
+            <span className="mono">--requires-approval</span>, or when a policy rule
+            escalates rather than blocks — most often an irreversible tool called
+            with arguments that came from something untrusted.
+          </p>
+          <p className="qc-links">
+            {answered > 0 && (
+              <>
+                <Link href="/app/approvals?status=approved">
+                  {answered} already answered
+                </Link>
+                {" · "}
+              </>
+            )}
+            <Link href="/app/agents">What each agent may call</Link>
+            {" · "}
+            <Link href="/app/policies">Which rules escalate</Link>
+          </p>
+        </div>
+      )}
     </>
   );
 }
@@ -243,95 +295,46 @@ async function EscalationTab({ agent }: { agent?: string }) {
         )}
       </form>
 
-      <div className="cards">
-        <div
-          className={`card ${breaching ? "bad" : "ok"}`}
-          title="Of the conversations that qualified for a hand-off (met an escalation condition), the share that never got one."
-        >
-          <div className="n">{(rate * 100).toFixed(1)}%</div>
-          <div className="l">missed-escalation rate {breaching ? "(target &lt; 5%)" : ""}</div>
-        </div>
-        <div className="card" title="Conversations that met at least one escalation condition in this window, whether or not they actually escalated.">
-          <div className="n">{report.qualified_for_escalation}</div>
-          <div className="l">conversations that qualified</div>
-        </div>
-        <div
-          className={`card ${report.sla_breached ? "bad" : "ok"}`}
-          title="Hand-offs sitting in the queue past their SLA with nobody acknowledging them — see the queue below."
-        >
-          <div className="n">{report.sla_breached}</div>
-          <div className="l">hand-offs past SLA</div>
-        </div>
-        <div
-          className={`card ${report.incomplete_handoffs ? "warn" : "ok"}`}
-          title="A hand-off raised without enough context for a human to act on it — the request, a summary, what was tried, why it was blocked, or a customer reference is missing."
-        >
-          <div className="n">{report.incomplete_handoffs}</div>
-          <div className="l">hand-offs missing context</div>
-        </div>
-        <div
-          className={`card ${report.false_resolutions ? "warn" : "ok"}`}
-          title="The agent claimed the issue was resolved, but the conversation contradicts it — the user kept going, it declined in the same turn, or closing sentiment was negative."
-        >
-          <div className="n">{report.false_resolutions}</div>
-          <div className="l">false resolutions</div>
-        </div>
-      </div>
+      {/* Five tiles, three of them zero and wearing a green border to say so,
+          above an empty "Missed escalations" section, above the hand-off queue —
+          which is the only thing on this tab that needs a person, and it started
+          610px down the page. The counts are a strip, the queue comes first, and
+          the after-the-fact report follows it. */}
+      <InventoryStrip
+        items={[
+          {
+            n: `${(rate * 100).toFixed(1)}%`,
+            label: "missed-escalation rate",
+            href: "/app/approvals?tab=escalation",
+            ...(breaching ? { tone: "bad" as const } : {}),
+          },
+          {
+            n: report.qualified_for_escalation,
+            label: "conversations that qualified",
+            href: "/app/approvals?tab=escalation",
+          },
+          {
+            n: report.sla_breached,
+            label: "hand-offs past SLA",
+            href: "#handoffs",
+            ...(report.sla_breached ? { tone: "bad" as const } : {}),
+          },
+          {
+            n: report.incomplete_handoffs,
+            label: "hand-offs missing context",
+            href: "#handoffs",
+            ...(report.incomplete_handoffs ? { tone: "warn" as const } : {}),
+          },
+          {
+            n: report.false_resolutions,
+            label: "false resolutions",
+            href: "#missed",
+            ...(report.false_resolutions ? { tone: "warn" as const } : {}),
+          },
+        ]}
+      />
 
-      <h2>Missed escalations</h2>
-      <p className="sub">
-        Detected after the fact.{" "}
-        <InfoTip text="At runtime there is nothing to see — the failure is the absence of an event." />
-      </p>
-      <div className="panel">
-        {missed.missed?.length ? (
-          <table>
-            <thead>
-              <tr>
-                <th>conversation</th>
-                <th>agent</th>
-                <th>turns</th>
-                <th>qualified at</th>
-                <th>why a human was needed</th>
-              </tr>
-            </thead>
-            <tbody>
-              {missed.missed.map((m: any) => (
-                <tr key={m.session_id}>
-                  <td className="mono small">
-                    <Link href={`/app/escalation/conversations/${encodeURIComponent(m.session_id)}`}>
-                      {m.session_id}
-                    </Link>
-                  </td>
-                  <td className="small">
-                    {m.agent_slug ? (
-                      <AgentLink slug={m.agent_slug} agents={agents.agents || []} />
-                    ) : (
-                      <span className="muted">unattributed</span>
-                    )}
-                  </td>
-                  <td>{m.turns}</td>
-                  <td>turn {m.first_qualifying_turn}</td>
-                  <td className="wrap" style={{ maxWidth: 260 }}>
-                    {m.triggers.slice(0, 2).map((t: any, i: number) => (
-                      <div key={i} className="small">
-                        <Severity value={t.severity} /> {t.detail}
-                      </div>
-                    ))}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <Empty>
-            None in this window. Either escalation is working, or nothing has been
-            recorded yet — check <a href="/app/start">Start here</a>.
-          </Empty>
-        )}
-      </div>
-
-      <h2>Hand-off queue</h2>
+      <h2 id="handoffs">Hand-off queue</h2>
       <p className="sub">
         Each row needs a person.{" "}
         <InfoTip text="'Completeness' scores whether the hand-off carries enough for a human to act without re-interviewing the user: the original request, a summary, what was already tried, why it was blocked, and a customer reference. Missing any of these is its own failure — the hand-off happened and was still unusable." />
@@ -420,65 +423,125 @@ async function EscalationTab({ agent }: { agent?: string }) {
         )}
       </div>
 
-      <h2>
-        Escalation policy
-        <InfoTip text="What actually qualifies a conversation for a hand-off — org-wide by default. Agent-scoped overrides exist in the API (?agent=slug) but aren't exposed here yet; this edits the default every agent inherits." />
-      </h2>
+      <h2 id="missed">Missed escalations</h2>
       <p className="sub">
-        Every condition is a signal, not a guarantee.{" "}
-        <InfoTip text="That is why this pillar ships observe-first. Fields not present in the JSON fall back to the platform default shown as a placeholder." />
+        Detected after the fact.{" "}
+        <InfoTip text="At runtime there is nothing to see — the failure is the absence of an event." />
       </p>
-      <form action="/api/escalation/policy" method="POST" className="panel body stack">
-        <div className="field-grid">
+      <div className="panel">
+        {missed.missed?.length ? (
+          <table>
+            <thead>
+              <tr>
+                <th>conversation</th>
+                <th>agent</th>
+                <th>turns</th>
+                <th>qualified at</th>
+                <th>why a human was needed</th>
+              </tr>
+            </thead>
+            <tbody>
+              {missed.missed.map((m: any) => (
+                <tr key={m.session_id}>
+                  <td className="mono small">
+                    <Link href={`/app/escalation/conversations/${encodeURIComponent(m.session_id)}`}>
+                      {m.session_id}
+                    </Link>
+                  </td>
+                  <td className="small">
+                    {m.agent_slug ? (
+                      <AgentLink slug={m.agent_slug} agents={agents.agents || []} />
+                    ) : (
+                      <span className="muted">unattributed</span>
+                    )}
+                  </td>
+                  <td>{m.turns}</td>
+                  <td>turn {m.first_qualifying_turn}</td>
+                  <td className="wrap" style={{ maxWidth: 260 }}>
+                    {m.triggers.slice(0, 2).map((t: any, i: number) => (
+                      <div key={i} className="small">
+                        <Severity value={t.severity} /> {t.detail}
+                      </div>
+                    ))}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <Empty>
+            None in this window. Either escalation is working, or nothing has been
+            recorded yet — check <a href="/app/start">Start here</a>.
+          </Empty>
+        )}
+      </div>
+
+      {/* The policy editor is configuration: a role, an SLA, a mode and a blob
+          of JSON conditions. It is not something anyone reads on the way to
+          clearing a queue, so it stops sitting under one. */}
+      <details className="rt-more" style={{ marginTop: 26 }}>
+        <summary>Escalation policy — what qualifies a conversation for a hand-off</summary>
+        <h2>
+          Escalation policy
+          <InfoTip text="What actually qualifies a conversation for a hand-off — org-wide by default. Agent-scoped overrides exist in the API (?agent=slug) but aren't exposed here yet; this edits the default every agent inherits." />
+        </h2>
+        <p className="sub">
+          Every condition is a signal, not a guarantee.{" "}
+          <InfoTip text="That is why this pillar ships observe-first. Fields not present in the JSON fall back to the platform default shown as a placeholder." />
+        </p>
+        <form action="/api/escalation/policy" method="POST" className="panel body stack">
+          <div className="field-grid">
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Owner role</label>
+              <input
+                type="text"
+                name="owner_role"
+                defaultValue={policy?.owner_role || "support"}
+                style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+              />
+            </div>
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>SLA (minutes)</label>
+              <input
+                type="number"
+                name="sla_minutes"
+                min={1}
+                max={10080}
+                defaultValue={policy?.sla_minutes ?? 60}
+                style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+              />
+            </div>
+            <div>
+              <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Mode</label>
+              <select
+                name="mode"
+                defaultValue={policy?.mode || "observe"}
+                style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+              >
+                <option value="observe">observe</option>
+                <option value="enforce">enforce</option>
+              </select>
+            </div>
+          </div>
           <div>
-            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Owner role</label>
-            <input
-              type="text"
-              name="owner_role"
-              defaultValue={policy?.owner_role || "support"}
-              style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
+            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
+              Conditions (JSON — explicit_request, repeated_failure, repeated_abstention,
+              turn_depth, sentiment_below, regulated_topics, confidence_below)
+            </label>
+            <textarea
+              name="conditions"
+              defaultValue={JSON.stringify(policy?.conditions || policy?.defaults || {}, null, 2)}
+              spellCheck={false}
+              rows={9}
+              style={{ width: "100%", fontFamily: "var(--mono)", fontSize: 12.5, lineHeight: 1.5, padding: 10, borderRadius: 7, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", resize: "vertical" }}
             />
           </div>
           <div>
-            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>SLA (minutes)</label>
-            <input
-              type="number"
-              name="sla_minutes"
-              min={1}
-              max={10080}
-              defaultValue={policy?.sla_minutes ?? 60}
-              style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
-            />
+            <button type="submit" className="btn-primary">Save escalation policy</button>
           </div>
-          <div>
-            <label className="small muted" style={{ display: "block", marginBottom: 4 }}>Mode</label>
-            <select
-              name="mode"
-              defaultValue={policy?.mode || "observe"}
-              style={{ width: "100%", padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
-            >
-              <option value="observe">observe</option>
-              <option value="enforce">enforce</option>
-            </select>
-          </div>
-        </div>
-        <div>
-          <label className="small muted" style={{ display: "block", marginBottom: 4 }}>
-            Conditions (JSON — explicit_request, repeated_failure, repeated_abstention,
-            turn_depth, sentiment_below, regulated_topics, confidence_below)
-          </label>
-          <textarea
-            name="conditions"
-            defaultValue={JSON.stringify(policy?.conditions || policy?.defaults || {}, null, 2)}
-            spellCheck={false}
-            rows={9}
-            style={{ width: "100%", fontFamily: "var(--mono)", fontSize: 12.5, lineHeight: 1.5, padding: 10, borderRadius: 7, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", resize: "vertical" }}
-          />
-        </div>
-        <div>
-          <button type="submit" className="btn-primary">Save escalation policy</button>
-        </div>
-      </form>
+        </form>
+      </details>
+
     </>
   );
 }

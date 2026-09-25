@@ -2589,3 +2589,23 @@ td .mono { overflow-wrap: anywhere; }
 .rt-more[open] > summary { margin-bottom: 11px; }
 /* The rows this finding is about, inside the full list. */
 .rt-row-subject > td { background: color-mix(in srgb, var(--warn) 9%, transparent); }
+
+/* A count on a filter chip. Without it a bar of four identical-looking options
+   above an empty table gives no hint that three of them have rows. */
+.chip-n {
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: var(--r-pill);
+  background: var(--panel-2);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+.chip.active .chip-n { background: color-mix(in srgb, var(--cta-ink, #fff) 22%, transparent); color: inherit; }
+
+/* An empty queue that is the healthy state, said properly rather than as one
+   line of grey text on a blank page. */
+.queue-clear { margin: 16px 0 0; max-width: var(--measure); }
+.queue-clear h3 { margin: 0 0 8px; font-size: var(--t-body); font-weight: 620; letter-spacing: -0.012em; }
+.queue-clear p { margin: 0 0 10px; font-size: var(--t-small); line-height: 1.6; color: var(--muted); }
+.queue-clear .qc-links { margin: 0; font-size: var(--t-micro); }
