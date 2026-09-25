@@ -60,10 +60,63 @@ export default function HowItWorks() {
         <article className="bm-doc">
 
         <h2>The path one call takes</h2>
+        {/* This said "three ways on … the sequence is the same for all three",
+            which is not true and is the kind of untrue that costs a reader real
+            protection. autoguard.py's _PATCHERS are the OpenAI, Anthropic,
+            LiteLLM and LangChain clients, so `auto()` governs model traffic and
+            the answerability gate in front of it — and nothing else. The tool
+            check only runs where the call passes through it, and retrieval is
+            filtered where your own code asks for it. A visitor could otherwise
+            add one import and believe their tools were governed. */}
+        <h3>Where it connects, and what each connection can check</h3>
+        <div className="scroll-x">
+          <table>
+            <thead>
+              <tr>
+                <th>Connect it here</th>
+                <th>And it checks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <code className="mono">agentfox.auto()</code>, one line in your entry point
+                </td>
+                <td>
+                  Model traffic: detectors over prompts and responses, the answerability
+                  gate before the call, the kill switch and budgets. <strong>Not tool calls.</strong>
+                </td>
+              </tr>
+              <tr>
+                <td>The gateway — point an OpenAI or Anthropic client&apos;s base URL at it</td>
+                <td>
+                  The same model-traffic checks, from any language, with no AgentFox code
+                  in your application
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  A governed tool path: the LangGraph node, the MCP governor, the SDK, or{" "}
+                  <code className="mono">POST /v1/guard/tool_call</code>
+                </td>
+                <td>
+                  The action itself: the agent&apos;s grants, declared argument ceilings,
+                  where each value came from, and whether the tool is irreversible
+                </td>
+              </tr>
+              <tr>
+                <td>
+                  <code className="mono">filter_retrieval()</code> from your retrieval code,
+                  or its HTTP endpoint
+                </td>
+                <td>What comes back for the person asking, before it reaches the prompt</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <p>
-          Three ways on: one line in Python, an HTTP call from any language, or the
-          gateway. The sequence is the same for all three, and three of the eight
-          steps can end a call before it reaches anything.
+          The sequence below is the full path a call takes when all four are connected.
+          Three of its eight steps can end a call before it reaches anything.
         </p>
 
         <RequestPath
@@ -120,8 +173,8 @@ export default function HowItWorks() {
                   It reads no text. It asks whether the agent holds a grant for the
                   tool, whether argument values are inside the declared ceilings, where
                   those arguments came from, and whether the tool is irreversible. An
-                  irreversible call built out of untrusted content is refused even when
-                  nothing flagged the prompt.
+                  irreversible call built out of untrusted content is refused, or sent
+                  to a person to approve, even when nothing flagged the prompt.
                 </>
               ),
               stops: true,
