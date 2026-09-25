@@ -2069,3 +2069,51 @@ td .mono { overflow-wrap: anywhere; }
   color: var(--muted);
   max-width: 88ch;
 }
+
+/* Tool-call arguments as pairs. See components/ui.tsx: JSON.stringify in a 260px
+   cell was breaking destination account numbers across two lines on the one page
+   whose entire purpose is a human checking that value before approving. */
+.args { margin: 0; display: grid; gap: 7px; min-width: 16ch; }
+/* Key above value, not beside it. Side by side, `account_id` ate the column and
+   left its value four characters wide — ACCT-4471982 came out as five lines of
+   two or three characters, which is worse than the JSON it replaced. Stacked,
+   the value gets the full width and breaks at most once. */
+.args > div { display: grid; gap: 1px; }
+.args dt {
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  line-height: 1.3;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.args dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: var(--t-small);
+  line-height: 1.35;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+/* Every rule that fired, not the first one truncated with the rest behind a
+   hover. See ReasonCell in app/app/approvals/page.tsx. */
+.reasons { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; }
+.reasons li {
+  position: relative;
+  padding-left: 13px;
+  font-size: var(--t-small);
+  line-height: 1.45;
+  color: var(--text-2);
+}
+.reasons li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--border-strong, var(--muted));
+}
+.reasons li:only-child { padding-left: 0; }
+.reasons li:only-child::before { display: none; }

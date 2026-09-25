@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, safeApi, apiErrorProps } from "@/lib/api";
-import { AgentLink, ApiDown, Empty, InfoTip, Severity, ts } from "@/components/ui";
+import { AgentLink, ApiDown, ArgsCell, Empty, InfoTip, Severity, ts } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { Countdown } from "@/components/Countdown";
 
@@ -31,16 +31,25 @@ const TABS: { key: string; label: string }[] = [
  * hover — the same "summary visible, detail on demand" split the table uses
  * for arguments (truncated + monospace) already, just applied here too.
  */
+/**
+ * Why this call needs a person, in full.
+ *
+ * This showed the first semicolon-separated part truncated to one line at 280px,
+ * with the rest behind a "+2 more" chip and the whole thing behind a tooltip.
+ * Each part is a separate rule that fired, and on this page the reason is the
+ * second most important thing after the arguments — it is what the approver is
+ * deciding against. Hiding two thirds of it behind a hover on the page where
+ * someone releases money is the wrong trade for one line of height.
+ */
 function ReasonCell({ reason }: { reason?: string }) {
   if (!reason) return <span className="muted">—</span>;
   const parts = reason.split(/;\s*/).filter(Boolean);
   return (
-    <span className="row" style={{ gap: 6, flexWrap: "nowrap", maxWidth: 280 }} title={reason}>
-      <span className="small muted truncate" style={{ flex: 1, minWidth: 0 }}>{parts[0]}</span>
-      {parts.length > 1 && (
-        <span className="tag" style={{ flex: "0 0 auto" }}>+{parts.length - 1} more</span>
-      )}
-    </span>
+    <ul className="reasons">
+      {parts.map((part) => (
+        <li key={part}>{part}</li>
+      ))}
+    </ul>
   );
 }
 
@@ -129,11 +138,11 @@ async function ApprovalsTab({ status: rawStatus }: { status?: string }) {
           <table>
             <thead>
               <tr>
-                <th>agent</th>
-                <th>tool</th>
-                <th>reason</th>
-                <th>arguments</th>
-                <th>requested</th>
+                <th className="w-name">agent</th>
+                <th className="w-name">tool</th>
+                <th className="w-prose">reason</th>
+                <th className="w-name">arguments</th>
+                <th className="w-when">requested</th>
                 <th>
                   expires
                   <InfoTip text="Past this time, an unanswered request is denied automatically and the call is blocked — the default timeout action fails closed rather than leaving a risky call in limbo." />
@@ -153,8 +162,8 @@ async function ApprovalsTab({ status: rawStatus }: { status?: string }) {
                   </td>
                   <td className="mono small">{a.tool || "—"}</td>
                   <td><ReasonCell reason={a.reason} /></td>
-                  <td className="small wrap mono muted" style={{ maxWidth: 260, fontSize: 11 }}>
-                    {a.arguments && Object.keys(a.arguments).length ? JSON.stringify(a.arguments) : "—"}
+                  <td className="w-name">
+                    <ArgsCell args={a.arguments} />
                   </td>
                   <td className="small muted">{ts(a.requested_at)}</td>
                   <td className="small">{status === "pending" ? <Countdown at={a.expires_at} /> : <span className="small muted">{ts(a.expires_at)}</span>}</td>

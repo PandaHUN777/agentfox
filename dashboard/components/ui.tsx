@@ -439,3 +439,32 @@ export function InventoryStrip({
     </div>
   );
 }
+
+/**
+ * Tool-call arguments, as pairs rather than as JSON.
+ *
+ * The Approvals table rendered `JSON.stringify(args)` into a 260px monospace
+ * cell with wrapping on, which broke values mid-token: an approver deciding
+ * whether to release money saw `"to":"acct_att acker_99i"` across two lines.
+ * A destination account split by a line wrap is the single worst thing this
+ * table could do, because the whole page exists for a human to check exactly
+ * that value before saying yes.
+ *
+ * One pair per row, key muted and value whole. A value long enough to need a
+ * break gets one at a character boundary rather than wherever the wrap landed,
+ * and the row can scroll rather than fold.
+ */
+export function ArgsCell({ args }: { args: Record<string, unknown> | null | undefined }) {
+  const entries = args ? Object.entries(args) : [];
+  if (!entries.length) return <span className="muted">—</span>;
+  return (
+    <dl className="args">
+      {entries.map(([k, v]) => (
+        <div key={k}>
+          <dt>{k}</dt>
+          <dd>{typeof v === "string" ? v : JSON.stringify(v)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
