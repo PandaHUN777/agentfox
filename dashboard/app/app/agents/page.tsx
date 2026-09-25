@@ -4,6 +4,7 @@ import Link from "next/link";
 import { api, apiErrorProps } from "@/lib/api";
 import { ApiDown, InfoTip, InventoryStrip, Panel, Stat, ts } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
+import { Explainer } from "@/components/Explainer";
 import { Modal } from "@/components/Modal";
 
 /**
@@ -57,36 +58,36 @@ export default async function Agents({
         action={<RegisterAgentModal idPrefix="header" />}
       />
 
-      {/* Six equal tiles, three of which decomposed one number — 4 agents, 3
-          registered, 1 unregistered — and two of which were inventory. Now: a tile
-          only for something that wants a person, and the rest as one strip. On a
-          clean estate this row disappears entirely, which is the correct amount of
-          attention to ask for when nothing is wrong. */}
-      {(inv.shadow > 0 || inv.unowned > 0) && (
-        <div className="cards">
-          {inv.shadow > 0 && (
-            <Stat
-              n={inv.shadow}
-              label="unregistered"
-              tone="bad"
-              hint="Seen making calls but never registered here — either through a repo scan or the form below. An agent nobody registered is an agent nobody is accountable for. The same record is called an 'Unregistered agent' wherever it appears as a finding."
-            />
-          )}
-          {inv.unowned > 0 && (
-            <Stat
-              n={inv.unowned}
-              label="without an owner"
-              tone="warn"
-              hint="Registered, but with no owner_email set — see the 'unowned — assign' links in the table below."
-            />
-          )}
-        </div>
-      )}
-
+      {/* One row, not two.
+ 
+          This was a .cards grid holding the two problem numbers, above a separate
+          InventoryStrip holding the other four — so a page with one unregistered
+          agent showed two enormous tiles stretched across the full 1010px (the
+          grid is auto-fit, and two items share the whole width between them) and
+          then a second, denser row of statistics directly underneath. Two
+          treatments of the same kind of thing, stacked.
+ 
+          The tile treatment was earning its loudness on the Overview, where
+          nothing else says "look at this". Here the "Unregistered agents" table
+          is immediately below and does exactly that, so the tiles were shouting a
+          heading that the next element already carries. One strip, with tone on
+          the two entries that are problems, and the section below does the rest. */}
       <InventoryStrip
         items={[
           { n: inv.agents, label: "agents", href: "/app/agents" },
           { n: inv.registered, label: "registered", href: "/app/agents" },
+          {
+            n: inv.shadow,
+            label: "unregistered",
+            href: "#unregistered",
+            ...(inv.shadow ? { tone: "bad" as const } : {}),
+          },
+          {
+            n: inv.unowned,
+            label: "without an owner",
+            href: "/app/agents",
+            ...(inv.unowned ? { tone: "warn" as const } : {}),
+          },
           { n: inv.tools, label: "tools", href: "/app/policies?tab=tools" },
           { n: inv.lineage_edges, label: "lineage edges", href: "/app/traces" },
         ]}
@@ -142,7 +143,7 @@ export default async function Agents({
 
       {shadow.shadow_agents.length > 0 && (
         <>
-          <h2>Unregistered agents</h2>
+          <h2 id="unregistered">Unregistered agents</h2>
           <Panel
             title="Observed but never registered"
             note="detected from traffic, not from a form"
@@ -300,74 +301,88 @@ export default async function Agents({
 function CapabilityGrants() {
   return (
     <>
+      {/* Was a heading, three paragraphs in a callout, a seven-row command table
+          and a closing note — roughly 300 words of mechanism, permanently open, at
+          the foot of a page somebody opened to look at their agents. The claim is
+          the part that has to be visible; the mechanism is the part you read once.
+          So the claim stays and the rest is behind the button. */}
       <h2>What an agent is allowed to do</h2>
       <p className="sub">
-        Separate from the tools it has been seen calling: a{" "}
-        <em>capability grant</em>, made from the command line.{" "}
-        <InfoTip text="The table above shows the tools an agent has been seen calling. What it is permitted to call is a separate declaration, called a capability grant. Grants are made from the command line today. There is no screen for them." />
+        The table above is what these agents have been <em>seen</em> calling. What
+        they are <em>permitted</em> to call is a separate declaration — a capability
+        grant — and it is default deny: an agent with no grant for a tool cannot call
+        it at all. Grants are made from the command line; there is no screen for them
+        yet.
       </p>
-      <div className="note-panel" style={{ marginTop: 0 }}>
-        <p style={{ marginTop: 0 }}>
-          <strong>Default deny</strong>: an agent with no grant for a tool cannot call
-          it at all.{" "}
-          <InfoTip text="A grant says this agent may call this tool, and on what terms: which actions, limits on the values in the arguments, a ceiling on how untrusted the arguments are allowed to be, whether the call needs a human approval first, and a date the grant expires." />
+      <Explainer label="How capability grants work" title="Capability grants">
+        <p>
+          A grant says this agent may call this tool, and on what terms: which
+          actions, limits on the values in the arguments, a ceiling on how untrusted
+          those arguments may be, whether the call needs a human approval first, and
+          a date the grant expires.
         </p>
         <p>
-          This half decides whether an action runs. The other half is the{" "}
-          <Link href="/app/glossary">impact tier</Link> on the tool itself.{" "}
-          <InfoTip text="The impact tier is how much damage that tool can do. Together they are the reason a prompt injection can succeed at convincing the model and still not get the action executed. A comparison the policy engine cannot actually evaluate is refused when the grant is written, so a grant never reads as narrower than it is." />
+          This is one half of whether an action runs. The other half is the{" "}
+          <Link href="/app/glossary#impact-tier">impact tier</Link> on the tool
+          itself — how much damage it can do. Together they are the reason a prompt
+          injection can succeed at convincing the model and still not get the action
+          executed.
         </p>
-        <p style={{ marginBottom: 0 }}>
-          It contains only what has been declared: a tool declared{" "}
-          <span className="mono">read</span> that in fact deletes records is not
-          contained by any of this.{" "}
-          <InfoTip text="A grant is not evidence that the tool behaves as described." />
+        <p>
+          <strong>A grant contains only what has been declared.</strong> A tool
+          declared <span className="mono">read</span> that in fact deletes records is
+          not contained by any of this, and a grant is not evidence that a tool
+          behaves as described.
         </p>
-      </div>
-      <div className="panel scroll-x" style={{ marginTop: 14 }}>
-        <table>
-          <thead>
-            <tr><th>to do this</th><th>command</th></tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td className="small">Let an agent call a tool</td>
-              <td className="mono small">agentfox capability grant AGENT TOOL</td>
-            </tr>
-            <tr>
-              <td className="small">Cap what the arguments may say</td>
-              <td className="mono small">--limit amount:lte=500 --action refund,lookup</td>
-            </tr>
-            <tr>
-              <td className="small">Refuse arguments from something untrusted</td>
-              <td className="mono small">--max-taint user</td>
-            </tr>
-            <tr>
-              <td className="small">Send the call to a human first</td>
-              <td className="mono small">--requires-approval</td>
-            </tr>
-            <tr>
-              <td className="small">Make the grant expire on its own</td>
-              <td className="mono small">--expires-in-days 30</td>
-            </tr>
-            <tr>
-              <td className="small">See what an agent currently holds</td>
-              <td className="mono small">agentfox capability list AGENT</td>
-            </tr>
-            <tr>
-              <td className="small">Take one back</td>
-              <td className="mono small">agentfox capability revoke CAPABILITY_ID</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p className="small muted" style={{ marginTop: 10, maxWidth: "var(--measure)" }}>
-        Granting writes <span className="mono">capability.granted</span> to the audit
-        chain — evidence on the{" "}
-        <Link href="/app/compliance?tab=evidence">Compliance page</Link>. A call sent
-        for sign-off arrives in <Link href="/app/approvals">Approvals</Link>. Over HTTP:{" "}
-        <span className="mono">POST /api/identities/{"{id}"}/capabilities</span>.
-      </p>
+
+        <h4>Commands</h4>
+        <div className="panel scroll-x">
+          <table>
+            <thead>
+              <tr><th>to do this</th><th>command</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="small">Let an agent call a tool</td>
+                <td className="mono small">agentfox capability grant AGENT TOOL</td>
+              </tr>
+              <tr>
+                <td className="small">Cap what the arguments may say</td>
+                <td className="mono small">--limit amount:lte=500 --action refund,lookup</td>
+              </tr>
+              <tr>
+                <td className="small">Refuse arguments from something untrusted</td>
+                <td className="mono small">--max-taint user</td>
+              </tr>
+              <tr>
+                <td className="small">Send the call to a human first</td>
+                <td className="mono small">--requires-approval</td>
+              </tr>
+              <tr>
+                <td className="small">Make the grant expire on its own</td>
+                <td className="mono small">--expires-in-days 30</td>
+              </tr>
+              <tr>
+                <td className="small">See what an agent currently holds</td>
+                <td className="mono small">agentfox capability list AGENT</td>
+              </tr>
+              <tr>
+                <td className="small">Take one back</td>
+                <td className="mono small">agentfox capability revoke CAPABILITY_ID</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Granting writes <span className="mono">capability.granted</span> to the
+          audit chain — evidence on the{" "}
+          <Link href="/app/compliance?tab=evidence">Compliance page</Link>. A call
+          sent for sign-off arrives in{" "}
+          <Link href="/app/approvals">Approvals</Link>. Over HTTP:{" "}
+          <span className="mono">POST /api/identities/{"{id}"}/capabilities</span>.
+        </p>
+      </Explainer>
+
     </>
   );
 }

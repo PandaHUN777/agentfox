@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/site";
 import { PageHeader } from "@/components/PageHeader";
 import { GlossaryFilter } from "@/components/GlossaryFilter";
+import { ProductMap, PRODUCT_MAP_ROWS } from "@/components/ProductMap";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,7 @@ const NOM_PREFIXES: [string, string][] = [
  * nothing. Concepts (23) + pillars (15) + NOM prefixes (6) + detector
  * libraries (6) + the two prose-only schemes.
  */
-const TERM_COUNT = 23 + PILLARS.length + NOM_PREFIXES.length + 6 + 2;
+const TERM_COUNT = 23 + PILLARS.length + NOM_PREFIXES.length + 6 + 2 + PRODUCT_MAP_ROWS;
 
 export default function Glossary() {
   return (
@@ -67,9 +68,8 @@ export default function Glossary() {
         title="Glossary"
         sub={
           <>
-            Every word and code this interface shows you, decoded once. For what each{" "}
-            <em>area</em> of the product is for, that is{" "}
-            <a href="/app/start?tab=map">What&rsquo;s in here</a>.
+            Every word and code this interface shows you, decoded once — and what each{" "}
+            <em>area</em> of the product is for.
           </>
         }
       />
@@ -325,6 +325,8 @@ export default function Glossary() {
       </div>
 
       </section>
+
+      <ProductMap />
 
       <section data-gl-section>
       <h2>P#-# — PRD pillar references</h2>

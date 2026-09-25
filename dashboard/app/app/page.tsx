@@ -115,6 +115,18 @@ async function Overview() {
             />
           </div>
 
+          {/* This qualifies the four tiles, so it sits under the four tiles. It
+              used to be the last element on the page, ~700px below the numbers
+              it was talking about and wrapping 330px short of everything around
+              it — a footnote with no referent in sight. */}
+          <p className="stat-note">
+            These four count what the detectors found in <em>text</em>. They miss the
+            other half of the job: before any tool runs, the call itself is checked
+            against what that agent was granted.
+            <InfoTip text="Which tool, what the arguments say, where those argument values came from, and how much damage the tool can do — so an irreversible call assembled out of untrusted content is refused or sent for approval even when nothing flagged the prompt. It depends entirely on tools being declared honestly: a tool recorded as read-only that is not read-only is not covered by any of this." />{" "}
+            <Link href="/app/policies">See it on Policies &rarr;</Link>
+          </p>
+
           <h2>Needs attention</h2>
           <div className="panel">
             <table>
@@ -192,16 +204,6 @@ async function Overview() {
         </div>
       )}
 
-      {/* Containment is what this product is actually for, and the numbers above do
-          not measure it. Two sentences and a tooltip, where this was a ninety-word
-          paragraph: the caveat is the part that must not be lost, so it is the part
-          that moved into the tooltip rather than the part that got cut. */}
-      <p className="page-foot">
-        The counts above are text a detector caught. Every tool call is also checked
-        against what that agent was granted, reading no text at all.{" "}
-        <InfoTip text="It checks which tool, what the arguments are, where those argument values came from, and how much damage the tool can do — so an irreversible call built out of untrusted content is refused or sent for approval even when nothing flagged the prompt. It depends entirely on tools being declared honestly: a tool recorded as read-only that is not read-only is not covered by any of this." />{" "}
-        <Link href="/app/policies">See it on Policies &rarr;</Link>
-      </p>
     </>
   );
 }
