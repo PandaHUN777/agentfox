@@ -33,7 +33,33 @@ export type Station = {
   keystone?: boolean;
 };
 
-export function RequestPath({ stations }: { stations: Station[] }) {
+/**
+ * The rail, with the request beside it.
+ *
+ * At desktop width the eight stations used a third of the screen and left the
+ * rest empty, which is what made this page read as documentation rather than a
+ * demonstration. The record the stations are describing now sits next to them
+ * and stays there while you scroll, so the reader always has the artefact in
+ * view while reading what happens to it.
+ *
+ * Sticky rather than changing per stage: swapping the panel as the reader
+ * advances needs an IntersectionObserver, and this page is a server component
+ * with no client bundle. One honest artefact that stays put beats a clever one
+ * that needs JavaScript to be correct.
+ */
+export function RequestPath({ stations, aside }: { stations: Station[]; aside?: ReactNode }) {
+  if (aside) {
+    return (
+      <div className="rp-split">
+        <RequestPathList stations={stations} />
+        <aside className="rp-aside">{aside}</aside>
+      </div>
+    );
+  }
+  return <RequestPathList stations={stations} />;
+}
+
+function RequestPathList({ stations }: { stations: Station[] }) {
   return (
     <ol className="rp" aria-label="The path one call takes">
       {/* The travelling pulse is one absolutely-positioned element on the rail

@@ -101,113 +101,72 @@ export function Editions({
         <div className="mk-narrow mk-up">
           <span className="mk-eyebrow">Editions</span>
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
-            Free either way. Run it yourself, or let us run it</h2>
+            Two ways to run it. Both free today</h2>
           <p className="mk-lede" style={{ marginTop: 14, maxWidth: "62ch" }}>
-            The same control plane in all three. Nothing is priced yet and no card is taken anywhere on this site.
+            The same control plane either way. Nothing is priced yet, and no card is taken anywhere on this site.
           </p>
         </div>
 
-        <div className="mk-grid mk-grid-3" style={{ marginTop: 40 }}>
-          {/* 1. Open source */}
-          <div className="mk-card mk-up mk-d1" style={COLUMN}>
+        {/* Two routes, not three tiers.
+            Three equally-weighted bordered cards look like a paid SaaS ladder,
+            which is exactly wrong for a page where nothing is priced. There are
+            really only two decisions a visitor makes here — run it yourself, or
+            let us run it — and supported rollout is a conversation, not an
+            edition. It is a strip underneath. */}
+        <div className="ed-routes" style={{ marginTop: 36 }}>
+          <div className="ed-route mk-up mk-d1">
             <div className="ed-head">
-              <h3 className="mk-h3">Open source</h3>
-              <span className="mk-chip mk-chip-go">Available now</span>
+              <h3 className="mk-h3">Run it yourself</h3>
+              <span className="mk-chip mk-chip-go">Free forever</span>
             </div>
-
-            <Item label="What you get">
-              The whole control plane. Every feature above, none of them gated.
-            </Item>
-            <Item label="Who it is for">
-              Anyone who wants to read the code that decides what their agent may do.
-            </Item>
-            <Item label="Cost">Free, Apache-2.0. No licence key, no gated features.</Item>
-
-            {/* The install block used to sit here. It made this column half again as
-                tall as its two neighbours, which pushed their actions into the middle
-                of an empty card, and it is already on the page twice: in the hero's
-                fine print and in the closing block. */}
-            <div style={ACTION_FOOT}>
-              <span className="mk-label">Start here</span>
-              <a
-                className="mk-btn mk-btn-outline"
-                href={REPO_HREF}
-                target="_blank"
-                rel="noreferrer"
-                style={{ justifyContent: "center" }}
-              >
-                Read the repository
-              </a>
-            </div>
+            <p className="mk-body">
+              The whole control plane, Apache-2.0, nothing gated and no licence key.
+              Runs offline: no API key, no downloaded weights, no network egress.
+            </p>
+            <pre className="ed-code">
+              <code>pip install git+https://github.com/architsharm/agentfox.git</code>
+              <code className="ed-code-2">agentfox init &amp;&amp; agentfox demo</code>
+            </pre>
+            <a
+              className="mk-btn mk-btn-outline"
+              href={REPO_HREF}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Read the repository
+            </a>
           </div>
 
-          {/* 2. Supported self-hosted */}
-          <div className="mk-card mk-up mk-d2" style={COLUMN}>
+          <div className="ed-route ed-route-hosted mk-up mk-d2">
             <div className="ed-head">
-              <h3 className="mk-h3">Supported self-hosted</h3>
-              <span className="mk-chip mk-chip-accent">Available now</span>
+              <h3 className="mk-h3">Let us run it</h3>
+              <span className="mk-chip mk-chip-accent">Free while in preview</span>
             </div>
-
-            <Item label="What you get">
-              The identical software, plus help with rollout and priority on fixes.
-            </Item>
-            <Item label="Who it is for">
-              Teams putting this in front of an auditor who want a named person to call.
-            </Item>
-            <Item label="Cost">Talk to us — we will agree a price with you.</Item>
-
-            <div style={ACTION_FOOT}>
-              <span className="mk-label">Start here</span>
-              <a
-                className="mk-btn mk-btn-outline"
-                href={SUPPORTED_HREF}
-                style={{ justifyContent: "center" }}
-              >
-                Email us
-              </a>
-            </div>
+            <p className="mk-body">
+              The same control plane, operated by us, with upgrades and backups
+              handled. Sign in with GitHub and you have a workspace of your own in
+              about ten seconds.
+            </p>
+            <ul className="ed-terms">
+              <li>No card, and nothing to pay today</li>
+              <li>When paid plans arrive, your first 14 days on one are free</li>
+              <li>We will tell you before anything changes</li>
+            </ul>
+            <a className="mk-btn mk-btn-primary" href="/login">
+              Start free
+            </a>
           </div>
+        </div>
 
-          {/* 3. Hosted.
-              This card said "In development" and offered a waitlist, while the nav
-              beside it offered "Sign in" and routes/integrations.py provisions a
-              brand-new org for any GitHub identity that has never been seen —
-              "new GitHub identity and new tenant are the same event", role owner,
-              no invite flow and no allowlist. The hosted product has been live and
-              open this whole time; the page was the only thing saying otherwise.
-
-              What genuinely does not exist is billing: there is no plan, trial,
-              subscription or Stripe code anywhere under src/agentfox. So the card
-              cannot say "14 days free" as a description of today, because there is
-              no clock and no paywall to be free of — a visitor would reasonably
-              read it as losing access on day 15. It says what is true now (free,
-              open, no card) and what the 14 days is (the first thing that happens
-              when paid plans arrive). */}
-          <div className="mk-card mk-up mk-d3" style={COLUMN}>
-            <div className="ed-head">
-              <h3 className="mk-h3">Hosted</h3>
-              <span className="mk-chip mk-chip-go">Free while in preview</span>
-            </div>
-
-            <Item label="What you get">
-              The same control plane, run by us. Sign in with GitHub and you have a
-              workspace of your own in about ten seconds.
-            </Item>
-            <Item label="Who it is for">
-              Teams who want this in front of an auditor without running a database.
-            </Item>
-            <Item label="Cost">
-              Nothing today, and no card. When paid plans arrive your first 14 days on
-              one are free, and we will tell you before anything changes.
-            </Item>
-
-            <div style={ACTION_FOOT}>
-              <span className="mk-label">Start here</span>
-              <a className="mk-btn mk-btn-primary" href="/login" style={{ justifyContent: "center" }}>
-                Start free
-              </a>
-            </div>
-          </div>
+        {/* Supported rollout: a service conversation, not a third tier. */}
+        <div className="ed-support mk-up mk-d3">
+          <p>
+            <strong>Putting this in front of an auditor?</strong> We help with rollout
+            and give you priority on fixes. Not priced yet — we agree it with you.
+          </p>
+          <a className="mk-btn mk-btn-outline" href={SUPPORTED_HREF}>
+            Talk to us
+          </a>
         </div>
 
         {/* The waitlist is not gone, it is pointed at the thing that is actually

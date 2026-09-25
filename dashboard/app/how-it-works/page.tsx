@@ -5,6 +5,7 @@ import { CATEGORY, REPO } from "./_public";
 import { MarketingNav } from "@/components/marketing/nav";
 import { Footer } from "@/components/marketing/sections";
 import { RequestPath } from "@/components/marketing/path";
+import { TraceAnatomy } from "@/components/marketing/product";
 
 /**
  * Public explainer for someone who has never seen this product, reached from the
@@ -119,7 +120,16 @@ export default function HowItWorks() {
           Three of its eight steps can end a call before it reaches anything.
         </p>
 
+        {/* The record the eight stations are describing, beside them rather than
+            three screens further down. At desktop width this column was empty,
+            which is most of why the page read as documentation. */}
         <RequestPath
+          aside={
+            <>
+              <span className="mk-label">the record it produces</span>
+              <TraceAnatomy />
+            </>
+          }
           stations={[
             {
               title: "A call arrives",
