@@ -179,12 +179,17 @@ export function Hero() {
               reader has not met it yet and will not until /product. And the fragment
               opener ("One line of Python.") was doing rhetorical work that the
               install block six inches below does literally.
-              Three short sentences instead, each stating one fact, in the words a
-              reader would use to repeat it to someone else. */}
+              Two sentences, in the words a reader would use to repeat it.
+              "The prompt is never read." was a third, and it was an orphan: a
+              true fact with no stated consequence, sitting on its own where the
+              reader has not yet been told that reading the prompt is what every
+              other product does. As a trailing clause it earns its place —
+              "whatever the prompt said" answers the question the second
+              sentence raises, which is what happens when the model is fooled. */}
           <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "50ch" }}>
             AgentFox sits between your agent and its tools. Every call is checked
             against the permissions you set, and anything outside them is refused
-            before it runs. The prompt is never read.
+            before it runs, whatever the prompt said.
           </p>
           <pre className="mk-install mk-up mk-d3">
             <code>pip install git+https://github.com/architsharm/agentfox.git</code>
