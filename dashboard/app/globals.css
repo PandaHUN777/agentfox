@@ -2655,3 +2655,31 @@ td .mono { overflow-wrap: anywhere; }
 }
 .section-head h2 { margin: 0; }
 .section-head .sub { flex: 1 1 100%; margin: 0; }
+
+/* The compiled rule objects, behind a control on a policy page. Scrolls in its
+   own box rather than making the page thousands of pixels tall. */
+.rule-json {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-2);
+  background: var(--panel-2);
+  font-size: var(--t-micro);
+  line-height: 1.5;
+  max-height: 460px;
+  overflow: auto;
+}
+
+/* A one-line caveat directly above the number it qualifies. Not a .caveat panel:
+   this is not a warning about a problem, it is a limit on what a good number
+   means, and an amber box would make a healthy result look like a fault. */
+.caveat-line {
+  margin: -2px 0 14px;
+  padding-left: 11px;
+  border-left: 2px solid var(--border);
+  font-size: var(--t-small);
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: var(--measure);
+}
+.caveat-line strong { color: var(--text); }

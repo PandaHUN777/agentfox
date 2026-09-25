@@ -176,6 +176,15 @@ export default async function Compliance({
               failing needs what the telemetry FOUND, not a restatement of what the
               control is for. */}
           <NeedsWork controls={controls.controls} />
+
+          {/* The catalogue is 43 rows of three prose columns — the reference
+              behind the worklist above, not the thing you came for. Closed, with
+              its size on the control, so the page ends on what needs doing. */}
+          <details className="rt-more" style={{ marginTop: 20 }}>
+          <summary>
+            The full control catalogue ({controls.controls.length}) — everything this
+            product can check
+          </summary>
           <div className="panel scroll-x">
             <table>
               <thead>
@@ -206,6 +215,7 @@ export default async function Compliance({
               </tbody>
             </table>
           </div>
+          </details>
         </>
       )}
 

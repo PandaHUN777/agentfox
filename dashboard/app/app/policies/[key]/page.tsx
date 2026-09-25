@@ -52,6 +52,50 @@ function withExampleRuleIfEmpty(body: string): string {
     : body;
 }
 
+/**
+ * A rule's `when` clause, as a sentence fragment rather than an object.
+ *
+ * The compiled form carries every condition the engine understands and sets all
+ * but a few to null — twenty-odd keys per rule, of which two or three are
+ * populated. Printed raw it is unreadable; dropped entirely it takes with it the
+ * only answer to "why would this fire?". So: the populated ones, in the order a
+ * person would ask them, and nothing else.
+ */
+function RuleWhen({ when }: { when: any }) {
+  if (!when) return <span className="muted">every request</span>;
+
+  const bits: string[] = [];
+  const surfaces = when.surface;
+  if (surfaces?.length) bits.push(`on ${surfaces.join(", ")}`);
+  if (when.detection) {
+    const d = when.detection;
+    const what = d.entity || d.entity_prefix;
+    const parts: string[] = [];
+    if (what) parts.push(`${what} detected`);
+    if (d.min_score != null) parts.push(`score \u2265 ${d.min_score}`);
+    if (d.min_count != null && d.min_count > 1) parts.push(`at least ${d.min_count}`);
+    if (parts.length) bits.push(parts.join(", "));
+  }
+  if (when.tool) bits.push(`tool ${when.tool}`);
+  if (when.tool_impact) bits.push(`tool impact ${[].concat(when.tool_impact).join(" or ")}`);
+  if (when.taint_exceeds) bits.push(`arguments more tainted than ${when.taint_exceeds}`);
+  if (when.capability) bits.push(`capability ${when.capability}`);
+  if (when.action_operation) bits.push(`operation ${[].concat(when.action_operation).join(" or ")}`);
+  if (when.action_reversible === false) bits.push("irreversible action");
+  if (when.blast_radius_at_least != null) bits.push(`blast radius \u2265 ${when.blast_radius_at_least}`);
+  if (when.intent_declared === false) bits.push("no declared intent");
+  if (when.budget_exceeded) bits.push("budget exceeded");
+  if (when.loop_detected) bits.push("loop detected");
+  if (when.detector_degraded) bits.push("a detector is degraded");
+  if (when.risk_tier) bits.push(`risk tier ${[].concat(when.risk_tier).join(" or ")}`);
+  if (when.agent) bits.push(`agent ${[].concat(when.agent).join(", ")}`);
+  if (when.environment) bits.push(`in ${[].concat(when.environment).join(", ")}`);
+  if (when.expr) bits.push("a custom expression matches");
+
+  if (!bits.length) return <span className="muted">every request</span>;
+  return <>{bits.join(" \u00b7 ")}</>;
+}
+
 export default async function PolicyDetail({
   params,
   searchParams,
@@ -98,6 +142,7 @@ export default async function PolicyDetail({
     ? withExampleRuleIfEmpty(savedBody)
     : starterTemplate(key, policy.name, policy.description, scopeAgent);
   const isTemplate = body !== savedBody;
+  const rules: any[] = policy.compiled?.rules || [];
 
   return (
     <>
@@ -122,22 +167,75 @@ export default async function PolicyDetail({
         </span>
       </div>
 
-      <h2>Rules — authored as YAML, enforced at runtime</h2>
-      <p className="small muted" style={{ marginTop: -8, marginBottom: 14, maxWidth: "var(--measure)" }}>
-        Edit and validate before saving — validation runs the exact same check the
-        engine applies at enforcement time, so an error here is an error there.
-        Saving creates a new immutable version; nothing currently in force changes
-        until you promote it.
-      </p>
-      <PolicyEditor
-        policyKey={key}
-        initialBody={body}
-        canEnforce={true}
-        isTemplate={isTemplate}
-        initialLevel={initialLevel}
-        initialScopeId={initialScopeId}
-        initialCompose={policy.compose}
-      />
+      {/* This page is reached from "Review & edit" on a policy with, in this
+          case, twelve rules — and it never showed them. It opened on a
+          create-a-rule form (five dropdowns and a checkbox row) under the
+          heading "Rules — authored as YAML, enforced at runtime", which is
+          engineering's voice describing a form written in plain language, above
+          a YAML blob. Someone arriving to review a policy met a blank form.
+
+          The rules come first now, as what they are. The editor is still one
+          click away and unchanged. */}
+      {rules.length > 0 && (
+        <>
+          <h2>Rules in this policy</h2>
+          <p className="sub">
+            Each one is checked on every request this policy covers. The first
+            whose conditions match decides the outcome.
+          </p>
+          <div className="panel scroll-x">
+            <table>
+              <thead>
+                <tr>
+                  <th>rule</th>
+                  <th>when it fires</th>
+                  <th>effect</th>
+                  <th>severity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rules.map((r: any) => (
+                  <tr key={r.id}>
+                    <td className="small wrap" style={{ maxWidth: 300 }}>
+                      {r.description || r.id}
+                      <div className="mono small muted">{r.id}</div>
+                    </td>
+                    <td className="small wrap" style={{ maxWidth: 340 }}>
+                      <RuleWhen when={r.when} />
+                    </td>
+                    <td>
+                      <span className={`tag ${r.effect === "block" ? "bad" : r.effect === "allow" ? "" : "warn"}`}>
+                        {r.effect}
+                      </span>
+                    </td>
+                    <td className="small muted">{r.severity || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      <details className="rt-more" style={{ marginTop: 22 }}>
+        <summary>
+          {rules.length > 0 ? "Edit these rules" : "Add the first rule"} — builder or YAML
+        </summary>
+        <p className="sub">
+          Validation runs the exact same check the engine applies at enforcement
+          time, so an error here is an error there. Saving creates a new immutable
+          version; nothing currently in force changes until you promote it.
+        </p>
+        <PolicyEditor
+          policyKey={key}
+          initialBody={body}
+          canEnforce={true}
+          isTemplate={isTemplate}
+          initialLevel={initialLevel}
+          initialScopeId={initialScopeId}
+          initialCompose={policy.compose}
+        />
+      </details>
 
       {policy.versions?.length > 0 && (
         <>
@@ -174,25 +272,15 @@ export default async function PolicyDetail({
         </>
       )}
 
-      {policy.compiled?.rules?.length > 0 && (
-        <>
-          <h2>Compiled — what actually evaluates</h2>
-          <p className="small muted" style={{ marginTop: -8, marginBottom: 14, maxWidth: "var(--measure)" }}>
-            The YAML above compiles down to this — every field the engine checks, most of
-            them null because most rules only use a few. Collapsed by default since this is
-            the debugging view, not the everyday one.
-          </p>
-          <Panel title="Compiled rules">
-            <details>
-              <summary className="small muted" style={{ cursor: "pointer", padding: "8px 14px" }}>
-                Show the compiled rule objects ({policy.compiled.rules.length})
-              </summary>
-              <pre className="small" style={{ margin: 0, padding: 14 }}>
-                {JSON.stringify(policy.compiled.rules, null, 2)}
-              </pre>
-            </details>
-          </Panel>
-        </>
+      {/* The table at the top of the page is this data, read. This is the same
+          data unread — every field the engine checks, most of them null because
+          most rules use a few. A debugging view, so it stays one control deep
+          rather than being its own section with its own heading and preamble. */}
+      {rules.length > 0 && (
+        <details className="rt-more" style={{ marginTop: 22 }}>
+          <summary>The compiled rule objects, in full ({rules.length})</summary>
+          <pre className="rule-json">{JSON.stringify(rules, null, 2)}</pre>
+        </details>
       )}
     </>
   );

@@ -340,16 +340,14 @@ export default async function Evals({
         many got through.
         <InfoTip text="It uses that agent's real grants and policy bindings rather than a mock. Run one before you promote a policy to enforce, and again after, so the number means something." />
       </p>
-      <p className="small muted" style={{ maxWidth: "var(--measure)", marginTop: -6 }}>
-        What it proves is narrow: a high score says the probes in this library did not
-        get through, not that the agent is safe.
-        <InfoTip text="An attack nobody wrote a probe for scores exactly the same as one that was stopped." />{" "}
-        The probes on offer are listed on the{" "}
-        <Link href="/app/policies">Policies page</Link>.{" "}
-        <code className="mono">agentfox redteam run &lt;agent&gt; --adaptive</code>{" "}
-        mutates a blocked probe and retries it, reporting the change in posture
-        against the last comparable campaign instead of a pass rate.
-        <InfoTip text="It exits zero whatever it finds, so read the output rather than the exit code." />
+      {/* Three unrelated things in one paragraph with three tooltips wedged
+          between them: the caveat on what a score means, where the probe list
+          lives, and what an --adaptive run does. Only the first changes how
+          somebody reads the number underneath, so only the first stays here. */}
+      <p className="caveat-line">
+        <strong>A high score is a narrow claim.</strong> It says the probes in this
+        library did not get through — not that the agent is safe. An attack nobody
+        wrote a probe for scores exactly the same as one that was stopped.
       </p>
       <form action="/api/redteam/campaigns" method="POST" className="row" style={{ gap: 8, marginBottom: 10, alignItems: "center" }}>
         <select
@@ -367,6 +365,7 @@ export default async function Evals({
         <button type="submit" className="btn-scan">Run built-in probes</button>
         <span className="small muted">
           Or from the CLI: <code className="mono">agentfox redteam run &lt;agent&gt;</code>
+        <InfoTip text="Add --adaptive and it mutates a blocked probe and retries it, reporting the change in posture against the last comparable campaign instead of a pass rate. It exits zero whatever it finds, so read the output rather than the exit code. The probes it can draw on are catalogued on the Policies page." />
         </span>
       </form>
       <div className="panel">

@@ -499,123 +499,67 @@ async function GuardrailTuningTab({ agent }: { agent?: string }) {
         ]}
       />
 
-      <h2>How much each check slows things down</h2>
-      <p className="sub">
-        Typical (p50), slow (p95) and worst case (max).
-        <InfoTip text="An average would hide the slow outliers, and those outliers are exactly what gets a safety check disabled for being too slow." />{" "}
-        The <Link href="/app/policies">Rules tab</Link> lists which checks are installed.
-      </p>
-      <div className="panel">
-        <table>
-          <thead>
-            <tr>
-              <th>check</th>
-              <th>version</th>
-              <th>runs</th>
-              <th>typical (p50)</th>
-              <th>slow (p95)</th>
-              <th>worst case</th>
-            </tr>
-          </thead>
-          <tbody>
-            {detectors.detectors.map((d: any) => {
-              const stats = latency.per_detector?.[d.key] || {};
-              const slow = (stats.p95_ms || 0) > detectors.detector_timeout_ms;
-              return (
-                <tr key={d.key}>
-                  <td>
-                    <span className="mono">{d.key}</span>
-                    {!d.available && (
-                      <span className="tag warn">
-                        unavailable
-                        {d.unavailable_reason && <InfoTip text={d.unavailable_reason} />}
-                      </span>
-                    )}
-                    {!d.enabled && <span className="tag">off</span>}
-                  </td>
-                  <td className="small muted">{d.version}</td>
-                  <td className="mono small">{stats.runs ?? 0}</td>
-                  <td className="mono small">{stats.p50_ms ?? "—"}</td>
-                  <td className={`mono small ${slow ? "bad" : ""}`}>{stats.p95_ms ?? "—"}</td>
-                  <td className="mono small">{stats.max_ms ?? "—"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-        <div className="body small muted">
-          Budget {detectors.budget_ms} ms per call, {detectors.detector_timeout_ms} ms per
-          detector.
-        </div>
-      </div>
+      {/* The tab is called "Guardrail tuning" and its first two thirds were a
+          latency report and a precision report — measurement, not tuning. The two
+          things you can actually change from this page, revoking a suppression
+          and labelling a detection so it becomes one, were at 622 and 680 lines
+          down, under both reports.
 
-      <h2>How often each check is actually right</h2>
+          Tuning first, then the measurements that justify it, collapsed. The
+          reports are why you would tune, and they are worth reading once, not on
+          every visit to revoke one exception. */}
+      <h2>Suppressions</h2>
       <p className="sub">
-        How often a check that flagged something was right, beside the number of flags
-        behind that.
-        <InfoTip text="Precision is how often a flag was a real problem rather than a false alarm. A check that is right 3 times out of 4 is not a real number yet; a check that is right 300 times out of 400 is." />
+        Every exception expires.
+        <InfoTip text="A permanent silent exception is indistinguishable from a detector that stopped working." />
       </p>
       <div className="panel">
-        {Object.keys(precision.detectors || {}).length ? (
+        {suppressions.suppressions?.length ? (
           <table>
             <thead>
               <tr>
                 <th>detector</th>
-                <th>labelled</th>
-                <th>false pos</th>
-                <th>precision</th>
-                <th>recommendation</th>
+                <th>scope</th>
+                <th>reason</th>
+                <th>hits</th>
+                <th>expires</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
-              {Object.entries(precision.detectors).map(([key, stats]: [string, any]) => {
-                const rec = (recommendations.recommendations || []).find(
-                  (r: any) => r.detector_key === key
-                );
-                return (
-                  <tr key={key}>
-                    <td className="mono">{key}</td>
-                    <td className="mono small">
-                      {stats.labelled}
-                      {!stats.sufficient_sample && (
-                        <span className="tag warn">too few</span>
-                      )}
-                    </td>
-                    <td className="mono small">{stats.false_positive}</td>
-                    <td className="mono small">
-                      {stats.precision === null ? "—" : `${Math.round(stats.precision * 100)}%`}
-                    </td>
-                    <td className="small">
-                      {rec ? (
-                        <>
-                          <span
-                            className={`tag ${
-                              rec.action === "raise_threshold"
-                                ? "ok"
-                                : rec.action === "no_clean_separation"
-                                ? "bad"
-                                : ""
-                            }`}
-                          >
-                            {rec.action.replace(/_/g, " ")}
-                          </span>
-                          <div className="muted">{rec.rationale}</div>
-                        </>
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              {suppressions.suppressions.map((s: any) => (
+                <tr key={s.id}>
+                  <td className="mono">{s.detector_key}</td>
+                  <td className="small">
+                    {s.agent === "*" ? (
+                      <span className="muted">all agents</span>
+                    ) : (
+                      <Link href={`/app/agents/${s.agent}`}>{s.agent}</Link>
+                    )}
+                    {s.entity_type && <span className="tag">{s.entity_type}</span>}
+                  </td>
+                  <td className="small muted">{s.reason || "—"}</td>
+                  <td className="mono small">
+                    {s.hits}
+                    {s.hits === 0 && <span className="tag warn">never used</span>}
+                  </td>
+                  <td className="small">
+                    {s.active ? <Countdown at={s.expires_at} /> : <span className="tag">inactive</span>}
+                  </td>
+                  <td className="small">
+                    {s.active && (
+                      <form action="/api/guardrails/suppressions/revoke" method="POST">
+                        <input type="hidden" name="id" value={s.id} />
+                        <button type="submit" className="chip" style={{ cursor: "pointer" }}>revoke</button>
+                      </form>
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         ) : (
-          <Empty>
-            No feedback yet. File it from a detection on a{" "}
-            <Link href="/app/traces">trace</Link>.
-            <InfoTip text="The alternative is that somebody turns the detector off instead, and nobody finds out." />
-          </Empty>
+          <Empty>No suppressions. Every detection is currently acted on.</Empty>
         )}
       </div>
 
@@ -677,61 +621,6 @@ async function GuardrailTuningTab({ agent }: { agent?: string }) {
         )}
       </div>
 
-      <h2>Suppressions</h2>
-      <p className="sub">
-        Every exception expires.
-        <InfoTip text="A permanent silent exception is indistinguishable from a detector that stopped working." />
-      </p>
-      <div className="panel">
-        {suppressions.suppressions?.length ? (
-          <table>
-            <thead>
-              <tr>
-                <th>detector</th>
-                <th>scope</th>
-                <th>reason</th>
-                <th>hits</th>
-                <th>expires</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {suppressions.suppressions.map((s: any) => (
-                <tr key={s.id}>
-                  <td className="mono">{s.detector_key}</td>
-                  <td className="small">
-                    {s.agent === "*" ? (
-                      <span className="muted">all agents</span>
-                    ) : (
-                      <Link href={`/app/agents/${s.agent}`}>{s.agent}</Link>
-                    )}
-                    {s.entity_type && <span className="tag">{s.entity_type}</span>}
-                  </td>
-                  <td className="small muted">{s.reason || "—"}</td>
-                  <td className="mono small">
-                    {s.hits}
-                    {s.hits === 0 && <span className="tag warn">never used</span>}
-                  </td>
-                  <td className="small">
-                    {s.active ? <Countdown at={s.expires_at} /> : <span className="tag">inactive</span>}
-                  </td>
-                  <td className="small">
-                    {s.active && (
-                      <form action="/api/guardrails/suppressions/revoke" method="POST">
-                        <input type="hidden" name="id" value={s.id} />
-                        <button type="submit" className="chip" style={{ cursor: "pointer" }}>revoke</button>
-                      </form>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <Empty>No suppressions. Every detection is currently acted on.</Empty>
-        )}
-      </div>
-
       <div className="note-panel">
         <strong>A false positive can become a proposed rule change, not just a
         suppression.</strong>{" "}
@@ -743,6 +632,121 @@ async function GuardrailTuningTab({ agent }: { agent?: string }) {
         Read them with <span className="mono">agentfox proposals list</span>. What they
         are and how deciding works is on the <Link href="/app/policies">Rules tab</Link>.
       </div>
+
+      <details className="rt-more" style={{ marginTop: 20 }}>
+        <summary>How often each check is actually right</summary>
+        <div className="panel">
+          {Object.keys(precision.detectors || {}).length ? (
+            <table>
+              <thead>
+                <tr>
+                  <th>detector</th>
+                  <th>labelled</th>
+                  <th>false pos</th>
+                  <th>precision</th>
+                  <th>recommendation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(precision.detectors).map(([key, stats]: [string, any]) => {
+                  const rec = (recommendations.recommendations || []).find(
+                    (r: any) => r.detector_key === key
+                  );
+                  return (
+                    <tr key={key}>
+                      <td className="mono">{key}</td>
+                      <td className="mono small">
+                        {stats.labelled}
+                        {!stats.sufficient_sample && (
+                          <span className="tag warn">too few</span>
+                        )}
+                      </td>
+                      <td className="mono small">{stats.false_positive}</td>
+                      <td className="mono small">
+                        {stats.precision === null ? "—" : `${Math.round(stats.precision * 100)}%`}
+                      </td>
+                      <td className="small">
+                        {rec ? (
+                          <>
+                            <span
+                              className={`tag ${
+                                rec.action === "raise_threshold"
+                                  ? "ok"
+                                  : rec.action === "no_clean_separation"
+                                  ? "bad"
+                                  : ""
+                              }`}
+                            >
+                              {rec.action.replace(/_/g, " ")}
+                            </span>
+                            <div className="muted">{rec.rationale}</div>
+                          </>
+                        ) : (
+                          <span className="muted">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <Empty>
+              No feedback yet. File it from a detection on a{" "}
+              <Link href="/app/traces">trace</Link>.
+              <InfoTip text="The alternative is that somebody turns the detector off instead, and nobody finds out." />
+            </Empty>
+          )}
+        </div>
+      </details>
+
+      <details className="rt-more" style={{ marginTop: 20 }}>
+        <summary>How much each check slows things down</summary>
+        <div className="panel">
+          <table>
+            <thead>
+              <tr>
+                <th>check</th>
+                <th>version</th>
+                <th>runs</th>
+                <th>typical (p50)</th>
+                <th>slow (p95)</th>
+                <th>worst case</th>
+              </tr>
+            </thead>
+            <tbody>
+              {detectors.detectors.map((d: any) => {
+                const stats = latency.per_detector?.[d.key] || {};
+                const slow = (stats.p95_ms || 0) > detectors.detector_timeout_ms;
+                return (
+                  <tr key={d.key}>
+                    <td>
+                      <span className="mono">{d.key}</span>
+                      {!d.available && (
+                        <span className="tag warn">
+                          unavailable
+                          {d.unavailable_reason && <InfoTip text={d.unavailable_reason} />}
+                        </span>
+                      )}
+                      {!d.enabled && <span className="tag">off</span>}
+                    </td>
+                    <td className="small muted">{d.version}</td>
+                    <td className="mono small">{stats.runs ?? 0}</td>
+                    <td className="mono small">{stats.p50_ms ?? "—"}</td>
+                    <td className={`mono small ${slow ? "bad" : ""}`}>{stats.p95_ms ?? "—"}</td>
+                    <td className="mono small">{stats.max_ms ?? "—"}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+          <div className="body small muted">
+            Budget {detectors.budget_ms} ms per call, {detectors.detector_timeout_ms} ms per
+            detector.
+          </div>
+        </div>
+      </details>
+
     </>
   );
 }
