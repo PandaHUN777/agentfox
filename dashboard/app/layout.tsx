@@ -1,17 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import Link from "next/link";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
 
-import { cookies, headers } from "next/headers";
-import { SESSION_COOKIE, safeApi } from "@/lib/api";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { Wordmark } from "@/components/Logo";
-import { AccountMenu } from "@/components/AccountMenu";
-import { NotificationsBell } from "@/components/NotificationsBell";
-import { CommandSearch } from "@/components/CommandSearch";
-import { SideNav, type NavItem } from "@/components/SideNav";
-import { TopbarStats } from "@/components/TopbarStats";
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, HOME_TITLE, REPO_URL } from "@/lib/site";
 import "./globals.css";
 import "./marketing.css";
@@ -140,97 +130,7 @@ export const metadata: Metadata = {
  * one thing, and the reader has to work out that they agree. They are in
  * NAV_SEARCH_ONLY below instead, so typing the name still finds them.
  */
-const NAV: { group: string; items: NavItem[] }[] = [
-  {
-    group: "",
-    items: [
-      ["Overview", "/app"],
-      ["Start here", "/app/start"],
-    ],
-  },
-  {
-    group: "Discover",
-    items: [
-      ["Agents", "/app/agents"],
-      ["Verified sources", "/app/sources"],
-    ],
-  },
-  {
-    group: "Monitor",
-    items: [
-      ["Findings", "/app/findings"],
-      ["Traces", "/app/traces"],
-    ],
-  },
-  {
-    group: "Test",
-    items: [
-      ["Evaluation", "/app/evals"],
-    ],
-  },
-  {
-    group: "Govern",
-    items: [
-      ["Policies", "/app/policies"],
-      ["Access control", "/app/entitlement"],
-      ["Approvals", "/app/approvals"],
-      ["Compliance", "/app/compliance"],
-    ],
-  },
-];
-
-/**
- * Destinations that used to be their own sidebar item before the nav was
- * consolidated into tabs — findable by name in search even though the
- * sidebar itself only shows the parent page. Losing a sidebar item is not
- * the same as losing the ability to find the thing by typing its name.
- */
-const NAV_SEARCH_ONLY: { label: string; href: string; group: string }[] = [
-  { label: "Connect GitHub", href: "/app/start?tab=connect", group: "Start here" },
-  { label: "Connect a hosted API", href: "/app/start?tab=connect", group: "Start here" },
-  { label: "API tokens", href: "/app/start?tab=tokens", group: "Start here" },
-  { label: "Guardrail tuning", href: "/app/policies?tab=guardrails", group: "Policies" },
-  { label: "Escalation", href: "/app/approvals?tab=escalation", group: "Approvals" },
-  { label: "Board view", href: "/app/compliance?tab=board", group: "Compliance" },
-  { label: "Glossary", href: "/app/glossary", group: "Reference" },
-];
-
-const NAV_FLAT = NAV.flatMap(({ group, items }) =>
-  items.map(([label, href]) => ({ label, href, group: group || "Home" })),
-).concat(NAV_SEARCH_ONLY);
-
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const signedIn = Boolean((await cookies()).get(SESSION_COOKIE)?.value);
-  // Set by middleware.ts. Falls back to showing the chrome — an unset header means
-  // middleware didn't run (e.g. some dev edge cases), and hiding the whole app by
-  // default on an edge case is the wrong failure direction.
-  const pathname = (await headers()).get("x-pathname") || "";
-  /**
-   * The app chrome — sidebar, topbar — belongs to the app, and the app is
-   * everything under `/app`.
-   *
-   * This used to be a fourteen-entry list of public prefixes, one of which ("/")
-   * depended on whether there was a session, because `/` served the marketing page
-   * to signed-out visitors and the dashboard to signed-in ones. Both are gone. The
-   * dashboard has its own URL, so `/` is the marketing page for everybody, and a
-   * signed-in visitor can read the public site without signing out — which they
-   * could not do before, because no URL served it to them.
-   *
-   * The list was also the wrong shape: it grew every time a public page was added
-   * and shrank never, and a page whose prefix was forgotten came out with the
-   * marketing nav nested inside the app sidebar.
-   */
-  const isAppPage = pathname === "/app" || pathname.startsWith("/app/");
-
-  let me: any = null;
-  let attention: any = null;
-  if (signedIn && isAppPage) {
-    [me, attention] = await Promise.all([
-      safeApi("/api/me", null),
-      safeApi("/api/attention", { items: [], total: 0 }),
-    ]);
-  }
-
   return (
     /* `data-theme="light"` is rendered here, on the server, and not only written by
        the script below. It is the default, so rendering it is what makes the markup
@@ -252,42 +152,20 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body>
-        {!isAppPage ? (
-          /* A div, not a <main>. Every public page renders its own <main>, so this
-             was nesting one inside another — invalid, and it silently applied the
-             app's `max-width: 1400px` and 32px side padding to the whole marketing
-             site. The hero's full-bleed wash stopped 52px short of each edge and
-             nobody could see why. */
-          <div className="login-main">{children}</div>
-        ) : (
-          <div className="shell">
-            <nav className="side">
-              {/* The mark and the name only. "by Nometria" sat under both of them
-                  as a block, which put it under the fox rather than under the
-                  word, and at 11px in a 224px rail it read as a stray caption.
-                  The parent brand belongs where there is room for it: the public
-                  footer and the sign-in page both carry it. */}
-              <Link href="/app" className="brand" aria-label="Overview">
-                <Wordmark />
-              </Link>
-              <SideNav nav={NAV} />
-              <ThemeToggle />
-            </nav>
-            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-              {signedIn && (
-                <div className="topbar">
-                  {attention?.counts && <TopbarStats counts={attention.counts} />}
-                  <CommandSearch nav={NAV_FLAT} />
-                  <NotificationsBell items={attention?.items?.slice(0, 6) || []} total={attention?.total || 0} />
-                  {me && <AccountMenu email={me.email} workspace={me.workspace} role={me.role} />}
-                </div>
-              )}
-              <main>{children}</main>
-            </div>
-          </div>
-        )}
-      </body>
+      {/* Nothing but the document.
+       
+          This layout used to decide, from an `x-pathname` header, whether to wrap
+          its children in the app shell or in a bare div — and it is shared by the
+          marketing site and the app, so Next never re-rendered it when a visitor
+          navigated between the two. Clicking "Dashboard" on the home page landed
+          on /app with the marketing wrapper still in place and no sidebar; a
+          reload fixed it, because a reload renders the layout again.
+
+          The shell moved to app/app/layout.tsx, which the router mounts only for
+          the routes it belongs to. The wrapper that used to sit here was
+          `.login-main { display: block; width: 100% }` — a div that did nothing —
+          and every public page renders its own <main>, so it is simply gone. */}
+      <body>{children}</body>
     </html>
   );
 }
