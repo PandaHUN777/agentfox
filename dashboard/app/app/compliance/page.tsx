@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, apiErrorProps } from "@/lib/api";
-import { ApiDown, ControlStatus, DraftCaveat, InfoTip, Panel, Stat, StatLink, pct, ts } from "@/components/ui";
+import { ApiDown, ControlStatus, DraftCaveat, InfoTip, InventoryStrip, Panel, Stat, StatLink, StatusBar, pct, ts } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { PrintButton } from "@/components/PrintButton";
 
@@ -106,22 +106,17 @@ export default async function Compliance({
 
       <DraftCaveat />
 
-      <div className="cards">
-        <Stat n={counts.effective || 0} label="effective" tone="ok" />
-        <Stat n={counts.degraded || 0} label="degraded" tone="warn" />
-        <Stat n={counts.failing || 0} label="failing" tone={counts.failing ? "bad" : "ok"} />
-        <Stat n={counts.not_implemented || 0} label="not implemented" tone={counts.not_implemented ? "warn" : "ok"} />
-        <Stat
-          n={counts.not_computed || 0}
-          label="not computed"
-          hint="Cataloged but never assessed. Different from 'not implemented', which is assessed and found to have no evidence source."
+              <StatusBar
+          segments={[
+            { n: counts.effective || 0, label: "effective", tone: "ok" },
+            { n: counts.degraded || 0, label: "degraded", tone: "warn" },
+            { n: counts.failing || 0, label: "failing", tone: "bad" },
+            { n: counts.not_implemented || 0, label: "not implemented", tone: "idle" },
+            { n: counts.not_computed || 0, label: "not computed", tone: "idle" },
+          ]}
+          total={pct(controls.posture.effectiveness)}
+          unit={`effective of the ${assessed} control(s) with telemetry to assess — the ${counts.not_implemented || 0} not-yet-implemented are excluded from the ratio, not counted as failing`}
         />
-        <Stat
-          n={pct(controls.posture.effectiveness)}
-          label="effectiveness"
-          hint={`Measured against the ${assessed} control(s) with telemetry to assess, not all ${controls.controls.length}: effective ÷ (effective + degraded + failing). The ${counts.not_implemented || 0} not-yet-implemented control(s) are excluded from the ratio, not counted as failing.`}
-        />
-      </div>
 
       <div className="tabbar">
         {TABS.map((t) => (
@@ -623,40 +618,56 @@ async function BoardTab() {
         <PrintButton />
       </div>
 
-      <div className="cards">
-        <StatLink n={inv.agents} label="agents under management" href="/app/agents" />
-        <StatLink
-          n={v.high_risk_agents.length}
-          label="high-risk agents"
-          tone={v.high_risk_agents.length ? "warn" : "ok"}
-          href="/app/agents"
-        />
-        <StatLink
-          n={inv.shadow}
-          label="unregistered"
-          tone={inv.shadow ? "bad" : "ok"}
-          href="/app/agents"
-          hint="Traffic observed from an agent that was never registered."
-        />
-        <StatLink
-          n={v.unassessed_agents.length}
-          label="unassessed"
-          tone={v.unassessed_agents.length ? "warn" : "ok"}
-          href="/app/compliance?tab=risk"
-          hint="Agents with no EU AI Act risk classification on file."
-        />
-        <StatLink
-          n={f.total}
-          label="open findings"
-          tone={f.by_severity?.critical ? "bad" : f.total ? "warn" : "ok"}
-          href="/app/findings"
-        />
-        <Stat
-          n={pct(v.overall_posture.effectiveness)}
-          label="control effectiveness"
-          hint="Effective ÷ (effective + degraded + failing) among assessed controls; not-yet-implemented controls are excluded from the ratio. The framework table below has the breakdown."
-        />
-      </div>
+      {/* Was six tiles here on top of the six above the tab bar — twelve on one
+          screen, with 88% control effectiveness appearing in both rows. A board
+          snapshot is read by someone who wants the shape of the estate in ten
+          seconds, so: the things that want attention as tiles, the rest as a
+          strip, and the effectiveness figure stated once. */}
+      {(v.high_risk_agents.length > 0 || inv.shadow > 0 || v.unassessed_agents.length > 0 || f.total > 0) && (
+        <div className="cards">
+          {v.high_risk_agents.length > 0 && (
+            <StatLink
+              n={v.high_risk_agents.length}
+              label="high-risk agents"
+              tone="warn"
+              href="/app/agents"
+            />
+          )}
+          {inv.shadow > 0 && (
+            <StatLink
+              n={inv.shadow}
+              label="unregistered"
+              tone="bad"
+              href="/app/agents"
+              hint="Traffic observed from an agent that was never registered."
+            />
+          )}
+          {v.unassessed_agents.length > 0 && (
+            <StatLink
+              n={v.unassessed_agents.length}
+              label="unassessed"
+              tone="warn"
+              href="/app/compliance?tab=risk"
+              hint="Agents with no EU AI Act risk classification on file."
+            />
+          )}
+          {f.total > 0 && (
+            <StatLink
+              n={f.total}
+              label="open findings"
+              tone={f.by_severity?.critical ? "bad" : "warn"}
+              href="/app/findings"
+            />
+          )}
+        </div>
+      )}
+
+      <InventoryStrip
+        items={[
+          { n: inv.agents, label: "agents under management", href: "/app/agents" },
+          { n: pct(v.overall_posture.effectiveness), label: "control effectiveness", href: "/app/compliance" },
+        ]}
+      />
 
       <div className="grid2" style={{ marginTop: 22 }}>
         <Panel title="Agents by risk class">

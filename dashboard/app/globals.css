@@ -2117,3 +2117,40 @@ td .mono { overflow-wrap: anywhere; }
 }
 .reasons li:only-child { padding-left: 0; }
 .reasons li:only-child::before { display: none; }
+
+/* --- A breakdown of one total, to scale ------------------------------------
+ * See StatusBar in components/ui.tsx. Six tiles that are parts of one whole
+ * tell you the counts and hide the proportion; a bar tells you both. */
+.sbar-wrap { display: grid; gap: 12px; }
+.sbar { display: flex; height: 26px; gap: 2px; border-radius: var(--r-1); overflow: hidden; }
+.sbar-seg { display: block; min-width: 3px; }
+.sbar-ok   { background: var(--good, #1a7f52); }
+.sbar-warn { background: var(--warn); }
+.sbar-bad  { background: var(--bad); }
+.sbar-idle { background: var(--border-strong, var(--border)); }
+
+.sbar-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--t-small);
+}
+.sbar-key li { display: flex; align-items: baseline; gap: 7px; }
+.sbar-key i { width: 9px; height: 9px; border-radius: 2px; transform: translateY(1px); flex: 0 0 auto; }
+.sbar-key b { font-variant-numeric: tabular-nums; color: var(--text); }
+.sbar-key span { color: var(--muted); }
+/* A zero is still worth showing — "0 failing" is the good news — but it should
+   not read as loudly as a count that wants attention. */
+.sbar-zero { opacity: .55; }
+
+.sbar-total { margin: 0; font-size: var(--t-small); line-height: 1.5; color: var(--muted); max-width: 88ch; }
+.sbar-total b {
+  font-size: var(--t-subhead);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  margin-right: 4px;
+}

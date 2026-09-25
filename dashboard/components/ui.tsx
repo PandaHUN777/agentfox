@@ -468,3 +468,59 @@ export function ArgsCell({ args }: { args: Record<string, unknown> | null | unde
     </dl>
   );
 }
+
+/**
+ * A breakdown of one total, drawn to scale.
+ *
+ * Compliance showed 35 effective / 3 degraded / 2 failing / 2 not implemented /
+ * 0 not computed / 88% as six equally-weighted tiles. Five of those are parts of
+ * one whole and the sixth is derived from them, so the page spent its entire
+ * first screen restating a single fact six ways with no sense of proportion —
+ * you could not tell at a glance whether 3 degraded was most of the estate or
+ * almost none of it.
+ *
+ * One bar answers that. The segments are to scale, the legend carries the exact
+ * counts, and the ratio that matters gets stated once beside it rather than
+ * competing as a seventh box. This is the same treatment the public benchmark
+ * page uses for the AgentDojo composition, for the same reason.
+ */
+export function StatusBar({
+  segments,
+  total,
+  unit,
+}: {
+  segments: { n: number; label: string; tone: "ok" | "warn" | "bad" | "idle" }[];
+  total?: React.ReactNode;
+  unit?: string;
+}) {
+  const sum = segments.reduce((a, s) => a + s.n, 0) || 1;
+  const shown = segments.filter((s) => s.n > 0);
+  return (
+    <div className="sbar-wrap">
+      <div className="sbar" role="img" aria-label={segments.map((s) => `${s.n} ${s.label}`).join("; ")}>
+        {shown.map((s) => (
+          <span
+            key={s.label}
+            className={`sbar-seg sbar-${s.tone}`}
+            style={{ flex: `${s.n} 0 0` }}
+            title={`${s.n} ${s.label}`}
+          />
+        ))}
+      </div>
+      <ul className="sbar-key">
+        {segments.map((s) => (
+          <li key={s.label} className={s.n ? undefined : "sbar-zero"}>
+            <i className={`sbar-${s.tone}`} aria-hidden />
+            <b>{s.n}</b>
+            <span>{s.label}</span>
+          </li>
+        ))}
+      </ul>
+      {total != null && (
+        <p className="sbar-total">
+          <b>{total}</b> {unit}
+        </p>
+      )}
+    </div>
+  );
+}
