@@ -116,7 +116,14 @@ export default async function Findings({
         ) : (
           <table>
             <thead>
-              <tr><th>severity</th><th>agent</th><th>type</th><th>finding</th><th>controls</th><th>raised</th></tr>
+              <tr>
+                <th className="w-chip">severity</th>
+                <th className="w-name">agent</th>
+                <th className="w-short">type</th>
+                <th className="w-prose">finding</th>
+                <th className="w-name">controls</th>
+                <th className="w-when">raised</th>
+              </tr>
             </thead>
             <tbody>
               {data.findings.map((f: any) => (

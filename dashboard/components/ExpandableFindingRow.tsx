@@ -78,12 +78,12 @@ export function ExpandableFindingRow({
           </span>
           {typeInfo.blurb && <div className="small muted">{typeInfo.blurb}</div>}
         </td>
-        <td className="small" onClick={(e) => e.stopPropagation()}>
+        <td className="small w-name" onClick={(e) => e.stopPropagation()}>
           {(finding.controls || []).map((c: string) => (
             <ControlChip key={c} code={c} titles={controlTitles} />
           ))}
         </td>
-        <td className="small muted">{ts(finding.created_at)}</td>
+        <td className="small muted w-when">{ts(finding.created_at)}</td>
       </tr>
       {open && (
         <tr className="row-expanded" id={panelId}>

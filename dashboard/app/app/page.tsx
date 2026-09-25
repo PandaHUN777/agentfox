@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { api, apiErrorProps } from "@/lib/api";
 import { appPageMetadata } from "@/lib/site";
-import { ApiDown, InfoTip, Severity, Stat, StatLink, findingTypeInfo, ts } from "@/components/ui";
+import { ApiDown, InfoTip, InventoryStrip, Severity, Stat, findingTypeInfo, ts } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
 
 export const dynamic = "force-dynamic";
@@ -120,10 +120,10 @@ async function Overview() {
             <table>
               <thead>
                 <tr>
-                  <th></th>
-                  <th>what</th>
-                  <th>subject</th>
-                  <th>when</th>
+                  <th className="w-chip" />
+                  <th className="w-prose">what</th>
+                  <th className="w-name">subject</th>
+                  <th className="w-when">when</th>
                 </tr>
               </thead>
               <tbody>
@@ -155,23 +155,34 @@ async function Overview() {
       )}
 
       <h2>Inventory</h2>
-      <div className="cards">
-        <StatLink n={inv.agents} label="agents under management" href="/app/agents" />
-        <StatLink n={inv.shadow} label="unregistered" tone={inv.shadow ? "bad" : "ok"} href="/app/agents" hint="Sending traffic but never registered, so nobody is accountable for them. Shown as an 'Unregistered agent' finding too." />
-        <StatLink n={inv.unowned} label="without an owner" tone={inv.unowned ? "warn" : "ok"} href="/app/agents" />
-        <StatLink
-          n={onboarding.counts.boundaries}
-          label="knowledge boundaries"
-          tone={onboarding.counts.boundaries ? "ok" : "warn"}
-          href="/app/start"
-        />
-        <StatLink
-          n={`${Math.round((posture.effectiveness || 0) * 100)}%`}
-          label="control effectiveness"
-          href="/app/compliance"
-          hint="Of assessed controls only (effective ÷ effective+degraded+failing) — click through for the full breakdown, including not-yet-implemented controls."
-        />
-      </div>
+      <InventoryStrip
+        items={[
+          { n: inv.agents, label: "agents under management", href: "/app/agents" },
+          {
+            n: inv.shadow,
+            label: "unregistered",
+            href: "/app/agents",
+            ...(inv.shadow ? { tone: "bad" as const } : {}),
+          },
+          {
+            n: inv.unowned,
+            label: "without an owner",
+            href: "/app/agents",
+            ...(inv.unowned ? { tone: "warn" as const } : {}),
+          },
+          {
+            n: onboarding.counts.boundaries,
+            label: "knowledge boundaries",
+            href: "/app/start",
+            ...(onboarding.counts.boundaries ? {} : { tone: "warn" as const }),
+          },
+          {
+            n: `${Math.round((posture.effectiveness || 0) * 100)}%`,
+            label: "control effectiveness",
+            href: "/app/compliance",
+          },
+        ]}
+      />
 
       {onboarding.next && (
         <div className="note-panel">
@@ -185,13 +196,12 @@ async function Overview() {
           not measure it. Two sentences and a tooltip, where this was a ninety-word
           paragraph: the caveat is the part that must not be lost, so it is the part
           that moved into the tooltip rather than the part that got cut. */}
-      <div className="note-panel">
-        <strong>What holds when a guardrail is fooled.</strong> The counts above are
-        text a detector caught. Underneath, every tool call is checked against what
-        that agent was granted, reading no text at all.{" "}
+      <p className="page-foot">
+        The counts above are text a detector caught. Every tool call is also checked
+        against what that agent was granted, reading no text at all.{" "}
         <InfoTip text="It checks which tool, what the arguments are, where those argument values came from, and how much damage the tool can do — so an irreversible call built out of untrusted content is refused or sent for approval even when nothing flagged the prompt. It depends entirely on tools being declared honestly: a tool recorded as read-only that is not read-only is not covered by any of this." />{" "}
         <Link href="/app/policies">See it on Policies &rarr;</Link>
-      </div>
+      </p>
     </>
   );
 }

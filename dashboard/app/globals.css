@@ -1232,6 +1232,10 @@ ol.steps li.done .step-title { color: var(--muted); }
 
 .chipbar { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
 .chipbar .chipbar-label { color: var(--muted); font-size: var(--t-micro); margin-right: 4px; }
+/* Each label starts a group, so "status: … severity: … agent: …" reads as three
+   controls rather than one undifferentiated run of pills. The gap does the
+   grouping; no separator needed, and no page markup has to change. */
+.chipbar .chipbar-label:not(:first-child) { margin-left: 20px; }
 .chip {
   display: inline-block;
   padding: 4px 11px;
@@ -1981,4 +1985,87 @@ input[type="checkbox"], input[type="radio"] {
   font-size: var(--t-small);
   line-height: 1.5;
   color: var(--muted);
+}
+
+/* A mapped control, as a chip. See components/ui.tsx: the title that used to sit
+   beside the code arrived truncated mid-word in every Findings row, so it is the
+   tooltip now and the code — the part people quote — is what shows. */
+.ctrl-chip {
+  display: inline-block;
+  margin: 0 4px 4px 0;
+  padding: 2px 7px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-1);
+  background: var(--panel-2);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  color: var(--text-2);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ctrl-chip:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+
+/* --- Table column discipline ----------------------------------------------
+ *
+ * Tables here auto-size, which spends width on whatever happens to be widest
+ * rather than on whatever matters. On Findings that gave a short severity chip
+ * a wide column while the finding text — the only column anyone reads — wrapped
+ * to three lines beside a control column truncating mid-word.
+ *
+ * `col` classes let a page say what each column is for. The prose column takes
+ * the slack; everything else takes what it needs and no more.
+ */
+th.w-chip,  td.w-chip  { width: 1%; white-space: nowrap; }
+th.w-short, td.w-short { width: 12ch; }
+th.w-name,  td.w-name  { width: 18ch; }
+th.w-when,  td.w-when  { width: 12ch; white-space: nowrap; }
+/* The one that should absorb the remaining width. */
+th.w-prose, td.w-prose { width: auto; }
+/* Identifiers wrap at a boundary rather than overflowing their cell. */
+td .mono { overflow-wrap: anywhere; }
+
+/* Inventory: one hairline row, not a second wall of tiles. A figure takes colour
+   only when it is a problem — "0 unregistered" is not news and should not glow. */
+.inv-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1px;
+  background: var(--hairline);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-3);
+  overflow: hidden;
+}
+.inv-item {
+  flex: 1 1 9rem;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 12px 14px;
+  background: var(--elevated);
+  text-decoration: none;
+  transition: background .12s ease;
+}
+.inv-item:hover { background: var(--panel-2); text-decoration: none; }
+.inv-item b {
+  font-size: var(--t-subhead);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+.inv-item span { font-size: var(--t-micro); line-height: 1.35; color: var(--muted); }
+.inv-warn b { color: var(--warn); }
+.inv-bad  b { color: var(--bad); }
+
+/* A closing note that is a sentence, not a panel. Two stacked bordered callouts
+   at the foot of a page is one more border than the page has anything to say. */
+.page-foot {
+  margin: 22px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--hairline);
+  font-size: var(--t-small);
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 88ch;
 }

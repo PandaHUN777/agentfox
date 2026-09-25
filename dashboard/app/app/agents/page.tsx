@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, apiErrorProps } from "@/lib/api";
-import { ApiDown, InfoTip, Panel, Stat, ts } from "@/components/ui";
+import { ApiDown, InfoTip, InventoryStrip, Panel, Stat, ts } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { Modal } from "@/components/Modal";
 
@@ -57,28 +57,40 @@ export default async function Agents({
         action={<RegisterAgentModal idPrefix="header" />}
       />
 
-      <div className="cards">
-        <Stat n={inv.agents} label="agents" />
-        <Stat n={inv.registered} label="registered" tone="ok" />
-        <Stat
-          n={inv.shadow}
-          label="unregistered"
-          tone={inv.shadow ? "bad" : "ok"}
-          hint="Seen making calls but never registered here — either through a repo scan or the form below. An agent nobody registered is an agent nobody is accountable for. The same record is called an 'Unregistered agent' wherever it appears as a finding."
-        />
-        <Stat
-          n={inv.unowned}
-          label="unowned"
-          tone={inv.unowned ? "warn" : "ok"}
-          hint="Registered, but with no owner_email set — see the 'unowned — assign' links in the table below."
-        />
-        <Stat n={inv.tools} label="tools" />
-        <Stat
-          n={inv.lineage_edges}
-          label="lineage edges"
-          hint="Observed agent-to-tool and agent-to-model calls, not declared config — this is what actually ran, not what someone typed into a form."
-        />
-      </div>
+      {/* Six equal tiles, three of which decomposed one number — 4 agents, 3
+          registered, 1 unregistered — and two of which were inventory. Now: a tile
+          only for something that wants a person, and the rest as one strip. On a
+          clean estate this row disappears entirely, which is the correct amount of
+          attention to ask for when nothing is wrong. */}
+      {(inv.shadow > 0 || inv.unowned > 0) && (
+        <div className="cards">
+          {inv.shadow > 0 && (
+            <Stat
+              n={inv.shadow}
+              label="unregistered"
+              tone="bad"
+              hint="Seen making calls but never registered here — either through a repo scan or the form below. An agent nobody registered is an agent nobody is accountable for. The same record is called an 'Unregistered agent' wherever it appears as a finding."
+            />
+          )}
+          {inv.unowned > 0 && (
+            <Stat
+              n={inv.unowned}
+              label="without an owner"
+              tone="warn"
+              hint="Registered, but with no owner_email set — see the 'unowned — assign' links in the table below."
+            />
+          )}
+        </div>
+      )}
+
+      <InventoryStrip
+        items={[
+          { n: inv.agents, label: "agents", href: "/app/agents" },
+          { n: inv.registered, label: "registered", href: "/app/agents" },
+          { n: inv.tools, label: "tools", href: "/app/policies?tab=tools" },
+          { n: inv.lineage_edges, label: "lineage edges", href: "/app/traces" },
+        ]}
+      />
 
       {review_error && <div className="error">{review_error}</div>}
 

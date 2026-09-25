@@ -153,26 +153,28 @@ export function ControlStatus({ value }: { value: string }) {
  * attribute, and a code missing from the map still shows the code rather than
  * nothing.
  */
+/**
+ * One mapped control, as a chip.
+ *
+ * It used to render the code followed by the control's title, ellipsised at
+ * 260px. In a Findings row that column is far narrower than 260, so the title
+ * arrived as four words and a full stop that is not a full stop — "Personal and
+ * sensitive data is de…" — stacked two deep, on every row. Truncated prose in a
+ * dense table is worse than no prose: it costs a line, reads as broken, and the
+ * reader still has to hover to learn anything.
+ *
+ * The code is the part people act on and quote, so the code is what shows. The
+ * title stays as the tooltip it already was, and the chip links to the control.
+ */
 export function ControlChip({ code, titles }: { code: string; titles: Record<string, string> }) {
   const title = titles[code];
   return (
-    <Link
-      href={`/app/compliance#${code}`}
-      title={title}
-      style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 3, maxWidth: 260 }}
-    >
-      <span className="mono small" style={{ flex: "none" }}>{code}</span>
-      {title && (
-        <span
-          className="small muted"
-          style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }}
-        >
-          {title}
-        </span>
-      )}
+    <Link href={`/app/compliance#${code}`} title={title || code} className="ctrl-chip">
+      {code}
     </Link>
   );
 }
+
 
 const SEVERITY_TONE: Record<string, string> = {
   critical: "bad",
@@ -406,4 +408,34 @@ export function ts(value?: string | null) {
 export function pct(value?: number | null) {
   if (value === null || value === undefined) return "—";
   return `${Math.round(value * 100)}%`;
+}
+
+/**
+ * Inventory as a strip, not as tiles.
+ *
+ * The Overview had nine equally-weighted stat tiles in two rows. The first four
+ * answer "what needs me today"; the next five answer "what exists". Those are
+ * different kinds of question, and giving them the same treatment made the page
+ * read as a wall of numbers with no order to it — the single most recognisable
+ * shape of a generated dashboard.
+ *
+ * So the first row stays as tiles, because that IS the point of the page, and
+ * this becomes one hairline row underneath. A figure only takes colour when it
+ * is a problem: `0 unregistered` is not news and should not glow.
+ */
+export function InventoryStrip({
+  items,
+}: {
+  items: { n: React.ReactNode; label: string; href: string; tone?: "warn" | "bad" }[];
+}) {
+  return (
+    <div className="inv-strip">
+      {items.map((it) => (
+        <Link key={it.label} href={it.href} className={it.tone ? `inv-item inv-${it.tone}` : "inv-item"}>
+          <b>{it.n}</b>
+          <span>{it.label}</span>
+        </Link>
+      ))}
+    </div>
+  );
 }
