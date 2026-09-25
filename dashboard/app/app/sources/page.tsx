@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, apiErrorProps } from "@/lib/api";
-import { ApiDown, InfoTip, Panel } from "@/components/ui";
+import { ApiDown, InfoTip, Panel, StatusBar } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
 import { ContextCheck } from "@/components/ContextCheck";
 import { Modal } from "@/components/Modal";
@@ -131,18 +131,28 @@ export default async function Sources({
         </>
       ) : (
         <>
-          <div className="cards">
-            {["system_of_record", "approved", "unverified", "external"].map((tier) => (
-              <div key={tier} className={`card ${TIER_TONE[tier]}`}>
-                <div className="n">{counts[tier] || 0}</div>
-                <div className="l">{tier.replace(/_/g, " ")}</div>
+          {/* Five tiles, and on a healthy index three of them are zero wearing a
+              coloured border — "0 external" and "0 past their freshness SLA" are the
+              good news and were shouting. The tier distribution is a breakdown of one
+              total, so it is a bar; staleness is the one thing that wants a person,
+              so it stays a tile and only when it is non-zero. */}
+          {(health.stale?.length || 0) > 0 && (
+            <div className="cards">
+              <div className="card warn">
+                <div className="n">{health.stale.length}</div>
+                <div className="l">past their freshness SLA</div>
               </div>
-            ))}
-            <div className={`card ${health.stale?.length ? "warn" : "ok"}`}>
-              <div className="n">{health.stale?.length || 0}</div>
-              <div className="l">past their freshness SLA</div>
             </div>
-          </div>
+          )}
+
+          <StatusBar
+            segments={[
+              { n: counts.system_of_record || 0, label: "system of record", tone: "ok" },
+              { n: counts.approved || 0, label: "approved", tone: "ok" },
+              { n: counts.unverified || 0, label: "unverified", tone: "warn" },
+              { n: counts.external || 0, label: "external", tone: "bad" },
+            ]}
+          />
 
           {(health.deprecated?.length > 0 || health.unowned?.length > 0) && (
             <div className="note-panel">

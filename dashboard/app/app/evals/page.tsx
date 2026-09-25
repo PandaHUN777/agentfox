@@ -2,7 +2,12 @@ import type { Metadata } from "next";
 import { appPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { api, safeApi, apiErrorProps } from "@/lib/api";
-import { AgentLink, ApiDown, Empty, InfoTip, Panel, Stat, ts } from "@/components/ui";
+import { AgentLink, ApiDown, Empty, InfoTip, InventoryStrip, Panel, ts } from "@/components/ui";
+
+/** Scores are ratios; two decimal places is all any of them carry. */
+function score(v: unknown): string {
+  return typeof v === "number" && Number.isFinite(v) ? v.toFixed(2) : "—";
+}
 import { PageHeader } from "@/components/PageHeader";
 
 /**
@@ -58,12 +63,17 @@ export default async function Evals({
     <>
       <PageHeader title="Evaluation" sub="Whether your agent gets the answer right — graded automatically, tracked over time." />
 
-      <div className="cards">
-        <Stat n={suites.suites.length} label="suites" hint="Named collections of test cases with expected behaviour; the unit an eval run scores against." />
-        <Stat n={runs.runs.length} label="recent runs" hint="Suite runs in the last window, across every runner (native, Ragas when installed)." />
-        <Stat n={scorers.scorers.length} label="scorers" hint="Metrics available to score a run: groundedness, exact-match, and any others a runner exposes." />
-        <Stat n={campaigns.campaigns.length} label="red-team campaigns" hint="Adversarial probe runs against one agent. Run one under Red-team posture below." />
-      </div>
+      {/* Four tiles for four inventory counts — none of them is a number that
+          wants a person, they are just what exists. A strip says the same thing
+          without claiming the top of the page. */}
+      <InventoryStrip
+        items={[
+          { n: suites.suites.length, label: "suites", href: "/app/evals" },
+          { n: runs.runs.length, label: "recent runs", href: "/app/evals" },
+          { n: scorers.scorers.length, label: "scorers", href: "/app/evals" },
+          { n: campaigns.campaigns.length, label: "red-team campaigns", href: "/app/evals" },
+        ]}
+      />
 
       {review_error && <div className="error">{review_error}</div>}
       {review_notice && <div className="note-panel">{review_notice}</div>}
@@ -83,9 +93,14 @@ export default async function Evals({
                 {Object.entries(latest.summary.scorers).map(([k, v]: any) => (
                   <tr key={k}>
                     <td className="mono small">{k}</td>
-                    <td className="num">{v.mean}</td>
-                    <td className="num muted">{v.min}</td>
-                    <td className="num muted">{v.max}</td>
+                    {/* Raw floats arrive at whatever precision the scorer produced,
+                        so a column read 0.6, 0.73, 0.2, 0.2005, 0.8 — five different
+                        decimal lengths in five rows, which makes a scored column look
+                        unreviewed. Two places for everything, and scores are a ratio
+                        so two places is all any of them carry. */}
+                    <td className="num">{score(v.mean)}</td>
+                    <td className="num muted">{score(v.min)}</td>
+                    <td className="num muted">{score(v.max)}</td>
                     <td className="num">
                       {v.pass_rate === null ? "—" : (
                         <span className={`tag ${v.pass_rate >= 0.9 ? "ok" : v.pass_rate >= 0.7 ? "warn" : "bad"}`}>
