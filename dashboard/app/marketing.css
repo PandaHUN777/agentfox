@@ -1189,3 +1189,119 @@
 @media (prefers-reduced-motion: reduce) {
   .chain-entry, .chain-entry-broken { animation: none; }
 }
+
+/* --- One request, three boundaries ----------------------------------------
+ *
+ * See components/marketing/sequence.tsx for why this replaced three cards.
+ * Layout: stacked on a phone with the numbering carrying the order, three
+ * columns on a wide screen with a rail running through them and a pulse
+ * travelling it. The rail is desktop-only on purpose — drawn horizontally over
+ * a stacked column it would describe a direction the layout does not have.
+ */
+.seq { position: relative; margin-top: 36px; }
+
+.seq-stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 28px;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 900px) {
+  .seq-stages { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+}
+
+.seq-stage {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  padding-top: 22px;
+  border-top: 2px solid var(--mk-border);
+}
+/* The stage that refuses outright owns the accent edge. One of three, so it
+   reads as the escalation it is rather than as three equal warnings. */
+.seq-stage-stop { border-top-color: var(--mk-stop); }
+
+.seq-head { display: flex; align-items: baseline; gap: 10px; }
+.seq-n {
+  font-family: var(--mk-code);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  color: var(--mk-muted);
+  flex: 0 0 auto;
+}
+.seq-head .mk-h3 { margin: 0; }
+
+.seq-in,
+.seq-out,
+.seq-req { margin: 0; font-size: var(--t-small); line-height: 1.55; }
+.seq-in { color: var(--mk-muted); }
+.seq-out { color: var(--mk-text); }
+.seq-req {
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid var(--mk-border);
+  color: var(--mk-muted);
+  font-size: var(--t-micro);
+}
+
+/* The verdict, in the same vocabulary the gateway emits and the same colours
+   the rest of the site uses for it. */
+.seq-verdict { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 2px; }
+.seq-chip {
+  font-family: var(--mk-code);
+  font-size: var(--t-small);
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--mk-r-sm);
+  background: var(--mk-hold-soft);
+  color: var(--mk-hold);
+}
+.seq-stage-stop .seq-chip { background: var(--mk-stop); color: #fff; }
+.seq-verdict .mk-mono { color: var(--mk-muted); }
+
+/* --- Motion ---------------------------------------------------------------
+ * The scene is complete before the first frame: every verdict is already on
+ * screen, the withheld chunk is already described as withheld. The animation
+ * only decides the order things are noticed in. */
+.seq-rail { display: none; }
+@media (min-width: 900px) {
+  .seq-rail {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    pointer-events: none;
+  }
+  .seq-pulse {
+    position: absolute;
+    top: -3px;
+    left: 0;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--mk-accent);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--mk-accent) 22%, transparent);
+    animation: seq-travel 4.2s cubic-bezier(.4, 0, .5, 1) infinite;
+  }
+  @keyframes seq-travel {
+    0%   { left: 0%;   opacity: 0; }
+    8%   { opacity: 1; }
+    88%  { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+  }
+  /* Each verdict lands as the pulse reaches its column. */
+  .seq-verdict { animation: seq-land 4.2s ease-out var(--d, 0s) infinite; }
+  @keyframes seq-land {
+    0%, 4%  { transform: none; }
+    9%      { transform: translateY(-2px); }
+    16%     { transform: none; }
+    100%    { transform: none; }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .seq-pulse, .seq-verdict { animation: none; }
+}

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
-import { BOUNDARIES, DecisionCard } from "@/components/marketing/decisions";
+import { BoundarySequence } from "@/components/marketing/sequence";
 import { DecisionStream, EstateScan, TraceAnatomy } from "@/components/marketing/product";
 import { REPO } from "@/components/marketing/nav";
 
@@ -261,23 +261,21 @@ export function Stack() {
   );
 }
 
-/* --- 3. The three boundaries -------------------------------------------- */
+/* --- 3. One request, three boundaries ----------------------------------- */
 
 /**
- * The centre of the page, and the thing two outside reviews independently said was
- * missing: three decisions, side by side, with the agent, the input, the rule and
- * the reason visible on each.
+ * The centre of the page.
  *
- * What was here before was three benefit sections — containment, evidence,
- * discovery — which is a product tour. It led a reader to think the product
- * authorises tool calls and also does some auditing, when the actual shape is one
- * idea applied at three points in a request: before retrieval, before the answer,
- * before the action.
+ * This was three DecisionCards side by side — three self-contained examples with
+ * three different agents and three unrelated questions. Three cards teach three
+ * facts, and left the reader to infer the one thing that actually matters: these
+ * are the same mechanism at three moments of a single request. That inference is
+ * the product, and the page was making the visitor do it unaided.
  *
- * The verbs under each card are different on purpose, because the three checks do
- * different things and saying "blocks" three times would be false twice. Every
- * value on the cards was read off this repository's gateway; see the comment above
- * BOUNDARIES in decisions.tsx.
+ * It is one journey now, in components/marketing/sequence.tsx: same agent, same
+ * customer, stakes climbing from a withheld document to a refused transfer. The
+ * third stage only carries weight because the first two happened to the same
+ * request.
  */
 export function Boundaries() {
   return (
@@ -285,41 +283,14 @@ export function Boundaries() {
       <div className="mk-wrap">
         <div className="mk-narrow">
           <h2 className="mk-h2 mk-up">Stop the call before it spends, sends or deletes</h2>
-          <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16, maxWidth: "56ch" }}>
-            Three checks, each against what this agent and the person behind it hold.
+          <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16, maxWidth: "58ch" }}>
+            One support request, three checks, each against what this agent and the
+            person behind it actually hold.
           </p>
         </div>
 
-        <div className="mk-grid mk-grid-3 mk-up mk-d3" style={{ marginTop: 44 }}>
-          {BOUNDARIES.map((b) => (
-            <div
-              key={b.id}
-              style={{ display: "grid", gridTemplateRows: "auto 1fr", gap: 14, minWidth: 0 }}
-            >
-              <div>
-                <h3 className="mk-h3">{b.question}</h3>
-                <p className="mk-body" style={{ margin: "6px 0 0", fontSize: "var(--t-small)" }}>
-                  {b.lede}
-                </p>
-              </div>
-              <DecisionCard decision={b.decision} fill />
-            </div>
-          ))}
-        </div>
-
-        {/* What each one costs to turn on. Kept, because a copy audit found the page
-            implying all three happen automatically when only the third does — but
-            the conditions fit in half the words they were using. */}
-        <div className="mk-grid mk-grid-3 mk-up mk-d4" style={{ marginTop: 24 }}>
-          {[
-            ["Read", "You call the filter from your retrieval code. It returns what that person may see."],
-            ["Answer", "Declare a knowledge boundary. It reports until you set it to enforce, then abstains before the model runs."],
-            ["Act", "On a governed tool path, an ungranted call is refused from the first request. Containment ships enforcing, detectors observing."],
-          ].map(([k, v]) => (
-            <p key={k} className="mk-fine" style={{ margin: 0 }}>
-              <strong style={{ color: "var(--mk-text)" }}>{k}.</strong> {v}
-            </p>
-          ))}
+        <div className="mk-up mk-d2">
+          <BoundarySequence />
         </div>
       </div>
     </section>
