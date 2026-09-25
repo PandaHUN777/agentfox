@@ -188,9 +188,19 @@ export function Hero() {
             each of those calls against the limits you set, so a tricked model still
             can&rsquo;t act outside them.
           </p>
+          {/* The install block used to read `pip install …` / `import agentfox;
+              agentfox.auto()` directly beside the stream showing payments.transfer
+              refused, which invited exactly one conclusion: add that import and this
+              tool call is stopped. It is not. autoguard.py's _PATCHERS are
+              (_patch_openai, _patch_anthropic, _patch_litellm, _patch_langchain) —
+              model clients — and the only callers of Enforcer.guard_tool_call are
+              the LangGraph tool node, the MCP governor, the SDK and the gateway's
+              /v1/guard/tool_call. On a security product, implying protection that a
+              reader has not actually wired up is the worst error available, so the
+              hero no longer pairs an import with a refusal. The two paths are named
+              on /how-it-works, and the one action here is the playground. */}
           <pre className="mk-install mk-up mk-d3">
             <code>pip install git+https://github.com/architsharm/agentfox.git</code>
-            <code className="mk-install-2">import agentfox; agentfox.auto()</code>
           </pre>
           <div className="mk-row mk-up mk-d4" style={{ marginTop: 24 }}>
             <Link href="/playground" className="mk-btn mk-btn-primary">
@@ -210,6 +220,10 @@ export function Hero() {
             a picture of a document, with nothing for the eye to land on. */}
         <div className="mk-up mk-d3">
           <DecisionStream />
+          <p className="mk-fine" style={{ marginTop: 12, maxWidth: "46ch" }}>
+            The refusal above uses this agent&rsquo;s grants and the call&rsquo;s own
+            arguments. It does not depend on recognising a malicious prompt.
+          </p>
         </div>
       </div>
     </section>
@@ -314,7 +328,7 @@ export function Boundaries() {
             ],
             [
               "Act",
-              "Nothing to turn on. A tool the agent was never granted is refused from the first request, whatever mode the policies are in.",
+              "On a governed tool path, a call the agent holds no grant for is refused from the first request. Tool containment ships in enforce mode; the detector policies ship in observe.",
             ],
           ].map(([k, v]) => (
             <p key={k} className="mk-fine" style={{ margin: 0 }}>
@@ -342,7 +356,7 @@ export function Around() {
     <>
       <BenefitWide
         title="Every decision lands in a chain you can verify without us"
-        lede="Every prompt, retrieval, tool call and decision is recorded as one auditable object, in a log that cannot be edited without the edit showing."
+        lede="Calls routed through AgentFox produce one auditable object per request: the checks that ran, the verdict, and the reason. The chain behind it is tamper-evident and has an independent verifier."
         ticks={[
           "One page per request, with every check that ran",
           "Auditors verify the log themselves, without trusting us",
@@ -396,26 +410,30 @@ export function Around() {
  * that map to what this section shows; ATLAS and the Art. 14 rule are named
  * because they are the ones a security reviewer asks about first.
  */
-const THREATS: { threat: string; detail: string; result: string }[] = [
+const THREATS: { threat: string; detail: string; result: string; source: string }[] = [
   {
-    threat: "Prompt injection reaching a tool call",
-    detail: "The model is already convinced; the call is refused anyway",
+    threat: "Attacker tool calls that act",
+    detail: "Write or irreversible calls made on the attacker's behalf",
     result: "42 of 42 contained",
+    source: "AgentDojo replay, 617 calls",
   },
   {
-    threat: "Data exfiltration through a tool argument",
-    detail: "A tool the agent was never granted",
+    threat: "Exfiltration through an ungranted tool",
+    detail: "capability.denied",
     result: "contained",
+    source: "containment suite, cb1",
   },
   {
-    threat: "Unauthorised transfer",
-    detail: "Destination or amount taken from attacker-controlled text",
+    threat: "Transfer built from attacker-controlled text",
+    detail: "taint.irreversible_tool, and the declared value ceiling",
     result: "contained",
+    source: "containment suite, cb2 and cb3",
   },
   {
-    threat: "Destructive delete",
-    detail: "An unbounded DELETE carried in a tool argument",
+    threat: "Unbounded DELETE in a tool argument",
+    detail: "sql.unbounded_mutation, cascade.reaches_destructive",
     result: "contained",
+    source: "containment suite, cb5",
   },
 ];
 
@@ -434,12 +452,13 @@ export function Proof() {
     <section id="proof" className="mk-section">
       <div className="mk-wrap">
         <span className="mk-eyebrow mk-up">Measured with every detector switched off</span>
-        <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12, maxWidth: "24ch" }}>
-          What a compromised agent still could not do
+        <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12, maxWidth: "26ch" }}>
+          What still got blocked when detection was off
         </h2>
         <p className="mk-lede mk-up mk-d2" style={{ marginTop: 16, maxWidth: "56ch" }}>
-          617 real agent calls replayed from AgentDojo, with our detection disabled
-          entirely, against an agent the attacker had already talked round.
+          617 ground-truth tool calls from AgentDojo, replayed through the same
+          tool-call guard with every detector disabled. The compromised agent is the
+          benchmark&rsquo;s premise, not something this run demonstrates.
         </p>
 
         <div className="mk-threats mk-up mk-d3">
@@ -447,7 +466,13 @@ export function Proof() {
             <div key={t.threat} className="mk-threat">
               <div>
                 <b>{t.threat}</b>
-                <span>{t.detail}</span>
+                <span className="mk-mono">{t.detail}</span>
+                {/* Named per row because these are two different experiments. The
+                    42 of 42 is the AgentDojo replay; the three below it are
+                    scenarios from the containment suite. Presenting all four under
+                    one heading without saying so would let a reader take "42 of 42"
+                    as the denominator for every row. */}
+                <span className="mk-threat-src">{t.source}</span>
               </div>
               <span className="mk-threat-verdict">{t.result}</span>
             </div>

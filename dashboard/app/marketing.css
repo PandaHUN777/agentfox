@@ -1120,3 +1120,13 @@
 .mk-honest h2 { margin: 0; }
 .mk-honest p { margin: 6px 0 0; max-width: 62ch; font-size: var(--t-small); }
 .mk-honest .mk-btn { flex: 0 0 auto; }
+
+/* Which experiment each row came from. Quiet, but present — two benchmarks under
+   one heading need their denominators kept apart. */
+.mk-threat-src {
+  display: block;
+  margin-top: 4px;
+  font-size: var(--t-micro);
+  color: var(--mk-muted);
+}
+.mk-threat .mk-mono { font-family: var(--mk-code); font-size: var(--t-small); }

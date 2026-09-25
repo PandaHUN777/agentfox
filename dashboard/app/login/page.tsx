@@ -136,7 +136,7 @@ export default async function Login({
           <span className="auth-wall-eyebrow">Measured, not asserted</span>
           <h2>We turned the detectors off and ran it anyway</h2>
           <p>
-            617 real agent calls, replayed with every detector disabled. What was left
+            617 ground-truth tool calls, replayed with every detector disabled. What was left
             is the part that does not depend on catching the attack.
           </p>
           <div className="auth-stats">
