@@ -633,7 +633,7 @@ function TokensTab() {
   return (
     <>
       <p className="sub" style={{ marginTop: 16 }}>
-        For the CLI and SDK. Set <code className="mono">NOMETRIA_API_TOKEN</code>, or
+        For the CLI and SDK. Set <code className="mono">AGENTFOX_API_TOKEN</code>, or
         pass it as a bearer token to the gateway.{" "}
         <InfoTip text="A token acts as you, scoped to your workspace." />
       </p>

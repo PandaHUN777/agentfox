@@ -165,10 +165,22 @@ export function TokenManager() {
                 </td>
               </tr>
             ))}
+            {/* `tokens` is null until the fetch resolves, and the empty state only
+                covered the loaded-but-empty case — so the first thing anyone saw on
+                this tab was a header row over nothing, which reads as broken rather
+                than as pending. Both states are covered now, and both say which one
+                they are. */}
+            {!tokens && (
+              <tr>
+                <td colSpan={6} className="tbl-note">
+                  Loading&hellip;
+                </td>
+              </tr>
+            )}
             {tokens && tokens.length === 0 && (
               <tr>
-                <td colSpan={6} className="small muted">
-                  No tokens yet.
+                <td colSpan={6} className="tbl-note">
+                  No tokens yet. Generate one above to use the CLI or the SDK.
                 </td>
               </tr>
             )}

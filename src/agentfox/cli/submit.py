@@ -26,21 +26,26 @@ class SubmissionUnavailable(Exception):
 
 
 def submit_scan_report(report: ScanReport, *, source: str) -> dict[str, Any]:
-    """POST the redacted summary of `report` to `NOMETRIA_API_URL`.
+    """POST the redacted summary of `report` to `AGENTFOX_API_URL`.
 
     Raises `SubmissionUnavailable` on anything that stops the submission — no URL
     configured, no credential configured, the request itself failing — so callers can
     show one friendly message rather than a traceback.
     """
-    base = os.environ.get("NOMETRIA_API_URL")
+    base = os.environ.get("AGENTFOX_API_URL") or os.environ.get("NOMETRIA_API_URL")
     if not base:
         raise SubmissionUnavailable(
-            "NOMETRIA_API_URL is not set — point it at a running `agentfox serve` "
+            "AGENTFOX_API_URL is not set — point it at a running `agentfox serve` "
             "(yours or your team's) to submit."
         )
 
-    token = os.environ.get("NOMETRIA_API_TOKEN")
-    dev_user = os.environ.get("NOMETRIA_USER")
+    # AGENTFOX_ first, NOMETRIA_ as the legacy alias — the same precedence
+    # config.py applies to every other setting (ENV_PREFIX / LEGACY_ENV_PREFIX).
+    # This module read the environment directly and so never picked up the
+    # rename, which meant the product told operators to set a variable named
+    # after the old company and the new one silently did nothing.
+    token = os.environ.get("AGENTFOX_API_TOKEN") or os.environ.get("NOMETRIA_API_TOKEN")
+    dev_user = os.environ.get("AGENTFOX_USER") or os.environ.get("NOMETRIA_USER")
     headers: dict[str, str] = {}
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -48,8 +53,8 @@ def submit_scan_report(report: ScanReport, *, source: str) -> dict[str, Any]:
         headers["X-Nometria-User"] = dev_user
     else:
         raise SubmissionUnavailable(
-            "no credentials configured — set NOMETRIA_API_TOKEN (`agentfox auth issue "
-            "<email>` on that deployment) or NOMETRIA_USER for a dev deployment."
+            "no credentials configured — set AGENTFOX_API_TOKEN (`agentfox auth issue "
+            "<email>` on that deployment) or AGENTFOX_USER for a dev deployment."
         )
 
     payload = report.to_submission_payload(source=source)

@@ -2154,3 +2154,13 @@ td .mono { overflow-wrap: anywhere; }
   color: var(--text);
   margin-right: 4px;
 }
+
+/* A table row that is a message rather than data: loading, or nothing to show.
+   Centred and given room so it reads as a deliberate state instead of a stray
+   cell under a header. */
+.tbl-note {
+  padding: 26px 16px;
+  text-align: center;
+  font-size: var(--t-small);
+  color: var(--muted);
+}
