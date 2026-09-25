@@ -49,6 +49,7 @@ from .routes import (
     provenance,
     registry,
     tuning,
+    waitlist,
 )
 
 log = logging.getLogger(__name__)
@@ -256,6 +257,11 @@ def create_app() -> FastAPI:
     # this process: a sandbox is a tenant in the deployment database, so any instance
     # can serve any sandbox and NFR-3 still holds.
     app.include_router(playground.router)
+    # Also unauthenticated by design, and for a plainer reason than the playground's:
+    # joining a waitlist is what someone does *before* they have an account to sign in
+    # with. It writes one row to the one table that holds no tenant's data, and calls
+    # nothing — see waitlist.py's module docstring for what keeps a public write safe.
+    app.include_router(waitlist.router)
 
     def _health_payload() -> dict[str, Any]:
         degradation = service_health()

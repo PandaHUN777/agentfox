@@ -49,7 +49,7 @@ from typing import Any
 from sqlalchemy import event, inspect
 from sqlalchemy.orm import Session, sessionmaker, with_loader_criteria
 
-from .models import TenantScoped
+from .models import TenantExempt, TenantScoped, _is_exempt
 
 log = logging.getLogger(__name__)
 
@@ -192,6 +192,11 @@ def _tenant_criteria(execute_state: Any) -> None:
     Column and relationship loads are skipped because they are secondary loads for
     objects the session already holds, and re-filtering them would break lazy loading
     of a legitimately-loaded parent.
+
+    The criteria target :class:`TenantScoped`, so a model that does not inherit it is
+    simply not filtered. That is not an oversight to be tightened later — it is how
+    :class:`~agentfox.models.TenantExempt` works, and :func:`assert_tenant_safe` is
+    what keeps the set of such models to the ones that were argued for.
     """
     if execute_state.is_column_load or execute_state.is_relationship_load:
         return
@@ -259,12 +264,35 @@ def assert_tenant_safe() -> list[str]:
     next year and forgetting the mixin becomes an immediate, loud import error rather
     than a data leak discovered by a customer. A filter you have to remember is not a
     control; a filter you cannot omit is.
+
+    The one class of exception is a table that exists *before* there is a tenant to
+    scope it to — today only the hosted-cloud waitlist. Those are not offenders, but
+    they are not invisible either: a model is excused only if it both inherits
+    :class:`~agentfox.models.TenantExempt` and is named in
+    ``models.TENANT_EXEMPT_TABLES``, so the excuse costs a reviewed diff in the file
+    that states what it costs. :func:`tenant_exempt_models` lists who has one.
     """
     from .models import Base
 
     offenders = [
         mapper.class_.__name__
         for mapper in Base.registry.mappers
-        if not issubclass(mapper.class_, TenantScoped)
+        if not issubclass(mapper.class_, TenantScoped) and not _is_exempt(mapper.class_)
     ]
     return sorted(offenders)
+
+
+def tenant_exempt_models() -> list[str]:
+    """The models the filter above deliberately does not cover.
+
+    Exists so the exemption is something a test and an auditor can *enumerate* rather
+    than something they have to go looking for. A row in one of these tables is
+    readable from any tenant's session, because no predicate is attached to it.
+    """
+    from .models import Base
+
+    return sorted(
+        mapper.class_.__name__
+        for mapper in Base.registry.mappers
+        if issubclass(mapper.class_, TenantExempt)
+    )

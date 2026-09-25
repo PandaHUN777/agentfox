@@ -876,3 +876,147 @@
   white-space: nowrap;
 }
 .mk-threat .mk-threat-verdict { margin-top: 0; }
+
+/* The detector pipeline, drawn as a run of marks rather than a list of rows. The
+   connector is a single line behind them, so adding a detector cannot desynchronise
+   the drawing from the data. */
+.pipe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  position: relative;
+}
+.pipe-node { display: flex; align-items: center; gap: 6px; font-size: var(--t-small); }
+.pipe-node i {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--mk-border-strong);
+  flex: 0 0 auto;
+}
+.pipe-node .mk-mono { color: var(--mk-muted); }
+.pipe-node-hit i { background: var(--mk-stop); box-shadow: 0 0 0 3px color-mix(in srgb, var(--mk-stop) 20%, transparent); }
+.pipe-node-hit .mk-mono { color: var(--mk-stop); font-weight: 600; }
+.pipe-node-slow i { background: var(--mk-hold); }
+.pipe-node-slow .mk-mono { color: var(--mk-hold); }
+
+.pipe-budget {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--mk-surface-2);
+  overflow: hidden;
+}
+.pipe-budget span { display: block; height: 100%; background: var(--mk-accent); }
+
+/* --- The request path -----------------------------------------------------
+ *
+ * A rail with eight stations. The rail is a pseudo-element on the list, so the
+ * line is drawn once regardless of how many stations there are, and the pulse
+ * that travels it is a single absolutely-positioned element for the same reason.
+ * See components/marketing/path.tsx.
+ */
+.rp,
+.bm-doc .rp,
+.mk .bm-doc .rp {
+  position: relative;
+  list-style: none;
+  margin: 30px 0 0;
+  padding: 2px 0 2px 46px;
+  display: grid;
+  gap: 24px;
+  font-size: var(--t-body);
+  color: var(--mk-text);
+}
+.bm-doc .rp li { margin: 0; }
+/* Station titles sit on the same baseline as their mark. */
+.rp-body h3,
+.bm-doc .rp-body h3,
+.mk .bm-doc .rp-body h3 { margin: 0; font-size: var(--t-subhead); line-height: 1.3; }
+.bm-doc .rp-body p { margin: 6px 0 0; }
+/* The rail. Inset top and bottom so it starts at the first mark and ends at the
+   last, rather than running past both. */
+.rp::before {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 16px;
+  bottom: 16px;
+  width: 2px;
+  background: var(--mk-border);
+  border-radius: 1px;
+}
+
+.rp-station { position: relative; display: block; }
+.rp-mark {
+  position: absolute;
+  left: -46px;
+  top: -1px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--mk-bg);
+  border: 2px solid var(--mk-border);
+  font-family: var(--mk-code);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  color: var(--mk-muted);
+}
+/* The three stations where a call can end are the information in this drawing,
+   so they are the only ones that take colour. */
+.rp-station-stop .rp-mark { border-color: var(--mk-stop); color: var(--mk-stop); }
+.rp-station-key .rp-mark {
+  border-color: var(--mk-accent);
+  background: var(--mk-accent);
+  color: var(--mk-accent-fg);
+}
+.rp-body h3 { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; }
+.rp-body p { margin: 6px 0 0; max-width: 62ch; font-size: var(--t-small); }
+.rp-tag {
+  font-family: var(--mk-sans);
+  font-size: var(--t-micro);
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--mk-stop);
+}
+
+/* One pulse travelling the rail, so the direction of travel is shown rather than
+   inferred from the numbering.
+   The travel is a percentage of the rail rather than a pixel distance, because the
+   rail's height depends on how the eight bodies wrap at the reader's width — a
+   hard-coded run would stop short on a wide screen and overshoot on a narrow one.
+   So the pulse is a child of the rail, inset to match it, and animates `top` from
+   0% to 100% of that parent. */
+.rp-pulse {
+  position: absolute;
+  left: 9px;
+  top: 16px;
+  bottom: 16px;
+  width: 10px;
+  pointer-events: none;
+}
+.rp-pulse::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  margin-top: -5px;
+  border-radius: 50%;
+  background: var(--mk-accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--mk-accent) 22%, transparent);
+  animation: rp-travel 7s cubic-bezier(.45, 0, .55, 1) infinite;
+}
+@keyframes rp-travel {
+  0%   { top: 0%;   opacity: 0; }
+  7%   { opacity: 1; }
+  86%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+/* The drawing has to be complete and legible with no motion at all: the rail,
+   the marks and the colour carry the whole message, and the pulse only says
+   which way it flows. */
+@media (prefers-reduced-motion: reduce) {
+  .rp-pulse::before { animation: none; opacity: 0; }
+}

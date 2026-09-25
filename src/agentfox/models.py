@@ -69,6 +69,37 @@ class TenantScoped:
     org_id: Mapped[str] = mapped_column(String(64), default="org_default", index=True)
 
 
+class TenantExempt:
+    """Marks the rare table that exists *before* there is a tenant to scope it to.
+
+    The rule in :class:`TenantScoped` is the important one and this does not soften
+    it: a model that simply forgets tenancy still fails at import. What this adds is
+    a way to say "outside the tenant model, on purpose" that is impossible to do by
+    accident — inheriting this mixin is not enough on its own, the table must also be
+    named in :data:`TENANT_EXEMPT_TABLES` below, so the exemption cannot be granted
+    without editing the one place that states the bar for granting it.
+
+    The bar: a row here is readable by every tenant and by none, because no tenant
+    filter applies to it. So the only rows that may live in such a table are rows that
+    belong to *nobody* — never a customer's data under a different name.
+    """
+
+
+#: Tables allowed to sit outside tenant isolation, and why each one is allowed.
+#:
+#: Read this list as a security review: every entry is a table the filter in
+#: ``tenancy.py`` does not touch. It is deliberately a hard-coded roster rather than
+#: "whatever inherits the mixin", so adding a table to it is a diff a reviewer sees.
+TENANT_EXEMPT_TABLES: frozenset[str] = frozenset(
+    {
+        # A waitlist signup is a stranger asking to be told when the hosted service
+        # exists. There is no org to scope it to yet — creating one would be inventing
+        # a tenant for someone who has not signed up for anything.
+        "waitlist_signups",
+    }
+)
+
+
 class TimestampMixin(TenantScoped):
     created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[dt.datetime] = mapped_column(
@@ -1663,6 +1694,67 @@ class PlaygroundSandbox(Base, TimestampMixin):
     trace_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
 
 
+# ---------------------------------------------------------------------------
+# Hosted-cloud waitlist — the one table that is not a tenant's
+# ---------------------------------------------------------------------------
+
+
+class WaitlistSignup(Base, TenantExempt):
+    """A stranger asking to be told when the hosted service exists.
+
+    Why this sits outside the tenant pattern that governs every other table: a
+    waitlist signup happens *before* the person has an org. Scoping it would mean
+    inventing a tenant for somebody who has not signed up for anything, and then
+    either hiding the list from the operator who needs to read it or filing every
+    signup under the deployment's own org — a tenant boundary that means nothing,
+    which is worse than admitting there isn't one. So the row belongs to nobody, and
+    :class:`TenantExempt` plus :data:`TENANT_EXEMPT_TABLES` say so out loud.
+
+    The consequence to hold in mind: ``tenancy.py``'s session filter does not touch
+    this table, so a query here returns every signup whatever tenant the session is
+    bound to. That is correct for a list of people who have no tenant, and it is the
+    reason nothing tenant-facing may ever be added to this table.
+
+    The email is unique, stored lowercased and stripped, so somebody double-clicking
+    the submit button joins the list once rather than twice. ``source`` is what keeps
+    this table usable for the *next* list — it names which form the person came
+    through, so "hosted cloud" and whatever is asked in a year are one table and one
+    endpoint rather than two of each.
+
+    What is deliberately absent: nothing here sends mail, and no third party is told.
+    A signup is a row. Someone reads the table when there is something to announce.
+    """
+
+    __tablename__ = "waitlist_signups"
+
+    id: Mapped[str] = mapped_column(String(40), primary_key=True, default=ids.waitlist_signup_id)
+    #: Unique across the whole table, not per anything — see the class docstring. 320
+    #: is the longest address SMTP will carry (64 local + @ + 255 domain).
+    email: Mapped[str] = mapped_column(String(320), unique=True, index=True)
+    #: Which list this is. Indexed because reading "everyone waiting for hosted cloud"
+    #: is the only query this table has.
+    source: Mapped[str] = mapped_column(String(64), default="hosted-cloud", index=True)
+    #: Both optional, both free text the visitor typed. Kept because "who is asking"
+    #: is the only thing that makes a waitlist worth more than a count.
+    company: Mapped[str | None] = mapped_column(String(200))
+    note: Mapped[str | None] = mapped_column(Text)
+    #: Declared here rather than inherited: ``TimestampMixin`` carries ``TenantScoped``
+    #: with it, which is exactly what this table must not have.
+    created_at: Mapped[dt.datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+def _is_exempt(cls: type) -> bool:
+    """True for a mapped class deliberately placed outside tenant isolation.
+
+    Both halves have to hold — the mixin *and* the roster entry — so neither a stray
+    inheritance nor a stray list entry is enough on its own.
+    """
+    return (
+        issubclass(cls, TenantExempt)
+        and getattr(cls, "__tablename__", None) in TENANT_EXEMPT_TABLES
+    )
+
+
 __all__ = [n for n in dir() if n[0].isupper()]
 
 
@@ -1679,11 +1771,31 @@ def _assert_every_model_is_tenant_scoped() -> None:
         mapper.class_.__name__
         for mapper in Base.registry.mappers
         if not issubclass(mapper.class_, TenantScoped)
+        and not issubclass(mapper.class_, TenantExempt)
     )
     if escaped:
         raise RuntimeError(
             "these models are not tenant-scoped and would leak across tenants: "
             f"{escaped}. Inherit TenantScoped (usually via TimestampMixin)."
+        )
+
+    # The other direction, and the reason the roster is a roster: a model that wears
+    # the exemption mixin but is not on the list is somebody opting a table out of
+    # tenancy without going near the list that explains what that costs. Checked
+    # separately from the sweep above so this case gets its own message — told to
+    # "inherit TenantScoped", the author of such a model would go looking for a bug
+    # that isn't there.
+    unlisted = sorted(
+        mapper.class_.__name__
+        for mapper in Base.registry.mappers
+        if issubclass(mapper.class_, TenantExempt)
+        and mapper.class_.__tablename__ not in TENANT_EXEMPT_TABLES
+    )
+    if unlisted:
+        raise RuntimeError(
+            f"these models claim TenantExempt but are not listed in "
+            f"TENANT_EXEMPT_TABLES: {unlisted}. Add the table name there, in the same "
+            "diff, with the reason it holds no tenant's data."
         )
 
 

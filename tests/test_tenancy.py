@@ -64,6 +64,39 @@ def test_every_model_is_tenant_scoped():
     assert assert_tenant_safe() == []
 
 
+def test_the_exemption_roster_is_exactly_what_was_argued_for():
+    """`assert_tenant_safe` excuses a table only if it was argued for in writing.
+
+    This is the test that makes the exemption reviewable rather than a hole: the list
+    below is the complete set of tables the session filter does not cover, so growing
+    it means editing this assertion and explaining the new entry in the same diff.
+    """
+    from agentfox.models import TENANT_EXEMPT_TABLES
+    from agentfox.tenancy import tenant_exempt_models
+
+    # A waitlist signup happens before the person has an org — there is no tenant to
+    # scope it to. See models.WaitlistSignup.
+    assert tenant_exempt_models() == ["WaitlistSignup"]
+    assert TENANT_EXEMPT_TABLES == frozenset({"waitlist_signups"})
+
+
+def test_the_mixin_alone_does_not_buy_an_exemption():
+    """Inheriting `TenantExempt` and nothing else must still fail at import. Otherwise
+    the roster is decoration and one line in a model file opts a table out of tenancy
+    without anyone reading the module that says what that costs."""
+    from agentfox.models import TenantExempt, _assert_every_model_is_tenant_scoped
+
+    class Sneaky(Base, TenantExempt):
+        __tablename__ = "sneaky_probe"
+        id: Mapped[str] = mapped_column(String(40), primary_key=True)
+
+    try:
+        with pytest.raises(RuntimeError, match="not listed in TENANT_EXEMPT_TABLES"):
+            _assert_every_model_is_tenant_scoped()
+    finally:
+        Base.registry._dispose_cls(Sneaky)
+
+
 def test_a_model_that_escapes_the_mixin_fails_at_import():
     """The realistic failure is someone adding a table next year who has never read the
     tenancy module. That must be an import error, not a data leak found by a customer."""

@@ -461,20 +461,10 @@ export function ChainMock({ className }: { className?: string }) {
         <ChainEntry row={third} />
       </div>
 
-      <p style={BODY}>
-        Every record is hashed together with the hash of the record before it. Editing,
-        deleting or reordering any one of them changes every hash after it, so the
-        tampering shows up without needing a copy of the original.
-      </p>
-
       <Rule />
 
       <div style={{ display: "grid", gap: 8 }}>
-        <span className="mk-label">What a broken link looks like</span>
-        <p style={TIGHT}>
-          Someone edits the record at seq 2 so its verdict reads allow. Nothing else is
-          touched.
-        </p>
+        <span className="mk-label">Someone edits seq 2 to read allow</span>
         <ChainEntry row={{ ...second, digest: TAMPERED_DIGEST }} broken />
         <Verdict tone="stop" verdict="check failed">
           <p style={STRONG}>seq 2: entry digest does not match its contents</p>

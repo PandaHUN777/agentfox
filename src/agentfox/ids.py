@@ -53,4 +53,5 @@ agent_signing_key_id = lambda: new_id("ask")  # noqa: E731
 agent_message_id = lambda: new_id("amg")  # noqa: E731
 policy_canary_id = lambda: new_id("cny")  # noqa: E731
 job_id = lambda: new_id("job")  # noqa: E731
+waitlist_signup_id = lambda: new_id("wlt")  # noqa: E731
 generic_id = new_id

@@ -180,6 +180,67 @@ export async function proxyJson(
 }
 
 /**
+ * A path on this origin, or null. The guard on the public helper below.
+ *
+ * `new URL(returnTo, origin)` resolves an absolute URL to *that* URL, so a
+ * `return_to=https://example.invalid/pay` on a form anyone can reach turns this
+ * app's own domain into a redirector — the shape a phishing link wants, because the
+ * link a victim sees and hovers is ours. The authenticated helpers above take their
+ * `redirectTo` from route code rather than from the request, so they have never been
+ * reachable this way; this one takes it from a form field posted by a stranger, so
+ * it checks. A protocol-relative `//evil.example` is the case a bare `startsWith("/")`
+ * misses, and is why the second test is here.
+ */
+function sameOriginPath(returnTo: string | null, fallback: string): string {
+  if (!returnTo || !returnTo.startsWith("/") || returnTo.startsWith("//")) return fallback;
+  return returnTo;
+}
+
+/**
+ * The one helper here that sends no session cookie, for the one gateway endpoint
+ * that is public: `POST /api/waitlist`. Joining a waitlist is what someone does
+ * *before* they have an account, so the "not signed in" refusal every other helper
+ * starts with would reject exactly the people the form exists for.
+ *
+ * Keep the exception to that: a route using this must front an endpoint that is
+ * unauthenticated *at the gateway*, so nothing here is a way to reach a protected
+ * one without a credential — the gateway still 401s those whatever this sends.
+ *
+ * Otherwise the skeleton is `proxyRedirectWithHandler`'s: forward, hand the caller
+ * the parsed body so it can phrase the outcome, redirect back with the result in the
+ * query string. The message is built by the route rather than echoed from the
+ * gateway, because reflecting a stranger's input back into a URL on a marketing page
+ * is not a thing to do by default.
+ */
+export async function proxyPublicFormPost(
+  req: NextRequest,
+  gatewayPath: string,
+  returnTo: string | null,
+  fallbackReturnTo: string,
+  body: unknown,
+  handleResult: (res: Response, body: any) => { notice?: string; error?: string },
+  params: { noticeParam: string; errorParam: string },
+): Promise<NextResponse> {
+  const target = new URL(sameOriginPath(returnTo, fallbackReturnTo), req.nextUrl.origin);
+  try {
+    const res = await fetch(`${API_BASE}${gatewayPath}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const resBody = await res.json().catch(() => ({}));
+    const { notice, error } = handleResult(res, resBody);
+    if (error) target.searchParams.set(params.errorParam, error);
+    else if (notice) target.searchParams.set(params.noticeParam, notice);
+  } catch {
+    // Deliberately not `String(e)`: with the gateway down that is a connection
+    // string with a host and port in it, and this one lands on a public page.
+    target.searchParams.set(params.errorParam, "Something went wrong — please try again.");
+  }
+  return NextResponse.redirect(target, 303);
+}
+
+/**
  * Same auth-check/fetch/redirect skeleton as the helpers above, but for a route
  * whose success/error message depends on the *content* of the response, not just
  * its status — `audit/verify`'s "chain verified — N entries (seq A–B)" message,
