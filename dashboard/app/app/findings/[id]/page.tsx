@@ -106,35 +106,53 @@ export default async function FindingDetail({
               disappear from dashboards as if it were fixed.
             </div>
           )}
-          <div className="row" style={{ gap: 8, marginBottom: 20, alignItems: "flex-start" }}>
-            <form action={`/api/findings/${id}`} method="POST" className="row" style={{ gap: 6 }}>
+          {/* Two opposed actions, each with its own required free-text field, were
+              laid out as one horizontal row: input, button, input, button. Which
+              input belonged to which button was left to the reader, and the two
+              outcomes are not interchangeable — one says the problem is gone, the
+              other says it is still here and we accept it. Stacked, each with its
+              own explanation attached rather than one shared sentence underneath
+              both. */}
+          <div className="decide">
+            <form action={`/api/findings/${id}`} method="POST" className="decide-opt">
               <input type="hidden" name="status" value="resolved" />
-              <input
-                type="text"
-                name="note"
-                placeholder="what did you do to fix this? (required)"
-                required
-                style={{ minWidth: 260, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
-              />
-              <button type="submit" className="btn-approve">Mark resolved</button>
+              <div className="decide-what">
+                <strong>Mark resolved</strong>
+                <span>The underlying problem is actually fixed.</span>
+              </div>
+              <div className="decide-do">
+                <input
+                  type="text"
+                  name="note"
+                  placeholder="What did you do to fix it?"
+                  required
+                  aria-label="What did you do to fix it?"
+                />
+                <button type="submit" className="btn-approve">Mark resolved</button>
+              </div>
             </form>
-            <form action={`/api/findings/${id}`} method="POST" className="row" style={{ gap: 6 }}>
+
+            <form action={`/api/findings/${id}`} method="POST" className="decide-opt">
               <input type="hidden" name="status" value="suppressed" />
-              <input
-                type="text"
-                name="suppression_reason"
-                placeholder="reason for suppressing (required)"
-                required
-                style={{ minWidth: 260, padding: "5px 9px", borderRadius: 6, border: "1px solid var(--border)", background: "var(--panel-2)", color: "var(--text)", fontSize: 13, fontFamily: "inherit" }}
-              />
-              <button type="submit" className="btn-reject">Suppress</button>
+              <div className="decide-what">
+                <strong>Suppress</strong>
+                <span>
+                  Not acting on it right now. It stays flagged as a known, accepted
+                  issue rather than looking fixed.
+                </span>
+              </div>
+              <div className="decide-do">
+                <input
+                  type="text"
+                  name="suppression_reason"
+                  placeholder="Why are you accepting it?"
+                  required
+                  aria-label="Why are you accepting it?"
+                />
+                <button type="submit" className="btn-reject">Suppress</button>
+              </div>
             </form>
           </div>
-          <p className="small muted" style={{ marginTop: -12, marginBottom: 20 }}>
-            <strong>Resolved</strong> means the underlying problem is actually fixed.{" "}
-            <strong>Suppressed</strong> means you've decided not to act on it right now —
-            it stays flagged as a known, accepted issue rather than looking fixed.
-          </p>
         </>
       )}
       {finding.status === "suppressed" && (

@@ -199,6 +199,9 @@ export function Severity({ value }: { value: string }) {
 const FINDING_TYPE_INFO: Record<string, { label: string; blurb?: string }> = {
   guardrail_detection: { label: "Guardrail catch", blurb: "A detector caught something in a request or response and it changed the outcome — see the masked excerpt below." },
   redteam: { label: "Security test", blurb: "Simulated attacks got through without being blocked." },
+  // Was absent, so it rendered through the humanize fallback as the bare slug
+  // "redteam over block" — which reads as a typo rather than as a category.
+  redteam_over_block: { label: "Over-blocking", blurb: "The agent refused legitimate requests from the test's control group — a guardrail that blocks real work gets switched off." },
   shadow_agent: { label: "Unregistered agent", blurb: "This agent is sending traffic but was never registered." },
   unowned_agent: { label: "No owner", blurb: "No one is accountable for this agent's decisions." },
   missed_escalation: { label: "Missed hand-off", blurb: "A conversation should have gone to a human and didn't." },

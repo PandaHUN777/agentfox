@@ -2471,3 +2471,121 @@ td .mono { overflow-wrap: anywhere; }
   color: var(--muted);
 }
 .explainer .panel { margin-bottom: 15px; }
+
+/* Why an action is missing from a row menu, in the place the action would have
+   been. A control that is simply absent makes the reader wonder whether they
+   missed it; a disabled one makes them wonder why. */
+.row-menu-note {
+  padding: 8px 11px;
+  font-size: var(--t-micro);
+  line-height: 1.5;
+  color: var(--muted);
+  background: var(--panel-2);
+  border-radius: var(--r-1);
+  margin: 2px 0;
+}
+/* What kind of source this is, above the fields whose meaning depends on it. */
+.row-menu-kind {
+  margin: -2px 0 10px;
+  font-size: var(--t-micro);
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* --- Finding: the decision ------------------------------------------------- */
+/*
+ * Resolve and Suppress are opposite claims about the same problem, and they were
+ * laid out as [input][button][input][button] on one row, leaving the reader to
+ * work out the pairing. Each is its own block now, with the meaning attached to
+ * the control rather than in one shared sentence below both.
+ */
+.decide { display: grid; gap: 10px; max-width: 680px; margin: 0 0 22px; }
+.decide-opt {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-3);
+  background: var(--elevated);
+}
+.decide-what { display: grid; gap: 2px; }
+.decide-what strong { font-size: var(--t-small); color: var(--text); }
+.decide-what span { font-size: var(--t-micro); line-height: 1.5; color: var(--muted); }
+.decide-do { display: flex; gap: 8px; flex-wrap: wrap; }
+.decide-do input {
+  flex: 1 1 240px;
+  min-width: 0;
+  padding: 6px 10px;
+  border-radius: var(--r-1);
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--t-small);
+}
+.decide-do input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.decide-do button { flex: 0 0 auto; }
+
+/* --- Finding: red-team evidence -------------------------------------------- */
+/*
+ * The subset of probes this finding is actually about, ahead of the campaign it
+ * came out of. Left stripe by severity, same vocabulary as the compliance
+ * worklist, so "this is the part that needs you" reads the same way in both.
+ */
+.rt-focus {
+  padding: 16px 18px 18px;
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--border);
+  border-radius: var(--r-3);
+  background: var(--elevated);
+}
+.rt-focus.rt-bad  { border-left-color: var(--bad); }
+.rt-focus.rt-warn { border-left-color: var(--warn); }
+.rt-focus h3 { margin: 0 0 6px; font-size: var(--t-body); font-weight: 620; letter-spacing: -0.012em; }
+.rt-focus > p { margin: 0 0 14px; font-size: var(--t-small); line-height: 1.6; color: var(--muted); max-width: var(--measure); }
+
+.rt-cases { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.rt-cases > li { display: grid; gap: 7px; }
+.rt-case-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; font-size: var(--t-micro); }
+.rt-case-cat { color: var(--muted); }
+/* The payload is the evidence, so it is shown as what it is: literal text, wrapped
+   rather than clipped, scrollable rather than reflowed. */
+.rt-payload {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--r-1);
+  background: var(--panel-2);
+  border: 1px solid var(--hairline);
+  font-family: var(--mono);
+  font-size: var(--t-micro);
+  line-height: 1.55;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.rt-why, .rt-nopayload { margin: 0; font-size: var(--t-micro); line-height: 1.5; color: var(--muted); max-width: var(--measure); }
+
+.rt-h { margin: 0 0 9px; font-size: var(--t-small); font-weight: 600; }
+
+/* The reference material, closed. A <details> rather than a tab strip because
+   these are optional depth on one subject, not siblings you switch between. */
+.rt-more > summary {
+  cursor: pointer;
+  padding: 9px 12px;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-2);
+  background: var(--elevated);
+  font-size: var(--t-small);
+  font-weight: 540;
+  color: var(--text);
+  list-style: none;
+}
+.rt-more > summary::-webkit-details-marker { display: none; }
+.rt-more > summary::before { content: "▸ "; color: var(--muted); }
+.rt-more[open] > summary::before { content: "▾ "; }
+.rt-more > summary:hover { background: var(--panel-2); }
+.rt-more[open] > summary { margin-bottom: 11px; }
+/* The rows this finding is about, inside the full list. */
+.rt-row-subject > td { background: color-mix(in srgb, var(--warn) 9%, transparent); }

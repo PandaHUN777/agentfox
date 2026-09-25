@@ -31,3 +31,34 @@ export const inputStyle = {
   fontSize: 13,
   fontFamily: "inherit",
 } as const;
+
+/**
+ * What kind of thing a source key actually is, which decides what you can do
+ * with it.
+ *
+ * The row menu used to offer the same four actions on every row, and two of them
+ * are impossible for some of those rows — a fact the page states in its own
+ * column tooltips and then ignores:
+ *
+ *   "url"       The key is an http(s) address. It is fetched directly, so it can
+ *               be validated as-is and needs no connection. Offering "Connect a
+ *               database or API" here proposes work that changes nothing.
+ *   "connected" The key is opaque (a table name, a document id) but a database or
+ *               API connection is registered, so validation has something to
+ *               reach it through.
+ *   "opaque"    The key is neither. NOTHING can check it — the content-check
+ *               column renders "not a URL — can't verify" for exactly this case.
+ *               Offering "Validate now" here is a button whose only outcome is a
+ *               failure the UI already predicted.
+ */
+export type SourceKind = "url" | "connected" | "opaque";
+
+export function sourceKind(source: { key: string; connection_kind?: string | null }): SourceKind {
+  if (source.connection_kind) return "connected";
+  return /^https?:\/\//i.test(source.key) ? "url" : "opaque";
+}
+
+/** Can this source actually be fetched and its content compared? */
+export function canValidate(source: { key: string; connection_kind?: string | null }): boolean {
+  return sourceKind(source) !== "opaque";
+}

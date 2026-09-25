@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { TIER_OPTIONS, FRESHNESS_OPTIONS, inputStyle } from "@/lib/sourceOptions";
+import { TIER_OPTIONS, FRESHNESS_OPTIONS, inputStyle, sourceKind } from "@/lib/sourceOptions";
 import { DatabaseFields, ApiFields } from "./ConnectionFields";
 
 type Panel = "menu" | "edit" | "connect" | null;
@@ -28,7 +28,11 @@ export function SourceRowActions({ source }: { source: any }) {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [panel]);
 
-  const connected = !!source.connection_kind;
+  // What this source IS decides what the menu may offer. See sourceKind's own
+  // comment: two of the four actions are impossible for some rows, and the page
+  // already says so in its column tooltips.
+  const kind = sourceKind(source);
+  const connected = kind === "connected";
 
   return (
     <div className="row-menu" ref={ref}>
@@ -47,15 +51,33 @@ export function SourceRowActions({ source }: { source: any }) {
           <button type="button" className="row-menu-item" onClick={() => setPanel("edit")}>
             Edit details
           </button>
-          <button type="button" className="row-menu-item" onClick={() => setPanel("connect")}>
-            {connected ? "Reconnect" : "Connect a database or API"}
-          </button>
-          <form action="/api/sources/validate" method="POST">
-            <input type="hidden" name="key" value={source.key} />
-            <button type="submit" className="row-menu-item">
-              Validate now
+          {/* A plain http(s) key is fetched directly and has nothing to connect
+              to, so this is offered only where it changes something: an opaque
+              key that cannot be checked at all without one, or a re-point of an
+              existing connection. */}
+          {kind !== "url" && (
+            <button type="button" className="row-menu-item" onClick={() => setPanel("connect")}>
+              {connected ? "Reconnect" : "Connect a database or API"}
             </button>
-          </form>
+          )}
+          {/* Validation fetches the source and compares the content. With an
+              opaque key and no connection there is nothing to fetch, so the
+              button's only possible outcome is the failure the content-check
+              column is already reporting. The reason is shown in its place —
+              a disabled control that does not say why is its own small puzzle. */}
+          {kind === "opaque" ? (
+            <div className="row-menu-note">
+              Can&rsquo;t be validated: the key is not a URL and no connection is
+              registered. Connect one to make this checkable.
+            </div>
+          ) : (
+            <form action="/api/sources/validate" method="POST">
+              <input type="hidden" name="key" value={source.key} />
+              <button type="submit" className="row-menu-item">
+                Validate now
+              </button>
+            </form>
+          )}
           <div className="row-menu-divider" />
           {!source.deprecated ? (
             <form action="/api/sources/deprecate" method="POST">
@@ -82,6 +104,20 @@ export function SourceRowActions({ source }: { source: any }) {
       {panel === "edit" && (
         <div className="row-menu-popover row-menu-form">
           <div className="row-menu-form-title">Edit {source.key}</div>
+          {/* What a source IS is not editable here and was not shown here either,
+              so the form asked for a freshness SLA without saying whether anything
+              could ever enforce it. One line, stating the kind, so the fields
+              below are read in context. */}
+          <div className="row-menu-kind">
+            {kind === "url" && <>Fetched directly from its URL.</>}
+            {kind === "connected" && (
+              <>
+                Reached through the registered{" "}
+                {source.connection_kind === "database" ? "database" : "API"} connection.
+              </>
+            )}
+            {kind === "opaque" && <>Not reachable — a name with no connection behind it.</>}
+          </div>
           <form action="/api/sources" method="POST" className="stack">
             <input type="hidden" name="key" value={source.key} />
             <label className="small muted" style={{ display: "block" }}>
@@ -102,20 +138,31 @@ export function SourceRowActions({ source }: { source: any }) {
               Domain / corpus
               <input type="text" name="domain" defaultValue={source.domain || ""} style={inputStyle} />
             </label>
-            <label className="small muted" style={{ display: "block" }}>
-              Freshness SLA
-              <select
-                name="freshness_sla_hours"
-                defaultValue={source.freshness_sla_hours ? String(source.freshness_sla_hours) : ""}
-                style={inputStyle}
-              >
-                {FRESHNESS_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {/* A freshness SLA is a promise something checks. For an opaque key
+                with no connection nothing can, so offering the field would be
+                collecting a commitment this product cannot keep — it says what
+                would make it enforceable instead. */}
+            {kind === "opaque" ? (
+              <div className="row-menu-note">
+                A freshness SLA needs something that can re-read the source. Connect a
+                database or API and this becomes available.
+              </div>
+            ) : (
+              <label className="small muted" style={{ display: "block" }}>
+                Freshness SLA
+                <select
+                  name="freshness_sla_hours"
+                  defaultValue={source.freshness_sla_hours ? String(source.freshness_sla_hours) : ""}
+                  style={inputStyle}
+                >
+                  {FRESHNESS_OPTIONS.map((o) => (
+                    <option key={o.value} value={o.value}>
+                      {o.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             {source.deprecated && (
               <label className="small muted" style={{ display: "block" }}>
                 Status
