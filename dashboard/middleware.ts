@@ -89,9 +89,27 @@ const MOVED_TO_APP = [
   "/escalation", "/board", "/guardrails", "/settings",
 ];
 
-/** The one exception under `/api`: the GitHub OAuth handshake, which by
- *  definition happens before there is a session to check. */
-const PUBLIC_API_PREFIX = "/api/auth";
+/**
+ * The exceptions under `/api`: routes that by definition run before there is a
+ * session to check.
+ *
+ *   * `/api/auth` — the GitHub OAuth handshake, which is how a session comes to
+ *     exist in the first place.
+ *   * `/api/waitlist` — the pricing page's hosted-cloud signup form. Joining a
+ *     waitlist is what someone does before they have an account, so a redirect to
+ *     /login here does not protect anything: it discards the signup of the only
+ *     kind of visitor the form exists for, and does it silently, because a plain
+ *     form POST has no client JS to notice it landed on a login page.
+ *
+ * This stays a short list of exact route prefixes rather than becoming a pattern.
+ * Everything else under `/api` proxies an authenticated gateway call, and the
+ * failure mode of a too-broad rule here is the opposite of the one above: not a lost
+ * signup, an unauthenticated request reaching a route that assumed it could not be.
+ * The gateway is still the security boundary — it 401s a missing or bad token on
+ * every route regardless — but the two public entries above are public *there* too,
+ * which is what makes them safe to list here.
+ */
+const PUBLIC_API_PREFIXES = ["/api/auth", "/api/waitlist"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -121,7 +139,7 @@ export function middleware(req: NextRequest) {
   }
 
   const isPrivate =
-    PRIVATE_PREFIXES.some(underPrefix) && !underPrefix(PUBLIC_API_PREFIX);
+    PRIVATE_PREFIXES.some(underPrefix) && !PUBLIC_API_PREFIXES.some(underPrefix);
   const signedIn = Boolean(req.cookies.get(SESSION_COOKIE)?.value);
 
   if (isPrivate && !signedIn) {

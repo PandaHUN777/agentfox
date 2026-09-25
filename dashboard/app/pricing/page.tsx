@@ -41,8 +41,7 @@ export default function Pricing() {
         <section className="mk-section" style={{ paddingBottom: 0 }}>
           <div className="mk-wrap">
             <h1 className="mk-h1 mk-up mk-d1" style={{ marginTop: 18, maxWidth: "16ch" }}>
-              Free to self-host, <em>forever</em>.
-            </h1>
+              Free to self-host, <em>forever</em></h1>
             <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "58ch" }}>
               Everything in the repository is Apache-2.0 and nothing is gated behind a paid tier.
               What a paid arrangement buys is a support relationship, and it is not priced yet.

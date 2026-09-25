@@ -36,8 +36,7 @@ export default function Terms() {
             <div className="mk-narrow">
               <span className="mk-eyebrow">Terms</span>
               <h1 className="mk-h1" style={{ margin: "18px 0 0", maxWidth: "15ch" }}>
-                Terms for the <em>hosted</em> service.
-              </h1>
+                Terms for the <em>hosted</em> service</h1>
               <p className="mk-lede" style={{ marginTop: 20 }}>
                 These terms govern your use of the site at{" "}
                 <span className="mk-mono">useagentfox.com</span>: the

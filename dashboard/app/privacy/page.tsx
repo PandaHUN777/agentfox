@@ -53,8 +53,7 @@ export default function Privacy() {
             <div className="mk-narrow">
               <span className="mk-eyebrow">Privacy</span>
               <h1 className="mk-h1" style={{ margin: "18px 0 0", maxWidth: "16ch" }}>
-                What we <em>actually</em> hold.
-              </h1>
+                What we <em>actually</em> hold</h1>
               <p className="mk-lede" style={{ marginTop: 20 }}>
                 This covers the hosted site you are reading, at{" "}
                 <span className="mk-mono">useagentfox.com</span>, and

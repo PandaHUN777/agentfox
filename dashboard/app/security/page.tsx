@@ -49,8 +49,7 @@ export default function Security() {
             <div className="mk-narrow">
               <span className="mk-eyebrow">Security</span>
               <h1 className="mk-h1" style={{ margin: "18px 0 0", maxWidth: "17ch" }}>
-                What holds, and <em>who has checked</em>.
-              </h1>
+                What holds, and <em>who has checked</em></h1>
               <p className="mk-lede" style={{ marginTop: 20 }}>
                 Two separate questions, and most security pages answer only the first.
                 Below: how to report something, the properties this product enforces in

@@ -237,6 +237,11 @@ export async function proxyPublicFormPost(
     // string with a host and port in it, and this one lands on a public page.
     target.searchParams.set(params.errorParam, "Something went wrong — please try again.");
   }
+  // 303, not `NextResponse.redirect`'s 307 default: 307 preserves the method, so the
+  // browser would POST the form again at the page it is being sent to — which is a
+  // Server Component that only answers GET. The helpers above inherit the default
+  // because changing it is a behaviour change on a dozen signed-in routes; this one
+  // is new, and the pricing form is a plain POST with no client JS to paper over it.
   return NextResponse.redirect(target, 303);
 }
 

@@ -1020,3 +1020,45 @@
 @media (prefers-reduced-motion: reduce) {
   .rp-pulse::before { animation: none; opacity: 0; }
 }
+
+/* The waitlist form. The input and the button share a row down to phone width,
+   where the button drops below rather than squeezing the field to nothing. */
+.wl { display: grid; gap: 8px; }
+/* Visible only to screen readers: the card already carries "Join the waitlist"
+   directly above, and two labels stacked is the same instruction twice. */
+.wl-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+.wl-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.wl-input {
+  flex: 1 1 11ch;
+  min-width: 0;
+  padding: 9px 12px;
+  font-family: inherit;
+  font-size: var(--t-body);
+  color: var(--mk-text);
+  background: var(--mk-surface);
+  border: 1px solid var(--mk-border-strong);
+  border-radius: var(--mk-r-md);
+}
+.wl-input::placeholder { color: var(--mk-muted); }
+.wl-input:focus-visible {
+  outline: 2px solid var(--mk-accent);
+  outline-offset: 1px;
+  border-color: var(--mk-accent);
+}
+.wl-submit { flex: 0 0 auto; }
+.wl-fine { margin: 2px 0 0; font-size: var(--t-small); line-height: 1.5; color: var(--mk-muted); }
+
+/* Card headers are a fixed two-line block so three cards of different title
+   lengths still start their bodies on the same line. */
+.ed-head { display: grid; gap: 7px; justify-items: start; margin-bottom: 4px; }
+.ed-head .mk-h3 { margin: 0; }

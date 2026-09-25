@@ -180,8 +180,7 @@ export default function Support() {
         <section className="mk-section" style={{ paddingBottom: 0 }}>
           <div className="mk-wrap">
             <h1 className="mk-h1 mk-up mk-d1" style={{ marginTop: 18, maxWidth: "18ch" }}>
-              Every report gets <em>read</em>.
-            </h1>
+              Every report gets <em>read</em></h1>
             <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "58ch" }}>
               This is one developer&rsquo;s project, so none of the routes below carries a
               promised response time. All of them are read.

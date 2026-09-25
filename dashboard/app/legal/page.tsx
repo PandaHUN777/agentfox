@@ -67,8 +67,7 @@ export default function Legal() {
             <div className="mk-narrow">
               <span className="mk-eyebrow">Legal</span>
               <h1 className="mk-h1" style={{ margin: "18px 0 0", maxWidth: "14ch" }}>
-                All of it, in <em>one place</em>.
-              </h1>
+                All of it, in <em>one place</em></h1>
               <p className="mk-lede" style={{ marginTop: 20 }}>
                 Five documents. Three of them describe the hosted service at this domain;
                 two of them describe the software, which you can run without agreeing to

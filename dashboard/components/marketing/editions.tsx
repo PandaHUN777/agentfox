@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { WaitlistForm } from "@/components/marketing/waitlist";
 
 /*
  * The editions story for the public pages: what is free, what is paid, and what
@@ -46,10 +47,6 @@ const SUPPORT_EMAIL = "support@nometria.com";
 const SUPPORTED_HREF =
   `mailto:${SUPPORT_EMAIL}` +
   "?subject=Supported%20self-hosted%20deployment";
-
-const CLOUD_HREF =
-  `mailto:${SUPPORT_EMAIL}` +
-  "?subject=Managed%20cloud%20waitlist%20(in%20development)";
 
 const REPO_HREF = "https://github.com/architsharm/agentfox";
 
@@ -103,10 +100,10 @@ export function Editions() {
           </p>
         </div>
 
-        <div className="mk-grid mk-grid-2" style={{ marginTop: 44, maxWidth: 760, marginInline: "auto" }}>
+        <div className="mk-grid mk-grid-3" style={{ marginTop: 40 }}>
           {/* 1. Open source */}
           <div className="mk-card mk-up mk-d1" style={COLUMN}>
-            <div className="mk-row" style={{ gap: 8 }}>
+            <div className="ed-head">
               <h3 className="mk-h3">Open source</h3>
               <span className="mk-chip mk-chip-go">Available now</span>
             </div>
@@ -139,7 +136,7 @@ export function Editions() {
 
           {/* 2. Supported self-hosted */}
           <div className="mk-card mk-up mk-d2" style={COLUMN}>
-            <div className="mk-row" style={{ gap: 8 }}>
+            <div className="ed-head">
               <h3 className="mk-h3">Supported self-hosted</h3>
               <span className="mk-chip mk-chip-accent">Available now</span>
             </div>
@@ -155,7 +152,7 @@ export function Editions() {
             <div style={ACTION_FOOT}>
               <span className="mk-label">Start here</span>
               <a
-                className="mk-btn mk-btn-primary"
+                className="mk-btn mk-btn-outline"
                 href={SUPPORTED_HREF}
                 style={{ justifyContent: "center" }}
               >
@@ -164,15 +161,42 @@ export function Editions() {
             </div>
           </div>
 
-          {/* The third card was a third of this section given to a product that does
-              not exist, described in four negations: "Nothing yet", "you cannot sign
-              up today", "Nothing is priced, because nothing is running". It is one
-              line below the grid now. The fact is unchanged; it just no longer takes
-              up a third of the page arguing against itself. */}
+          {/* 3. Hosted cloud. Previously one mailto line under the grid, because a
+              card describing a product that does not exist was arguing against
+              itself in four negations ("Nothing yet", "you cannot sign up today",
+              "Nothing is priced, because nothing is running"). The answer to that
+              was never to hide it: who wants the hosted version is the most useful
+              thing this site can learn before launch. So it is a card again, with
+              one thing a visitor can do in it, and it says plainly what is running
+              and what is not.
+
+              No Stripe code exists in this repository, so there is deliberately no
+              "start trial" button here that would go nowhere. The seven free days
+              are stated as the terms of the offer, which is a commitment, not a
+              claim that something is live. */}
+          <div className="mk-card mk-up mk-d3" style={COLUMN}>
+            <div className="ed-head">
+              <h3 className="mk-h3">Hosted</h3>
+              <span className="mk-chip mk-chip-hold">In development</span>
+            </div>
+
+            <Item label="What you get">
+              The same control plane, run by us, with upgrades and backups handled.
+            </Item>
+            <Item label="Who it is for">
+              Teams who want this in front of an auditor without running a database.
+            </Item>
+            <Item label="Cost">
+              First 7 days free. Nothing is charged before it opens, and no card is
+              taken today.
+            </Item>
+
+            <div style={ACTION_FOOT}>
+              <span className="mk-label">Join the waitlist</span>
+              <WaitlistForm />
+            </div>
+          </div>
         </div>
-        <p className="mk-fine mk-up mk-d3" style={{ marginTop: 22,}}>
-          A hosted version is coming. <a href={CLOUD_HREF}>Join the waitlist.</a>
-        </p>
       </div>
     </section>
   );

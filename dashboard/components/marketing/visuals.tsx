@@ -198,7 +198,7 @@ function Cols({
       className="mk-grid"
       style={{
         gridTemplateColumns: track,
-        ...(cap ? { maxWidth: cap * 260, marginInline: "auto", width: "100%" } : null),
+        ...(cap ? { maxWidth: cap * 260, width: "100%" } : null),
       }}
     >
       {children}

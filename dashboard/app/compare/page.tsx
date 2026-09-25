@@ -249,13 +249,12 @@ export default function Compare() {
         <section className="mk-section" style={{ paddingBottom: 0 }}>
           <div className="mk-wrap">
             <h1 className="mk-h1 mk-up mk-d1" style={{ marginTop: 18, maxWidth: "19ch" }}>
-              Two camps, each with <em>half the problem</em>.
-            </h1>
+              Two camps, each with <em>half the problem</em></h1>
             <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "60ch" }}>
               One camp owns policy and framework mapping. The other owns runtime
               guardrails.
             </p>
-            <p className="mk-fine mk-up mk-d3" style={{ marginTop: 18, maxWidth: "62ch", marginInline: "auto" }}>
+            <p className="mk-fine mk-up mk-d3" style={{ marginTop: 18, maxWidth: "62ch" }}>
               Every competitor statement below comes from{" "}
               <Out href={ANALYSIS}>docs/competitor-analysis.md</Out> or a benchmark in this
               repository, named next to the claim. No vendor is scored from its own marketing
