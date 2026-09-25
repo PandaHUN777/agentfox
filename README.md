@@ -11,7 +11,9 @@ and refuses the rest. It holds after the model has already been convinced.
 
 [![CI](https://github.com/architsharm/agentfox/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/architsharm/agentfox/actions/workflows/ci.yml) [![Licence](https://img.shields.io/badge/licence-Apache--2.0-2f6feb.svg)](LICENSE) [![Python](https://img.shields.io/badge/python-3.11%2B-2f6feb.svg)](pyproject.toml) [![Status](https://img.shields.io/badge/status-MVP%20v0.3-8a5a00.svg)](docs/status.md) [![Playground](https://img.shields.io/badge/playground-no%20account-c23600.svg)](https://useagentfox.com/playground)
 
-[**Try it live**](https://useagentfox.com/playground) · [**Getting started**](docs/getting-started.md) · [**Benchmarks**](https://useagentfox.com/benchmark) · [**What is built**](docs/status.md) · [**Website**](https://useagentfox.com)
+**[▶ Try it live, no account](https://useagentfox.com/playground)** &nbsp;·&nbsp; [🚀 Self-host it](#self-hosting) &nbsp;·&nbsp; [📊 Every benchmark](https://useagentfox.com/benchmark) &nbsp;·&nbsp; [⚖ How we compare](https://useagentfox.com/compare)
+
+[Getting started](docs/getting-started.md) · [Docs](docs/) · [What is built](docs/status.md) · [Good first issues](https://github.com/architsharm/agentfox/labels/good%20first%20issue) · [Discussions](https://github.com/architsharm/agentfox/discussions) · [Contributing](CONTRIBUTING.md) · [Website](https://useagentfox.com)
 
 </div>
 
@@ -170,27 +172,34 @@ contributed nothing, by construction.
 
 <br />
 
-## Where we lose
+## Where we are still improving
 
-Prompt-injection detection is our weakest layer, and we publish it rather than omit it.
+Detection is the layer we trust least. We publish its numbers rather than omit them, because the
+product is designed so that this layer failing is survivable — containment is measured with every
+detector switched off, and [holds](#what-we-measured). These are the open fronts.
 
 - Held-out injection recall is **66.7%**, at 100% precision. An
   [adaptive attacker](benchmarks/adaptive/README.md) that reads our verdict and retries gets
   **73% of the attacks we catch through within 50 attempts**.
-- Against a real, independently installed `llm-guard` on indirect injection via tool output, we lose
-  on precision: 66.7% against their 81.8%. We win on multi-turn payload splitting and on tool
-  parameter exploitation — but those are axes a text scanner structurally cannot compete on.
+- Against a real, independently installed `llm-guard` on indirect injection via tool output, it is
+  more precise than us: **81.8% against our 66.7%**, on the same 20 cases — while we catch all 20
+  and it catches 18. The cost is ours: a round-4 ensemble backstop bought recall everywhere and
+  paid for it in false positives everywhere. Narrowing that trade is open work.
 - AgentDojo's read-only attack calls are contained 20/23. A compromised agent asked to read
   something it legitimately may read is indistinguishable from one doing its job.
 - The opt-in classifier ensemble reaches 85.6% and 98.6% recall on two independent datasets, but it
   is **not the shipped default** — the default stack scores far lower on those same two, and on long
-  prompts the ensemble mostly times out.
+  prompts the ensemble mostly times out. Making it fast enough to ship on is open work.
 
-Treat every detection number as a speed bump that raises attacker cost, never as a defence.
+Treat every detection number as a speed bump that raises attacker cost, never as a defence. That is
+why the product does not depend on it.
 
 <br />
 
-## What it does not do
+## Not built yet
+
+Written out rather than discovered later. Live per-pillar coverage is computed by probe, not
+asserted: [docs/status.md](docs/status.md).
 
 - **It is only as good as your declarations.** A destructive tool declared `read` is not treated as
   destructive by anything downstream. `agentfox doctor` grades this; `agentfox check` finds the
@@ -200,9 +209,8 @@ Treat every detection number as a speed bump that raises attacker cost, never as
 - **Compliance mappings are DRAFT.** Produced from framework texts by engineers, not reviewed by
   counsel. Evidence packages label them `DRAFT — UNVERIFIED / NOT LEGAL ADVICE` rather than
   excluding them. [Appendix B §B.6](docs/appendix-b-control-catalog.md#b6-mapping-review-gate).
-- **It is MVP v0.3.** No live IdP or SSO, single-org multi-tenancy enforced at the session, text
-  only. Live per-pillar coverage, computed by probe rather than asserted:
-  [docs/status.md](docs/status.md).
+- **Version 0.3.** No live IdP or SSO, single-org multi-tenancy enforced at the session, text only.
+  Each of those is a known gap with a seam already in place, not a redesign.
 
 <br />
 
@@ -349,6 +357,70 @@ NeMo/Guardrails AI, promptfoo, Garak, PyRIT, OpenTelemetry — and 80% is the lo
 wrapped project sits behind a swappable adapter. [docs/hld.md](docs/hld.md) has the full design.
 
 </details>
+
+<br />
+
+## Self-hosting
+
+Everything runs on your own infrastructure. There is no licence check, no phone-home, and no
+default egress: a fresh install ships with `NOMETRIA_ALLOW_EGRESS=false` and the `echo` provider,
+so it runs end to end with no model and no API key. Point it at a model when you want one.
+
+**1. One click** — provisions Postgres, the gateway and the dashboard, wired together:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/architsharm/agentfox)
+
+The blueprint is [`render.yaml`](render.yaml). The gateway needs Render's `starter` instance type
+rather than `free` — the image carries the classifier extra — and the blueprint says so rather than
+letting you find out on a failed build. The database and the dashboard run on free.
+
+**2. Docker Compose** — the whole stack, including OPA, on one machine:
+
+```bash
+git clone https://github.com/architsharm/agentfox.git && cd agentfox
+docker compose -f deploy/docker-compose.yml up -d
+# dashboard on :3000, gateway on :8080
+```
+
+[`deploy/docker-compose.yml`](deploy/docker-compose.yml) is commented line by line, including which
+values you must change before a real deployment — `NOMETRIA_AUDIT_SIGNING_KEY` above all, since the
+audit chain is only as trustworthy as the key that signs it.
+
+**3. Python, no containers** — the gateway is an ordinary ASGI app:
+
+```bash
+pip install "agentfox[postgres] @ git+https://github.com/architsharm/agentfox.git"
+agentfox init                      # SQLite by default; set NOMETRIA_DATABASE_URL for Postgres
+uvicorn agentfox.gateway.app:app --host 0.0.0.0 --port 8080
+```
+
+**After any of them:** create a GitHub OAuth app and set its callback to
+`https://<your-host>/api/auth/github/callback`. Full runbook, including Fly.io and bare metal:
+[`deploy/README-dashboard.md`](deploy/README-dashboard.md).
+
+<br />
+
+## Contributing
+
+Good first issues are [labelled on the tracker](https://github.com/architsharm/agentfox/labels/good%20first%20issue)
+— each one names the file to change and how to verify it. [`CONTRIBUTING.md`](CONTRIBUTING.md) has
+setup, conventions and the PR flow.
+
+The test suite is the contract: `uv sync --extra dev && pytest tests/ -q`. Anything that changes a
+published number must also update [`benchmarks/claims.yaml`](benchmarks/claims.yaml), which
+`scripts/claims.py --check` enforces in CI — so a figure on the website cannot drift from the
+results file it came from.
+
+<br />
+
+## Community
+
+- 🗣️ **[Discussions](https://github.com/architsharm/agentfox/discussions)** — questions, ideas, and
+  what you built.
+- 🐛 **[Issues](https://github.com/architsharm/agentfox/issues/new/choose)** — bugs and feature
+  requests.
+- 🔒 **[Security policy](SECURITY.md)** — report a vulnerability privately. Please do not open a
+  public issue for one.
 
 <br />
 
