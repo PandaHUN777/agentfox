@@ -882,6 +882,24 @@ class Enforcer:
         self.session.add(decision_row)
         self.session.flush()
         result.decision_id = decision_row.id
+        # The trace's own verdict is the strongest thing that happened on it.
+        #
+        # `Trace.verdict` defaults to "allow" and was only ever written by
+        # `end_trace`, which is called from the completion path alone — preflight,
+        # _finish_completion, run_completion_stream. Nothing on the tool-call path
+        # calls it, so a trace whose tool call was blocked or escalated sat in the
+        # database, and in the Traces list, reading `allow`.
+        #
+        # That is the worst direction for this error to run in: tool containment is
+        # the control that is supposed to hold after a content filter has been
+        # fooled, and every trace it acted on reported that nothing happened.
+        #
+        # Raised here rather than in `guard_tool_call` because every surface lands
+        # on this line — tool_args, memory_write, agent_message and the completion
+        # surfaces alike — and raise-only because one trace can carry many
+        # decisions: a blocked call followed by three allowed ones is a blocked
+        # trace, and last-write-wins would erase it.
+        self._raise_trace_verdict(trace, verdict)
         # P3-12: the explanation is built before persistence so the non-persisting
         # path still gets one, which leaves the dispute payload to be completed here —
         # a "file a false positive" link with no decision id is not a route anywhere.
@@ -1438,6 +1456,35 @@ class Enforcer:
     # ------------------------------------------------------------------
     # Full inline path (gateway)
     # ------------------------------------------------------------------
+
+    def _raise_trace_verdict(self, trace: Trace | None, verdict: str) -> None:
+        """Raise a trace's verdict to `verdict`, never lower it.
+
+        A trace is one request and can carry many decisions. Its verdict answers
+        "what is the strongest thing that happened here" — so a blocked call
+        followed by three allowed ones leaves the trace blocked, and an allowed
+        call can never quietly clear an earlier block.
+
+        `status` moves with it, using the same two words `end_trace` uses, so a
+        trace ended by the completion path and one only ever written here agree
+        on their vocabulary.
+
+        Deliberately does NOT set `ended_at`: the caller owns the trace's
+        lifetime and may still add to it. A trace that nothing ever ended is a
+        real thing worth being able to see, and forging an end time here would
+        hide it.
+        """
+        if trace is None:
+            return
+        if _RANK.get(verdict, 0) <= _RANK.get(trace.verdict or "allow", 0):
+            return
+        trace.verdict = verdict
+        # Spelled out, not derived: "abstain" + "d" is "abstaind". These are the
+        # exact words end_trace writes for the same three outcomes.
+        status = {"block": "blocked", "escalate": "escalated", "abstain": "abstained"}.get(verdict)
+        if status:
+            trace.status = status
+        self.session.flush()
 
     def _severity(self, result: EnforcementResult) -> tuple[int, int]:
         return (_RANK[result.verdict], _RANK[result.effective_verdict])
