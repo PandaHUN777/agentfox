@@ -1688,6 +1688,76 @@ def redteam_probes() -> None:
     )
 
 
+@scan_app.command("skills")
+def scan_skills(
+    path: Path = typer.Argument(Path("."), help="Directory to search for SKILL.md files."),
+    persist: bool = typer.Option(
+        True, "--persist/--no-persist", help="Raise findings, or just print."
+    ),
+) -> None:
+    """Scan agent skills for planted instructions and declared danger (P1-5).
+
+    A skill is the same object as an MCP tool one layer up: a description the
+    model reads to decide whether to invoke it, and instructions it then obeys.
+    OWASP published an Agentic Skills Top 10 in 2026 and we scanned servers but
+    not skills.
+    """
+    from ..findings import raise_finding
+    from ..registry.skills import scan_skills_dir
+
+    results = scan_skills_dir(path)
+    if not results:
+        console.print(f"[dim]no SKILL.md files under {path}[/]")
+        return
+
+    total = 0
+    for result in results:
+        issues = result["issues"]
+        total += len(issues)
+        head = f"[bold]{result['skill']}[/]  [dim]{result['path']}[/]"
+        if not issues:
+            console.print(f"{head}\n  [green]clean[/]")
+            continue
+        console.print(head)
+        for issue in issues:
+            colour = SEVERITY_COLOUR.get(issue["severity"], "dim")
+            extra = issue.get("risk") or issue.get("location") or ""
+            console.print(
+                f"  [{colour}]{issue['severity']}[/] {issue['type']}"
+                + (f" — {extra}" if extra else "")
+            )
+            if issue.get("excerpt"):
+                console.print(f"      [dim]{issue['excerpt'][:160]}[/]")
+
+    if persist:
+        with _session() as session:
+            for result in results:
+                for issue in result["issues"]:
+                    raise_finding(
+                        session,
+                        type=issue["type"],
+                        severity=issue["severity"],
+                        title=f"Skill '{result['skill']}': {issue['type'].replace('_', ' ')}",
+                        subject_type="skill",
+                        subject_id=None,
+                        evidence={**issue, "path": result["path"], "digest": result["digest"]},
+                        control_keys=["NOM-DSC-05"],
+                        fingerprint_parts=(result["skill"], issue["type"], issue.get("risk")),
+                    )
+
+    console.print(
+        f"\n  {len(results)} skill(s) · {total} issue(s)"
+        + ("" if persist else "  [dim](not recorded: --no-persist)[/]")
+    )
+    # Said plainly rather than left to be discovered: this is a static read.
+    console.print(
+        "  [dim]Static: nothing here runs a skill or reads its bundled scripts, and a "
+        "skill that describes dangerous behaviour in plain prose is not caught.[/]"
+    )
+    if total:
+        raise typer.Exit(1)
+
+
 @scan_app.command("mcp")
 def scan_mcp(
     server: str,
