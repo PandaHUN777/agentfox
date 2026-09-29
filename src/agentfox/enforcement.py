@@ -544,6 +544,7 @@ class Enforcer:
         prior_steps: list[dict[str, Any]] | None = None,
         tracker: TaintTracker | None = None,
         conversation_window: list[str] | None = None,
+        completion: dict[str, Any] | None = None,
         persist: bool = True,
     ) -> EnforcementResult:
         """One decision on one surface. The single point every guarantee flows through.
@@ -734,6 +735,7 @@ class Enforcer:
             prior_tools=prior_tools or [],
             detector_degraded=bool(pipeline_result.degraded),
             action=action,
+            completion=completion or {},
         )
 
         bound = active_policies(self.session, agent_slug, environment)
@@ -1462,6 +1464,52 @@ class Enforcer:
     # ------------------------------------------------------------------
     # Inter-agent message security (P17, NOM-IAM-08) — closes OWASP ASI07
     # ------------------------------------------------------------------
+
+    def guard_completion(
+        self,
+        *,
+        agent_slug: str,
+        claim: str = "",
+        completion: dict[str, Any] | None = None,
+        trace: Trace | None = None,
+        credential: str | None = None,
+        persist: bool = True,
+    ) -> EnforcementResult:
+        """Decide whether the agent is allowed to stop (F9.5).
+
+        Every other guard on this class asks whether an action is safe. This one
+        asks a question nobody was asking: the agent says it is finished — is it?
+
+        The gap this closes is `c4` in the market survey, "did the agent finish
+        the task it was given", which the evaluation vendors score after the
+        fact on sampled runs and nobody gates at runtime. We had the same shape:
+        `silent_failure` is an offline scorer, so an agent that reported "your
+        refund is processed" after the payment API returned an error was caught
+        in a report next week, not stopped at the time.
+
+        The division of labour is the important part. The **caller** reports
+        what it can observe at the moment of the claim — `{"committed": True,
+        "ci_green": False}` — because only the caller can see it. **Policy**
+        decides which of those must hold, through `completion_requires`, because
+        that is a governance decision and it differs per agent and per
+        environment. A condition the caller never mentions counts as unmet
+        rather than assumed: an agent claiming to be done has to have been
+        checked, and a caller that forgot to report `ci_green` did not check it.
+
+        The claim text goes through the detector pipeline like any other output,
+        so a false claim of success is also subject to the content rules that
+        already exist — this adds the gate, it does not replace them.
+        """
+        agent, identity, _ = self.resolve(agent_slug, credential)
+        return self.evaluate(
+            agent=agent,
+            identity=identity,
+            content=claim,
+            surface="completion",
+            trace=trace,
+            completion=completion or {},
+            persist=persist,
+        )
 
     def guard_agent_message(
         self,

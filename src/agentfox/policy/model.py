@@ -102,6 +102,12 @@ class Condition(BaseModel):
     loop_detected: bool | None = None
     intent_declared: bool | None = None
     detector_degraded: bool | None = None
+    #: Conditions that must hold before the agent may declare itself finished.
+    #: Fires on the `completion` surface when any named condition is missing
+    #: from, or false in, what the caller reported. This is the one rule shape
+    #: that is not about whether an action is safe — it is about whether the
+    #: agent is allowed to stop, which is the question nobody was asking.
+    completion_requires: list[str] | None = None
     #: Escape hatch for conditions the schema does not model yet.
     expr: str | None = None
 
@@ -240,6 +246,11 @@ class PolicyInput:
     action: dict[str, Any] = field(default_factory=dict)
     prior_tools: list[str] = field(default_factory=list)
     detector_degraded: bool = False
+    #: Observable facts at the moment the agent claims to be done, e.g.
+    #: {"committed": True, "ci_green": False}. Supplied by the caller, who is
+    #: the only one who can see them; which of them are *required* is the
+    #: policy's business, not the caller's.
+    completion: dict[str, Any] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, Any]:
         return {

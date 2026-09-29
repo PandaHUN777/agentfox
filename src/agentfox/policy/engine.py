@@ -155,6 +155,15 @@ class NativePolicyEngine:
             if p.detector_degraded != cond.detector_degraded:
                 return False
 
+        if cond.completion_requires:
+            # Unmet means "not reported true". A condition the caller did not
+            # mention is unmet, not assumed — the whole point of the gate is
+            # that an agent claiming to be finished has to have been checked,
+            # and a caller that forgets to report `ci_green` has not checked it.
+            unmet = [name for name in cond.completion_requires if not p.completion.get(name)]
+            if not unmet:
+                return False
+
         if cond.expr and not self._eval_expr(cond.expr, p):
             return False
 

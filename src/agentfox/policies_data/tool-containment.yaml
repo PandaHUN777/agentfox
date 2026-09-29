@@ -123,6 +123,48 @@ rules:
     reason: "The same tool has been called repeatedly in one execution path — runaway loop."
     controls: [NOM-RTG-08]
 
+  # --- Completion: is the agent allowed to stop? ------------------------
+  # Every rule above this point asks whether an action is safe. These ask
+  # whether the run may end, which is a different question and the one nobody
+  # was asking: an agent that reports "your refund is processed" after the
+  # payment API returned an error has broken nothing a content filter can see.
+  #
+  # `completion_requires` names facts the CALLER reports at the moment of the
+  # claim (`guard_completion(completion={"work_verified": True})`). A fact that
+  # is not reported counts as unmet, not assumed — an agent claiming to be done
+  # has to have been checked.
+  #
+  # Observe by default in spirit: this pack is `mode: enforce`, so these two
+  # are deliberately the narrow, uncontroversial pair. Anything workflow-shaped
+  # — commit before stop, CI green before stop — belongs in a deployment's own
+  # policy, because what "finished" means is the deployment's to define.
+  - id: completion.unverified_claim
+    description: >
+      The agent declared a task complete without any confirmation that the work
+      actually happened. The check it skipped is the one that distinguishes a
+      finished task from a confident sentence.
+    when:
+      surface: [completion]
+      completion_requires: [work_verified]
+    effect: escalate
+    severity: high
+    reason: "The agent reported this task as complete without verifying the work landed."
+    controls: [NOM-RTG-08]
+
+  - id: completion.irreversible_unconfirmed
+    description: >
+      A run that took an irreversible action is ending without read-back confirmation
+      that the action succeeded. Reporting success for a transfer that failed is worse
+      than reporting the failure.
+    when:
+      surface: [completion]
+      completion_requires: [irreversible_confirmed]
+      action_operation: [destructive, admin]
+    effect: block
+    severity: critical
+    reason: "An irreversible action in this run was never confirmed to have succeeded."
+    controls: [NOM-RTG-04, NOM-RTG-08]
+
   # --- The rule the other rules depend on ------------------------------
   # An agent that can pause enforcement can switch off everything above this
   # line, so this one is not optional: `policy.PROTECTED_RULES` refuses to load
