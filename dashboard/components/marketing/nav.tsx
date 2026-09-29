@@ -4,6 +4,8 @@ import { BrandLockup } from "@/components/marketing/brand";
 import { SESSION_COOKIE } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ScrollReveal } from "@/components/marketing/motion";
+import { NavMenu } from "@/components/marketing/menu";
+import { FLAT, GROUPS, SECONDARY } from "@/lib/nav";
 
 /**
  * The public navigation bar.
@@ -20,31 +22,16 @@ import { ScrollReveal } from "@/components/marketing/motion";
 /* Four of the nine pages were reachable only from the footer, and "Open source"
    was a mislabelled anchor into a pricing block on the home page. These are the
    pages, named the way they are titled. */
-/* Four, still. The product grew three pages and the header did not, because a
-   header that lists every page is a header nobody reads — the sub-pages are
-   one click down from /product and are in the footer and llms.txt.
+/* The header row is two dropdowns and one link, and the lists behind them
+   live in lib/nav.ts along with the footer's, the sitemap's and llms.txt's.
+   Four files used to keep their own copy of the same information
+   architecture and the failure was always the same: a page was added and
+   three of them never heard about it.
 
-   "Coding agents" replaces "How it works" in the row. It is the page a reader
-   can act on in two commands, it is the wedge the product is actually sold
-   on, and /how-it-works is a reference page people reach when they already
-   want detail rather than one they browse to. */
-const LINKS: [string, string][] = [
-  ["Product", "/product"],
-  ["Coding agents", "/hooks"],
-  ["Coverage", "/coverage"],
-  ["Pricing", "/pricing"],
-];
-
-/** Reachable from the mobile menu and the footer, not the header row. */
-const MENU_EXTRA: [string, string][] = [
-  ["MCP", "/mcp"],
-  ["Control points", "/control-points"],
-  ["How it works", "/how-it-works"],
-  ["Benchmarks", "/benchmark"],
-  ["Playground", "/playground"],
-  ["Compare", "/compare"],
-  ["Support", "/support"],
-];
+   Bare labels are the thing being fixed here. A menu that says "Discovery /
+   Grants / Guardrails" makes a visitor open three pages to find out which
+   one they wanted; each item carries a sentence, so the menu explains the
+   product instead. */
 
 export const REPO = "https://github.com/architsharm/agentfox";
 
@@ -72,9 +59,12 @@ export async function MarketingNav() {
           <BrandLockup size={26} />
         </Link>
         <nav className="mk-nav-links" aria-label="Main">
-          {LINKS.map(([label, href]) => (
-            <Link key={href} href={href}>
-              {label}
+          {GROUPS.map((group) => (
+            <NavMenu key={group.label} group={group} />
+          ))}
+          {FLAT.map((item) => (
+            <Link key={item.href} href={item.href}>
+              {item.label}
             </Link>
           ))}
           <a href={REPO} target="_blank" rel="noreferrer">
@@ -105,15 +95,26 @@ export async function MarketingNav() {
             <path d="M4 7h16M4 12h16M4 17h16" />
           </svg>
         </summary>
+        {/* On a phone this is the entire navigation, so it carries every
+            page rather than a curated few — grouped the same way the
+            dropdowns are, so the two do not disagree about what the product
+            is made of. */}
         <div className="mk-menu-panel">
-          {LINKS.map(([label, href]) => (
-            <Link key={href} href={href}>
-              {label}
-            </Link>
-          ))}
-          {MENU_EXTRA.map(([label, href]) => (
-            <Link key={href} href={href}>
-              {label}
+          {GROUPS.map((group) =>
+            group.sections.map((section, i) => (
+              <div key={`${group.label}-${section.heading ?? i}`} className="mk-burger-group">
+                <p>{section.heading ?? group.label}</p>
+                {section.items.map((item) => (
+                  <Link key={item.href} href={item.href}>
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            )),
+          )}
+          {[...FLAT, ...SECONDARY].map((item) => (
+            <Link key={item.href} href={item.href}>
+              {item.label}
             </Link>
           ))}
           <a href={REPO} target="_blank" rel="noreferrer">

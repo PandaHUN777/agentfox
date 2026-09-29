@@ -1,0 +1,101 @@
+import type { Metadata } from "next";
+
+import { CapabilityPage } from "@/components/marketing/capability";
+import { publicPageMetadata } from "@/lib/site";
+
+export const metadata: Metadata = publicPageMetadata({
+  title: "Runtime guardrails",
+  description:
+    "Nine surfaces, 50 rules across four packs, a declared latency budget, and a detector that runs out of time saying so in the record rather than being skipped.",
+  path: "/runtime",
+});
+
+export default function Page() {
+  return (
+    <CapabilityPage
+      kicker="Runtime guardrails"
+      title={["Detectors read the text.", "A policy decides"]}
+      lede="Nine places content can enter or leave an agent, and a rule set you can read."
+      challenge={
+        <p>
+          A scanner returns a score. A score is not a decision, and the gap between them
+          is where most guardrail products leave the hard part to you: which surface was
+          this, how much do we trust its source, what is this agent allowed to do, and
+          is the answer different because a check was down.
+        </p>
+      }
+      steps={[
+        {
+          title: "Nine surfaces, not one",
+          body: (
+            <p>
+              Input, output, tool arguments, tool results, retrieved documents, memory
+              writes and messages from other agents — plus two most products do not
+              have: the model&rsquo;s own <code>reasoning</code>, and its{" "}
+              <code>completion</code> claim that it finished. The same text means
+              different things on different surfaces.
+            </p>
+          ),
+        },
+        {
+          title: "The same detection, weighted by where it landed",
+          body: (
+            <p>
+              Injection-shaped text in a retrieved document is an attempt. The same text
+              in the model&rsquo;s own reasoning is a compromise in progress, so it is
+              caught at a lower confidence. That asymmetry is the argument for having
+              surfaces at all.
+            </p>
+          ),
+        },
+        {
+          title: "Rules you can read, in packs you can choose",
+          body: (
+            <p>
+              50 rules across four packs — a detector baseline, tool containment, an EU
+              AI Act pack, and one tuned for coding agents. YAML, in the repository, with
+              a lint that catches a rule shadowed by another and a rule whose conditions
+              can never all hold.
+            </p>
+          ),
+          code: "agentfox policy lint",
+        },
+        {
+          title: "Nothing blocks until you say so",
+          body: (
+            <p>
+              Every pack ships in observe. It records the verdict it would have returned
+              against real traffic, and you promote it when the counterfactual looks
+              right rather than when the documentation says to.
+            </p>
+          ),
+          code: "agentfox policy observe baseline",
+        },
+        {
+          title: "A check that cannot run says so",
+          body: (
+            <p>
+              350ms for the whole request, 300ms for the pipeline, 40ms for any one
+              detector. Over budget, a detector is marked degraded on that decision
+              rather than quietly skipped — and four controls, including tenant
+              isolation and the audit chain, may not be configured to fail open at all.
+            </p>
+          ),
+        },
+      ]}
+      gaps={{
+        title: "What the detectors do not do",
+        body: (
+          <p>
+            They are pattern and classifier based, and a sufficiently novel phrasing gets
+            through — which is the entire reason grants exist underneath them and why the
+            benchmark is run with every detector switched off. On some individual
+            detection tasks a specialised scanner is more precise than ours, and{" "}
+            <a href="/compare">/compare</a> names which.
+          </p>
+        ),
+      }}
+      related={["/grants", "/hooks", "/evidence"]}
+    />
+  );
+}

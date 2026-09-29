@@ -26,27 +26,35 @@
  * sections of annotated links.
  */
 
+import { EVIDENCE, FLAT, HOME, PRODUCT as NAV_PRODUCT, SECONDARY } from "@/lib/nav";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, REPO_URL } from "@/lib/site";
 
 export const dynamic = "force-static";
 
-/** One section of the index. `path` is site-relative; the URL is built below. */
+/**
+ * The index, derived from lib/nav.ts.
+ *
+ * It used to be a hand-kept list here, with its own copy of every page's
+ * description. Two consequences, both real: three pages existed for a week
+ * without appearing in this file, and the sentence an assistant read about a
+ * page was a different sentence from the one a person read in the menu.
+ * Deriving it fixes both — the note under a menu item and the note an
+ * assistant is given are now the same string.
+ */
 type Link = { path: string; note: string };
 
-const PRODUCT: Link[] = [
-  { path: "/", note: "What AgentFox is, and the one idea it is built on: calls approach a capability check, most go through, one does not." },
-  { path: "/product", note: "The three gates — what an agent may read, may claim, and may do — and the controls at each. The hub for the pages below." },
-  { path: "/hooks", note: "Governing a coding agent. Three Claude Code hook points, and which of them can actually stop a call: UserPromptSubmit and PreToolUse block, PostToolUse cannot because the call has already run." },
-  { path: "/control-points", note: "One policy set bound at six places — coding-agent hooks, HTTP gateway, Python SDK, MCP governor, LangGraph node, CLI — with what each one is blind to." },
-  { path: "/mcp", note: "MCP governance: rug-pull detection at call time, undeclared tools raised as findings, results treated as untrusted context. Two of six named MCP risks are not covered and are listed." },
-  { path: "/how-it-works", note: "The decision path end to end: a call arrives, the pipeline runs under a budget, a policy decides, the record is chained." },
-  { path: "/playground", note: "Run a real attack against the real detectors in the browser. No account, no signup." },
-  { path: "/coverage", note: "116 ways an agentic request can fail, scored against what AgentFox catches, and cut by cause: external, internal, autonomous, intrinsic. 105 executed against the running product nightly; the gaps are listed too." },
-  { path: "/benchmark", note: "Every published number and the run it came from. Detector precision and recall on named public datasets." },
-  { path: "/compare", note: "How AgentFox differs from AI gateways, evaluation tools and the cloud providers' own filters." },
-  { path: "/pricing", note: "Self-hosting is free and unlimited under Apache-2.0. Hosted is a waitlist." },
-  { path: "/security", note: "The threat model, what is in scope, and how to report a vulnerability." },
-];
+const asLinks = (items: { href: string; note: string }[]): Link[] =>
+  items.map((i) => ({ path: i.href, note: i.note }));
+
+const PRODUCT_LINKS: Link[] = asLinks([
+  HOME,
+  ...NAV_PRODUCT.sections.flatMap((group) => group.items),
+]);
+
+/** Published separately, because it is the part of the site nobody else has. */
+const EVIDENCE_LINKS: Link[] = asLinks(EVIDENCE.sections.flatMap((group) => group.items));
+
+const MORE_LINKS: Link[] = asLinks([...FLAT, ...SECONDARY]);
 
 /**
  * The distinguishing facts, for an assistant deciding whether this is the right
@@ -84,7 +92,14 @@ export function GET(): Response {
     "",
     FACTS.map((f) => `- ${f}`).join("\n"),
     "",
-    section("Product", PRODUCT),
+    section("Product", PRODUCT_LINKS),
+    "",
+    // Its own heading rather than more rows under Product. An assistant
+    // deciding what to recommend is exactly the reader who should be told
+    // that the coverage page lists what this does *not* catch.
+    section("Evidence you can check", EVIDENCE_LINKS),
+    "",
+    section("More", MORE_LINKS),
     "",
     "## Source and documentation",
     "",

@@ -2452,3 +2452,194 @@
   padding-left: 12px;
   text-wrap: pretty;
 }
+
+/* --- Header dropdown ----------------------------------------------------
+ *
+ * The panel is positioned against the nav row rather than the button so a
+ * two-column menu does not run off the right edge on a narrow laptop. It is
+ * `hidden` when closed — not just transparent — so its links are out of the
+ * tab order rather than focusable behind the page.
+ */
+.mk-dd { position: relative; display: inline-flex; }
+.mk-dd-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 0;
+  padding: 6px 2px;
+  font: inherit;
+  font-size: var(--t-small);
+  color: var(--mk-muted);
+  cursor: pointer;
+}
+.mk-dd-button:hover,
+.mk-dd-button[aria-expanded="true"] { color: var(--mk-text); }
+.mk-dd-button svg { transition: transform 0.16s ease; }
+.mk-dd-button[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+.mk-dd-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: -18px;
+  z-index: 60;
+  min-width: 320px;
+  border: 1px solid var(--mk-border);
+  border-radius: 14px;
+  background: var(--mk-surface);
+  box-shadow: 0 18px 44px -18px rgb(0 0 0 / 0.28);
+  padding: 8px;
+}
+.mk-dd-panel[data-open] { animation: mk-dd-in 0.16s cubic-bezier(0.22, 0.68, 0, 1) both; }
+@keyframes mk-dd-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mk-dd-panel[data-open] { animation: none; }
+}
+.mk-dd-inner { display: grid; gap: 4px; }
+
+/* The product menu: ten items in three groups. Stacked, that is 883px inside
+   an 820px viewport — taller than the screen, with the last two items
+   unreachable and nothing to scroll. Two columns, with the unheaded group
+   spanning the top as an overview row.
+
+   `max-height` and `overflow-y` stay as a backstop: a group can grow, and a
+   menu that runs off the bottom of a short laptop screen is the failure this
+   is fixing, not a shape to re-create at a different size. */
+.mk-dd-panel[data-wide] { min-width: 600px; }
+.mk-dd-panel[data-wide] .mk-dd-inner {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 8px;
+  align-items: start;
+}
+.mk-dd-panel[data-wide] .mk-dd-section:first-child {
+  grid-column: 1 / -1;
+  border-bottom: 1px solid var(--mk-border);
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+}
+.mk-dd-panel {
+  max-height: min(78vh, 720px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* Single-column menus keep the rule between groups; the two-column one uses
+   its headings for separation and a rule there would cut across a column. */
+.mk-dd-panel:not([data-wide]) .mk-dd-section + .mk-dd-section {
+  border-top: 1px solid var(--mk-border);
+  padding-top: 8px;
+  margin-top: 4px;
+}
+.mk-dd-heading {
+  margin: 8px 12px 6px;
+  font-size: var(--t-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mk-muted);
+}
+.mk-dd-section ul { list-style: none; margin: 0; padding: 0; display: grid; }
+.mk-dd-section a {
+  display: grid;
+  gap: 2px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  text-decoration: none;
+  color: inherit;
+}
+.mk-dd-section a:hover,
+.mk-dd-section a:focus-visible { background: var(--mk-surface-2); }
+.mk-dd-section a b { font-size: var(--t-small); font-weight: 600; color: var(--mk-text); }
+.mk-dd-section a span {
+  font-size: var(--t-micro);
+  color: var(--mk-muted);
+  max-width: 44ch;
+  text-wrap: pretty;
+}
+/* The header row collapses into the burger below this, and the panel would
+   otherwise be wider than the screen. */
+@media (max-width: 1040px) {
+  /* Below this the two-column panel plus the left offset would run past the
+     right edge on the narrower dropdown's position. */
+  .mk-dd-panel[data-wide] { min-width: 420px; }
+  .mk-dd-panel[data-wide] .mk-dd-inner { grid-template-columns: 1fr; }
+}
+@media (max-width: 880px) { .mk-dd { display: none; } }
+
+/* A labelled group inside the phone burger, so a list of fourteen links
+   reads as four short lists rather than one long one. */
+.mk-burger-group { display: contents; }
+.mk-burger-group > p {
+  margin: 12px 0 2px;
+  font-size: var(--t-micro);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--mk-muted);
+}
+
+/* --- Capability page template ------------------------------------------ */
+.cap-challenge {
+  display: grid;
+  grid-template-columns: minmax(120px, 160px) minmax(0, 62ch);
+  gap: 24px 40px;
+  padding-block: 8px;
+  border-left: 2px solid var(--mk-accent);
+  padding-left: 24px;
+}
+@media (max-width: 720px) {
+  .cap-challenge { grid-template-columns: 1fr; gap: 10px; padding-left: 16px; }
+}
+
+.cap-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+.cap-steps > li {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 24px;
+  padding-block: 32px;
+  border-top: 1px solid var(--mk-border);
+}
+.cap-steps > li:last-child { border-bottom: 1px solid var(--mk-border); }
+@media (max-width: 640px) {
+  .cap-steps > li { grid-template-columns: 1fr; gap: 10px; }
+}
+.cap-step-n {
+  font-family: var(--mk-code);
+  font-size: var(--t-small);
+  color: var(--mk-accent);
+}
+.cap-step-body { display: grid; gap: 12px; align-content: start; max-width: 62ch; }
+.cap-step-body h2 { margin: 0; font-size: var(--t-h3, 1.35rem); font-weight: 600; text-wrap: balance; }
+.cap-step-code {
+  font-family: var(--mk-code);
+  font-size: var(--t-micro);
+  background: var(--mk-surface);
+  border: 1px solid var(--mk-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  justify-self: start;
+  max-width: 100%;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.cap-related {
+  display: grid;
+  gap: 1px;
+  margin-top: 48px;
+  background: var(--mk-border);
+  border: 1px solid var(--mk-border);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+.cap-related-item {
+  display: grid;
+  gap: 4px;
+  align-content: start;
+  padding: 18px 20px;
+  background: var(--mk-surface);
+  text-decoration: none;
+  color: inherit;
+}
+.cap-related-item:hover { background: var(--mk-surface-2); }
+.cap-related-item b { font-size: var(--t-small); font-weight: 600; }
+.cap-related-item span { font-size: var(--t-micro); color: var(--mk-muted); text-wrap: pretty; }
