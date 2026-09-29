@@ -2488,7 +2488,7 @@
   border-radius: 14px;
   background: var(--mk-surface);
   box-shadow: 0 18px 44px -18px rgb(0 0 0 / 0.28);
-  padding: 8px;
+  padding: 6px;
 }
 .mk-dd-panel[data-open] { animation: mk-dd-in 0.16s cubic-bezier(0.22, 0.68, 0, 1) both; }
 @keyframes mk-dd-in {
@@ -2508,7 +2508,7 @@
    `max-height` and `overflow-y` stay as a backstop: a group can grow, and a
    menu that runs off the bottom of a short laptop screen is the failure this
    is fixing, not a shape to re-create at a different size. */
-.mk-dd-panel[data-wide] { min-width: 600px; }
+.mk-dd-panel[data-wide] { min-width: 560px; }
 .mk-dd-panel[data-wide] .mk-dd-inner {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 4px 8px;
@@ -2533,29 +2533,44 @@
   margin-top: 4px;
 }
 .mk-dd-heading {
-  margin: 8px 12px 6px;
+  margin: 10px 10px 4px;
   font-size: var(--t-micro);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--mk-muted);
 }
 .mk-dd-section ul { list-style: none; margin: 0; padding: 0; display: grid; }
+/* One line each, and the two lines are tight together: the label and its
+   note are one thing, and 2px of leading between them against 10px of
+   padding around them is what makes a row read as a row.
+
+   `white-space: nowrap` on the note is deliberate. Every note is written to
+   fit — six or seven words — and allowing a wrap would let one long entry
+   silently make the whole menu taller, which is the failure this pass was
+   fixing. If a note ever needs two lines, the note is wrong. */
 .mk-dd-section a {
   display: grid;
-  gap: 2px;
-  padding: 9px 12px;
-  border-radius: 9px;
+  gap: 1px;
+  padding: 7px 10px;
+  border-radius: 8px;
   text-decoration: none;
   color: inherit;
 }
 .mk-dd-section a:hover,
 .mk-dd-section a:focus-visible { background: var(--mk-surface-2); }
-.mk-dd-section a b { font-size: var(--t-small); font-weight: 600; color: var(--mk-text); }
+.mk-dd-section a b {
+  font-size: var(--t-small);
+  font-weight: 600;
+  color: var(--mk-text);
+  line-height: 1.3;
+}
 .mk-dd-section a span {
   font-size: var(--t-micro);
   color: var(--mk-muted);
-  max-width: 44ch;
-  text-wrap: pretty;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 /* The header row collapses into the burger below this, and the panel would
    otherwise be wider than the screen. */
@@ -2643,3 +2658,163 @@
 .cap-related-item:hover { background: var(--mk-surface-2); }
 .cap-related-item b { font-size: var(--t-small); font-weight: 600; }
 .cap-related-item span { font-size: var(--t-micro); color: var(--mk-muted); text-wrap: pretty; }
+
+/* --- /product routing grid --------------------------------------------- */
+.idx-group + .idx-group { margin-top: 44px; }
+.idx-group > .mk-label { margin-bottom: 14px; }
+.idx-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+.idx-card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 20px;
+  border: 1px solid var(--mk-border);
+  border-radius: 12px;
+  background: var(--mk-surface);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.16s ease, transform 0.16s ease;
+}
+.idx-card:hover { border-color: var(--mk-accent); transform: translateY(-2px); }
+@media (prefers-reduced-motion: reduce) {
+  .idx-card { transition: none; }
+  .idx-card:hover { transform: none; }
+}
+.idx-card b { font-size: var(--t-body); font-weight: 600; }
+.idx-card span { font-size: var(--t-small); color: var(--mk-muted); text-wrap: pretty; }
+.idx-card i { font-style: normal; color: var(--mk-accent); font-size: var(--t-small); }
+
+/* --- Capability page features ------------------------------------------
+ *
+ * Five small grids, one per page, and they deliberately share a rhythm: a
+ * mono key, a plain-language line, and the accent spent on the one thing the
+ * page wants you to notice. Five bespoke treatments would make eight sibling
+ * pages look like eight products.
+ */
+
+/* /runtime — the nine surfaces. The two most products lack carry the accent. */
+.surf-grid {
+  display: grid;
+  gap: 1px;
+  margin-top: 40px;
+  background: var(--mk-border);
+  border: 1px solid var(--mk-border);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* Nine items. Three columns divide exactly; two leave one empty cell, and
+   this grid draws its gaps by showing the border colour through, so an empty
+   cell is a visible grey rectangle rather than blank space. The last item
+   spans instead. */
+@media (max-width: 860px) {
+  .surf-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .surf-grid > :last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 520px) {
+  .surf-grid { grid-template-columns: 1fr; }
+  .surf-grid > :last-child { grid-column: auto; }
+}
+.surf {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  padding: 18px 20px;
+  background: var(--mk-surface);
+}
+.surf code { font-family: var(--mk-code); font-size: var(--t-small); font-weight: 500; }
+.surf p { margin: 0; font-size: var(--t-small); color: var(--mk-muted); text-wrap: pretty; }
+.surf-rare { box-shadow: inset 3px 0 0 var(--mk-accent); }
+.surf-tag {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  font-size: var(--t-micro);
+  color: var(--mk-accent);
+}
+
+/* /frameworks — count per framework, as a bar against 43. */
+.fw-grid {
+  display: grid;
+  gap: 22px 32px;
+  margin-top: 40px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 720px) { .fw-grid { grid-template-columns: 1fr; } }
+.fw { display: grid; gap: 8px; align-content: start; }
+.fw-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.fw-head b { font-size: var(--t-body); font-weight: 600; }
+.fw-head span { font-family: var(--mk-code); font-size: var(--t-small); color: var(--mk-muted); }
+.fw-bar { display: block; height: 6px; border-radius: 3px; background: var(--mk-border); overflow: hidden; }
+.fw-bar i { display: block; height: 100%; background: var(--mk-accent); border-radius: 3px; }
+.fw p { margin: 0; font-size: var(--t-small); color: var(--mk-muted); text-wrap: pretty; }
+
+/* /grants — two ordered ladders, side by side. */
+.ladders {
+  display: grid;
+  gap: 32px;
+  margin-top: 40px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 720px) { .ladders { grid-template-columns: 1fr; } }
+.ladder ol {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  background: var(--mk-border);
+  border: 1px solid var(--mk-border);
+}
+.ladder li {
+  display: grid;
+  gap: 3px;
+  padding: 12px 16px;
+  background: var(--mk-surface);
+}
+.ladder code { font-family: var(--mk-code); font-size: var(--t-small); font-weight: 500; }
+.ladder span { font-size: var(--t-small); color: var(--mk-muted); text-wrap: pretty; }
+/* Ordered least to most dangerous, and the last rung says so. */
+.ladder li:last-child code { color: var(--mk-accent); }
+
+/* /discovery — four kinds of thing. */
+.find-grid {
+  display: grid;
+  gap: 22px 28px;
+  margin-top: 40px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 720px) { .find-grid { grid-template-columns: 1fr; } }
+.find { display: grid; gap: 8px; align-content: start; border-top: 2px solid var(--mk-text); padding-top: 14px; }
+.find b { font-size: var(--t-body); font-weight: 600; }
+.find code {
+  font-family: var(--mk-code);
+  font-size: var(--t-micro);
+  color: var(--mk-accent);
+  justify-self: start;
+}
+.find p { margin: 0; font-size: var(--t-small); color: var(--mk-muted); text-wrap: pretty; }
+
+/* /evidence — the fields of one record. */
+.rec-grid {
+  display: grid;
+  gap: 1px;
+  margin-top: 40px;
+  background: var(--mk-border);
+  border: 1px solid var(--mk-border);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 720px) { .rec-grid { grid-template-columns: 1fr; } }
+.rec {
+  display: grid;
+  grid-template-columns: minmax(120px, 170px) 1fr;
+  gap: 14px;
+  align-items: baseline;
+  padding: 14px 18px;
+  background: var(--mk-surface);
+}
+.rec code { font-family: var(--mk-code); font-size: var(--t-micro); }
+.rec p { margin: 0; font-size: var(--t-small); color: var(--mk-muted); text-wrap: pretty; }

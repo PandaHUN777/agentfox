@@ -10,6 +10,29 @@ export const metadata: Metadata = publicPageMetadata({
   path: "/discovery",
 });
 
+const FINDS = [
+  {
+    what: "Agents",
+    how: "agentfox check .",
+    why: "Model clients and agent frameworks in committed code, with the file and line.",
+  },
+  {
+    what: "What is running now",
+    how: "agentfox quickscan .",
+    why: "Local coding-assistant session state — the agent someone is using today that was never committed.",
+  },
+  {
+    what: "MCP servers and tools",
+    how: "agentfox scan mcp",
+    why: "Recorded with a digest, which is the only thing that makes a later change detectable.",
+  },
+  {
+    what: "Skills",
+    how: "included in the repo scan",
+    why: "Instructions the model will follow, read for planted directives and shell fences.",
+  },
+] as const;
+
 export default function Page() {
   return (
     <CapabilityPage
@@ -23,6 +46,21 @@ export default function Page() {
           running, the answer lives in four repositories and somebody&rsquo;s laptop.
         </p>
       }
+      feature={{
+        title: "Four kinds of thing, four ways of finding them",
+        lede: "Each one is found differently, and each one is a different sort of blind spot when it is missing.",
+        body: (
+          <div className="find-grid mk-stagger">
+            {FINDS.map((f) => (
+              <div key={f.what} className="find">
+                <b>{f.what}</b>
+                <code>{f.how}</code>
+                <p>{f.why}</p>
+              </div>
+            ))}
+          </div>
+        ),
+      }}
       steps={[
         {
           title: "Read the code without running it",

@@ -10,6 +10,24 @@ export const metadata: Metadata = publicPageMetadata({
   path: "/runtime",
 });
 
+/**
+ * The nine surfaces, exactly as `guardrails/base.py` names them. `rare` marks
+ * the two most products do not have — and they are the two that matter most
+ * for an agent, because one is the model deciding and the other is the model
+ * claiming it is finished.
+ */
+const SURFACES: { key: string; what: string; rare?: boolean }[] = [
+  { key: "input", what: "What the operator typed or pasted" },
+  { key: "output", what: "What the model is about to say" },
+  { key: "tool_args", what: "The arguments of a call about to run" },
+  { key: "tool_result", what: "What a tool sent back" },
+  { key: "retrieved", what: "A document pulled into context" },
+  { key: "memory_write", what: "Something being written to long-term memory" },
+  { key: "agent_message", what: "A claim from another agent" },
+  { key: "reasoning", what: "The model's own thinking, before it acts", rare: true },
+  { key: "completion", what: "The claim that it finished", rare: true },
+];
+
 export default function Page() {
   return (
     <CapabilityPage
@@ -24,6 +42,21 @@ export default function Page() {
           is the answer different because a check was down.
         </p>
       }
+      feature={{
+        title: "Nine places content enters or leaves",
+        lede: "The same sentence means different things depending on where it turned up, so the surface is part of the decision rather than metadata attached to it.",
+        body: (
+          <div className="surf-grid mk-stagger">
+            {SURFACES.map((s) => (
+              <div key={s.key} className={s.rare ? "surf surf-rare" : "surf"}>
+                <code>{s.key}</code>
+                <p>{s.what}</p>
+                {s.rare && <span className="surf-tag">Rare</span>}
+              </div>
+            ))}
+          </div>
+        ),
+      }}
       steps={[
         {
           title: "Nine surfaces, not one",

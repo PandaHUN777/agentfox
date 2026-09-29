@@ -43,8 +43,10 @@ export const dynamic = "force-static";
  */
 type Link = { path: string; note: string };
 
-const asLinks = (items: { href: string; note: string }[]): Link[] =>
-  items.map((i) => ({ path: i.href, note: i.note }));
+// `summary` where a page has one: a menu line is six words and an
+// assistant has room for the sentence.
+const asLinks = (items: { href: string; note: string; summary?: string }[]): Link[] =>
+  items.map((i) => ({ path: i.href, note: i.summary ?? i.note }));
 
 const PRODUCT_LINKS: Link[] = asLinks([
   HOME,

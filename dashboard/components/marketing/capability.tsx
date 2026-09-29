@@ -28,7 +28,20 @@ export type CapabilityPageProps = {
   /** Two parts, so the second can carry the accent. */
   title: [string, string];
   lede: string;
+  /** A command or two under the lede, where the page has one to give. */
+  commands?: string[];
   challenge: ReactNode;
+  /**
+   * The one thing this page is really about, rendered full width between the
+   * problem and the steps.
+   *
+   * Every page keeps the same skeleton — problem, feature, steps, gaps,
+   * related — and spends its difference here. Before this slot existed the
+   * three pages with a distinctive centrepiece had bespoke layouts around it
+   * and the other five shared a template, so eight sibling pages read as two
+   * unrelated sets.
+   */
+  feature?: { title: string; lede?: string; body: ReactNode };
   steps: Step[];
   /** What this does not do. Required. */
   gaps: { title: string; body: ReactNode };
@@ -44,7 +57,9 @@ export function CapabilityPage({
   kicker,
   title,
   lede,
+  commands,
   challenge,
+  feature,
   steps,
   gaps,
   related,
@@ -53,15 +68,26 @@ export function CapabilityPage({
     <div className="mk">
       <MarketingNav />
       <main>
+        {/* The hero animates on load rather than on scroll: it is already in
+            view, and an IntersectionObserver firing on something the reader
+            is looking at reads as a flicker. Same staggered classes the home
+            hero uses, so the two do not arrive differently. */}
         <section className="mk-section">
           <div className="mk-wrap mk-narrow">
-            <p className="mk-kicker">{kicker}</p>
-            <h1 className="mk-h1" style={{ marginTop: 14 }}>
+            <p className="mk-kicker mk-up mk-d1">{kicker}</p>
+            <h1 className="mk-h1 mk-up mk-d2" style={{ marginTop: 14 }}>
               {title[0]} <em>{title[1]}</em>
             </h1>
-            <p className="mk-lede" style={{ marginTop: 20 }}>
+            <p className="mk-lede mk-up mk-d3" style={{ marginTop: 20 }}>
               {lede}
             </p>
+            {commands && (
+              <div className="mk-code-block mk-up mk-d4" style={{ marginTop: 28 }}>
+                {commands.map((line) => (
+                  <code key={line}>{line}</code>
+                ))}
+              </div>
+            )}
           </div>
         </section>
 
@@ -74,7 +100,25 @@ export function CapabilityPage({
           </div>
         </section>
 
-        <section className="mk-section mk-band mk-reveal">
+        {feature && (
+          <section className="mk-section mk-band mk-reveal">
+            <div className="mk-wrap">
+              <div className="mk-narrow">
+                <h2 className="mk-h2">{feature.title}</h2>
+                {feature.lede && (
+                  <p className="mk-lede" style={{ marginTop: 16 }}>
+                    {feature.lede}
+                  </p>
+                )}
+              </div>
+              {feature.body}
+            </div>
+          </section>
+        )}
+
+        <section
+          className={feature ? "mk-section mk-reveal" : "mk-section mk-band mk-reveal"}
+        >
           <div className="mk-wrap">
             <ol className="cap-steps mk-stagger">
               {steps.map((step, i) => (

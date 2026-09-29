@@ -10,6 +10,17 @@ export const metadata: Metadata = publicPageMetadata({
   path: "/evidence",
 });
 
+const RECORD = [
+  { field: "agent + identity", what: "Who acted, and on whose behalf." },
+  { field: "surface", what: "Where the content entered or left." },
+  { field: "provenance", what: "Where each argument came from, per argument." },
+  { field: "rules_fired", what: "Which rules matched, and what each decided." },
+  { field: "degraded", what: "Any detector that ran out of budget on this call." },
+  { field: "policy version", what: "The exact rule set in force at that moment." },
+  { field: "effective_verdict", what: "What would have happened, when running in observe." },
+  { field: "prev_hash", what: "The link that makes a later deletion visible." },
+] as const;
+
 export default function Page() {
   return (
     <CapabilityPage
@@ -24,6 +35,20 @@ export default function Page() {
           regulator will not accept.
         </p>
       }
+      feature={{
+        title: "What one decision record holds",
+        lede: "Reconstructing a decision a year later needs all of it. A verdict and a timestamp is a log line, not evidence.",
+        body: (
+          <div className="rec-grid mk-stagger">
+            {RECORD.map((r) => (
+              <div key={r.field} className="rec">
+                <code>{r.field}</code>
+                <p>{r.what}</p>
+              </div>
+            ))}
+          </div>
+        ),
+      }}
       steps={[
         {
           title: "One record per decision, with what decided it",

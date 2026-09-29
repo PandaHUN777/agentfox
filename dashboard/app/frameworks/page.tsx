@@ -10,6 +10,22 @@ export const metadata: Metadata = publicPageMetadata({
   path: "/frameworks",
 });
 
+/**
+ * Counted from `compliance_data/controls.yaml` rather than typed. The four
+ * at 43 are the frameworks every control maps to; the three below it are
+ * threat catalogues, which cover the attack surface rather than the
+ * management system, so a lower number is the right number and not a gap.
+ */
+const FRAMEWORKS = [
+  { key: "eu-ai-act", name: "EU AI Act", n: 43, what: "High-risk obligations, including Art. 12 logging and Art. 14 oversight" },
+  { key: "iso-42001", name: "ISO/IEC 42001", n: 43, what: "The AI management system standard" },
+  { key: "nist-ai-rmf", name: "NIST AI RMF", n: 43, what: "Govern, map, measure, manage" },
+  { key: "soc2", name: "SOC 2", n: 43, what: "The trust services criteria an auditor already knows" },
+  { key: "owasp-llm", name: "OWASP LLM Top 10", n: 22, what: "The attack catalogue for language models" },
+  { key: "owasp-agentic", name: "OWASP Agentic", n: 19, what: "Threats specific to agents that act" },
+  { key: "mitre-atlas", name: "MITRE ATLAS", n: 9, what: "Adversary tactics against ML systems" },
+] as const;
+
 export default function Page() {
   return (
     <CapabilityPage
@@ -23,6 +39,26 @@ export default function Page() {
           invisible until an incident, and then it is the only thing anyone reads.
         </p>
       }
+      feature={{
+        title: "Seven frameworks, 43 controls",
+        lede: "One control set mapped across all of them, so a control evidenced once is not re-evidenced by hand for the next framework.",
+        body: (
+          <div className="fw-grid mk-stagger">
+            {FRAMEWORKS.map((f) => (
+              <div key={f.key} className="fw">
+                <div className="fw-head">
+                  <b>{f.name}</b>
+                  <span>{f.n}</span>
+                </div>
+                <span className="fw-bar" aria-hidden>
+                  <i style={{ width: `${(f.n / 43) * 100}%` }} />
+                </span>
+                <p>{f.what}</p>
+              </div>
+            ))}
+          </div>
+        ),
+      }}
       steps={[
         {
           title: "Seven frameworks, one control set",

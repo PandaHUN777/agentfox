@@ -60,7 +60,7 @@ export default function Security() {
           </div>
         </section>
 
-        <section className="mk-section">
+        <section className="mk-section mk-reveal">
           <div className="mk-wrap">
             <div className="mk-narrow">
               <h2 className="mk-h2">Reporting a vulnerability</h2>
@@ -92,7 +92,7 @@ export default function Security() {
           </div>
         </section>
 
-        <section className="mk-section mk-band">
+        <section className="mk-section mk-band mk-reveal">
           <div className="mk-wrap">
             <div className="mk-narrow">
               <h2 className="mk-h2">Scope</h2>
@@ -148,7 +148,7 @@ export default function Security() {
           </div>
         </section>
 
-        <section className="mk-section">
+        <section className="mk-section mk-reveal">
           <div className="mk-wrap">
             <div className="mk-narrow">
               <h2 className="mk-h2">Properties you can check in the source</h2>
@@ -258,7 +258,7 @@ export default function Security() {
           </div>
         </section>
 
-        <section className="mk-section mk-band">
+        <section className="mk-section mk-band mk-reveal">
           <div className="mk-wrap">
             <div className="mk-narrow">
               <div className="mk-card">
