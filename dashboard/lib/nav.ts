@@ -34,11 +34,22 @@ export type NavItem = {
   sitemap?: { changeFrequency: "weekly" | "monthly" | "yearly"; priority: number };
 };
 
+export type NavSection = {
+  /**
+   * Required. The first section used to be allowed to have none, which put two
+   * unlabelled links above two labelled groups and read as a mistake — every
+   * dropdown worth copying labels every group, including the first.
+   */
+  heading: string;
+  /** Which column of the panel this section sits in. Defaults to 1. */
+  column?: 1 | 2;
+  items: NavItem[];
+};
+
 export type NavGroup = {
   /** The header button. */
   label: string;
-  /** Sections inside the dropdown. A single unnamed section renders flat. */
-  sections: { heading?: string; items: NavItem[] }[];
+  sections: NavSection[];
 };
 
 /**
@@ -54,6 +65,8 @@ export const PRODUCT: NavGroup = {
   label: "Product",
   sections: [
     {
+      heading: "Start here",
+      column: 1,
       items: [
         {
           label: "Overview",
@@ -73,6 +86,7 @@ export const PRODUCT: NavGroup = {
     },
     {
       heading: "Where it binds",
+      column: 1,
       items: [
         {
           label: "Coding agents",
@@ -99,6 +113,7 @@ export const PRODUCT: NavGroup = {
     },
     {
       heading: "What it does",
+      column: 2,
       items: [
         {
           label: "Discovery",
@@ -146,22 +161,31 @@ export const PRODUCT: NavGroup = {
 };
 
 /**
- * The evidence menu.
+ * The second dropdown.
  *
- * Its own group rather than a couple of links in Product, because publishing
- * checkable evidence is the one thing on this site that no competitor does,
- * and burying it under "Product" files it as marketing.
+ * Named Resources because that is what this slot is called on every site a
+ * visitor has already used, and a header is the one place to spend nothing on
+ * originality — someone looking for a benchmark scans for the word they
+ * expect. The differentiator keeps its name one level down, as the heading of
+ * the group it belongs to.
+ *
+ * The playground is deliberately not in here. It is the thing we most want a
+ * stranger to do and it needs no account, so burying it two interactions deep
+ * was working against the only conversion this site has.
  */
-export const EVIDENCE: NavGroup = {
-  label: "Evidence",
+export const RESOURCES: NavGroup = {
+  label: "Resources",
   sections: [
     {
+      heading: "Evidence",
+      column: 1,
       items: [
         {
           label: "Coverage",
           href: "/coverage",
           note: "116 failures scored, gaps included",
-          summary: "116 ways an agent can fail, scored — including the ones we miss.",
+          summary:
+            "116 ways an agent can fail, scored against what AgentFox catches, and cut by cause: external, internal, autonomous, intrinsic. 105 executed against the running product nightly; the gaps are listed too.",
           sitemap: { changeFrequency: "weekly", priority: 0.8 },
         },
         {
@@ -172,13 +196,6 @@ export const EVIDENCE: NavGroup = {
           sitemap: { changeFrequency: "monthly", priority: 0.7 },
         },
         {
-          label: "Playground",
-          href: "/playground",
-          note: "Attack it yourself. No account",
-          summary: "Run a real attack against the real detectors. No account.",
-          sitemap: { changeFrequency: "monthly", priority: 0.8 },
-        },
-        {
           label: "Compare",
           href: "/compare",
           note: "Where other tools beat us",
@@ -187,58 +204,76 @@ export const EVIDENCE: NavGroup = {
         },
       ],
     },
+    {
+      heading: "Project",
+      column: 2,
+      items: [
+        {
+          label: "Security",
+          href: "/security",
+          note: "Threat model, and how to report",
+          summary: "The threat model, what is in scope, and how to report a vulnerability.",
+          sitemap: { changeFrequency: "yearly", priority: 0.4 },
+        },
+        {
+          label: "Support",
+          href: "/support",
+          note: "Where to ask",
+          summary: "Where to ask, and what to expect.",
+          sitemap: { changeFrequency: "monthly", priority: 0.6 },
+        },
+      ],
+    },
   ],
 };
 
-/** Flat header links, after the two dropdowns. */
+/**
+ * Flat header links, after the two dropdowns.
+ *
+ * The playground first, because it is the one thing on this site a stranger
+ * can do in ten seconds with no account, and it was previously three
+ * interactions away inside a menu.
+ */
 export const FLAT: NavItem[] = [
+  {
+    label: "Playground",
+    href: "/playground",
+    note: "Attack it yourself. No account",
+    summary: "Run a real attack against the real detectors in the browser. No account, no signup.",
+    sitemap: { changeFrequency: "monthly", priority: 0.8 },
+  },
   {
     label: "Pricing",
     href: "/pricing",
-          note: "Free to self-host, forever",
-          summary: "Self-hosting is free and unlimited under Apache-2.0. Hosted is a waitlist.",
+    note: "Free to self-host, forever",
+    summary: "Self-hosting is free and unlimited under Apache-2.0. Hosted is a waitlist.",
     sitemap: { changeFrequency: "monthly", priority: 0.7 },
   },
 ];
 
-/** Not in the header. Real pages all the same. */
+/** Not in the header. Real pages all the same, reachable from the footer. */
 export const SECONDARY: NavItem[] = [
-  {
-    label: "Support",
-    href: "/support",
-          note: "Where to ask",
-          summary: "Where to ask, and what to expect.",
-    sitemap: { changeFrequency: "monthly", priority: 0.6 },
-  },
-  {
-    label: "Security",
-    href: "/security",
-          note: "Threat model, and how to report",
-          summary: "The threat model, what is in scope, and how to report a vulnerability.",
-    sitemap: { changeFrequency: "yearly", priority: 0.4 },
-  },
   {
     label: "Legal",
     href: "/legal",
-          note: "The hub for the three below",
+    note: "The hub for the two below",
     sitemap: { changeFrequency: "yearly", priority: 0.4 },
   },
   {
     label: "Privacy",
     href: "/privacy",
-          note: "What the hosted demo stores",
-          summary: "What the hosted demo stores, and for how long.",
+    note: "What the hosted demo stores",
     sitemap: { changeFrequency: "yearly", priority: 0.4 },
   },
   {
     label: "Terms",
     href: "/terms",
-          note: "Terms for the hosted service",
+    note: "Terms for the hosted service",
     sitemap: { changeFrequency: "yearly", priority: 0.3 },
   },
 ];
 
-export const GROUPS: NavGroup[] = [PRODUCT, EVIDENCE];
+export const GROUPS: NavGroup[] = [PRODUCT, RESOURCES];
 
 /** The landing page, which belongs in the sitemap and in no menu. */
 export const HOME: NavItem = {

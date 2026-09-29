@@ -754,10 +754,51 @@
   border-bottom: 1px solid var(--mk-border);
 }
 .mk-nav-inner { display: flex; align-items: center; gap: 20px; height: 52px; }
-.mk-nav-links { display: none; gap: 22px; margin-left: 18px; }
+/* `align-items: center` and a shared box on both kinds of child, because the
+   row mixes <a> and <button>. The button had its own padding and its own
+   colour, so the two sat on different baselines at different weights — which
+   is exactly what "Pricing and GitHub are not aligned" describes. Now the
+   only difference between a link and a menu trigger is the chevron. */
+.mk-nav-links { display: none; gap: 4px; margin-left: 14px; align-items: center; }
 @media (min-width: 900px) { .mk-nav-links { display: flex; } }
-.mk-nav-links a { color: var(--mk-text); text-decoration: none; font-size: var(--t-small); opacity: .9; }
-.mk-nav-links a:hover { opacity: 1; }
+.mk-nav-links > a,
+.mk-nav-links .mk-dd-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  font-size: var(--t-small);
+  line-height: 1;
+  color: var(--mk-text);
+  opacity: 0.82;
+  text-decoration: none;
+  cursor: pointer;
+}
+.mk-nav-links > a:hover,
+.mk-nav-links .mk-dd-button:hover,
+.mk-nav-links .mk-dd-button[aria-expanded="true"] {
+  opacity: 1;
+  background: var(--mk-surface-2);
+}
+
+/* GitHub sits with the actions, as an icon. It leaves the site, and an
+   outbound link in a row of internal pages reads as a page until you click. */
+.mk-nav-gh {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--mk-muted);
+}
+.mk-nav-gh:hover { color: var(--mk-text); background: var(--mk-surface-2); }
+@media (max-width: 560px) { .mk-nav-gh { display: none; } }
 .mk-nav-cta { margin-left: auto; display: flex; align-items: center; gap: 10px; }
 /* `white-space: nowrap` because "Try it" was wrapping to two lines inside a 53px
    sticky bar on every page at phone width, and a button that renders as "Try /
@@ -2461,21 +2502,10 @@
  * tab order rather than focusable behind the page.
  */
 .mk-dd { position: relative; display: inline-flex; }
-.mk-dd-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: 0;
-  padding: 6px 2px;
-  font: inherit;
-  font-size: var(--t-small);
-  color: var(--mk-muted);
-  cursor: pointer;
-}
-.mk-dd-button:hover,
-.mk-dd-button[aria-expanded="true"] { color: var(--mk-text); }
-.mk-dd-button svg { transition: transform 0.16s ease; }
+/* Only the chevron lives here now. Everything else about this button is set
+   with the nav links above, in one rule, so the two cannot drift apart
+   again. */
+.mk-dd-button svg { transition: transform 0.16s ease; opacity: 0.6; }
 .mk-dd-button[aria-expanded="true"] svg { transform: rotate(180deg); }
 
 .mk-dd-panel {
@@ -2498,47 +2528,22 @@
 @media (prefers-reduced-motion: reduce) {
   .mk-dd-panel[data-open] { animation: none; }
 }
-.mk-dd-inner { display: grid; gap: 4px; }
-
-/* The product menu: ten items in three groups. Stacked, that is 883px inside
-   an 820px viewport — taller than the screen, with the last two items
-   unreachable and nothing to scroll. Two columns, with the unheaded group
-   spanning the top as an overview row.
-
-   `max-height` and `overflow-y` stay as a backstop: a group can grow, and a
-   menu that runs off the bottom of a short laptop screen is the failure this
-   is fixing, not a shape to re-create at a different size. */
-.mk-dd-panel[data-wide] { min-width: 560px; }
-.mk-dd-panel[data-wide] .mk-dd-inner {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 4px 8px;
-  align-items: start;
-}
-.mk-dd-panel[data-wide] .mk-dd-section:first-child {
-  grid-column: 1 / -1;
-  border-bottom: 1px solid var(--mk-border);
-  padding-bottom: 6px;
-  margin-bottom: 4px;
-}
-.mk-dd-panel {
-  max-height: min(78vh, 720px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-/* Single-column menus keep the rule between groups; the two-column one uses
-   its headings for separation and a rule there would cut across a column. */
-.mk-dd-panel:not([data-wide]) .mk-dd-section + .mk-dd-section {
-  border-top: 1px solid var(--mk-border);
-  padding-top: 8px;
-  margin-top: 4px;
-}
+/* Two columns, each a stack of labelled groups. The panel is as tall as its
+   tallest column rather than as tall as every group stacked, which is what
+   made the first version 583px. */
+.mk-dd-inner { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 10px; }
+.mk-dd-col { display: grid; align-content: start; gap: 2px; }
+.mk-dd-panel { min-width: 520px; }
 .mk-dd-heading {
-  margin: 10px 10px 4px;
+  margin: 8px 10px 4px;
   font-size: var(--t-micro);
   text-transform: uppercase;
   letter-spacing: 0.08em;
   color: var(--mk-muted);
 }
+/* The first heading in a column sits flush with the panel padding; the ones
+   after it need air above to read as a new group. */
+.mk-dd-col > .mk-dd-section:first-child > .mk-dd-heading { margin-top: 4px; }
 .mk-dd-section ul { list-style: none; margin: 0; padding: 0; display: grid; }
 /* One line each, and the two lines are tight together: the label and its
    note are one thing, and 2px of leading between them against 10px of
@@ -2572,6 +2577,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+@media (max-width: 1040px) {
+  .mk-dd-panel { min-width: 420px; }
+  .mk-dd-inner { grid-template-columns: 1fr; }
+}
+
 /* The header row collapses into the burger below this, and the panel would
    otherwise be wider than the screen. */
 @media (max-width: 1040px) {
@@ -2580,7 +2590,9 @@
   .mk-dd-panel[data-wide] { min-width: 420px; }
   .mk-dd-panel[data-wide] .mk-dd-inner { grid-template-columns: 1fr; }
 }
-@media (max-width: 880px) { .mk-dd { display: none; } }
+/* Matches .mk-nav-links exactly. They differed by 20px, which left a
+   window where the row was hidden and the dropdown was not. */
+@media (max-width: 899px) { .mk-dd { display: none; } }
 
 /* A labelled group inside the phone burger, so a list of fourteen links
    reads as four short lists rather than one long one. */

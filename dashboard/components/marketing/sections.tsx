@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { EVIDENCE, PRODUCT } from "@/lib/nav";
+import { FLAT, PRODUCT, RESOURCES, SECONDARY } from "@/lib/nav";
 import { BrandLockup } from "@/components/marketing/brand";
 
 /**
@@ -530,9 +530,10 @@ const FOOT_PRODUCT: FootLink[] = PRODUCT.sections
   .flatMap((section) => section.items)
   .map((item) => ({ label: item.label, href: item.href }));
 
-const FOOT_EVIDENCE: FootLink[] = EVIDENCE.sections
-  .flatMap((section) => section.items)
-  .map((item) => ({ label: item.label, href: item.href }));
+const FOOT_RESOURCES: FootLink[] = [
+  ...RESOURCES.sections.flatMap((section) => section.items),
+  ...FLAT,
+].map((item) => ({ label: item.label, href: item.href }));
 
 const FOOT_PROJECT: FootLink[] = [
   { label: "Support", href: "/support" },
@@ -550,7 +551,7 @@ const FOOT_LEGAL: FootLink[] = [
 
 const FOOT_COLUMNS: [string, FootLink[]][] = [
   ["Product", FOOT_PRODUCT],
-  ["Evidence", FOOT_EVIDENCE],
+  ["Resources", FOOT_RESOURCES],
   ["Project", FOOT_PROJECT],
   ["Legal", FOOT_LEGAL],
 ];

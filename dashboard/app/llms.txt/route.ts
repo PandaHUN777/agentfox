@@ -26,7 +26,7 @@
  * sections of annotated links.
  */
 
-import { EVIDENCE, FLAT, HOME, PRODUCT as NAV_PRODUCT, SECONDARY } from "@/lib/nav";
+import { FLAT, HOME, PRODUCT as NAV_PRODUCT, RESOURCES, SECONDARY } from "@/lib/nav";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL, REPO_URL } from "@/lib/site";
 
 export const dynamic = "force-static";
@@ -54,7 +54,7 @@ const PRODUCT_LINKS: Link[] = asLinks([
 ]);
 
 /** Published separately, because it is the part of the site nobody else has. */
-const EVIDENCE_LINKS: Link[] = asLinks(EVIDENCE.sections.flatMap((group) => group.items));
+const RESOURCE_LINKS: Link[] = asLinks(RESOURCES.sections.flatMap((group) => group.items));
 
 const MORE_LINKS: Link[] = asLinks([...FLAT, ...SECONDARY]);
 
@@ -99,7 +99,7 @@ export function GET(): Response {
     // Its own heading rather than more rows under Product. An assistant
     // deciding what to recommend is exactly the reader who should be told
     // that the coverage page lists what this does *not* catch.
-    section("Evidence you can check", EVIDENCE_LINKS),
+    section("Evidence you can check", RESOURCE_LINKS),
     "",
     section("More", MORE_LINKS),
     "",
