@@ -319,6 +319,12 @@ def _fallback_policies(risk_tier: str | None = None) -> tuple:
     return tuple(by_key[k] for k in wanted if k in by_key)
 
 
+#: Which of two verdicts is the stronger claim, for picking between the
+#: layers of one file. Ordinary verdict comparison is scattered across the
+#: engine; this is the one place that needs only "which is worse".
+_VERDICT_RANK = {"allow": 0, "alter": 1, "redact": 1, "mask": 1, "escalate": 2, "block": 3}
+
+
 @dataclass
 class EnforcementResult:
     verdict: str = "allow"
@@ -342,6 +348,10 @@ class EnforcementResult:
     explanation: dict[str, Any] = field(default_factory=dict)
     suppressed: list[dict[str, Any]] = field(default_factory=list)
     latency_budget: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def detections_found(self) -> bool:
+        return bool(self.entities) or bool(self.rules_fired)
 
     @property
     def blocked(self) -> bool:
@@ -1578,6 +1588,79 @@ class Enforcer:
             trace=trace,
             persist=persist,
         )
+
+    def guard_file(
+        self,
+        *,
+        agent_slug: str,
+        filename: str,
+        data: bytes,
+        trace: Trace | None = None,
+        credential: str | None = None,
+        persist: bool = True,
+    ) -> EnforcementResult:
+        """Check a file an agent is about to read, layer by layer (a4).
+
+        A document is not a string. It has a body a person proofreads and
+        parts nobody opens — document properties, review comments, alt text,
+        an SVG `<title>` — and the model reads all of them. The attack is
+        old and specific: a resume whose white-on-white text tells the
+        screening agent to rank the candidate first.
+
+        So the file is split by `guardrails.files.normalise` and the hidden
+        layers are checked **separately from the visible ones**, with the
+        hidden result taking precedence. The same sentence in the body is a
+        sentence somebody wrote; in `docProps` it is a sentence nobody was
+        meant to read, and treating those alike throws away the only signal
+        that distinguishes a document from an attack.
+
+        A layer that could not be read is recorded on the result as a
+        degradation rather than dropped. An image needs OCR and a PDF needs a
+        parser; when either is missing the answer is "this was not checked",
+        which the caller can act on. Returning no findings for a file nobody
+        looked inside is the failure this product exists to argue against.
+        """
+        from .guardrails.files import normalise
+
+        scan = normalise(filename, data)
+        agent, identity, _ = self.resolve(agent_slug, credential)
+
+        # Hidden first: if anything is going to decide the verdict it should
+        # be the layer with the stronger claim, and `evaluate` persists a
+        # decision per call.
+        ordered = [(True, scan.hidden_text), (False, scan.visible_text)]
+        result: EnforcementResult | None = None
+        for is_hidden, text in ordered:
+            if not text.strip():
+                continue
+            outcome = self.evaluate(
+                agent=agent,
+                identity=identity,
+                content=text,
+                surface="retrieved",
+                taint_source="tool_result",
+                trace=trace,
+                persist=persist,
+            )
+            if is_hidden and outcome.detections_found:
+                outcome.reason = (
+                    f"{outcome.reason} — found in a part of '{filename}' a reader would not see"
+                ).strip(" —")
+            if result is None or _VERDICT_RANK.get(
+                outcome.effective_verdict, 0
+            ) > _VERDICT_RANK.get(result.effective_verdict, 0):
+                result = outcome
+
+        if result is None:
+            result = EnforcementResult(verdict="allow", effective_verdict="allow")
+
+        for gap in scan.unread:
+            # Surfaced the way a timed-out detector is: the gap is part of the
+            # decision record, not a silence.
+            result.degraded.append(f"file.unread:{gap['part']}")
+            result.explanation.setdefault("unread_layers", []).append(gap)
+        result.explanation["file"] = scan.to_json()
+        return result
 
     def guard_agent_message(
         self,
