@@ -264,7 +264,7 @@ export default function Compare() {
         </section>
 
         {/* 1. The camps */}
-        <section className="mk-section">
+        <section className="mk-section mk-reveal">
           <div className="mk-wrap">
             <Head
               eyebrow="The landscape"
@@ -313,7 +313,7 @@ export default function Compare() {
 
         {/* 2. Where they win */}
         <section className="mk-band">
-          <div className="mk-section mk-wrap">
+          <div className="mk-section mk-wrap mk-reveal">
             <Head
               eyebrow="Concessions"
               title="Where a competitor beats us"
@@ -343,7 +343,7 @@ export default function Compare() {
         </section>
 
         {/* 3. The measured head-to-head */}
-        <section className="mk-section">
+        <section className="mk-section mk-reveal">
           <div className="mk-wrap">
             <Head
               eyebrow="The one measured comparison"
@@ -404,7 +404,7 @@ export default function Compare() {
 
         {/* 4. Category table */}
         <section className="mk-band">
-          <div className="mk-section mk-wrap">
+          <div className="mk-section mk-wrap mk-reveal">
             <Head
               eyebrow="Category by category"
               title="Capabilities, by camp rather than by vendor"
@@ -443,7 +443,7 @@ export default function Compare() {
         </section>
 
         {/* 5. Different */}
-        <section className="mk-section">
+        <section className="mk-section mk-reveal">
           <div className="mk-wrap">
             <Head
               eyebrow="The difference"

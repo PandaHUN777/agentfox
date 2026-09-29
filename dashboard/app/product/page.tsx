@@ -2,14 +2,9 @@ import type { Metadata } from "next";
 import { publicPageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { MarketingNav } from "@/components/marketing/nav";
-import {
-  Pillars,
-  Guardrails,
-  Containment,
-  Discovery,
-  Assurance,
-} from "@/components/marketing/pillars";
-import { Evidence, HowItWorks, FAQ, CTA, Footer } from "@/components/marketing/sections";
+import { Pillars } from "@/components/marketing/pillars";
+import { FAQ, CTA, Footer } from "@/components/marketing/sections";
+import { ProductIndex } from "@/components/marketing/index-grid";
 
 export const dynamic = "force-dynamic";
 
@@ -19,19 +14,23 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = publicPageMetadata({
   title: "What AgentFox does, on real screens",
   description:
-    "The six pillars of the control plane, each with the screen that runs it: guardrails, capability grants, agent discovery, evals, the audit chain and compliance.",
+    "The whole control plane on one page: what each of the six areas does, and the page that covers it in depth.",
   path: "/product",
 });
 
 /**
- * The long version.
+ * The hub.
  *
- * These sections used to be the homepage, which measured 4,932 words and 36
- * viewports. That is a reference page, and a reference page in the homepage slot
- * loses the reader who only wanted to know what this is. The material was not the
- * problem; the slot was. It lives here, one click from six cards on the homepage
- * and from the nav, and the homepage keeps the job of getting someone to the
- * playground or the repository.
+ * This was the long version — 2,157 words and nine sections, which was six
+ * times a sibling page and more than half of it duplicated. Containment,
+ * guardrails, discovery and assurance each have their own page now, written
+ * at more depth than a shared section could carry, so keeping the old
+ * sections here meant two descriptions of the same thing drifting apart.
+ *
+ * What a hub owes the reader is a map and an honest sentence about each
+ * destination, not a précis of all eight. So: the pillar grid, which is the
+ * one view of the whole product that no single page can give, a routing grid
+ * built from the same `lib/nav.ts` the menu reads, and the FAQ.
  */
 export default function Product() {
   return (
@@ -49,13 +48,10 @@ export default function Product() {
             </p>
           </div>
         </section>
-        <Containment />
-        <Guardrails />
-        <Discovery />
-        <Assurance />
-        <Evidence />
+        {/* The map, then the routes. Everything that used to sit between
+            these two is now a page of its own. */}
         <Pillars />
-        <HowItWorks />
+        <ProductIndex exclude={["/product"]} />
         <FAQ />
         <CTA />
       </main>

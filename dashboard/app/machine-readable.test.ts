@@ -19,28 +19,17 @@ import { describe, expect, it } from "vitest";
 import { GET as agentsMd } from "./AGENTS.md/route";
 import { GET as llmsTxt } from "./llms.txt/route";
 import { GET as securityTxt } from "./.well-known/security.txt/route";
+import { ALL_PATHS } from "@/lib/nav";
 import { SITE_URL } from "@/lib/site";
 
-/** Public routes, as the sitemap and the middleware understand them. */
-const PUBLIC_PATHS = [
-  "/",
-  "/benchmark",
-  "/compare",
-  "/control-points",
-  "/coverage",
-  "/hooks",
-  "/how-it-works",
-  "/mcp",
-  "/legal",
-  "/playground",
-  "/pricing",
-  "/privacy",
-  "/product",
-  "/security",
-  "/support",
-  "/terms",
-];
-
+/**
+ * Public routes — read from the same module the nav, the footer, the sitemap
+ * and llms.txt all read.
+ *
+ * This was a hand-kept array, which made the test a second copy of the thing
+ * it was checking: adding a page meant editing five files, and the one most
+ * likely to be forgotten was the test that exists to catch the forgetting.
+ */
 /** Paths these files may name that are not pages in the sitemap. */
 const ALSO_SERVED = ["/llms.txt", "/AGENTS.md", "/.well-known/security.txt"];
 
@@ -65,7 +54,7 @@ describe("/llms.txt", () => {
     );
     expect(ours.length).toBeGreaterThan(5);
 
-    const allowed = new Set([...PUBLIC_PATHS, ...ALSO_SERVED]);
+    const allowed = new Set([...ALL_PATHS, ...ALSO_SERVED]);
     const unknown = [...new Set(ours)].filter((p) => !allowed.has(p));
     expect(unknown, "llms.txt names paths that are not public routes").toEqual([]);
   });
@@ -75,7 +64,7 @@ describe("/llms.txt", () => {
     // Legal boilerplate is deliberately not in the index — an assistant
     // recommending a product does not need the terms of service, and listing
     // them dilutes the pages that answer the question being asked.
-    const expected = PUBLIC_PATHS.filter((p) => !["/legal", "/privacy", "/terms", "/support"].includes(p));
+    const expected = ALL_PATHS.filter((p) => !["/legal", "/privacy", "/terms", "/support"].includes(p));
     for (const path of expected) {
       expect(text, `llms.txt does not mention ${path}`).toContain(`${SITE_URL}${path === "/" ? "/" : path}`);
     }

@@ -197,7 +197,7 @@ export default function Support() {
         </section>
 
         {/* 1. Before you file */}
-        <section className="mk-section">
+        <section className="mk-section mk-reveal">
           <div className="mk-wrap">
             <Head
               eyebrow="Before you file"
@@ -244,7 +244,7 @@ export default function Support() {
 
         {/* 2. Routing table */}
         <section className="mk-band">
-          <div className="mk-section mk-wrap">
+          <div className="mk-section mk-wrap mk-reveal">
             <Head
               eyebrow="Where it goes"
               title="Which template, for which problem"
@@ -274,7 +274,7 @@ export default function Support() {
         </section>
 
         {/* 3. Wrong verdict, called out */}
-        <section className="mk-section">
+        <section className="mk-section mk-reveal">
           <div className="mk-wrap mk-split mk-split-wide">
             <div className="mk-up">
               <span className="mk-eyebrow">The one that matters most</span>
@@ -317,7 +317,7 @@ export default function Support() {
         </section>
 
         {/* 4. Security */}
-        <section className="mk-section mk-band">
+        <section className="mk-section mk-band mk-reveal">
           <div className="mk-wrap mk-narrow">
             <div
               className="mk-card mk-card-raised mk-up"
@@ -351,7 +351,7 @@ export default function Support() {
         </section>
 
         {/* 5. Commercial */}
-        <section className="mk-section">
+        <section className="mk-section mk-reveal">
           <div className="mk-wrap">
             <Head
               eyebrow="Commercial support"
@@ -386,7 +386,7 @@ export default function Support() {
         </section>
 
         {/* 6. Docs */}
-        <section className="mk-section mk-band">
+        <section className="mk-section mk-band mk-reveal">
           <div className="mk-wrap">
             <Head
               eyebrow="Read first"

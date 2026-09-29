@@ -1,23 +1,15 @@
 /**
  * /control-points — open enforcement, in full.
  *
- * The home page carries a six-cell teaser of this. It needed a page because
- * the argument does not fit in six cells: the interesting part is not that
- * there are six, it is that each one sees a *different surface*, and that the
- * honest version of "we integrate with X" is "here is exactly what that
- * integration can and cannot see".
- *
- * The table on this page is therefore the inverse of every integrations page
- * in this category. Those list logos. This lists what each binding point is
- * blind to, because that is the thing a reader cannot find out any other way
- * short of reading our source.
+ * Same template as the other seven. The distinctive part, and the `feature`,
+ * is the last column: every integrations page in this category lists logos,
+ * and none of them tells you what each integration cannot see.
  */
 
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { MarketingNav } from "@/components/marketing/nav";
-import { CTA, Footer } from "@/components/marketing/sections";
+import { CapabilityPage } from "@/components/marketing/capability";
 import { publicPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = publicPageMetadata({
@@ -78,86 +70,105 @@ const POINTS = [
   },
 ] as const;
 
-export default function ControlPointsPage() {
+export default function Page() {
   return (
-    <div className="mk">
-      <MarketingNav />
-      <main>
-        <section className="mk-section">
-          <div className="mk-wrap mk-narrow">
-            <p className="mk-kicker">Open enforcement</p>
-            <h1 className="mk-h1" style={{ marginTop: 14 }}>
-              One policy set, <em>six places it binds</em>
-            </h1>
-            <p className="mk-lede" style={{ marginTop: 20 }}>
-              No single gateway sees every agent, and routing everything through one is
-              a migration rather than a control.
-            </p>
+    <CapabilityPage
+      kicker="Open enforcement"
+      title={["One policy set,", "six places it binds"]}
+      lede="No single gateway sees every agent, and routing everything through one is a migration rather than a control."
+      challenge={
+        <p>
+          Agents do not arrive through one door. One team is in LangGraph, one is
+          calling an API from Go, one is running Claude Code on a laptop — and a
+          guardrail that only works if all three move onto your gateway is a migration
+          plan wearing a product&rsquo;s clothes.
+        </p>
+      }
+      feature={{
+        title: "What each one is blind to",
+        lede: "Every integrations page in this category lists logos. The useful column is the last one.",
+        body: (
+          <div className="cp-list mk-stagger">
+            {POINTS.map((point) => (
+              <article key={point.how} className="cp-item">
+                <div className="cp-item-head">
+                  <span className="cp-where">{point.where}</span>
+                  <h3>{point.how}</h3>
+                </div>
+                <div className="cp-item-body">
+                  <code className="cp-install">{point.install}</code>
+                  <ul className="cp-sees">
+                    {point.sees.map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ul>
+                  <p className="cp-blind">
+                    <b>Blind to</b> {point.blind}
+                  </p>
+                  <Link href={point.href} className="cp-more">
+                    More &rarr;
+                  </Link>
+                </div>
+              </article>
+            ))}
           </div>
-        </section>
-
-        <section className="mk-section mk-band mk-reveal">
-          <div className="mk-wrap">
-            <div className="mk-narrow">
-              <h2 className="mk-h2">What each one is blind to</h2>
-              <p className="mk-lede" style={{ marginTop: 16 }}>
-                Every integrations page in this category lists logos. The useful
-                column is the last one.
-              </p>
-            </div>
-            <div className="cp-list mk-stagger">
-              {POINTS.map((point) => (
-                <article key={point.how} className="cp-item">
-                  <div className="cp-item-head">
-                    <span className="cp-where">{point.where}</span>
-                    <h3>{point.how}</h3>
-                  </div>
-                  <div className="cp-item-body">
-                    <code className="cp-install">{point.install}</code>
-                    <ul className="cp-sees">
-                      {point.sees.map((line) => (
-                        <li key={line}>{line}</li>
-                      ))}
-                    </ul>
-                    <p className="cp-blind">
-                      <b>Blind to</b> {point.blind}
-                    </p>
-                    <Link href={point.href} className="cp-more">
-                      More →
-                    </Link>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="mk-section mk-reveal">
-          <div className="mk-wrap mk-narrow">
-            <h2 className="mk-h2">Same engine, every one of them</h2>
-            <p className="mk-lede" style={{ marginTop: 16 }}>
-              This is not six products behind one name. Each binding point calls the
+        ),
+      }}
+      steps={[
+        {
+          title: "One engine behind all six",
+          body: (
+            <p>
+              This is not six products under one name. Each binding point calls the
               same <code>Enforcer</code> against the same packs and writes the same
-              decision record, so a rule you wrote for the gateway is already in force
-              at the hook — and a verdict means the same thing wherever it came from.
+              decision record, so a verdict means the same thing wherever it came from.
             </p>
-            <div className="mk-honest" style={{ marginTop: 32 }}>
-              <div>
-                <h3 className="mk-h3">Nothing blocks until you say so</h3>
-                <p className="mk-body">
-                  Every pack ships in observe and records the verdict it would have
-                  returned, against real calls, changing nothing.
-                </p>
-              </div>
-              <Link href="/coverage" className="mk-btn mk-btn-outline">
-                What we catch
-              </Link>
-            </div>
-          </div>
-        </section>
-        <CTA />
-      </main>
-      <Footer />
-    </div>
+          ),
+        },
+        {
+          title: "Write the rule once",
+          body: (
+            <p>
+              A rule you wrote for the gateway is already in force at the hook. Packs
+              are YAML in the repository, so the policy travels with the code rather
+              than living in a console somebody has to remember to update.
+            </p>
+          ),
+          code: "agentfox policy lint",
+        },
+        {
+          title: "Add a binding point without moving traffic",
+          body: (
+            <p>
+              Each one is independent. Starting with the hook on one laptop and adding
+              the gateway six months later changes nothing about the policy — which is
+              the whole reason not to demand the gateway on day one.
+            </p>
+          ),
+        },
+        {
+          title: "Nothing blocks until you say so",
+          body: (
+            <p>
+              Every pack ships in observe and records the verdict it would have
+              returned, against real calls, changing nothing until you promote it.
+            </p>
+          ),
+          code: "agentfox policy observe baseline",
+        },
+      ]}
+      gaps={{
+        title: "Six doors is not every door",
+        body: (
+          <p>
+            Traffic that goes through none of them is ungoverned, and we would rather
+            say that than imply coverage we do not have. The honest use of this page is
+            to find which door your agents already use — not to assume the list is
+            exhaustive.
+          </p>
+        ),
+      }}
+      related={["/hooks", "/mcp", "/runtime"]}
+    />
   );
 }

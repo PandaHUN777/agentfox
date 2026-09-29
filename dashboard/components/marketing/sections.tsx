@@ -1,4 +1,6 @@
 import Link from "next/link";
+
+import { FLAT, PRODUCT, RESOURCES, SECONDARY } from "@/lib/nav";
 import { BrandLockup } from "@/components/marketing/brand";
 
 /**
@@ -520,18 +522,18 @@ export function CTA() {
  */
 type FootLink = { label: string; href: string; out?: boolean };
 
-/* Two product columns rather than one of eleven. The first is the parts of
-   the product — each of these got its own page once it was clear it was
-   being crowded out of /product — and the second is the pages a reader uses
-   to check the claims those pages make. */
-const FOOT_PRODUCT: FootLink[] = [
-  { label: "Product tour", href: "/product" },
-  { label: "Coding agents", href: "/hooks" },
-  { label: "MCP", href: "/mcp" },
-  { label: "Control points", href: "/control-points" },
-  { label: "How it works", href: "/how-it-works" },
-  { label: "Pricing", href: "/pricing" },
-];
+/* Derived from lib/nav.ts, like the header, the sitemap and llms.txt. The
+   footer is where a reader goes when the header did not have what they
+   wanted, so it carries everything the menus carry rather than a curated
+   subset that drifts from them. */
+const FOOT_PRODUCT: FootLink[] = PRODUCT.sections
+  .flatMap((section) => section.items)
+  .map((item) => ({ label: item.label, href: item.href }));
+
+const FOOT_RESOURCES: FootLink[] = [
+  ...RESOURCES.sections.flatMap((section) => section.items),
+  ...FLAT,
+].map((item) => ({ label: item.label, href: item.href }));
 
 const FOOT_PROJECT: FootLink[] = [
   { label: "Support", href: "/support" },
@@ -549,6 +551,7 @@ const FOOT_LEGAL: FootLink[] = [
 
 const FOOT_COLUMNS: [string, FootLink[]][] = [
   ["Product", FOOT_PRODUCT],
+  ["Resources", FOOT_RESOURCES],
   ["Project", FOOT_PROJECT],
   ["Legal", FOOT_LEGAL],
 ];
