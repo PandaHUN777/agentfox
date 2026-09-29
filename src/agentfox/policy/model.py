@@ -86,6 +86,11 @@ class Condition(BaseModel):
     risk_tier: list[str] | None = None
     tool: str | None = None  # glob on tool key
     tool_impact: list[str] | None = None
+    #: False when the call names a tool the registry has never heard of. Either
+    #: the model invented it, or it is real and nobody declared it; both are
+    #: worth a human, and neither is the same question as "may this agent use
+    #: this tool", which is `capability`.
+    tool_known: bool | None = None
     detection: DetectionCondition | None = None
     argument: ArgumentCondition | None = None
     #: Fires when argument provenance is more dangerous than this level.
@@ -235,6 +240,9 @@ class PolicyInput:
     surface: str = "input"
     tool_key: str | None = None
     tool_impact: str = "read"
+    #: True when no tool was named (the question does not arise) or the tool is
+    #: in the registry.
+    tool_known: bool = True
     arguments: dict[str, Any] = field(default_factory=dict)
     intent: str | None = None
     detections: list[dict[str, Any]] = field(default_factory=list)

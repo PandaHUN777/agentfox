@@ -165,6 +165,85 @@ rules:
     reason: "An irreversible action in this run was never confirmed to have succeeded."
     controls: [NOM-RTG-04, NOM-RTG-08]
 
+  # --- A tool nobody declared -------------------------------------------
+  # Distinct from `capability.denied`, which answers "may this agent use this
+  # tool". This answers "is there such a tool" — and a call to one the registry
+  # has never heard of is either a hallucination or registry drift. Both want a
+  # person; neither is caught by a permission check, because there is no
+  # permission to check against.
+  #
+  # Escalate rather than block: an organisation part-way through declaring its
+  # inventory would otherwise have every undeclared call hard-fail, and the
+  # honest answer in that state is "someone look", not "no".
+  - id: tool.not_declared
+    description: >
+      A call to a tool key the registry does not hold. Either the model invented the
+      tool, or it is real and undeclared — and until it is declared, nothing knows
+      what it can do.
+    when:
+      tool_known: false
+    effect: escalate
+    severity: high
+    reason: "This names a tool the registry has never seen, so its impact is unknown."
+    controls: [NOM-RTG-04, NOM-GOV-03]
+
+  # --- High-impact shell, graded ----------------------------------------
+  # `shell.destructive` already covers the catastrophic shapes. These are the
+  # ones a destructive-only list misses: code nobody reviewed, credentials at
+  # rest, a package the world can install, live infrastructure, and history
+  # that is in no backup.
+  #
+  # Graded deliberately. Two block because there is no benign reading of them;
+  # three escalate because they are ordinary operations that a human should
+  # nonetheless be the one to authorise, and because a containment pack that
+  # hard-fails `terraform apply` gets removed rather than tuned.
+  - id: action.remote_code_execution
+    description: A download piped straight into a shell or interpreter — code nobody reviewed.
+    when:
+      action_risk: "remote-code-execution"
+    effect: block
+    severity: critical
+    reason: "This runs code fetched at the moment of execution, which nothing reviewed."
+    controls: [NOM-RTG-04]
+
+  - id: secrets.credential_file
+    description: >
+      A command touching a file that holds credentials — .env, an SSH private key,
+      cloud credentials, a kubeconfig or a service-account JSON.
+    when:
+      action_risk: "credential-file-access"
+    effect: block
+    severity: high
+    reason: "This command reads or writes a file that holds credentials."
+    controls: [NOM-RTG-04, NOM-IAM-02]
+
+  - id: action.supply_chain_publish
+    description: Publishing a package or image that other people will install.
+    when:
+      action_risk: "supply-chain-publish"
+    effect: escalate
+    severity: high
+    reason: "Publishing is public and irreversible; a person should authorise it."
+    controls: [NOM-RTG-04]
+
+  - id: action.infrastructure_mutation
+    description: A change to live infrastructure through terraform, kubectl, helm or a cloud CLI.
+    when:
+      action_risk: "infrastructure-mutation"
+    effect: escalate
+    severity: high
+    reason: "This changes live infrastructure."
+    controls: [NOM-RTG-04]
+
+  - id: action.history_rewrite
+    description: Destroying local history — a hard reset, a force clean, a dropped stash.
+    when:
+      action_risk: "history-rewrite"
+    effect: escalate
+    severity: medium
+    reason: "This destroys work that is in no backup."
+    controls: [NOM-RTG-04]
+
   # --- The rule the other rules depend on ------------------------------
   # An agent that can pause enforcement can switch off everything above this
   # line, so this one is not optional: `policy.PROTECTED_RULES` refuses to load

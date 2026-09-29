@@ -155,6 +155,10 @@ class NativePolicyEngine:
             if p.detector_degraded != cond.detector_degraded:
                 return False
 
+        if cond.tool_known is not None:
+            if p.tool_known != cond.tool_known:
+                return False
+
         if cond.completion_requires:
             # Unmet means "not reported true". A condition the caller did not
             # mention is unmet, not assumed — the whole point of the gate is

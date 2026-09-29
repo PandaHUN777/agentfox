@@ -273,9 +273,16 @@ def _detection_title(effective: str, applied: str, surface: str, entity_types: l
 #: not depend on whether the app is built on LangChain or CrewAI — the same
 #: injection reaches the same model either way — and a framework-to-policy
 #: mapping would be a rule that looks considered and means nothing.
+#: Keyed on the vocabulary the classifier actually emits, which is
+#: `compliance.risk.EU_CLASSES` — prohibited, high, limited, minimal. This said
+#: "unacceptable", a word nothing in the product ever sets, so the branch was
+#: dead and the tier it was meant to cover got `_FALLBACK_DEFAULT` instead: an
+#: agent classified as a *prohibited practice* fell through to the weakest pack
+#: of the three. Found by `policy.hierarchy`'s unreachable-rule lint, which was
+#: written for policy YAML and caught this on the way past.
 _FALLBACK_FOR_TIER: dict[str, tuple[str, ...]] = {
     "high": ("baseline", "eu-ai-act-high-risk"),
-    "unacceptable": ("baseline", "eu-ai-act-high-risk"),
+    "prohibited": ("baseline", "eu-ai-act-high-risk"),
 }
 _FALLBACK_DEFAULT: tuple[str, ...] = ("baseline",)
 
@@ -560,7 +567,16 @@ class Enforcer:
         trace_id = trace.id if trace else None
 
         tool = self.session.scalar(select(Tool).where(Tool.key == tool_key)) if tool_key else None
+        # An undeclared tool used to inherit `impact = "read"`, the *least*
+        # dangerous value in the vocabulary — so a call to a tool nobody had
+        # ever declared was reasoned about as though it only read something.
+        # Every impact-based rule above `read` therefore skipped it, which is
+        # the wrong direction for the one case where the platform knows least.
+        # It stays "read" as the impact (inventing a higher one would be a
+        # guess) and the not-knowing is surfaced as its own fact instead, for
+        # policy to decide on.
         tool_impact = tool.impact if tool else "read"
+        tool_known = tool is not None if tool_key else True
 
         # --- 4. detector pipeline (budgeted, concurrent) -----------------
         context = DetectionContext(
@@ -726,6 +742,7 @@ class Enforcer:
             surface=surface,
             tool_key=tool_key,
             tool_impact=tool_impact,
+            tool_known=tool_known,
             arguments=arguments or {},
             intent=intent,
             detections=detections,

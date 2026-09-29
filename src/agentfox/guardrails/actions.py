@@ -410,6 +410,101 @@ _SHELL_CONTROL_PLANE = [
     ),
 ]
 
+#: Shell shapes that are high-impact without being destructive to *data*.
+#:
+#: `_SHELL_DESTRUCTIVE` below answers "does this wreck something". These answer
+#: the questions a destructive-only list misses: does this run code nobody
+#: reviewed, read a credential, publish something the world can install, change
+#: live infrastructure, or destroy history. Each carries its own code and
+#: severity rather than being folded into `shell.destructive`, because a policy
+#: that cannot tell `terraform apply` from `rm -rf /` cannot be tuned.
+#:
+#: Read verbs are deliberately absent throughout. `kubectl get`, `aws s3 ls`,
+#: `terraform plan` and `git log` are how an agent is supposed to find out what
+#: is going on, and a rule that fires on those gets switched off.
+#: Shapes that only exist BETWEEN sub-commands, so they cannot be matched per
+#: segment: `_shell_segments` splits on `|` precisely because a pipe is a
+#: command boundary, which leaves `curl … | sh` as two innocent halves. These
+#: run against the whole command string instead.
+_SHELL_WHOLE_COMMAND: list[tuple[re.Pattern[str], str, str, str]] = [
+    (
+        re.compile(r"\b(?:curl|wget)\b[^|]*\|\s*(?:sudo\s+)?(?:ba|z|k|da)?sh\b", re.I),
+        "remote-code-execution",
+        "critical",
+        "pipes a downloaded script straight into a shell",
+    ),
+    (
+        re.compile(
+            r"\b(?:curl|wget)\b[^|]*\|\s*(?:sudo\s+)?(?:python[\d.]*|node|ruby|perl)\b", re.I
+        ),
+        "remote-code-execution",
+        "critical",
+        "pipes a download into an interpreter",
+    ),
+]
+
+_SHELL_HIGH_IMPACT: list[tuple[re.Pattern[str], str, str, str]] = [
+    # --- credentials at rest ---------------------------------------------
+    # Matched on the *file*, not the command, so `cat`, `less`, `head`, `xxd`
+    # and a bare redirect all land. Writes are the worse half and are caught by
+    # the same pattern, which is why the code does not say "read".
+    (
+        re.compile(
+            r"(?:^|[\s/=])(?:\.env(?:\.[\w.-]+)?|id_[re]sa|id_ed25519|\.netrc|\.npmrc|\.pypirc"
+            r"|credentials|kubeconfig|\.kube/config|service[-_]account\.json)\b",
+            re.I,
+        ),
+        "credential-file-access",
+        "high",
+        "touches a file that holds credentials",
+    ),
+    # --- things the world can then install --------------------------------
+    (
+        re.compile(
+            r"\b(?:npm|pnpm|yarn)\s+publish\b|\btwine\s+upload\b|\bcargo\s+publish\b"
+            r"|\bgem\s+push\b|\bdocker\s+push\b|\bpoetry\s+publish\b",
+            re.I,
+        ),
+        "supply-chain-publish",
+        "high",
+        "publishes a package or image others will install",
+    ),
+    # --- live infrastructure ---------------------------------------------
+    # `terraform destroy` and `kubectl delete ns` are already catastrophic in
+    # the destructive list; these are the merely-irreversible verbs beside them.
+    (
+        re.compile(
+            r"\bterraform\s+apply\b|\bkubectl\s+(?:apply|delete|scale|patch|replace|drain|cordon)\b"
+            r"|\bhelm\s+(?:install|upgrade|uninstall|rollback)\b",
+            re.I,
+        ),
+        "infrastructure-mutation",
+        "high",
+        "changes live infrastructure",
+    ),
+    (
+        re.compile(
+            r"\b(?:aws|az|gcloud)\s+[\w -]*\b(?:delete|terminate|remove|rm|destroy|put|create"
+            r"|update|modify|deploy|set-iam-policy|attach-user-policy)\b",
+            re.I,
+        ),
+        "infrastructure-mutation",
+        "high",
+        "changes cloud resources through a provider CLI",
+    ),
+    # --- history, which is not recoverable from a backup ------------------
+    (
+        re.compile(
+            r"\bgit\s+reset\s+--hard\b|\bgit\s+clean\s+-[a-z]*[fd]|\bgit\s+stash\s+(?:drop|clear)\b"
+            r"|\bgit\s+branch\s+-D\b|\bgit\s+rebase\b.*--force|\bgit\s+filter-branch\b",
+            re.I,
+        ),
+        "history-rewrite",
+        "medium",
+        "destroys local history that is not in any backup",
+    ),
+]
+
 #: Shell fragments that are destructive regardless of context. Deliberately narrow:
 #: shell has no equivalent of sqlglot, so this is a high-confidence deny-list rather
 #: than a claim to analyse shell semantics, and it is documented as such.
@@ -507,6 +602,18 @@ def analyse_shell(command: str) -> ActionAnalysis:
     """
     analysis = ActionAnalysis(dialect="shell", parsed=True, operation=UNKNOWN)
     analysis.normalised = [command.strip()]
+    for pattern, code, severity, label in _SHELL_WHOLE_COMMAND:
+        if pattern.search(command):
+            analysis.reversible = False
+            analysis.blast_radius = "unbounded"
+            analysis.risks.append(
+                ActionRisk(
+                    code=code,
+                    severity=severity,
+                    detail=f"command {label}",
+                    evidence={"pattern": pattern.pattern, "segment": command.strip()},
+                )
+            )
     for segment in _shell_segments(command):
         for pattern, label in _SHELL_CONTROL_PLANE:
             if pattern.search(segment):
@@ -523,6 +630,22 @@ def analyse_shell(command: str) -> ActionAnalysis:
                         code="control-plane-tamper",
                         severity="critical",
                         detail=f"command disables AgentFox's own enforcement by {label}",
+                        evidence={"pattern": pattern.pattern, "segment": segment},
+                    )
+                )
+        for pattern, code, severity, label in _SHELL_HIGH_IMPACT:
+            if pattern.search(segment):
+                # Not DESTRUCTIVE: these change the world without wrecking data,
+                # and calling them destructive would make `action_operation`
+                # useless for telling the two apart.
+                analysis.reversible = False
+                if analysis.blast_radius in (None, "", "none", "unknown"):
+                    analysis.blast_radius = "unbounded"
+                analysis.risks.append(
+                    ActionRisk(
+                        code=code,
+                        severity=severity,
+                        detail=f"command {label}",
                         evidence={"pattern": pattern.pattern, "segment": segment},
                     )
                 )
