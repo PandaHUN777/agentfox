@@ -5,6 +5,7 @@ import { BoundarySequence } from "@/components/marketing/sequence";
 import { EstateScan, TraceAnatomy } from "@/components/marketing/product";
 import { Boundary } from "@/components/marketing/boundary";
 import { REPO } from "@/components/marketing/nav";
+import { ThreatMarquee } from "@/components/marketing/motion";
 
 /*
  * The homepage sections.
@@ -189,10 +190,16 @@ export function Hero() {
               stakes and concreteness: the tools in question move money, delete
               records and send mail, which is why any of this matters, and the
               payoff is that being tricked does not get the model an exception. */}
-          <p className="mk-lede mk-up mk-d3" style={{ marginTop: 22, maxWidth: "46ch" }}>
-            Your agents read customer data, answer on your behalf, and move money.
-            AgentFox checks each of those against what you allowed, and stops the ones
-            that fall outside.
+          {/* Was 28 words across four lines. Measured against the competitor
+              page that reads fastest: their whole hero is 33 words and ours
+              was 90, which is the single biggest density gap on the site. The
+              cut keeps both halves of the argument — what the agent can do,
+              and what happens to a call outside it — and drops the list.
+              "Granted" rather than "allowed" because grants are the noun the
+              rest of the page and the product both use. */}
+          <p className="mk-lede mk-up mk-d3" style={{ marginTop: 22, maxWidth: "42ch" }}>
+            Your agents move money, delete records and answer for you. Every call is
+            checked against what you actually granted.
           </p>
           {/* The install block used to read `pip install …` / `import agentfox;
               agentfox.auto()` directly beside the stream showing payments.transfer
@@ -288,80 +295,58 @@ export function Stack() {
  * flattened all six into "protects your agent" would reintroduce exactly the
  * overclaim that rewrite removed, so each row says what it sees.
  */
-const CONTROL_POINTS: { where: string; how: string; governs: string }[] = [
-  {
-    where: "Your coding agent",
-    how: "Claude Code hooks",
-    governs: "the turn, each tool call, and every tool result",
-  },
-  {
-    where: "Any language",
-    how: "HTTP gateway",
-    governs: "whatever you send it, over one endpoint",
-  },
-  {
-    where: "Python",
-    how: "agentfox.auto()",
-    governs: "prompts and completions through your model client",
-  },
-  {
-    where: "Tool servers",
-    how: "MCP governor",
-    governs: "the call, the schema it was approved under, and what comes back",
-  },
-  {
-    where: "Graphs",
-    how: "LangGraph tool node",
-    governs: "each tool call inside the run",
-  },
-  {
-    where: "CI and the terminal",
-    how: "the CLI",
-    governs: "a repository, a session, a policy before it ships",
-  },
+const CONTROL_POINTS: { where: string; how: string }[] = [
+  { where: "Your coding agent", how: "Claude Code hooks" },
+  { where: "Any language", how: "HTTP gateway" },
+  { where: "Python", how: "agentfox.auto()" },
+  { where: "Tool servers", how: "MCP governor" },
+  { where: "Graphs", how: "LangGraph tool node" },
+  { where: "CI and the terminal", how: "the CLI" },
 ];
 
 export function ControlPoints() {
   return (
-    <section id="control-points" className="mk-section">
+    <section id="control-points" className="mk-section mk-reveal">
       <div className="mk-wrap">
         <div className="mk-narrow">
           <span className="mk-eyebrow mk-up">One policy set, six places it binds</span>
           <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12 }}>
             You should not have to re-architect to get a guardrail
           </h2>
-          <p className="mk-lede mk-up mk-d2" style={{ marginTop: 16, maxWidth: "56ch" }}>
-            No single gateway sees every agent, and routing everything through one is
-            a migration, not a control. Write the policy once and bind it where your
-            agents already run.
+          <p className="mk-lede" style={{ marginTop: 16, maxWidth: "52ch" }}>
+            No single gateway sees every agent. Write the policy once and bind it
+            where your agents already run.
           </p>
         </div>
 
-        <div className="mk-points mk-up mk-d3">
+        <div className="mk-points mk-stagger">
           {CONTROL_POINTS.map((point) => (
             <div key={point.how} className="mk-point">
               <span className="mk-point-where">{point.where}</span>
               <b>{point.how}</b>
-              <span className="mk-point-governs">{point.governs}</span>
             </div>
           ))}
         </div>
+
+        <p className="mk-fine" style={{ marginTop: 20 }}>
+          Each one sees a different surface, and each one is blind to something.{" "}
+          <Link href="/control-points">What each can and cannot see</Link>.
+        </p>
 
         {/* The objection-killer, and until now it appeared nowhere on this site.
             Observe mode and the counterfactual verdict are both shipped; a
             reader afraid a guardrail will break their agent has no way to
             discover that from the product pages. */}
-        <div className="mk-honest mk-up mk-d4" style={{ marginTop: 36 }}>
+        <div className="mk-honest" style={{ marginTop: 40 }}>
           <div>
             <h3 className="mk-h3">Nothing blocks until you say so</h3>
             <p className="mk-body">
-              Every pack ships in observe. It records the verdict it <em>would</em>{" "}
-              have returned against every real call, so you can read a week of
-              decisions before a single one changes what your agent does.
+              Every pack ships in observe, recording the verdict it <em>would</em>{" "}
+              have returned against real calls and changing nothing.
             </p>
           </div>
-          <Link href="/how-it-works" className="mk-btn mk-btn-outline">
-            How that works
+          <Link href="/hooks" className="mk-btn mk-btn-outline">
+            Start with your coding agent
           </Link>
         </div>
       </div>
@@ -413,7 +398,7 @@ const ORIGINS: { name: string; line: string; example: string }[] = [
 
 export function Origins() {
   return (
-    <section id="origins" className="mk-section">
+    <section id="origins" className="mk-section mk-reveal">
       <div className="mk-wrap">
         <div className="mk-narrow">
           <h2 className="mk-h2 mk-up">Three ways an agent does the wrong thing</h2>
@@ -423,7 +408,7 @@ export function Origins() {
           </p>
         </div>
 
-        <div className="mk-origins mk-up mk-d2">
+        <div className="mk-origins mk-stagger">
           {ORIGINS.map((origin, index) => (
             <div key={origin.name} className="mk-origin">
               {/* Numbered because the three are ordered by how little there is
@@ -436,12 +421,21 @@ export function Origins() {
           ))}
         </div>
 
-        <p className="mk-fine mk-up mk-d3" style={{ marginTop: 22 }}>
+        <p className="mk-fine" style={{ marginTop: 22 }}>
           A fourth kind has no actor at all — the model is simply wrong, or a provider
           is down. It is two thirds of what we track and most of it is not a security
           problem.{" "}
           <Link href="/coverage">All 116 scenarios, scored</Link>.
         </p>
+      </div>
+
+      {/* The concrete instances of the three abstractions above, and the one
+          piece of motion on this page that is content rather than polish: a
+          paragraph naming ten attacks is a paragraph people skip, and the same
+          ten drifting past are absorbed without being read. Full bleed, so it
+          reads as a band across the page rather than another column. */}
+      <div style={{ marginTop: 44 }}>
+        <ThreatMarquee />
       </div>
     </section>
   );
@@ -465,7 +459,7 @@ export function Origins() {
  */
 export function Boundaries() {
   return (
-    <section id="boundaries" className="mk-section mk-band">
+    <section id="boundaries" className="mk-section mk-band mk-reveal">
       <div className="mk-wrap">
         <div className="mk-narrow">
           <h2 className="mk-h2 mk-up">Stop the call before it spends, sends or deletes</h2>
@@ -495,16 +489,16 @@ export function Boundaries() {
  */
 export function Around() {
   return (
-    <section className="mk-section mk-band">
+    <section className="mk-section mk-band mk-reveal">
       <div className="mk-wrap">
         <div className="mk-narrow">
-          <h2 className="mk-h2 mk-up">Prove what happened, and find what you missed</h2>
-          <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16, maxWidth: "56ch" }}>
+          <h2 className="mk-h2">Prove what happened, and find what you missed</h2>
+          <p className="mk-lede" style={{ marginTop: 16, maxWidth: "50ch" }}>
             Every governed call leaves a record an auditor can check without us.
           </p>
         </div>
 
-        <div className="mk-split mk-up mk-d2" style={{ marginTop: 36, gap: 28 }}>
+        <div className="mk-split mk-stagger" style={{ marginTop: 44, gap: 32 }}>
           <div>
             <TraceAnatomy />
             <p className="mk-fine" style={{ marginTop: 10 }}>
@@ -591,7 +585,7 @@ const FRAMEWORKS = [
 
 export function Proof() {
   return (
-    <section id="proof" className="mk-section">
+    <section id="proof" className="mk-section mk-reveal">
       <div className="mk-wrap">
         <span className="mk-eyebrow mk-up">Measured with every detector switched off</span>
         <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12, maxWidth: "24ch" }}>
@@ -602,7 +596,7 @@ export function Proof() {
           tool-call guard with every detector disabled.
         </p>
 
-        <div className="mk-threats mk-up mk-d3">
+        <div className="mk-threats mk-stagger">
           {THREATS.map((t) => (
             <div key={t.threat} className="mk-threat">
               <div>
@@ -623,10 +617,13 @@ export function Proof() {
               of 42" invites "out of what?", and a proof section that makes the
               reader follow a link to find out is doing the opposite of its job. */}
           <div className="mk-threat-foot">
+            {/* Was three sentences of caveat. The denominator has to stay — "42
+                of 42" invites "out of what?" — but the reasoning behind the
+                three that got through is a /benchmark paragraph, not a
+                homepage one. */}
             <p>
               552 of 552 legitimate calls still ran. Three attacker reads got through,
-              each one something the agent already held a grant for. The compromised
-              agent is the benchmark&rsquo;s premise, not a result of this run.
+              each one something the agent already held a grant for.
             </p>
             <div className="mk-row" style={{ gap: 6 }}>
               {FRAMEWORKS.map((f) => (
@@ -667,7 +664,7 @@ export function Limits() {
      * reader has come to check rather than to be convinced. A link costs nothing
      * in credibility; a wall of caveats at the point of decision costs a sign-up.
      */
-    <section id="limits" className="mk-section-tight">
+    <section id="limits" className="mk-section-tight mk-reveal">
       <div className="mk-wrap">
         <div className="mk-honest mk-up">
           <div>

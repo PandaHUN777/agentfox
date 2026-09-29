@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { BrandLockup } from "@/components/marketing/brand";
 import { SESSION_COOKIE } from "@/lib/api";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ScrollReveal } from "@/components/marketing/motion";
 
 /**
  * The public navigation bar.
@@ -19,15 +20,27 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 /* Four of the nine pages were reachable only from the footer, and "Open source"
    was a mislabelled anchor into a pricing block on the home page. These are the
    pages, named the way they are titled. */
+/* Four, still. The product grew three pages and the header did not, because a
+   header that lists every page is a header nobody reads — the sub-pages are
+   one click down from /product and are in the footer and llms.txt.
+
+   "Coding agents" replaces "How it works" in the row. It is the page a reader
+   can act on in two commands, it is the wedge the product is actually sold
+   on, and /how-it-works is a reference page people reach when they already
+   want detail rather than one they browse to. */
 const LINKS: [string, string][] = [
   ["Product", "/product"],
-  ["How it works", "/how-it-works"],
-  ["Benchmarks", "/benchmark"],
+  ["Coding agents", "/hooks"],
+  ["Coverage", "/coverage"],
   ["Pricing", "/pricing"],
 ];
 
 /** Reachable from the mobile menu and the footer, not the header row. */
 const MENU_EXTRA: [string, string][] = [
+  ["MCP", "/mcp"],
+  ["Control points", "/control-points"],
+  ["How it works", "/how-it-works"],
+  ["Benchmarks", "/benchmark"],
   ["Playground", "/playground"],
   ["Compare", "/compare"],
   ["Support", "/support"],
@@ -46,6 +59,13 @@ export const REPO = "https://github.com/architsharm/agentfox";
 export async function MarketingNav() {
   const signedIn = Boolean((await cookies()).get(SESSION_COOKIE)?.value);
   return (
+    <>
+      {/* Mounted from the nav because it is the one component on every
+          marketing page and there is no marketing-only layout to hang it
+          from. It renders nothing; it turns on the scroll-reveal that the
+          stylesheet keeps switched off until a script says otherwise, so a
+          page with no JavaScript is fully visible rather than fully blank. */}
+      <ScrollReveal />
     <header className="mk-nav">
       <div className="mk-wrap mk-nav-inner">
         <Link href="/" className="mk-brand" aria-label="AgentFox home">
@@ -102,5 +122,6 @@ export async function MarketingNav() {
         </div>
       </details>
     </header>
+    </>
   );
 }
