@@ -82,7 +82,18 @@ def _luhn(digits: str) -> bool:
 class NativePiiDetector(BaseDetector):
     key = "pii.native"
     version = "1.1"
-    surfaces = ("input", "output", "tool_args", "tool_result", "retrieved", "memory_write", "agent_message")
+    surfaces = (
+        "input",
+        "output",
+        "tool_args",
+        "tool_result",
+        "retrieved",
+        "memory_write",
+        "agent_message",
+        # A completion claim is content too, and for a deployment that only
+        # gates the end of a run this is the last place anything reads it.
+        "completion",
+    )
 
     def __init__(self, packs: tuple[str, ...] = DEFAULT_PACKS) -> None:
         self.packs = packs

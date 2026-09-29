@@ -33,6 +33,8 @@ import fnmatch
 from dataclasses import dataclass, field
 from typing import Any
 
+from ..compliance.risk import EU_CLASSES
+from ..guardrails.base import SURFACES
 from .model import EFFECT_RANK, PolicyDocument, Rule
 
 #: Broadest to narrowest. Order is load-bearing: later levels win ties.
@@ -235,6 +237,59 @@ class LintFinding:
         }
 
 
+#: Values a condition field may take. A rule naming anything else can never
+#: match, so it is a rule that reports as enforced and enforces nothing.
+#:
+#: Only fields whose full set of legal values is knowable from here are listed.
+#: `action_risk` deliberately is not: risk codes are emitted from several
+#: modules and a rule may glob over them, so a whitelist would be a second
+#: place to keep in step and would flag working rules as dead — which is worse
+#: than the problem it set out to solve.
+_ENUMERABLE_CONDITIONS: dict[str, tuple[str, ...]] = {
+    "surface": SURFACES,
+    "action_operation": ("read", "write", "destructive", "admin", "unknown"),
+    # From `compliance.risk.EU_CLASSES`, imported rather than retyped — a
+    # second copy of this list is what the check exists to catch.
+    "risk_tier": EU_CLASSES,
+    # `high_impact` sits between write and irreversible; `seed.py` and the
+    # onboarding summary both use it.
+    "tool_impact": ("read", "write", "high_impact", "irreversible"),
+}
+
+
+def _unreachable(rule: Rule) -> str | None:
+    """Why this rule can never fire, or None if it can.
+
+    A competitor throws at load when a policy names an implementation that does
+    not exist, and their reasoning is the one this project is built on: the
+    guard then allows, exits zero, and still reports itself as having run — a
+    machine reporting that a check happened when it never did. We had no
+    equivalent: `lint_policy` caught duplicate ids and shadowing, and nothing
+    asked whether a rule's own conditions could ever be true.
+    """
+    for field_name, allowed in _ENUMERABLE_CONDITIONS.items():
+        value = getattr(rule.when, field_name, None)
+        if not value:
+            continue
+        values = value if isinstance(value, list) else [value]
+        unknown = [v for v in values if v not in allowed]
+        if len(unknown) == len(values):
+            return (
+                f"every value in `{field_name}` is unknown ({', '.join(sorted(unknown))}); "
+                f"this rule can never match. Known: {', '.join(allowed)}"
+            )
+
+    # The mistake the completion surface invites: naming the conditions without
+    # scoping the rule to the surface that supplies them.
+    if rule.when.completion_requires and rule.when.surface != ["completion"]:
+        return (
+            "`completion_requires` only has values on the `completion` surface, and this "
+            "rule is not scoped to it — add `surface: [completion]`"
+        )
+
+    return None
+
+
 def lint_policy(layers: list[PolicyLayer]) -> list[LintFinding]:
     """Catch the misconfigurations that hierarchy makes possible.
 
@@ -267,6 +322,18 @@ def lint_policy(layers: list[PolicyLayer]) -> list[LintFinding]:
                     )
                 )
             ids_in_layer.add(rule.id)
+
+            dead = _unreachable(rule)
+            if dead:
+                findings.append(
+                    LintFinding(
+                        "unreachable",
+                        "high",
+                        rule.id,
+                        f"'{rule.id}' can never fire: {dead}",
+                        layer.level,
+                    )
+                )
 
             if not rule.enabled:
                 findings.append(

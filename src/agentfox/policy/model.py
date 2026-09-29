@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 Effect = Literal["allow", "redact", "mask", "tokenize", "abstain", "block", "escalate"]
 
@@ -86,6 +86,11 @@ class Condition(BaseModel):
     risk_tier: list[str] | None = None
     tool: str | None = None  # glob on tool key
     tool_impact: list[str] | None = None
+    #: False when the call names a tool the registry has never heard of. Either
+    #: the model invented it, or it is real and nobody declared it; both are
+    #: worth a human, and neither is the same question as "may this agent use
+    #: this tool", which is `capability`.
+    tool_known: bool | None = None
     detection: DetectionCondition | None = None
     argument: ArgumentCondition | None = None
     #: Fires when argument provenance is more dangerous than this level.
@@ -102,6 +107,12 @@ class Condition(BaseModel):
     loop_detected: bool | None = None
     intent_declared: bool | None = None
     detector_degraded: bool | None = None
+    #: Conditions that must hold before the agent may declare itself finished.
+    #: Fires on the `completion` surface when any named condition is missing
+    #: from, or false in, what the caller reported. This is the one rule shape
+    #: that is not about whether an action is safe — it is about whether the
+    #: agent is allowed to stop, which is the question nobody was asking.
+    completion_requires: list[str] | None = None
     #: Escape hatch for conditions the schema does not model yet.
     expr: str | None = None
 
@@ -123,6 +134,38 @@ class Rule(BaseModel):
     overridable: bool = False
 
 
+#: Rules a pack may not ship without, by pack key.
+#:
+#: `control_plane.tamper` blocks the commands that would switch AgentFox's own
+#: enforcement off — putting a policy back into observe mode, changing an
+#: agent's grants, rolling the schema back, writing to the config or the state
+#: directory. Every other rule in `tool-containment.yaml` is downstream of it:
+#: an agent that can pause enforcement can switch off all of them, so a pack
+#: that has quietly dropped this one still reports as enforcing while enforcing
+#: nothing that matters.
+#:
+#: Checked in the model rather than at load, and raised rather than warned, for
+#: the reason `availability.py` gives for NEVER_OPEN: a setting that can be
+#: changed under pressure at three in the morning is not a guarantee. A
+#: deployment that genuinely does not want this rule removes the whole pack,
+#: which is visible in `agentfox policy list`; silently disabling one rule
+#: inside it is not.
+PROTECTED_RULES: dict[str, tuple[str, ...]] = {
+    "tool-containment": ("control_plane.tamper",),
+}
+
+
+class ProtectedRuleMissing(ValueError):
+    """A pack was loaded without a rule that pack is not allowed to be without.
+
+    Raised inside a pydantic validator, so callers see it wrapped in a
+    `ValidationError` rather than as this type — the message survives, the class
+    does not. It is a named class anyway because the message is the contract and
+    a bare `ValueError` in the validator would read, to the next person, as an
+    ordinary field problem rather than a deliberate refusal.
+    """
+
+
 class PolicyDocument(BaseModel):
     key: str
     name: str = ""
@@ -134,6 +177,29 @@ class PolicyDocument(BaseModel):
     fail_mode: Literal["open", "closed"] = "open"
     scope: dict[str, Any] = Field(default_factory=dict)
     rules: list[Rule] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _protected_rules_present(self) -> PolicyDocument:
+        required = PROTECTED_RULES.get(self.key)
+        if not required:
+            return self
+        by_id = {rule.id: rule for rule in self.rules}
+        for rule_id in required:
+            rule = by_id.get(rule_id)
+            if rule is None:
+                raise ProtectedRuleMissing(
+                    f"policy pack '{self.key}' is missing '{rule_id}', which it may not "
+                    "ship without: that rule is what stops a governed agent switching "
+                    "off every other rule in the pack. Remove the whole pack if you do "
+                    "not want it — that is visible; dropping this one rule is not."
+                )
+            if not rule.enabled:
+                raise ProtectedRuleMissing(
+                    f"'{rule_id}' in policy pack '{self.key}' cannot be disabled: it is "
+                    "what stops a governed agent switching off every other rule in the "
+                    "pack, including the ones still marked enabled."
+                )
+        return self
 
     @classmethod
     def from_yaml(cls, body: str) -> PolicyDocument:
@@ -174,6 +240,9 @@ class PolicyInput:
     surface: str = "input"
     tool_key: str | None = None
     tool_impact: str = "read"
+    #: True when no tool was named (the question does not arise) or the tool is
+    #: in the registry.
+    tool_known: bool = True
     arguments: dict[str, Any] = field(default_factory=dict)
     intent: str | None = None
     detections: list[dict[str, Any]] = field(default_factory=list)
@@ -185,6 +254,11 @@ class PolicyInput:
     action: dict[str, Any] = field(default_factory=dict)
     prior_tools: list[str] = field(default_factory=list)
     detector_degraded: bool = False
+    #: Observable facts at the moment the agent claims to be done, e.g.
+    #: {"committed": True, "ci_green": False}. Supplied by the caller, who is
+    #: the only one who can see them; which of them are *required* is the
+    #: policy's business, not the caller's.
+    completion: dict[str, Any] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, Any]:
         return {

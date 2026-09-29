@@ -21,7 +21,19 @@ from typing import Any, Protocol, runtime_checkable
 # long-term store and a sub-agent's claim are not the same trust boundary as a
 # tool call or its return value, even though both used to be folded into one of
 # those two surfaces before these controls existed.
-SURFACES = ("input", "output", "tool_args", "tool_result", "retrieved", "memory_write", "agent_message")
+SURFACES = (
+    "input",
+    "output",
+    "tool_args",
+    "tool_result",
+    "retrieved",
+    "memory_write",
+    "agent_message",
+    # The agent declaring itself finished. Not content arriving or leaving —
+    # a claim, checked against what actually happened. See
+    # `Enforcer.guard_completion`.
+    "completion",
+)
 
 # Trust sources, ordered least → most dangerous. Used for taint comparison.
 TAINT_ORDER = ("none", "user", "retrieved", "tool_result", "subagent", "memory")

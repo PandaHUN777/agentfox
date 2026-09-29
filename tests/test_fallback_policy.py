@@ -102,7 +102,7 @@ def test_a_declared_high_risk_agent_also_gets_the_eu_pack() -> None:
 
 
 def test_every_fallback_pack_is_observe_whatever_the_tier() -> None:
-    for tier in (None, "limited", "high", "unacceptable"):
+    for tier in (None, "limited", "high", "prohibited"):
         assert all(doc.mode == "observe" for doc in _fallback_policies(tier))
 
 

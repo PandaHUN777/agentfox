@@ -68,7 +68,15 @@ _LEXICON: dict[str, list[re.Pattern[str]]] = {
 class SafetyLexiconDetector(BaseDetector):
     key = "safety.lexicon"
     version = "1.0"
-    surfaces = ("input", "output", "retrieved", "tool_result")
+    surfaces = (
+        "input",
+        "output",
+        "retrieved",
+        "tool_result",
+        # A completion claim is content too, and for a deployment that only
+        # gates the end of a run this is the last place anything reads it.
+        "completion",
+    )
 
     def _detect(self, content: str, context: DetectionContext) -> list[Detection]:
         if not content:

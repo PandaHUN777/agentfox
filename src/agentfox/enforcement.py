@@ -273,9 +273,16 @@ def _detection_title(effective: str, applied: str, surface: str, entity_types: l
 #: not depend on whether the app is built on LangChain or CrewAI — the same
 #: injection reaches the same model either way — and a framework-to-policy
 #: mapping would be a rule that looks considered and means nothing.
+#: Keyed on the vocabulary the classifier actually emits, which is
+#: `compliance.risk.EU_CLASSES` — prohibited, high, limited, minimal. This said
+#: "unacceptable", a word nothing in the product ever sets, so the branch was
+#: dead and the tier it was meant to cover got `_FALLBACK_DEFAULT` instead: an
+#: agent classified as a *prohibited practice* fell through to the weakest pack
+#: of the three. Found by `policy.hierarchy`'s unreachable-rule lint, which was
+#: written for policy YAML and caught this on the way past.
 _FALLBACK_FOR_TIER: dict[str, tuple[str, ...]] = {
     "high": ("baseline", "eu-ai-act-high-risk"),
-    "unacceptable": ("baseline", "eu-ai-act-high-risk"),
+    "prohibited": ("baseline", "eu-ai-act-high-risk"),
 }
 _FALLBACK_DEFAULT: tuple[str, ...] = ("baseline",)
 
@@ -544,6 +551,7 @@ class Enforcer:
         prior_steps: list[dict[str, Any]] | None = None,
         tracker: TaintTracker | None = None,
         conversation_window: list[str] | None = None,
+        completion: dict[str, Any] | None = None,
         persist: bool = True,
     ) -> EnforcementResult:
         """One decision on one surface. The single point every guarantee flows through.
@@ -559,7 +567,16 @@ class Enforcer:
         trace_id = trace.id if trace else None
 
         tool = self.session.scalar(select(Tool).where(Tool.key == tool_key)) if tool_key else None
+        # An undeclared tool used to inherit `impact = "read"`, the *least*
+        # dangerous value in the vocabulary — so a call to a tool nobody had
+        # ever declared was reasoned about as though it only read something.
+        # Every impact-based rule above `read` therefore skipped it, which is
+        # the wrong direction for the one case where the platform knows least.
+        # It stays "read" as the impact (inventing a higher one would be a
+        # guess) and the not-knowing is surfaced as its own fact instead, for
+        # policy to decide on.
         tool_impact = tool.impact if tool else "read"
+        tool_known = tool is not None if tool_key else True
 
         # --- 4. detector pipeline (budgeted, concurrent) -----------------
         context = DetectionContext(
@@ -725,6 +742,7 @@ class Enforcer:
             surface=surface,
             tool_key=tool_key,
             tool_impact=tool_impact,
+            tool_known=tool_known,
             arguments=arguments or {},
             intent=intent,
             detections=detections,
@@ -734,6 +752,7 @@ class Enforcer:
             prior_tools=prior_tools or [],
             detector_degraded=bool(pipeline_result.degraded),
             action=action,
+            completion=completion or {},
         )
 
         bound = active_policies(self.session, agent_slug, environment)
@@ -1462,6 +1481,52 @@ class Enforcer:
     # ------------------------------------------------------------------
     # Inter-agent message security (P17, NOM-IAM-08) — closes OWASP ASI07
     # ------------------------------------------------------------------
+
+    def guard_completion(
+        self,
+        *,
+        agent_slug: str,
+        claim: str = "",
+        completion: dict[str, Any] | None = None,
+        trace: Trace | None = None,
+        credential: str | None = None,
+        persist: bool = True,
+    ) -> EnforcementResult:
+        """Decide whether the agent is allowed to stop (F9.5).
+
+        Every other guard on this class asks whether an action is safe. This one
+        asks a question nobody was asking: the agent says it is finished — is it?
+
+        The gap this closes is `c4` in the market survey, "did the agent finish
+        the task it was given", which the evaluation vendors score after the
+        fact on sampled runs and nobody gates at runtime. We had the same shape:
+        `silent_failure` is an offline scorer, so an agent that reported "your
+        refund is processed" after the payment API returned an error was caught
+        in a report next week, not stopped at the time.
+
+        The division of labour is the important part. The **caller** reports
+        what it can observe at the moment of the claim — `{"committed": True,
+        "ci_green": False}` — because only the caller can see it. **Policy**
+        decides which of those must hold, through `completion_requires`, because
+        that is a governance decision and it differs per agent and per
+        environment. A condition the caller never mentions counts as unmet
+        rather than assumed: an agent claiming to be done has to have been
+        checked, and a caller that forgot to report `ci_green` did not check it.
+
+        The claim text goes through the detector pipeline like any other output,
+        so a false claim of success is also subject to the content rules that
+        already exist — this adds the gate, it does not replace them.
+        """
+        agent, identity, _ = self.resolve(agent_slug, credential)
+        return self.evaluate(
+            agent=agent,
+            identity=identity,
+            content=claim,
+            surface="completion",
+            trace=trace,
+            completion=completion or {},
+            persist=persist,
+        )
 
     def guard_agent_message(
         self,
