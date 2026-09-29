@@ -38,6 +38,18 @@ log = logging.getLogger(__name__)
 #: `client.py`, which owns the other half of this number.
 DEFAULT_TIMEOUT_S = 5.0
 
+#: Where content on a surface came from, when the caller does not say. A tool
+#: result is third-party content arriving as context — the canonical indirect
+#: injection vector — and calling it `user` would let it inherit the trust of
+#: something the operator typed.
+_TAINT_FOR_SURFACE = {
+    "tool_result": "tool_result",
+    "retrieved": "retrieved",
+    "agent_message": "subagent",
+    "memory_write": "memory",
+    "reasoning": "tool_result",
+}
+
 
 def ensure_run_dir(path: Path) -> Path:
     """Create the socket's directory at 0700, and refuse to adopt one we did not make.
@@ -170,7 +182,24 @@ class HookDaemon:
             return {"type": "pong", "protocolVersion": PROTOCOL_VERSION}
         if kind == "hook":
             return self._hook(request)
+        if kind == "content":
+            return self._content(request)
         return {"type": "error", "error": f"unknown request type {kind!r}"}
+
+    @staticmethod
+    def _verdict_payload(result: Any) -> dict[str, Any]:
+        """One shape for every kind of request, so a client parses one thing."""
+        return {
+            "type": "verdict",
+            "protocolVersion": PROTOCOL_VERSION,
+            "verdict": result.verdict,
+            "effectiveVerdict": result.effective_verdict,
+            "mode": result.mode,
+            "reason": result.reason,
+            "rules": [r.get("rule_id") for r in result.rules_fired],
+            "decisionId": result.decision_id,
+            "degraded": list(result.degraded),
+        }
 
     def _hook(self, request: dict[str, Any]) -> dict[str, Any]:
         from ..db import session_scope
@@ -190,17 +219,54 @@ class HookDaemon:
                 tool_key=str(tool or ""),
                 arguments=arguments if isinstance(arguments, dict) else {"value": arguments},
             )
-            payload = {
-                "type": "verdict",
-                "protocolVersion": PROTOCOL_VERSION,
-                "verdict": result.verdict,
-                "effectiveVerdict": result.effective_verdict,
-                "mode": result.mode,
-                "reason": result.reason,
-                "rules": [r.get("rule_id") for r in result.rules_fired],
-                "decisionId": result.decision_id,
-                "degraded": list(result.degraded),
+            payload = self._verdict_payload(result)
+        payload["daemonMs"] = round((time.perf_counter() - started) * 1000, 2)
+        return payload
+
+    def _content(self, request: dict[str, Any]) -> dict[str, Any]:
+        """A surface carrying text rather than a call: a tool result, a turn.
+
+        The same `Enforcer`, the same policy set, the same decision record —
+        the only thing that changes is which surface the rules see. That is
+        the point: a hook on `PostToolUse` is not a second product with its
+        own rules, it is the existing engine bound at another moment.
+        """
+        from ..db import session_scope
+        from ..enforcement import Enforcer
+        from ..guardrails.base import SURFACES
+
+        started = time.perf_counter()
+        agent = str(request.get("agent") or "")
+        surface = str(request.get("surface") or "input")
+        content = request.get("content")
+
+        if not agent:
+            return {"type": "error", "error": "no agent named in the request"}
+        if surface not in SURFACES:
+            # Refused rather than coerced to a default. A surface the engine
+            # does not know would be evaluated under whichever rules happened
+            # to have no surface filter, which is enforcement by accident.
+            return {
+                "type": "error",
+                "error": f"unknown surface {surface!r}; known: {', '.join(SURFACES)}",
             }
+
+        with session_scope() as session:
+            # `resolve` then `evaluate`, the same two steps every named guard
+            # takes. Not `check_content`, which returns already-serialised JSON
+            # and would make this the one request kind whose reply is built
+            # differently from the others.
+            enforcer = Enforcer(session)
+            resolved, identity, _ = enforcer.resolve(agent)
+            result = enforcer.evaluate(
+                agent=resolved,
+                identity=identity,
+                content=content if isinstance(content, str) else str(content or ""),
+                surface=surface,
+                taint_source=str(request.get("taint") or _TAINT_FOR_SURFACE.get(surface, "user")),
+                tool_key=str(request.get("tool") or "") or None,
+            )
+            payload = self._verdict_payload(result)
         payload["daemonMs"] = round((time.perf_counter() - started) * 1000, 2)
         return payload
 

@@ -29,8 +29,13 @@ import { publicPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = publicPageMetadata({
   title: "Coverage: what an agent can get wrong",
+  // Interpolated, not typed. The two figures in this sentence were already
+  // stale by four scenarios and two probes when this was written, which is
+  // the whole argument for the generated file underneath the page.
   description:
-    "114 ways an agentic request can fail, scored against what AgentFox catches — and 103 of them executed against the running product rather than asserted.",
+    `${coverage.scenarios} ways an agentic request can fail, scored against what AgentFox ` +
+    `catches — and ${coverage.verified} of them executed against the running product rather ` +
+    `than asserted.`,
   path: "/coverage",
 });
 
@@ -81,6 +86,7 @@ export default function CoveragePage() {
     verified,
     weighted_coverage,
     layers,
+    origins,
     rows,
     disagreements,
   } = coverage;
@@ -122,6 +128,59 @@ export default function CoveragePage() {
                 <b>{disagreements.length}</b>
                 <span>claims disagreeing with the product</span>
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Why, before where.
+          *
+          * The layer breakdown below answers "at which stage did this go
+          * wrong", which is an engineer's question and the one this taxonomy
+          * was originally built to answer. It is not the question a reader
+          * arrives with. They arrive wanting to know whether their problem is
+          * an attacker, a permission they should not have granted, or an
+          * agent that improvised — and no amount of staring at "L4 tools and
+          * actions" tells them that.
+          *
+          * The first three origins are the carve-up Zenity publishes, which
+          * is better than anything we had. The fourth is ours: a provider
+          * outage and an arithmetic error have no actor at all, and filing
+          * them under a security heading would make this product sound more
+          * security-shaped than it is. Two thirds of the taxonomy lands
+          * there, and the page says so rather than burying it.
+          */}
+        <section className="mk-section mk-band">
+          <div className="mk-wrap">
+            <h2>Why the agent did it</h2>
+            <p className="mk-lede">
+              The same {scenarios} scenarios cut by cause rather than by stage.
+              Most coverage pages only have the first three rows, because the
+              fourth is not a security story — but it is where most of what
+              goes wrong actually lives, so it is here.
+            </p>
+            <div className="cov-origins">
+              {origins.map((origin) => (
+                <div key={origin.origin} className="cov-origin">
+                  <div className="cov-origin-head">
+                    <b>{origin.origin}</b>
+                    <span className="cov-origin-score">
+                      {pct(origin.fraction)}
+                      <i>
+                        {origin.covered}/{origin.total}
+                      </i>
+                    </span>
+                  </div>
+                  <span className="cov-bar" aria-hidden="true">
+                    <i style={{ width: `${origin.fraction * 100}%` }} />
+                  </span>
+                  <p>{origin.description}</p>
+                  {origin.absent.length > 0 && (
+                    <p className="cov-origin-absent">
+                      Nothing catches: {origin.absent.join(", ")}
+                    </p>
+                  )}
+                </div>
+              ))}
             </div>
           </div>
         </section>

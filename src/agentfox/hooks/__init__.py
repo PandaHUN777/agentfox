@@ -10,7 +10,13 @@ avoid.
 from __future__ import annotations
 
 from .capability import CAPABILITY, Verified, capability_of, describe
-from .client import DaemonUnavailable, guard_tool_call, ping, report_unavailable
+from .client import (
+    DaemonUnavailable,
+    guard_content,
+    guard_tool_call,
+    ping,
+    report_unavailable,
+)
 from .daemon import HookDaemon, warm
 from .protocol import PROTOCOL_VERSION, ProtocolError, socket_path
 
@@ -23,6 +29,7 @@ __all__ = [
     "Verified",
     "capability_of",
     "describe",
+    "guard_content",
     "guard_tool_call",
     "ping",
     "report_unavailable",

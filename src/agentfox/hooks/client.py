@@ -89,6 +89,38 @@ def guard_tool_call(
     return reply
 
 
+def guard_content(
+    *,
+    agent: str,
+    surface: str,
+    content: str,
+    tool: str = "",
+    taint: str = "",
+    path: Path | None = None,
+) -> dict[str, Any]:
+    """Ask for a verdict on text arriving at a surface. Same daemon, same policy.
+
+    The second and third hook events do not carry a call to authorise — they
+    carry a tool's result, or the operator's own turn — so they ask a
+    different question of the same engine rather than going somewhere else.
+    """
+    reply = ask(
+        {
+            "type": "content",
+            "protocolVersion": PROTOCOL_VERSION,
+            "agent": agent,
+            "surface": surface,
+            "content": content,
+            "tool": tool,
+            "taint": taint,
+        },
+        path=path,
+    )
+    if reply.get("type") == "error":
+        raise DaemonUnavailable(str(reply.get("error")))
+    return reply
+
+
 def report_unavailable(exc: Exception) -> None:
     """Say it where the operator will see it, and say what it means.
 

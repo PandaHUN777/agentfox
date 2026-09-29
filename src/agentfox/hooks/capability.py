@@ -86,6 +86,66 @@ CAPABILITY: dict[tuple[str, str], Verified] = {
             "only and is ignored with a warning in an interactive session."
         ),
     ),
+    # Established by running it, in this session, at high effort under the
+    # `auto` permission mode. A PostToolUse hook returned `decision: "block"`
+    # with a reason AND an `additionalContext`, on a Bash call whose command
+    # echoed a sentinel.
+    #
+    # **The command ran.** Its stdout came back as the tool result in the
+    # same turn, alongside the hook's reason. So the harness calls this
+    # "blocking" and it does not stop anything: by the time PostToolUse
+    # fires, the side effect has happened. That is the exact distinction this
+    # table exists to record, and it is why this row says `observe` while the
+    # harness's own vocabulary says block.
+    ("claude", "PostToolUse"): Verified(
+        capability="observe",
+        evidence="LIVE_PROBE",
+        version="2.1.220",
+        reference="probe: decision='block' on a Bash PostToolUse; stdout still returned",
+        note=(
+            "The call had already run and its result reached the model regardless. What "
+            "a refusal here does buy is real but smaller: both `reason` and "
+            "`hookSpecificOutput.additionalContext` were surfaced to the agent verbatim "
+            "in the same turn, so the model is told the result it is holding is "
+            "untrusted before it acts on it. Payload adds `tool_response` and "
+            "`duration_ms` to the PreToolUse shape. Treat this event as the place to "
+            "catch indirect injection arriving, never as containment."
+        ),
+    ),
+    # Not probed: UserPromptSubmit fires when the *operator* submits a turn,
+    # which a hook running inside somebody else's turn cannot trigger. So
+    # this row is SOURCE, and the source is the consumer rather than the
+    # docs, because the docs only say `decision: "block"` is "for"
+    # UserPromptSubmit and that is not the same as saying what it does.
+    ("claude", "UserPromptSubmit"): Verified(
+        capability="block",
+        evidence="SOURCE",
+        version="2.1.220",
+        reference=(
+            "bundle: executeUserPromptSubmitHooks consumer, `shouldQuery:!1` on blockingError"
+        ),
+        note=(
+            "On a blocking result the consumer returns `shouldQuery: false` — the turn "
+            "is never sent to the model — and renders "
+            "`UserPromptSubmit operation blocked by hook: <reason>`. `suppressOriginalPrompt` "
+            "decides whether the operator's own text is echoed back beside it. A "
+            "non-blocking hook's `additionalContext` is attached to the turn instead. "
+            "Re-probe this the first time a real operator turn runs through it; SOURCE "
+            "is weaker than LIVE_PROBE and this row should not stay SOURCE forever."
+        ),
+    ),
+}
+
+#: What each event is a checkpoint *on*. A hook event is not a surface — it is
+#: a moment — and the mapping between them is the thing a reader gets wrong.
+#: PreToolUse sees arguments about to be used; PostToolUse sees a result
+#: arriving, which is the canonical indirect-injection vector; UserPromptSubmit
+#: sees the operator's own words, the one genuinely untrusted-but-authorised
+#: input in the session.
+EVENT_SURFACE: dict[tuple[str, str], str] = {
+    ("claude", "PreToolUse"): "tool_args",
+    ("claude", "PostToolUse"): "tool_result",
+    ("claude", "UserPromptSubmit"): "input",
 }
 
 #: Ways to say no, where more than one works. Recorded separately because
@@ -121,6 +181,14 @@ CAN_REWRITE_INPUT: dict[str, Verified] = {
 }
 
 
+#: What a deny actually prevents, per event, in the reader's noun.
+_STOPS = {
+    "PreToolUse": "stops the call before it runs",
+    "PostToolUse": "does not stop anything; the call has already run",
+    "UserPromptSubmit": "stops the turn reaching the model",
+}
+
+
 def capability_of(harness: str, event: str) -> Verified | None:
     """What a deny does here, or None if nobody has checked."""
     return CAPABILITY.get((harness, event))
@@ -135,11 +203,18 @@ def describe(harness: str, event: str) -> str:
             "deny stops the call has not been established against this harness — treat it "
             "as observation until it has."
         )
+    provenance = f"({known.evidence.lower()}, {known.version})"
+    # The noun matters. "A deny stops the call" is wrong on an event that
+    # never sees a call, and "observes only" understates an event that does
+    # reach the model. Each event gets the sentence that is true of it.
     if known.capability == "block":
+        stops = _STOPS.get(event, "stops the action")
+        return f"{harness}/{event}: a deny {stops} {provenance}."
+    if event == "PostToolUse":
         return (
-            f"{harness}/{event}: a deny stops the call ({known.evidence.lower()}, {known.version})."
+            f"{harness}/{event}: the call has already run — a deny cannot withdraw it, "
+            f"but the reason does reach the model {provenance}."
         )
     return (
-        f"{harness}/{event}: the call proceeds regardless — this event observes only "
-        f"({known.evidence.lower()}, {known.version})."
+        f"{harness}/{event}: the action proceeds regardless; this event observes only {provenance}."
     )

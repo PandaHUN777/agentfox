@@ -32,7 +32,7 @@ os.environ.setdefault("NOMETRIA_DATABASE_URL", f"sqlite:///{_TMP}/probe.db")
 os.environ.setdefault("NOMETRIA_EVIDENCE_DIR", f"{_TMP}/evidence")
 os.environ.setdefault("NOMETRIA_ALLOW_EGRESS", "false")
 
-from scripts.probe.taxonomy import SCENARIOS, Scenario, by_layer  # noqa: E402
+from scripts.probe.taxonomy import ORIGINS, SCENARIOS, Scenario, by_layer  # noqa: E402
 
 Result = tuple[bool, str]
 
@@ -1943,6 +1943,28 @@ def _as_json(rows: list[tuple[Scenario, str, str, bool]]) -> dict[str, Any]:
             }
         )
 
+    # The same scoring, cut the other way: not *where* in the stack a failure
+    # lands but *how the agent came to it*. A reader deciding whether they
+    # have an attacker problem, a permissions problem or an improvising-agent
+    # problem cannot get that from a layer, and it is the question they
+    # actually have.
+    origins = []
+    for origin, blurb in ORIGINS.items():
+        rows_for = [s for s in SCENARIOS if s.origin == origin]
+        if not rows_for:
+            continue
+        covered = sum(VERDICT_ORDER[s.expect] for s in rows_for)
+        origins.append(
+            {
+                "origin": origin,
+                "description": blurb,
+                "covered": round(covered, 1),
+                "total": len(rows_for),
+                "fraction": round(covered / len(rows_for), 4),
+                "absent": [s.id for s in rows_for if s.expect == "absent"],
+            }
+        )
+
     scored = sum(VERDICT_ORDER[s.expect] for s in SCENARIOS)
     return {
         "generated_by": "scripts/probe/run.py --json",
@@ -1952,12 +1974,14 @@ def _as_json(rows: list[tuple[Scenario, str, str, bool]]) -> dict[str, Any]:
         "weighted_coverage": round(scored / len(SCENARIOS), 4),
         "disagreements": [s.id for s, _o, _d, agrees in rows if not agrees],
         "layers": layers,
+        "origins": origins,
         "rows": [
             {
                 "id": s.id,
                 "layer": s.layer,
                 "name": s.name,
                 "verdict": s.expect,
+                "origin": s.origin,
                 "control": s.control,
                 "verified": bool(s.probe) and agrees,
                 "executable": bool(s.probe),

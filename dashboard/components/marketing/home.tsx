@@ -266,6 +266,187 @@ export function Stack() {
   );
 }
 
+/* --- 2b. Where the policy binds ----------------------------------------- */
+
+/**
+ * The section this page was missing, and the reason it was missing is
+ * instructive: we built six binding points over a year and described them in
+ * the README as a list of integrations, which reads as "supports several
+ * frameworks" — a compatibility note, not an argument.
+ *
+ * A competitor with $132M named the same architecture "Open Enforcement" and
+ * put it on their front page: no single gateway sees every agent, rerouting
+ * everything through one taxes your architecture, so the policy is defined
+ * once and bound wherever you already run. That is exactly what this is, and
+ * naming it costs nothing.
+ *
+ * The rows are deliberately specific about *what each one governs*, because
+ * the hero above this already had to be rewritten once for implying that
+ * `agentfox.auto()` guards tool calls. It does not — autoguard.py patches
+ * model clients, and the callers of Enforcer.guard_tool_call are the LangGraph
+ * tool node, the MCP governor, the SDK and the gateway. A section that
+ * flattened all six into "protects your agent" would reintroduce exactly the
+ * overclaim that rewrite removed, so each row says what it sees.
+ */
+const CONTROL_POINTS: { where: string; how: string; governs: string }[] = [
+  {
+    where: "Your coding agent",
+    how: "Claude Code hooks",
+    governs: "the turn, each tool call, and every tool result",
+  },
+  {
+    where: "Any language",
+    how: "HTTP gateway",
+    governs: "whatever you send it, over one endpoint",
+  },
+  {
+    where: "Python",
+    how: "agentfox.auto()",
+    governs: "prompts and completions through your model client",
+  },
+  {
+    where: "Tool servers",
+    how: "MCP governor",
+    governs: "the call, the schema it was approved under, and what comes back",
+  },
+  {
+    where: "Graphs",
+    how: "LangGraph tool node",
+    governs: "each tool call inside the run",
+  },
+  {
+    where: "CI and the terminal",
+    how: "the CLI",
+    governs: "a repository, a session, a policy before it ships",
+  },
+];
+
+export function ControlPoints() {
+  return (
+    <section id="control-points" className="mk-section">
+      <div className="mk-wrap">
+        <div className="mk-narrow">
+          <span className="mk-eyebrow mk-up">One policy set, six places it binds</span>
+          <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12 }}>
+            You should not have to re-architect to get a guardrail
+          </h2>
+          <p className="mk-lede mk-up mk-d2" style={{ marginTop: 16, maxWidth: "56ch" }}>
+            No single gateway sees every agent, and routing everything through one is
+            a migration, not a control. Write the policy once and bind it where your
+            agents already run.
+          </p>
+        </div>
+
+        <div className="mk-points mk-up mk-d3">
+          {CONTROL_POINTS.map((point) => (
+            <div key={point.how} className="mk-point">
+              <span className="mk-point-where">{point.where}</span>
+              <b>{point.how}</b>
+              <span className="mk-point-governs">{point.governs}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* The objection-killer, and until now it appeared nowhere on this site.
+            Observe mode and the counterfactual verdict are both shipped; a
+            reader afraid a guardrail will break their agent has no way to
+            discover that from the product pages. */}
+        <div className="mk-honest mk-up mk-d4" style={{ marginTop: 36 }}>
+          <div>
+            <h3 className="mk-h3">Nothing blocks until you say so</h3>
+            <p className="mk-body">
+              Every pack ships in observe. It records the verdict it <em>would</em>{" "}
+              have returned against every real call, so you can read a week of
+              decisions before a single one changes what your agent does.
+            </p>
+          </div>
+          <Link href="/how-it-works" className="mk-btn mk-btn-outline">
+            How that works
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* --- 2c. Three ways an agent goes wrong --------------------------------- */
+
+/**
+ * Why this is here at all.
+ *
+ * The page went straight from "runtime firewall" to a three-stage worked
+ * example, which asks the reader to already believe there is a problem worth
+ * three stages. The competitor pages that read most easily all do the same
+ * thing first: four or five plain sentences naming the kinds of failure, one
+ * line each, before any mechanism.
+ *
+ * The carve-up is the one now used throughout /coverage: external, internal,
+ * autonomous — the first three from Zenity's public framing, which is a
+ * better split than anything we had. The fourth origin on the coverage page,
+ * `intrinsic`, is deliberately not here: it is two thirds of the taxonomy and
+ * it is not what a reader arriving at a security product is asking about. It
+ * is one click away and the link says so, rather than the page quietly
+ * implying three is the whole story.
+ *
+ * Third one first in emphasis, because it is the one nobody else names and it
+ * is the one our capability ceiling is actually for.
+ */
+const ORIGINS: { name: string; line: string; example: string }[] = [
+  {
+    name: "Someone attacked it",
+    line: "Text that was not written by you, arriving where the model will read it.",
+    example:
+      "A line in an issue comment telling the agent to push its credentials somewhere.",
+  },
+  {
+    name: "Someone over-granted it",
+    line: "Nobody attacked anything. It was doing as it was told, holding more than it needed.",
+    example: "A read-only assistant with a token that can also delete.",
+  },
+  {
+    name: "It improvised",
+    line: "No attacker and no bad grant. It hit a problem and found a way around it.",
+    example:
+      "Blocked on a deploy, it goes looking for a credentials file nobody handed it.",
+  },
+];
+
+export function Origins() {
+  return (
+    <section id="origins" className="mk-section">
+      <div className="mk-wrap">
+        <div className="mk-narrow">
+          <h2 className="mk-h2 mk-up">Three ways an agent does the wrong thing</h2>
+          <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16, maxWidth: "56ch" }}>
+            Only the first is an attack. The other two are an agent working exactly as
+            built, and they are the ones a text scanner cannot see.
+          </p>
+        </div>
+
+        <div className="mk-origins mk-up mk-d2">
+          {ORIGINS.map((origin, index) => (
+            <div key={origin.name} className="mk-origin">
+              {/* Numbered because the three are ordered by how little there is
+                  to blame, which is the argument the section is making. */}
+              <span className="mk-origin-n">{index + 1}</span>
+              <b>{origin.name}</b>
+              <p>{origin.line}</p>
+              <span className="mk-origin-eg">{origin.example}</span>
+            </div>
+          ))}
+        </div>
+
+        <p className="mk-fine mk-up mk-d3" style={{ marginTop: 22 }}>
+          A fourth kind has no actor at all — the model is simply wrong, or a provider
+          is down. It is two thirds of what we track and most of it is not a security
+          problem.{" "}
+          <Link href="/coverage">All 116 scenarios, scored</Link>.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 /* --- 3. One request, three boundaries ----------------------------------- */
 
 /**
