@@ -207,7 +207,18 @@ async function RulesTab({ agent }: { agent?: string }) {
                     {p.mode || "unbound"}
                   </span>
                 </td>
-                <td className="num">{p.rules}</td>
+                {/* The rule count was the one number on this page a reader
+                    actually wanted to open — "12 rules" says nothing about
+                    which twelve — and it was dead text. The policy body is one
+                    click away and always was; nothing pointed at it. */}
+                <td className="num">
+                  <Link
+                    href={`/app/policies/${p.key}`}
+                    title={`Read the ${p.rules} rule(s) in ${p.key}`}
+                  >
+                    {p.rules}
+                  </Link>
+                </td>
                 <td className="small" style={{ textAlign: "right", whiteSpace: "nowrap" }}>
                   <Link href={`/app/policies/${p.key}`}>Review &amp; edit &rarr;</Link>
                 </td>
