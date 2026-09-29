@@ -323,7 +323,9 @@ _LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
         0.85,
     ),
     (
-        re.compile(r"\b(?:developer|god|admin|debug|dan)\s+mode\s+(?:enabled|on|activated)\b", re.I),
+        re.compile(
+            r"\b(?:developer|god|admin|debug|dan)\s+mode\s+(?:enabled|on|activated)\b", re.I
+        ),
         "INJECTION.PERSONA_OVERRIDE",
         0.75,
     ),
@@ -459,7 +461,17 @@ class InjectionHeuristicDetector(BaseDetector):
     handles_views = True
     key = "injection.heuristic"
     version = "1.2"
-    surfaces = ("input", "retrieved", "tool_result", "output", "memory_write", "agent_message")
+    surfaces = (
+        "input",
+        "retrieved",
+        "tool_result",
+        "output",
+        "memory_write",
+        "agent_message",
+        # The model's own reasoning: a detection here means the payload
+        # was adopted, not merely present.
+        "reasoning",
+    )
 
     def _detect(self, content: str, context: DetectionContext) -> list[Detection]:
         if not content:

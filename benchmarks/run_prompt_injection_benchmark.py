@@ -195,9 +195,9 @@ def main() -> None:
         predictions = result.pop("_predictions")
         summary["configs"][config_name] = result
         for split_name, preds in predictions.items():
-            (RESULTS_DIR / f"prompt_injection_{config_name}_{split_name}_predictions.json").write_text(
-                json.dumps(preds, indent=2)
-            )
+            (
+                RESULTS_DIR / f"prompt_injection_{config_name}_{split_name}_predictions.json"
+            ).write_text(json.dumps(preds, indent=2))
 
     (RESULTS_DIR / "prompt_injection_summary.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary, indent=2))

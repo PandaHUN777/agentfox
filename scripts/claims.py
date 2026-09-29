@@ -86,7 +86,9 @@ def check(manifest: Path = MANIFEST, repo: Path = REPO) -> tuple[list[dict[str, 
             expected = normalise(quote["text"].format(**values))
             if expected not in docs[file]:
                 drifts.append(
-                    Drift(claim["id"], file, expected, "document no longer says what the result says")
+                    Drift(
+                        claim["id"], file, expected, "document no longer says what the result says"
+                    )
                 )
     return table, drifts
 

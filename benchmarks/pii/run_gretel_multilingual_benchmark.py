@@ -94,20 +94,16 @@ def street_address_spans_for_row(row: dict) -> list[tuple[int, int]]:
     LOCATION false positives were confirmed-correct hits inside one of
     these) — see README "Fixes applied".
     """
-    return [
-        (s["start"], s["end"]) for s in row["spans"] if s["label"] == "street_address"
-    ]
+    return [(s["start"], s["end"]) for s in row["spans"] if s["label"] == "street_address"]
 
 
 def pred_spans(detections, canonical_types: set[str]) -> list[tuple[int, int, str]]:
-    return [
-        (d.start, d.end, d.entity_type)
-        for d in detections
-        if d.entity_type in canonical_types
-    ]
+    return [(d.start, d.end, d.entity_type) for d in detections if d.entity_type in canonical_types]
 
 
-def score_row(gt, pred, containment_exclude: list[tuple[int, int]] = ()) -> tuple[int, int, int, int, dict[str, list[int]]]:
+def score_row(
+    gt, pred, containment_exclude: list[tuple[int, int]] = ()
+) -> tuple[int, int, int, int, dict[str, list[int]]]:
     """See run_presidio_research_benchmark.py's score_row for the containment-
     exclusion rationale — a predicted span fully inside a street_address span
     is neither TP nor FP, tracked separately as `excluded`."""
@@ -161,7 +157,14 @@ def prf1(tp: int, fp: int, fn: int) -> tuple[float, float, float]:
 
 def summarize(tp: int, fp: int, fn: int) -> dict:
     p, r, f = prf1(tp, fp, fn)
-    return {"tp": tp, "fp": fp, "fn": fn, "precision": round(p, 4), "recall": round(r, 4), "f1": round(f, 4)}
+    return {
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "precision": round(p, 4),
+        "recall": round(r, 4),
+        "f1": round(f, 4),
+    }
 
 
 def run_config(name: str, detector, rows: list[dict], ctx: DetectionContext) -> dict:
@@ -232,7 +235,9 @@ def main() -> None:
     out_path.write_text(json.dumps(summary, indent=2))
     print(f"\nWrote {out_path}\n")
 
-    print(f"{'config':<24}{'precision':<12}{'recall':<12}{'f1':<12}{'tp':<8}{'fp':<8}{'fn':<8}{'excl':<6}")
+    print(
+        f"{'config':<24}{'precision':<12}{'recall':<12}{'f1':<12}{'tp':<8}{'fp':<8}{'fn':<8}{'excl':<6}"
+    )
     for r in results:
         print(
             f"{r['config']:<24}{r['precision']:<12}{r['recall']:<12}{r['f1']:<12}"

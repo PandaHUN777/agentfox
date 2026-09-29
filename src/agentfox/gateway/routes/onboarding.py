@@ -120,10 +120,7 @@ def onboarding(session: Session = Depends(db), _user=Depends(current_user)) -> d
             # PyPI, so the obvious command failed with "No matching distribution
             # found" for everyone who copied it. The release workflow now uploads
             # via Trusted Publishing. Same line as the README and the site.
-            "command": (
-                "pip install agentfox"
-                " && agentfox init"
-            ),
+            "command": ("pip install agentfox && agentfox init"),
             "detail": (
                 "Optional. Everything above already works over HTTP. Install it for the "
                 "command line, the Python one-liner, or your own control plane."

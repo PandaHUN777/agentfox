@@ -97,7 +97,9 @@ def create_token(
 
 
 @router.get("/tokens")
-def list_tokens(session: Session = Depends(db), user: User = Depends(current_user)) -> dict[str, Any]:
+def list_tokens(
+    session: Session = Depends(db), user: User = Depends(current_user)
+) -> dict[str, Any]:
     tokens = session.scalars(
         select(ApiToken).where(ApiToken.user_id == user.id).order_by(ApiToken.created_at.desc())
     )
@@ -478,7 +480,9 @@ def register_mcp_tools(
 # ---------------------------------------------------------------------------
 
 
-def _agent_slug_for_subject(session: Session, subject_type: str, subject_id: str | None) -> str | None:
+def _agent_slug_for_subject(
+    session: Session, subject_type: str, subject_id: str | None
+) -> str | None:
     """A finding's `subject_id` is an agent identifier — but call sites across the
     codebase have raised findings with both the agent's DB id and its slug in that
     field over time. Resolving both here, once, means the dashboard can always link

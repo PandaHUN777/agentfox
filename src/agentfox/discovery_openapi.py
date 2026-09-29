@@ -60,7 +60,9 @@ def fetch_spec(spec_url: str) -> dict[str, Any]:
         try:
             parsed = yaml.safe_load(resp.text)
         except Exception as exc:
-            raise SpecFetchError(f"the document at that URL is not valid JSON or YAML: {exc}") from exc
+            raise SpecFetchError(
+                f"the document at that URL is not valid JSON or YAML: {exc}"
+            ) from exc
         if not isinstance(parsed, dict):
             raise SpecFetchError("the document did not parse to an OpenAPI object")
         return parsed

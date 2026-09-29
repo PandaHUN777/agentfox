@@ -111,8 +111,12 @@ class LoopVerdict:
         return self.decision != CONTINUE
 
     def to_json(self) -> dict[str, Any]:
-        return {"decision": self.decision, "reason": self.reason, "step": self.step,
-                "evidence": self.evidence}
+        return {
+            "decision": self.decision,
+            "reason": self.reason,
+            "step": self.step,
+            "evidence": self.evidence,
+        }
 
 
 class LoopGovernor:
@@ -141,13 +145,13 @@ class LoopGovernor:
 
         if index > self.budget.max_steps:
             return LoopVerdict(
-                STOP, f"the run passed its {self.budget.max_steps}-step budget", index,
+                STOP,
+                f"the run passed its {self.budget.max_steps}-step budget",
+                index,
                 {"steps": index},
             )
 
-        repeats = sum(
-            1 for s in self.steps if s.call_fingerprint == step.call_fingerprint
-        )
+        repeats = sum(1 for s in self.steps if s.call_fingerprint == step.call_fingerprint)
         if repeats > self.budget.max_repeats:
             return LoopVerdict(
                 STOP,
@@ -155,7 +159,8 @@ class LoopGovernor:
                 "arguments. Whatever it returned the first time is still true; the "
                 "agent is asking again because it did not know what to do with the "
                 "answer",
-                index, {"tool": step.tool, "repeats": repeats},
+                index,
+                {"tool": step.tool, "repeats": repeats},
             )
 
         if cycle := self._cycle():
@@ -163,7 +168,8 @@ class LoopGovernor:
                 STOP,
                 f"the sequence {' → '.join(cycle)} is repeating. Per-tool counting "
                 "cannot see this: neither tool repeats consecutively",
-                index, {"cycle": cycle},
+                index,
+                {"cycle": cycle},
             )
 
         threshold = self.budget.effective_max_steps_without_progress(index)
@@ -174,8 +180,11 @@ class LoopGovernor:
                 f"steps {first}-{index} produced no observation that had not already "
                 "been seen. The run is active and not advancing",
                 index,
-                {"steps_without_progress": self._steps_without_progress,
-                 "from_step": first, "to_step": index},
+                {
+                    "steps_without_progress": self._steps_without_progress,
+                    "from_step": first,
+                    "to_step": index,
+                },
             )
 
         return LoopVerdict(CONTINUE, step=index)
@@ -186,7 +195,7 @@ class LoopGovernor:
         for length in range(2, self.budget.max_cycle_length + 1):
             if len(tools) < length * 2:
                 continue
-            tail, before = tools[-length:], tools[-length * 2:-length]
+            tail, before = tools[-length:], tools[-length * 2 : -length]
             if tail == before and len(set(tail)) > 1:
                 return tail
         return None
@@ -211,10 +220,14 @@ def govern_loop(
     governor = LoopGovernor(budget)
     last = LoopVerdict(CONTINUE)
     for raw in steps:
-        step = raw if isinstance(raw, Step) else Step(
-            tool=str(raw.get("tool", "")),
-            arguments=raw.get("arguments") or {},
-            observation=raw.get("observation"),
+        step = (
+            raw
+            if isinstance(raw, Step)
+            else Step(
+                tool=str(raw.get("tool", "")),
+                arguments=raw.get("arguments") or {},
+                observation=raw.get("observation"),
+            )
         )
         last = governor.observe(step)
         if last.stopped:

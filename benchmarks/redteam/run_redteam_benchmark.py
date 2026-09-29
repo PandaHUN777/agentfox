@@ -58,7 +58,9 @@ def main() -> None:
 
     attacks = [p for p in BUILTIN_PROBES if p.expect_blocked]
     benign = [p for p in BUILTIN_PROBES if not p.expect_blocked]
-    print(f"{len(BUILTIN_PROBES)} built-in probes: {len(attacks)} attacks, {len(benign)} benign controls")
+    print(
+        f"{len(BUILTIN_PROBES)} built-in probes: {len(attacks)} attacks, {len(benign)} benign controls"
+    )
     by_kind: dict[str, int] = {}
     for p in BUILTIN_PROBES:
         by_kind[p.kind] = by_kind.get(p.kind, 0) + 1

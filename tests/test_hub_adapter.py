@@ -109,7 +109,10 @@ def test_a_passing_validator_produces_no_detection(fake_guardrails):
     fake_guardrails("profanity_free", "ProfanityFree", lambda v: PassResult())
     d = _detector("profanity_free")
     assert d.available() is True
-    assert d.detect("a perfectly ordinary sentence", DetectionContext(surface="output")).detections == []
+    assert (
+        d.detect("a perfectly ordinary sentence", DetectionContext(surface="output")).detections
+        == []
+    )
 
 
 def test_a_failing_validator_maps_onto_our_taxonomy(fake_guardrails):
@@ -120,7 +123,8 @@ def test_a_failing_validator_maps_onto_our_taxonomy(fake_guardrails):
     detector did — matches no rule anyone has written.
     """
     fake_guardrails(
-        "detect_jailbreak", "DetectJailbreak",
+        "detect_jailbreak",
+        "DetectJailbreak",
         lambda v: FailResult("jailbreak attempt detected"),
     )
     d = _detector("detect_jailbreak")
@@ -142,10 +146,15 @@ def test_the_failure_message_is_redacted(fake_guardrails):
     """
     secret = "sk-live-4f8a9c2b1e7d6f3a9c8b7e6d5f4a3b2c"
     fake_guardrails(
-        "secrets_present", "SecretsPresent",
+        "secrets_present",
+        "SecretsPresent",
         lambda v: FailResult(f"found a secret: {secret}"),
     )
-    found = _detector("secrets_present").detect(secret, DetectionContext(surface="output")).detections[0]
+    found = (
+        _detector("secrets_present")
+        .detect(secret, DetectionContext(surface="output"))
+        .detections[0]
+    )
     assert secret not in found.sample
     assert "*" in found.sample
 
@@ -157,6 +166,7 @@ def test_a_validator_that_throws_is_an_error_not_a_pass(fake_guardrails):
     indistinguishable from a clean pass — a control that quietly stops running
     while still reporting healthy is the failure this product exists to prevent.
     """
+
     def boom(_value):
         raise ValueError("model weights missing")
 

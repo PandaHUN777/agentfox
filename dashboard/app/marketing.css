@@ -1934,3 +1934,108 @@
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
 }
+
+/* --- /coverage -------------------------------------------------------
+   The numbers on this page come from `lib/coverage.json`, so the layout
+   has to survive them changing: a layer added to the taxonomy, a gap
+   list that grows or empties. Everything below sizes to its content. */
+
+.cov-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 28px 32px;
+  margin-top: 44px;
+  padding-top: 28px;
+  border-top: 1px solid var(--mk-border);
+}
+.cov-kpis > div { display: grid; gap: 6px; align-content: start; }
+.cov-kpis b {
+  font-size: var(--t-figure-lg);
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: var(--track-display);
+  font-variant-numeric: tabular-nums;
+}
+.cov-kpis span { font-size: var(--t-small); color: var(--mk-muted); max-width: 26ch; }
+
+.cov-layers { display: grid; gap: 10px; margin-top: 28px; }
+.cov-layer {
+  display: grid;
+  /* The name column is fixed so every bar starts at the same x — a ragged
+     left edge on a bar chart reads as ten unrelated numbers. */
+  grid-template-columns: minmax(0, 15rem) 1fr auto;
+  align-items: center;
+  gap: 16px;
+}
+.cov-layer-name { font-size: var(--t-small); color: var(--mk-text); }
+.cov-layer-score {
+  font-size: var(--t-small);
+  color: var(--mk-muted);
+  font-variant-numeric: tabular-nums;
+}
+.cov-bar {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--mk-border);
+  overflow: hidden;
+}
+.cov-bar i { display: block; height: 100%; background: var(--mk-accent); border-radius: 4px; }
+@media (max-width: 640px) {
+  .cov-layer { grid-template-columns: 1fr auto; }
+  .cov-bar { grid-column: 1 / -1; }
+}
+
+.cov-gaps {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1px;
+  background: var(--mk-border);
+  border: 1px solid var(--mk-border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.cov-gaps li {
+  background: var(--mk-bg);
+  padding: 14px 16px;
+  display: grid;
+  gap: 4px;
+}
+.cov-gaps b { font-weight: 500; font-size: var(--t-body); text-wrap: pretty; }
+.cov-gaps span { font-size: var(--t-micro); color: var(--mk-muted); }
+
+.cov-budgets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+  margin-top: 28px;
+}
+.cov-budgets > div { display: grid; gap: 6px; align-content: start; border-top: 2px solid var(--mk-text); padding-top: 14px; }
+.cov-budgets b {
+  font-size: var(--t-figure);
+  font-weight: 400;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.cov-budget-label { font-size: var(--t-small); color: var(--mk-text); }
+.cov-budgets span:last-child { font-size: var(--t-micro); color: var(--mk-muted); }
+
+.cov-h3 { margin-top: 56px; }
+
+.cov-neveropen { margin: 20px 0 0; display: grid; gap: 1px; background: var(--mk-border); border: 1px solid var(--mk-border); border-radius: 12px; overflow: hidden; }
+.cov-neveropen > div {
+  background: var(--mk-bg);
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: minmax(0, 14rem) 1fr;
+  gap: 16px;
+}
+.cov-neveropen dt { font-size: var(--t-body); font-weight: 500; }
+.cov-neveropen dd { margin: 0; font-size: var(--t-small); color: var(--mk-muted); }
+@media (max-width: 560px) { .cov-neveropen > div { grid-template-columns: 1fr; gap: 4px; } }
+
+.cov-note { font-size: var(--t-small); color: var(--mk-muted); max-width: var(--measure); }
+.cov-note code { font-size: 0.92em; }

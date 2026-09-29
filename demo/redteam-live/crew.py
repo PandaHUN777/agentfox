@@ -29,13 +29,12 @@ import sys
 import uuid
 
 import _env  # noqa: F401  -- must run before anything imports agentfox settings
-
 from crewai import LLM, Agent, Crew, Process, Task
 from crewai.tools import tool
+from support_tools import AGENT_SLUG, GovernedToolkit
 
 import agentfox
 from agentfox.db import init_db, session_scope
-from support_tools import AGENT_SLUG, GovernedToolkit
 
 
 class MissingApiKey(RuntimeError):

@@ -9,7 +9,7 @@ what we set out to cover and say nothing about what we never thought of. This on
 walks the path a request actually travels and asks, at each layer, what can go
 wrong there.
 
-**114 scenarios · 103 verified by execution · 92% weighted coverage**
+**116 scenarios · 105 verified by execution · 91% weighted coverage**
 (partial counts half). The harness runs every executable claim against the real
 product and fails if any disagrees — so a row marked ✅ here has fired at least
 once in anger.
@@ -18,7 +18,7 @@ once in anger.
 |---|---|---|
 | L0 model-intrinsic | 7.5/11 | `██████████` |
 | L1 input and prompt | 8/9 | `█████████████` |
-| L2 retrieval and context | 16/17 | `██████████████` |
+| L2 retrieval and context | 17/19 | `█████████████` |
 | L3 reasoning and planning | 5/6 | `████████████` |
 | L4 tools and actions | 17.5/18 | `███████████████` |
 | L5 output and disclosure | 18/19 | `██████████████` |
@@ -91,6 +91,8 @@ once in anger.
 | L2.15 | The authoritative system was not the one consulted | ✅ covered | P18 source arbitration over declared authority | answering from the warehouse extract while the ledger was reachable is blocked — the answer would be grounded, |
 | L2.16 | Two systems disagree and one is silently picked | ✅ covered | P18 arbitration — a disagreement produces a confirmation step, not a ranking | the disagreement produces a confirmation step naming ['ledger: 4000', 'crm: 4310'] rather than picking the hig |
 | L2.17 | A poisoned entry persists into long-term memory | ✅ covered | Enforcer.guard_memory_write() — NOM-RTG-13, closes OWASP ASI06 | secret write is block and memory rows stay at 0 (was 0); a clean write persists unverified with an expiry |
+| L2.18 | An instruction hidden in a part of a file nobody reads | ✅ covered | Enforcer.guard_file() — layers split visible from hidden, hidden wins | an instruction in docProps is block and the reason names the layer (True); the same document without it is all |
+| L2.19 | An instruction in an image, or a scanned PDF | ✗ absent | Reported unread; nothing is claimed about it | an image produces no findings, and records the unread layer on the decision rather than reporting clean |
 | | **L5 output and disclosure** | | | |
 | L5.1 | PII in the response | ✅ covered | P3 PII + redaction | PII.EMAIL, PII.US_SSN |
 | L5.2 | Secret in the response | ✅ covered | P3 secrets detector | SECRET.OPENAI_KEY |
@@ -142,7 +144,7 @@ once in anger.
 | L8.5 | Model version changes underneath | ◐ partial | P4 drift + version recording | Versions are recorded per decision and drift is measured on scores. No alert on a version change itself. |
 | L8.6 | Prompt change regresses quality | ✅ covered | P4 CI gating with direction-aware scorers | passed=False, 1 absolute failure(s) |
 | L8.7 | Shadow agent in production | ✅ covered | P1-6 shadow detection | 2 shadow agent(s) |
-| L8.8 | Latency budget blown by the guardrails | ✅ covered | P3-13 request-level ledger + fast path | 32 KB document at p50 24.5 ms (budget 100 ms) |
+| L8.8 | Latency budget blown by the guardrails | ✅ covered | P3-13 request-level ledger + fast path | a detector overrunning 40 ms by 4x was degraded; call returned in 45 ms against a 300 ms budget |
 | L8.9 | Policy misconfiguration | ✅ covered | P12 lint with six codes | 3 finding(s): ['duplicate-id', 'illegal-loosening', 'unconditional'] |
 | L8.10 | Rate-limit or quota exhaustion | ✅ covered | P15-4 admission control that sheds work, never governance | over-limit traffic is refused rather than admitted unchecked, batch is shed before interactive, operator traff |
 | L8.11 | A guardrail is down and nobody can tell | ✅ covered | PL-7 declared fail modes — visible, bounded, and impossible for some controls | a fail-open request is allowed and recorded so it can be re-examined; after 300s past a 120s budget it convert |
@@ -156,4 +158,4 @@ once in anger.
 | L9.5 | The audit log becomes a PII liability | ✅ covered | P5-5 redaction at capture | stored as 'sk-p************************************' |
 | L9.6 | Right to erasure conflicts with the chain | ◐ partial | retention + legal hold | Retention policy and legal hold exist. Erasure against an append-only chain has no designed answer — a real an |
 | L9.7 | Nobody can prove what the policy was at decision time | ✅ covered | immutable policy versions recorded per decision | 3 policy version(s) recorded on the decision |
-| L9.8 | Operator action goes unrecorded | ✅ covered | operator actions recorded in the same hash-chained log as the decisions | 6 privileged operations declared, 0 unaudited; promoting a rule to enforce recorded with actor and reason (['p |
+| L9.8 | Operator action goes unrecorded | ✅ covered | operator actions recorded in the same hash-chained log as the decisions | 9 privileged operations declared, 0 unaudited; promoting a rule to enforce recorded with actor and reason (['p |

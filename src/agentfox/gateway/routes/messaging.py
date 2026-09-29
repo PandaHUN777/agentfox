@@ -56,7 +56,9 @@ def list_messages(
     session: Session = Depends(db),
     _user: User = Depends(current_user),
 ) -> dict[str, Any]:
-    stmt = select(AgentMessageLog).order_by(AgentMessageLog.created_at.desc()).limit(min(limit, 500))
+    stmt = (
+        select(AgentMessageLog).order_by(AgentMessageLog.created_at.desc()).limit(min(limit, 500))
+    )
     if sender:
         stmt = stmt.where(AgentMessageLog.sender_slug == sender)
     rows = list(session.scalars(stmt))

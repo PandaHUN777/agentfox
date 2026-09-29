@@ -35,7 +35,7 @@ def test_a_dose_is_an_instruction_however_correct_it_is():
 
 
 def test_a_spelled_out_unit_carries_the_same_instruction_as_its_abbreviation():
-    """"400 milligrams" is the identical instruction as "400mg" — only checking
+    """ "400 milligrams" is the identical instruction as "400mg" — only checking
     the abbreviation was a vocabulary gap, not a different risk (P18 register
     broadening)."""
     check = check_register(
@@ -87,7 +87,7 @@ def test_licensing_a_domain_stops_the_instruction_findings():
 
 
 def test_a_dosage_reports_once_not_twice():
-    """"What dose should I take?" also classifies as an opinion question because of the
+    """ "What dose should I take?" also classifies as an opinion question because of the
     "should I". Two findings about one sentence is a check people learn to skim."""
     check = check_register("Take 400mg every six hours.", request="What dose should I take?")
     assert "preference-stated-as-fact" not in codes(check)
@@ -97,7 +97,7 @@ def test_a_dosage_reports_once_not_twice():
 
 
 def test_a_point_estimate_about_the_future_is_false_precision():
-    """"Rates will probably ease" is defensible; a number is something somebody plans
+    """ "Rates will probably ease" is defensible; a number is something somebody plans
     around."""
     check = check_register(
         "Rates will be 3.25% in 2027.", request="Where will interest rates be in 2027?"

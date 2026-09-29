@@ -1729,9 +1729,7 @@ def main(argv: list[str] | None = None) -> None:
         detection = previous["detection_parity"]
         scorer_validation = previous["language_scorer_validation"]
 
-    integrity = (
-        run_integrity_parity() if "integrity" in sections else previous["integrity_parity"]
-    )
+    integrity = run_integrity_parity() if "integrity" in sections else previous["integrity_parity"]
     integrity_extension = (
         run_integrity_parity(INTEGRITY_PAIRS_EXTENSION)
         if "integrity" in sections

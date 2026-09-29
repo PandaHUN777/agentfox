@@ -43,8 +43,11 @@ def ledger():
 
 def test_a_fail_closed_control_blocks_and_says_why(ledger):
     event = service_fallback(
-        "pii_detection", "detector timeout",
-        policy=FailPolicy("pii_detection", CLOSED), ledger=ledger, now=T0,
+        "pii_detection",
+        "detector timeout",
+        policy=FailPolicy("pii_detection", CLOSED),
+        ledger=ledger,
+        now=T0,
     )
     assert event.verdict == "block"
     assert "fail-closed" in event.reason
@@ -57,8 +60,11 @@ def test_a_fail_open_request_is_allowed_and_recorded(ledger):
     """An ungoverned request that leaves no trace is the one nobody can re-examine
     after the incident, and re-examining them is the entire reason to allow it."""
     event = service_fallback(
-        "pii_detection", "detector timeout",
-        policy=FailPolicy("pii_detection", OPEN), ledger=ledger, now=T0,
+        "pii_detection",
+        "detector timeout",
+        policy=FailPolicy("pii_detection", OPEN),
+        ledger=ledger,
+        now=T0,
     )
     assert event.verdict == "allow"
     assert ledger.history("pii_detection") == [event]
@@ -68,8 +74,11 @@ def test_a_fail_open_request_is_allowed_and_recorded(ledger):
 def test_blocking_is_recorded_too(ledger):
     """The record is the point, not the verdict."""
     service_fallback(
-        "pii_detection", "boom",
-        policy=FailPolicy("pii_detection", CLOSED), ledger=ledger, now=T0,
+        "pii_detection",
+        "boom",
+        policy=FailPolicy("pii_detection", CLOSED),
+        ledger=ledger,
+        now=T0,
     )
     assert len(ledger.history("pii_detection")) == 1
 
@@ -293,8 +302,11 @@ def test_ordinary_traffic_through_the_live_gate_is_never_shed(client):
 
 def test_health_means_every_control_ran_not_that_requests_succeeded(ledger):
     service_fallback(
-        "pii_detection", "boom",
-        policy=FailPolicy("pii_detection", OPEN), ledger=ledger, now=T0,
+        "pii_detection",
+        "boom",
+        policy=FailPolicy("pii_detection", OPEN),
+        ledger=ledger,
+        now=T0,
     )
     status = health(ledger, now=T0)
     assert not status["healthy"]
@@ -306,8 +318,11 @@ def test_reading_health_twice_gives_the_same_answer(ledger):
     depended on how far through the loop the reader was: one call reported unhealthy
     while listing nothing, and the next reported healthy."""
     service_fallback(
-        "pii_detection", "boom",
-        policy=FailPolicy("pii_detection", OPEN), ledger=ledger, now=T0,
+        "pii_detection",
+        "boom",
+        policy=FailPolicy("pii_detection", OPEN),
+        ledger=ledger,
+        now=T0,
     )
     assert health(ledger, now=T0) == health(ledger, now=T0)
 

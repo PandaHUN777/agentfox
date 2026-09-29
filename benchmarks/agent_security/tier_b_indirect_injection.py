@@ -40,14 +40,14 @@ import json
 import os
 from pathlib import Path
 
+from _util import wipe_db
+
 from agentfox import db
 from agentfox.config import get_settings, reset_settings_cache
 from agentfox.enforcement import Enforcer
 from agentfox.guardrails import warm_all
 from agentfox.integrations.mcp import McpGovernor
 from agentfox.seed import seed
-
-from _util import wipe_db
 
 DATA_PATH = Path(__file__).parent / "data" / "tier_b_cases.json"
 RESULTS_DIR = Path(__file__).parent / "results"
@@ -128,7 +128,12 @@ def score_llm_guard(cases: list[dict]) -> list[dict] | None:
         print(f"llm-guard comparison skipped: {exc}")
         return None
     return [
-        {"id": c["id"], "label": c["label"], "flagged": s["is_injection"], "risk_score": s["risk_score"]}
+        {
+            "id": c["id"],
+            "label": c["label"],
+            "flagged": s["is_injection"],
+            "risk_score": s["risk_score"],
+        }
         for c, s in zip(cases, scanned, strict=True)
     ]
 

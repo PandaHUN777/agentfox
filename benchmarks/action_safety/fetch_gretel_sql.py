@@ -142,18 +142,14 @@ def build_cases(rows: list[dict], rng: random.Random) -> dict[str, list[dict]]:
     dml = [r for r in rows if r["sql_task_type"] == "data manipulation"]
     ddl = [r for r in rows if r["sql_task_type"] == "data definition"]
 
-    delete_update = [
-        r for r in dml if re.match(r"^\s*(DELETE|UPDATE)\b", r["sql"], re.I)
-    ]
+    delete_update = [r for r in dml if re.match(r"^\s*(DELETE|UPDATE)\b", r["sql"], re.I)]
 
     natural_dml = []
     single_bounded_sources = []  # feeds the adversarial variants
     for r in delete_update:
         statements = split_statements(r["sql"])
         stacked = len(statements) > 1
-        stmt_has_where, stmt_has_bound = (
-            (None, None) if stacked else parse_bound(statements[0])
-        )
+        stmt_has_where, stmt_has_bound = (None, None) if stacked else parse_bound(statements[0])
         # ground truth: "should this actually be flagged" — stacked, or genuinely
         # unbounded in reality (no WHERE and no FROM/JOIN bounding it), not just
         # "does the text contain the substring WHERE somewhere."

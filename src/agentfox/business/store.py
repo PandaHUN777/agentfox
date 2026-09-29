@@ -74,8 +74,11 @@ def save_ladder(
         subject_type="business_rule",
         subject_id=ladder.key,
         before={"bands": previous.get("bands")} if previous else None,
-        after={"bands": rule.definition_json.get("bands"), "mode": rule.mode,
-               "version": rule.version},
+        after={
+            "bands": rule.definition_json.get("bands"),
+            "mode": rule.mode,
+            "version": rule.version,
+        },
     )
     return rule
 
@@ -102,9 +105,7 @@ def load_ladders(
         try:
             out.append(Ladder.model_validate(rule.definition_json))
         except Exception as exc:
-            log.warning(
-                "business rule '%s' no longer validates and was skipped: %s", rule.key, exc
-            )
+            log.warning("business rule '%s' no longer validates and was skipped: %s", rule.key, exc)
     return out
 
 

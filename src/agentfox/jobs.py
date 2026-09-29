@@ -55,8 +55,11 @@ class Job:
 
     def to_json(self) -> dict[str, Any]:
         return {
-            "kind": self.kind, "status": self.status, "attempts": self.attempts,
-            "max_attempts": self.max_attempts, "last_error": self.last_error,
+            "kind": self.kind,
+            "status": self.status,
+            "attempts": self.attempts,
+            "max_attempts": self.max_attempts,
+            "last_error": self.last_error,
             "org_id": self.org_id,
             "enqueued_at": self.enqueued_at.isoformat() if self.enqueued_at else None,
             "finished_at": self.finished_at.isoformat() if self.finished_at else None,
@@ -102,8 +105,13 @@ class JobQueue:
                 "nothing knows how to do — the failure would surface an hour later as "
                 "missing evidence"
             )
-        job = Job(kind=kind, payload=payload or {}, max_attempts=max_attempts,
-                  org_id=org_id, enqueued_at=now or dt.datetime.now(dt.UTC))
+        job = Job(
+            kind=kind,
+            payload=payload or {},
+            max_attempts=max_attempts,
+            org_id=org_id,
+            enqueued_at=now or dt.datetime.now(dt.UTC),
+        )
         self._pending.append(job)
         return job
 
@@ -122,8 +130,9 @@ class JobQueue:
                 self._handlers[job.kind](job.payload)
             except Exception as exc:
                 job.last_error = f"{type(exc).__name__}: {exc}"
-                log.warning("job '%s' attempt %d failed: %s", job.kind, job.attempts,
-                            job.last_error)
+                log.warning(
+                    "job '%s' attempt %d failed: %s", job.kind, job.attempts, job.last_error
+                )
                 log.debug("%s", traceback.format_exc())
                 if job.attempts >= job.max_attempts:
                     # Never discarded. Evidence that is missing without a record is
@@ -174,5 +183,10 @@ class JobQueue:
 
 #: Work that belongs off the request path. Named rather than discovered so that adding
 #: a slow step to the inline path is a visible decision.
-DEFERRABLE = ("evidence.package", "redteam.sweep", "compliance.recompute",
-              "eval.run", "retrieval.baseline")
+DEFERRABLE = (
+    "evidence.package",
+    "redteam.sweep",
+    "compliance.recompute",
+    "eval.run",
+    "retrieval.baseline",
+)

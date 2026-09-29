@@ -317,7 +317,9 @@ def test_the_one_liner_captures_conversation_turns(isolated_db, fake_openai):
         # filtered to this test's own session — the seed demo carries a real,
         # already-escalated conversation of its own (seed-refund-dispute-1)
         assert session.query(ConversationTurn).filter_by(session_id="conv-1").count() == 3
-        result = detect_missed_escalation(session, raise_findings=False, agent_slug="support-triage")
+        result = detect_missed_escalation(
+            session, raise_findings=False, agent_slug="support-triage"
+        )
     assert result["qualified"] == 1
     assert len(result["missed"]) == 1
 

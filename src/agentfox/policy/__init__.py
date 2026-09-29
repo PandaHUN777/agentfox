@@ -44,13 +44,18 @@ from .model import (
 from .opa import OpaPolicyEngine, compile_to_rego
 from .simulate import SimulationDiff, record_simulation, simulate
 from .store import (
+    PROJECT_POLICY_DIR,
+    PolicyPackError,
     active_layers,
     active_policies,
     effective_for,
     get_engine,
     history,
     lint_all,
+    load_available,
     load_from_dir,
+    pack_sources,
+    project_policy_dir,
     save_policy,
     set_mode,
 )
@@ -89,7 +94,12 @@ __all__ = [
     "lint_all",
     "lint_policy",
     "lint_summary",
+    "PROJECT_POLICY_DIR",
+    "PolicyPackError",
+    "load_available",
     "load_from_dir",
+    "pack_sources",
+    "project_policy_dir",
     "pick_version_id",
     "record_simulation",
     "resolve_effective",

@@ -114,7 +114,9 @@ def _aware(value: dt.datetime | None) -> dt.datetime | None:
 def _json_safe(value: dict[str, Any]) -> dict[str, Any]:
     """A handler's result lands in a JSON column; datetimes and the like become ISO
     strings here rather than failing the flush after the work already succeeded."""
-    return json.loads(json.dumps(value, default=lambda o: o.isoformat() if hasattr(o, "isoformat") else str(o)))
+    return json.loads(
+        json.dumps(value, default=lambda o: o.isoformat() if hasattr(o, "isoformat") else str(o))
+    )
 
 
 def backoff_delay(attempts: int) -> dt.timedelta:
@@ -200,7 +202,9 @@ def recover_stuck(
     for job in stuck:
         bind_session(session, job.org_id)
         started = _aware(job.started_at) or _aware(job.enqueued_at)
-        log.warning("job '%s' (%s) stuck in running since %s; recovering", job.kind, job.id, started)
+        log.warning(
+            "job '%s' (%s) stuck in running since %s; recovering", job.kind, job.id, started
+        )
         if job.attempts <= 0:
             job.attempts = 1
         _fail_attempt(

@@ -38,6 +38,7 @@ const PRODUCT: Link[] = [
   { path: "/product", note: "The three gates — what an agent may read, may claim, and may do — and the controls at each." },
   { path: "/how-it-works", note: "The decision path end to end: a call arrives, the pipeline runs under a budget, a policy decides, the record is chained." },
   { path: "/playground", note: "Run a real attack against the real detectors in the browser. No account, no signup." },
+  { path: "/coverage", note: "114 ways an agentic request can fail, scored against what AgentFox catches. 103 executed against the running product nightly; the gaps are listed too." },
   { path: "/benchmark", note: "Every published number and the run it came from. Detector precision and recall on named public datasets." },
   { path: "/compare", note: "How AgentFox differs from AI gateways, evaluation tools and the cloud providers' own filters." },
   { path: "/pricing", note: "Self-hosting is free and unlimited under Apache-2.0. Hosted is a waitlist." },

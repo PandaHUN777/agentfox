@@ -74,9 +74,7 @@ def create_session(request: Request) -> dict[str, Any]:
     return {
         "session_id": record.id,
         "expires_in_seconds": SESSION_TTL_SECONDS,
-        "agents": [
-            {"slug": a["slug"], "name": a["name"], "purpose": a["purpose"]} for a in AGENTS
-        ],
+        "agents": [{"slug": a["slug"], "name": a["name"], "purpose": a["purpose"]} for a in AGENTS],
         "tools": {t["key"]: {"name": t["name"], "impact": t["impact"]} for t in TOOLS},
         "capabilities": CAPABILITIES,
         "poisoned_document": POISONED_DOCUMENT,

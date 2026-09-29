@@ -26,6 +26,7 @@ const PUBLIC_PATHS = [
   "/",
   "/benchmark",
   "/compare",
+  "/coverage",
   "/how-it-works",
   "/legal",
   "/playground",

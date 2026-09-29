@@ -107,9 +107,14 @@ class Degradation:
     escalated: bool = False
 
     def to_json(self) -> dict[str, Any]:
-        return {"control": self.control, "verdict": self.verdict, "reason": self.reason,
-                "at": self.at.isoformat(), "error": self.error,
-                "escalated": self.escalated}
+        return {
+            "control": self.control,
+            "verdict": self.verdict,
+            "reason": self.reason,
+            "at": self.at.isoformat(),
+            "error": self.error,
+            "escalated": self.escalated,
+        }
 
 
 class DegradationLedger:
@@ -184,15 +189,14 @@ class DegradationLedger:
                 "open_fraction": round(len(events) / total, 4) if total else 0.0,
                 "events": len(events),
             }
-            for control, events in self._events.items() if events
+            for control, events in self._events.items()
+            if events
         }
 
     def history(self, control: str | None = None) -> list[Degradation]:
         if control is not None:
             return list(self._events.get(control, ()))
-        return sorted(
-            (e for events in self._events.values() for e in events), key=lambda e: e.at
-        )
+        return sorted((e for events in self._events.values() for e in events), key=lambda e: e.at)
 
 
 def service_fallback(
@@ -214,8 +218,11 @@ def service_fallback(
 
     if policy.on_unavailable == CLOSED:
         event = Degradation(
-            control, "block",
-            f"'{control}' is unavailable and is declared fail-closed", now, error,
+            control,
+            "block",
+            f"'{control}' is unavailable and is declared fail-closed",
+            now,
+            error,
         )
         ledger.record(event)
         return event
@@ -225,30 +232,38 @@ def service_fallback(
 
     if open_for > policy.max_open_seconds:
         event = Degradation(
-            control, "block",
+            control,
+            "block",
             f"'{control}' has been failing open for {open_for:.0f}s, past its "
             f"{policy.max_open_seconds}s budget. A control open this long is not "
             "degraded, it is absent",
-            now, error, escalated=True,
+            now,
+            error,
+            escalated=True,
         )
         ledger.record(event)
         return event
 
     if fraction > policy.max_open_fraction:
         event = Degradation(
-            control, "block",
+            control,
+            "block",
             f"'{control}' has failed open on {fraction:.0%} of recent requests, past "
             f"its {policy.max_open_fraction:.0%} budget",
-            now, error, escalated=True,
+            now,
+            error,
+            escalated=True,
         )
         ledger.record(event)
         return event
 
     event = Degradation(
-        control, "allow",
+        control,
+        "allow",
         f"'{control}' is unavailable and is declared fail-open; this request was not "
         "checked and is recorded so it can be re-examined",
-        now, error,
+        now,
+        error,
     )
     ledger.record(event)
     return event
@@ -275,9 +290,13 @@ class Admission:
         return "allow" if self.admitted else "shed"
 
     def to_json(self) -> dict[str, Any]:
-        return {"admitted": self.admitted, "verdict": self.verdict,
-                "reason": self.reason, "retry_after_seconds": self.retry_after_seconds,
-                "queue_depth": self.queue_depth}
+        return {
+            "admitted": self.admitted,
+            "verdict": self.verdict,
+            "reason": self.reason,
+            "retry_after_seconds": self.retry_after_seconds,
+            "queue_depth": self.queue_depth,
+        }
 
 
 @dataclass
@@ -347,7 +366,8 @@ class AdmissionController:
                     f"{self._in_flight} requests already in flight, at the "
                     f"{self.max_concurrent} ceiling. Refused rather than admitted "
                     "unchecked",
-                    retry_after_seconds=1.0, queue_depth=self._in_flight,
+                    retry_after_seconds=1.0,
+                    queue_depth=self._in_flight,
                 )
 
         if not self._take(scope, now):
@@ -614,9 +634,7 @@ def probe_services(*, now: dt.datetime | None = None, force: bool = False) -> di
     return errors
 
 
-def check_services(
-    *, now: dt.datetime | None = None, force: bool = False
-) -> list[Degradation]:
+def check_services(*, now: dt.datetime | None = None, force: bool = False) -> list[Degradation]:
     """Probe every dependency, record what is down, and return the verdicts.
 
     Never raises. A ledger that can break a request is worse than no ledger: the whole

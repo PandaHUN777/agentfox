@@ -24,7 +24,6 @@ from sqlalchemy.orm import Session
 from ... import jobs_db
 from ...audit import chain, evidence, siem
 from ...audit.trace import full_trace, search_traces
-from ...tenancy import session_org
 from ...compliance import (
     all_frameworks,
     board_view,
@@ -52,6 +51,7 @@ from ...models import (
     Trace,
     User,
 )
+from ...tenancy import session_org
 from ..deps import current_user, db, get_agent_or_404, require
 
 router = APIRouter(prefix="/api", tags=["audit", "compliance"])
@@ -251,8 +251,12 @@ def _run_evidence_package(session: Session, payload: dict[str, Any]) -> dict[str
     """PL-5 — the job's handler. Runs inside jobs_db.run_pending(), which has
     already tenant-bound the session to the job's own org_id, not whatever
     context happened to be ambient when this got registered at import time."""
-    period_from = dt.datetime.fromisoformat(payload["period_from"]) if payload.get("period_from") else None
-    period_to = dt.datetime.fromisoformat(payload["period_to"]) if payload.get("period_to") else None
+    period_from = (
+        dt.datetime.fromisoformat(payload["period_from"]) if payload.get("period_from") else None
+    )
+    period_to = (
+        dt.datetime.fromisoformat(payload["period_to"]) if payload.get("period_to") else None
+    )
     package = evidence.build(
         session,
         agents=payload.get("agents"),
@@ -281,8 +285,9 @@ def build_evidence(
     directly, and processes it within this same request — see jobs_db's own
     module docstring for why same-request processing, not a deferred worker,
     is the honest fit here. A transient failure gets one automatic retry
-    later, with backoff, and this returns 202 queued_for_retry meanwhile; a permanent one is a real `Job`
-    row with status="dead" a human can find via GET /jobs, not a bare 500."""
+    later, with backoff, and this returns 202 queued_for_retry meanwhile; a
+    permanent one is a real `Job` row with status="dead" a human can find via
+    GET /jobs, not a bare 500."""
     job = jobs_db.enqueue(
         session,
         "evidence.package",

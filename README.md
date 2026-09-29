@@ -336,6 +336,19 @@ pytest -q
 PyRIT, OpenTelemetry, Postgres). The suite is offline by default: the `echo` model provider makes
 the whole enforcement path exercisable with nothing installed and no API key.
 
+**Model-backed detectors need their weights fetched first, on purpose.** None of them downloads
+anything while handling a request — a detector whose weights are absent reports itself
+unavailable rather than reaching the network mid-decision, and `agentfox doctor` names the one
+that is missing. Fetch them deliberately:
+
+```bash
+python -m spacy download en_core_web_lg   # pii.presidio — ~400MB
+```
+
+Granite Guardian, the injection classifier and the embedding detector pull their weights from
+Hugging Face the same way; `agentfox doctor` lists which are present. The running container never
+does this itself (NFR-4/NFR-9).
+
 Three drift checks run in CI and are worth running locally before a PR:
 
 ```bash

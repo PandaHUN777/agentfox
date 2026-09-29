@@ -23,7 +23,10 @@ def flat(output: str) -> str:
 
 def test_quickscan_runs_with_no_database_and_no_network(tmp_path: Path):
     (tmp_path / "app.py").write_text(
-        "from openai import OpenAI\nclient = OpenAI()\ndef f():\n    client.chat.completions.create(model='gpt-4o', messages=[])\n"
+        "from openai import OpenAI\n"
+        "client = OpenAI()\n"
+        "def f():\n"
+        "    client.chat.completions.create(model='gpt-4o', messages=[])\n"
     )
     result = runner.invoke(app, ["quickscan", str(tmp_path), "--skip-sessions"])
     assert result.exit_code == 0, result.output
@@ -91,9 +94,7 @@ def test_default_run_does_not_prompt_or_submit_when_not_a_tty(tmp_path: Path, mo
     assert "Submit to the dashboard?" not in result.output
 
 
-def test_submit_without_a_configured_control_plane_fails_gracefully(
-    tmp_path: Path, monkeypatch
-):
+def test_submit_without_a_configured_control_plane_fails_gracefully(tmp_path: Path, monkeypatch):
     # Both names, because submit.py accepts AGENTFOX_ with NOMETRIA_ as the
     # legacy alias — unsetting only one leaves the other able to satisfy the
     # check this test exists to exercise.
@@ -132,9 +133,7 @@ def test_submit_posts_only_the_redacted_payload(tmp_path: Path, monkeypatch):
 
     monkeypatch.setattr("agentfox.cli.submit.httpx.post", _fake_post)
 
-    result = runner.invoke(
-        app, ["quickscan", str(tmp_path), "--skip-sessions", "--submit"]
-    )
+    result = runner.invoke(app, ["quickscan", str(tmp_path), "--skip-sessions", "--submit"])
     assert result.exit_code == 0, result.output
     assert "Submitted." in flat(result.output)
     assert captured["url"] == "https://plane.example.internal/api/discovery/submit"

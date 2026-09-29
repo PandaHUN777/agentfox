@@ -15,8 +15,8 @@ import pytest
 from agentfox.enforcement import Enforcer
 from agentfox.integrations.langgraph import (
     STATE_KEY,
-    ApprovalRequired,
     AgentFoxGuard,
+    ApprovalRequired,
     PolicyViolation,
 )
 from agentfox.models import AgentControl, AuditEntry, Finding
@@ -571,7 +571,11 @@ def test_tool_node_alternating_cycle_trips_the_real_loop_governor(seeded):
     state = search({})
     state = lookup(state)
     state = search(state)
-    assert [s["tool"] for s in state[STATE_KEY]["steps"]] == ["kb.search", "crm.lookup", "kb.search"]
+    assert [s["tool"] for s in state[STATE_KEY]["steps"]] == [
+        "kb.search",
+        "crm.lookup",
+        "kb.search",
+    ]
 
     with pytest.raises(PolicyViolation) as excinfo:
         lookup(state)

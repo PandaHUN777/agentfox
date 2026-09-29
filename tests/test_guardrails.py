@@ -426,13 +426,16 @@ def test_ensemble_secondary_is_not_consulted_when_the_primary_already_fired():
         [{"label": "injection", "score": 0.99}, {"label": "safe", "score": 0.01}]
     ]
     secondary_calls = []
-    detector.__dict__["_secondary_pipeline"] = lambda text: secondary_calls.append(text) or [
-        [{"label": "injection", "score": 0.99}, {"label": "safe", "score": 0.01}]
-    ]
+    detector.__dict__["_secondary_pipeline"] = lambda text: (
+        secondary_calls.append(text)
+        or [[{"label": "injection", "score": 0.99}, {"label": "safe", "score": 0.01}]]
+    )
 
     result = detector.detect("anything", DetectionContext(surface="input"))
     assert result.detections and result.detections[0].entity_type == "INJECTION.JAILBREAK"
-    assert secondary_calls == [], "secondary pipeline should never run when the primary already fired"
+    assert secondary_calls == [], (
+        "secondary pipeline should never run when the primary already fired"
+    )
 
 
 def test_ensemble_secondary_backstop_fires_above_its_own_threshold():

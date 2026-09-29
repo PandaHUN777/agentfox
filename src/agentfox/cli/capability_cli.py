@@ -153,9 +153,7 @@ def _find_capability(session, typed: str):
         console.print(f"[red]unknown capability '{typed}'[/]")
         console.print("  List the real ids with `agentfox capability list`.")
         raise typer.Exit(1)
-    console.print(
-        f"[red]'{typed}' matches {len(matches)} grants.[/] Name one of them in full:"
-    )
+    console.print(f"[red]'{typed}' matches {len(matches)} grants.[/] Name one of them in full:")
     for match in matches:
         console.print(f"    {match.id}  [dim]{match.tool_key}[/]")
     raise typer.Exit(1)
@@ -227,8 +225,7 @@ def capability_grant(
 
     if max_taint not in TAINT_LEVELS:
         console.print(
-            f"[red]unknown provenance level '{max_taint}'[/]. "
-            f"Use one of: {', '.join(TAINT_LEVELS)}"
+            f"[red]unknown provenance level '{max_taint}'[/]. Use one of: {', '.join(TAINT_LEVELS)}"
         )
         raise typer.Exit(2)
 
@@ -249,9 +246,7 @@ def capability_grant(
     console.print(f"[bold]Grant[/] {tool} to [bold]{agent}[/]  [dim]{principal}[/]")
     console.print(f"  actions        {', '.join(actions)}")
     console.print(f"  argument limits {_describe_constraints(constraints)}")
-    console.print(
-        f"  max provenance {max_taint}  [dim]{_TAINT_MEANING.get(max_taint, '')}[/]"
-    )
+    console.print(f"  max provenance {max_taint}  [dim]{_TAINT_MEANING.get(max_taint, '')}[/]")
     console.print(
         f"  human approval {'required for every call' if requires_approval else 'not required'}"
     )
@@ -314,9 +309,7 @@ def capability_grant(
 
 @capability_app.command("list")
 def capability_list(
-    agent: str | None = typer.Argument(
-        None, help="Agent slug. Omit to list every agent's grants."
-    ),
+    agent: str | None = typer.Argument(None, help="Agent slug. Omit to list every agent's grants."),
     as_json: bool = typer.Option(False, "--json", help="Machine-readable output for scripts."),
 ) -> None:
     """What each agent is allowed to do. Anything not listed here is refused."""
@@ -438,9 +431,7 @@ def capability_revoke(
         tool_key = capability.tool_key
         resolved_id = capability.id
 
-        console.print(
-            f"[bold]Revoke[/] {tool_key} from [bold]{name}[/]  [dim]{resolved_id}[/]"
-        )
+        console.print(f"[bold]Revoke[/] {tool_key} from [bold]{name}[/]  [dim]{resolved_id}[/]")
         console.print(f"  argument limits {_describe_constraints(shape['constraints'])}")
         if not yes and not typer.confirm(
             "\nCalls to this tool will be refused. Revoke it?", default=False

@@ -147,9 +147,7 @@ def issue_token(
     return token, raw
 
 
-def revoke_token(
-    session: Session, token_id: str, *, actor: str = "", reason: str = ""
-) -> bool:
+def revoke_token(session: Session, token_id: str, *, actor: str = "", reason: str = "") -> bool:
     """End a credential.
 
     The window between issue and revoke is the exposure window, and it can only be
@@ -167,9 +165,12 @@ def revoke_token(
         reason=reason or "token revoked",
         subject_type="api_token",
         subject_id=token.id,
-        before={"name": token.name,
-                "issued_at": token.created_at.isoformat()
-                if getattr(token, "created_at", None) else None},
+        before={
+            "name": token.name,
+            "issued_at": token.created_at.isoformat()
+            if getattr(token, "created_at", None)
+            else None,
+        },
     )
     return True
 

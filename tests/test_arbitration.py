@@ -52,8 +52,9 @@ def test_a_source_past_its_freshness_limit_is_reported():
 
 
 def test_a_source_with_no_declared_standing_cannot_be_weighed():
-    result = arbitrate("balance", [Reading("ledger", 4000), Reading("scratchpad", 4000)],
-                       sources=SOURCES)
+    result = arbitrate(
+        "balance", [Reading("ledger", 4000), Reading("scratchpad", 4000)], sources=SOURCES
+    )
     assert "undeclared-source" in codes(result)
 
 
@@ -63,9 +64,7 @@ def test_a_source_with_no_declared_standing_cannot_be_weighed():
 def test_a_material_disagreement_asks_rather_than_picks():
     """This is the whole argument. A disagreement between two systems is information,
     not a ranking problem."""
-    result = arbitrate(
-        "balance", [Reading("ledger", 4000), Reading("crm", 4310)], sources=SOURCES
-    )
+    result = arbitrate("balance", [Reading("ledger", 4000), Reading("crm", 4310)], sources=SOURCES)
     assert result.verdict == "confirm"
     assert result.confirmation is not None
     assert "ledger: 4000" in result.confirmation.options
@@ -74,9 +73,7 @@ def test_a_material_disagreement_asks_rather_than_picks():
 
 def test_the_confirmation_carries_its_reason_so_it_can_be_replayed():
     """A confirmation nobody can reconstruct afterwards is a pause, not a control."""
-    result = arbitrate(
-        "balance", [Reading("ledger", 4000), Reading("crm", 4310)], sources=SOURCES
-    )
+    result = arbitrate("balance", [Reading("ledger", 4000), Reading("crm", 4310)], sources=SOURCES)
     payload = result.confirmation.to_json()
     assert payload["because"]
     assert payload["topic"] == "balance"
@@ -86,8 +83,10 @@ def test_confirmation_can_be_downgraded_but_never_to_allow():
     """A setting that made the disagreement disappear would be a setting for producing
     confident wrong answers."""
     result = arbitrate(
-        "balance", [Reading("ledger", 4000), Reading("crm", 4310)],
-        sources=SOURCES, require_confirmation=False,
+        "balance",
+        [Reading("ledger", 4000), Reading("crm", 4310)],
+        sources=SOURCES,
+        require_confirmation=False,
     )
     assert result.confirmation is None
     assert result.verdict == "block"
@@ -103,9 +102,7 @@ def test_a_rounding_difference_is_not_a_disagreement():
 
 
 def test_agreement_between_sources_needs_no_question():
-    result = arbitrate(
-        "balance", [Reading("ledger", 4000), Reading("crm", 4000)], sources=SOURCES
-    )
+    result = arbitrate("balance", [Reading("ledger", 4000), Reading("crm", 4000)], sources=SOURCES)
     assert result.confirmation is None
     assert result.verdict == "allow"
 

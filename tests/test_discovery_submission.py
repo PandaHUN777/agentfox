@@ -27,8 +27,7 @@ def test_submission_payload_drops_file_contents_and_paths(tmp_path):
         "    client.chat.completions.create(model='gpt-4o', messages=[])\n"
     )
     (tmp_path / "agents" / "run.py").write_text(
-        "import subprocess\n"
-        "subprocess.run('rm -rf /some/internal/path --config secret-flag')\n"
+        "import subprocess\nsubprocess.run('rm -rf /some/internal/path --config secret-flag')\n"
     )
     report = scan(tmp_path)
     payload = report.to_submission_payload(source="check")
@@ -53,9 +52,7 @@ def test_submission_payload_drops_file_contents_and_paths(tmp_path):
 
 
 def test_submission_payload_never_includes_a_hardcoded_secret(tmp_path):
-    (tmp_path / "app.py").write_text(
-        'api_key = "sk-liveAbCdEfGhIjKlMnOpQrStUvWxYz0123456789"\n'
-    )
+    (tmp_path / "app.py").write_text('api_key = "sk-liveAbCdEfGhIjKlMnOpQrStUvWxYz0123456789"\n')
     report = scan(tmp_path)
     assert any(s.kind == "secret" for s in report.sites)  # sanity: it was found locally
     payload = report.to_submission_payload(source="quickscan")

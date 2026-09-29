@@ -147,16 +147,35 @@ def extract_constraints(text: str) -> list[Constraint]:
         direction = _norm(match.group(1))
         amount = re.sub(r"[\s,]", "", match.group(2))
         unit = _norm(match.group(3) or "")
-        unit = {"dollars": "usd", "dollar": "usd", "euros": "eur", "euro": "eur",
-                "pounds": "gbp", "pound": "gbp"}.get(unit, unit)
+        unit = {
+            "dollars": "usd",
+            "dollar": "usd",
+            "euros": "eur",
+            "euro": "eur",
+            "pounds": "gbp",
+            "pound": "gbp",
+        }.get(unit, unit)
         if amount.startswith(("£", "$", "€", "¥")):
             unit = {"£": "gbp", "$": "usd", "€": "eur", "¥": "jpy"}[amount[0]]
             amount = amount[1:]
-        direction = "under" if direction in (
-            "under", "below", "less than", "no more than", "at most", "up to",
-            "maximum of", "within") else "over"
-        found.append(Constraint(LIMIT, f"{direction} {amount}{' ' + unit if unit else ''}",
-                                match.group(0)))
+        direction = (
+            "under"
+            if direction
+            in (
+                "under",
+                "below",
+                "less than",
+                "no more than",
+                "at most",
+                "up to",
+                "maximum of",
+                "within",
+            )
+            else "over"
+        )
+        found.append(
+            Constraint(LIMIT, f"{direction} {amount}{' ' + unit if unit else ''}", match.group(0))
+        )
 
     for match in _APPROVAL.finditer(flat):
         found.append(Constraint(APPROVAL, "approval", match.group(0)))
@@ -256,13 +275,9 @@ class Handoff:
             return "every constraint in the parent instruction reached the child"
         parts = []
         if self.dropped:
-            parts.append(
-                "dropped " + ", ".join(f"{c.kind}: {c.value}" for c in self.dropped)
-            )
+            parts.append("dropped " + ", ".join(f"{c.kind}: {c.value}" for c in self.dropped))
         if self.added:
-            parts.append(
-                "invented " + ", ".join(f"{c.kind}: {c.value}" for c in self.added)
-            )
+            parts.append("invented " + ", ".join(f"{c.kind}: {c.value}" for c in self.added))
         if self.unclassified:
             parts.append(
                 "an instruction-shaped clause did not clearly carry over: "
@@ -272,8 +287,10 @@ class Handoff:
 
     def to_json(self) -> dict[str, Any]:
         return {
-            "from": self.from_agent, "to": self.to_agent,
-            "fidelity": self.fidelity, "verdict": self.verdict,
+            "from": self.from_agent,
+            "to": self.to_agent,
+            "fidelity": self.fidelity,
+            "verdict": self.verdict,
             "kept": [c.to_json() for c in self.kept],
             "dropped": [c.to_json() for c in self.dropped],
             "added": [c.to_json() for c in self.added],
@@ -340,12 +357,14 @@ def trace_handoffs(steps: list[dict[str, Any]]) -> list[Handoff]:
     """
     handoffs: list[Handoff] = []
     for parent, child in zip(steps, steps[1:], strict=False):
-        handoffs.append(handoff_fidelity(
-            str(parent.get("instruction", "")),
-            str(child.get("instruction", "")),
-            from_agent=str(parent.get("agent", "")),
-            to_agent=str(child.get("agent", "")),
-        ))
+        handoffs.append(
+            handoff_fidelity(
+                str(parent.get("instruction", "")),
+                str(child.get("instruction", "")),
+                from_agent=str(parent.get("agent", "")),
+                to_agent=str(child.get("agent", "")),
+            )
+        )
     return handoffs
 
 
@@ -366,7 +385,9 @@ class Drift:
 
     def to_json(self) -> dict[str, Any]:
         return {
-            "retained": self.retained, "drifted": self.drifted, "steps": self.steps,
+            "retained": self.retained,
+            "drifted": self.drifted,
+            "steps": self.steps,
             "lost": [c.to_json() for c in self.lost],
         }
 
@@ -412,7 +433,8 @@ class Attribution:
             )
         carried = (
             f" {len(self.propagators)} step(s) carried it without changing it"
-            if self.propagators else ""
+            if self.propagators
+            else ""
         )
         return (
             f"step {self.origin_step} ({self.origin_actor}) originated '{self.value}'; "
@@ -421,9 +443,12 @@ class Attribution:
 
     def to_json(self) -> dict[str, Any]:
         return {
-            "origin_step": self.origin_step, "origin_actor": self.origin_actor,
-            "propagators": self.propagators, "failed_step": self.failed_step,
-            "value": self.value, "confident": self.confident,
+            "origin_step": self.origin_step,
+            "origin_actor": self.origin_actor,
+            "propagators": self.propagators,
+            "failed_step": self.failed_step,
+            "value": self.value,
+            "confident": self.confident,
             "explanation": self.explain(),
         }
 
@@ -495,8 +520,10 @@ class Delegation:
 
     def to_json(self) -> dict[str, Any]:
         return {
-            "cycles": self.cycles, "max_depth": self.max_depth,
-            "over_depth": self.over_depth, "verdict": self.verdict,
+            "cycles": self.cycles,
+            "max_depth": self.max_depth,
+            "over_depth": self.over_depth,
+            "verdict": self.verdict,
         }
 
 
@@ -521,7 +548,7 @@ def delegation_graph(edges: list[tuple[str, str]], *, depth_limit: int = 5) -> D
         max_depth = max(max_depth, len(path))
         for neighbour in adjacency.get(node, []):
             if neighbour in on_path:
-                cycle = path[path.index(neighbour):] + [neighbour]
+                cycle = path[path.index(neighbour) :] + [neighbour]
                 # Rotate to a canonical start so A->B->A and B->A->B report once.
                 core = cycle[:-1]
                 spin = min(range(len(core)), key=lambda i: core[i])

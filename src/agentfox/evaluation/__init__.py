@@ -5,7 +5,8 @@ product from a pure-security tool: we govern whether the agent *worked*, not onl
 whether it was safe (principle X-5).
 """
 
-from . import adaptive, adapters, drift, gating, redteam, runner, scorers, silent_failure
+from . import adapters, adaptive, drift, gating, redteam, runner, scorers, silent_failure
+from .adapters import PromptfooRunner, get_runner
 from .adaptive import (
     OPERATORS,
     SCOPE_STATEMENT,
@@ -13,7 +14,6 @@ from .adaptive import (
     generate_deployment_probes,
     mutation_classes,
 )
-from .adapters import PromptfooRunner, get_runner
 from .drift import DriftReport, evaluate_slos, ks_statistic, psi, set_slo
 from .drift import compute as compute_drift
 from .gating import GateResult, Regression, gate, set_baseline, to_junit, to_sarif

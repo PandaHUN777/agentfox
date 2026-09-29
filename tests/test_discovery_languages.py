@@ -167,8 +167,7 @@ def test_the_json_report_carries_the_caveat_the_counts_need(repo):
         ),
         (
             "vercel-stream.mjs",
-            'import { streamText } from "ai";\n'
-            'const s = streamText({ model, prompt: "hi" });\n',
+            'import { streamText } from "ai";\nconst s = streamText({ model, prompt: "hi" });\n',
             "vercel-ai",
         ),
     ],

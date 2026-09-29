@@ -492,22 +492,18 @@ def test_the_escalation_api(client):
     # queue with no filter is exactly what a team with more than one agent hits.
     # hr-screening (not payments-ops) is the clean "other agent" here — the seed
     # demo carries a real hand-off for payments-ops to make NOM-RTG-10 computable.
-    filtered = client.get(
-        "/api/escalation/handoffs?agent=support-triage", headers=headers
-    ).json()["handoffs"]
+    filtered = client.get("/api/escalation/handoffs?agent=support-triage", headers=headers).json()[
+        "handoffs"
+    ]
     assert filtered and all(h["agent_slug"] == "support-triage" for h in filtered)
-    other = client.get(
-        "/api/escalation/handoffs?agent=hr-screening", headers=headers
-    ).json()["handoffs"]
+    other = client.get("/api/escalation/handoffs?agent=hr-screening", headers=headers).json()[
+        "handoffs"
+    ]
     assert not other
 
-    report = client.get(
-        "/api/escalation/report?agent=support-triage", headers=headers
-    ).json()
+    report = client.get("/api/escalation/report?agent=support-triage", headers=headers).json()
     assert report["handoffs"] == len(filtered)
-    empty_report = client.get(
-        "/api/escalation/report?agent=hr-screening", headers=headers
-    ).json()
+    empty_report = client.get("/api/escalation/report?agent=hr-screening", headers=headers).json()
     assert empty_report["handoffs"] == 0
 
 

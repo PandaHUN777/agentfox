@@ -87,7 +87,8 @@ def model_groundedness(
     try:
         provider = get_provider(provider_key)
         verdict = provider.judge(
-            output=output, rubric=_RUBRIC_TEMPLATE.format(context=context_text[:6000]),
+            output=output,
+            rubric=_RUBRIC_TEMPLATE.format(context=context_text[:6000]),
             model=model or "default",
         )
         return {

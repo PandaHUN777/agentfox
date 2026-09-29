@@ -44,6 +44,26 @@ jobs:
   # which belongs in a per-push check. `deps` still catches what actually broke
   # production once already: COPY paths that don't exist, or an extras install that
   # no longer covers what the app imports.
+  # Added after a sweep that cleared 397 findings — among them two undefined
+  # names (`Any` in the coverage probe, `GuardState` in a test, both latent
+  # only because `from __future__ import annotations` defers evaluation), a
+  # dead `used_fallback`, and three unused variables in tests that could as
+  # easily have been forgotten assertions. None of it gated anything, because
+  # nothing ran ruff. Cheap enough to run on every push that there is no
+  # reason it should not.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      # Pinned, and pinned to the version the repo was actually cleaned with.
+      # `ruff format` output differs between releases, so an unpinned
+      # `--check` here would fail on a day nobody changed anything.
+      - name: Ruff — the rules, from pyproject
+        run: uvx ruff@0.15.7 check .
+      - name: Ruff — formatting, unchanged
+        run: uvx ruff@0.15.7 format --check .
+
   docker-smoke:
     runs-on: ubuntu-latest
     steps:

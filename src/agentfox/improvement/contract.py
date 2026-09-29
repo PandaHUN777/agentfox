@@ -25,7 +25,15 @@ ROLLED_BACK = "rolled_back"
 SUPERSEDED = "superseded"
 
 STATUSES = (
-    PROPOSED, PROVEN, APPROVED, CANARY, APPLIED, VERIFIED, REJECTED, ROLLED_BACK, SUPERSEDED
+    PROPOSED,
+    PROVEN,
+    APPROVED,
+    CANARY,
+    APPLIED,
+    VERIFIED,
+    REJECTED,
+    ROLLED_BACK,
+    SUPERSEDED,
 )
 TERMINAL = frozenset({VERIFIED, REJECTED, ROLLED_BACK, SUPERSEDED})
 #: Still awaiting a decision or an outcome — the set dedupe and inbox views care about.

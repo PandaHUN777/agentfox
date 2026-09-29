@@ -719,9 +719,7 @@ def scan_file(path: Path, root: Path) -> tuple[list[Site], set[str], bool]:
         visitor = _Visitor(rel)
         visitor.visit(tree)
         sites.extend(visitor.sites)
-        sites.extend(
-            site for site, fw in visitor._pending_agent_defs if fw in visitor.frameworks
-        )
+        sites.extend(site for site, fw in visitor._pending_agent_defs if fw in visitor.frameworks)
         frameworks |= visitor.frameworks
         governed = visitor.governed
     elif path.suffix in JS_SUFFIXES:

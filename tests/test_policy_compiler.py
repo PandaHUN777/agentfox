@@ -174,8 +174,7 @@ def test_a_bare_number_asks_for_its_unit():
 
 def test_an_unmapped_role_is_a_one_word_question():
     c = compile_document(
-        "Refunds under $10 auto-approve. Refunds over $100 require approval from "
-        "management.",
+        "Refunds under $10 auto-approve. Refunds over $100 require approval from management.",
         key_prefix="r",
     )
     item = next(i for i in c.review if "management" in i.question)
@@ -289,7 +288,7 @@ def test_counts_are_not_swallowed_by_a_money_ladder(held_out):
 
 
 def test_the_kind_that_fits_beats_the_kind_that_scores(held_out):
-    """"PII in any reply must be masked" scores highest as an output contract.
+    """ "PII in any reply must be masked" scores highest as an output contract.
 
     An output contract has nothing to extract from that sentence, so the compiler took
     the best-scoring kind, found no parameters, and raised a question — about a
@@ -301,7 +300,7 @@ def test_the_kind_that_fits_beats_the_kind_that_scores(held_out):
 
 
 def test_a_question_names_its_subject(held_out):
-    """"Which tool does this govern?" cannot be answered without the document."""
+    """ "Which tool does this govern?" cannot be answered without the document."""
     item = next(i for i in held_out.review if "tool" in i.question.lower())
     assert "purchase order" in item.question.lower()
 

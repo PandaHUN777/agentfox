@@ -390,9 +390,7 @@ def search(
             candidates = [op for op in pool if op.family not in used_families]
             if not candidates:
                 break
-            weights = [
-                credits[op.key] * (3.0 if op.family in steer else 1.0) for op in candidates
-            ]
+            weights = [credits[op.key] * (3.0 if op.family in steer else 1.0) for op in candidates]
             pick = rng.choices(candidates, weights=weights)[0]
             chosen.append(pick)
             used_families.add(pick.family)
@@ -804,9 +802,7 @@ def main() -> None:
                 "scored as `no detection`, so a slow attempt can read as a bypass on one "
                 "machine and not on another. Counted below rather than hidden."
             ),
-            "degraded_attempts": degraded_attempts + sum(
-                1 for a in all_attempts if a["degraded"]
-            ),
+            "degraded_attempts": degraded_attempts + sum(1 for a in all_attempts if a["degraded"]),
             "degraded_rate": round(
                 (degraded_attempts + sum(1 for a in all_attempts if a["degraded"]))
                 / total_attempts,
@@ -862,8 +858,10 @@ def main() -> None:
     wipe_db(DB_PATH)
 
     # --- console report -----------------------------------------------------
-    print(f"\nASR (success = allow verdict, zero entities), {len(searches)} searches, "
-          f"{total_attempts} attempts, {summary_doc['config']['wall_clock_seconds']}s")
+    print(
+        f"\nASR (success = allow verdict, zero entities), {len(searches)} searches, "
+        f"{total_attempts} attempts, {summary_doc['config']['wall_clock_seconds']}s"
+    )
     header = "  {:34s}" + "".join(f"{f'@{b}':>8s}" for b in BUDGETS) + "{:>8s}"
     print(header.format("config (seeds)", "median"))
     for key, row in curves.items():

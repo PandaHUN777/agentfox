@@ -52,14 +52,14 @@ DB_PATH = Path(tempfile.gettempdir()) / "nometria_agentdojo_e2e.db"
 os.environ["NOMETRIA_DATABASE_URL"] = f"sqlite:///{DB_PATH}"
 os.environ.setdefault("NOMETRIA_CONFIG", "none")
 
+from _util import wipe_db  # noqa: E402
+
 from agentfox import db  # noqa: E402
 from agentfox.config import get_settings, reset_settings_cache  # noqa: E402
 from agentfox.enforcement import Enforcer  # noqa: E402
 from agentfox.identity.service import ensure_identity, grant_capability  # noqa: E402
 from agentfox.policy import load_from_dir, save_policy  # noqa: E402
 from agentfox.registry.service import register_agent, upsert_tool  # noqa: E402
-
-from _util import wipe_db  # noqa: E402
 
 DATA = Path(__file__).parent.parent / "action_safety" / "data" / "agentdojo_calls.json"
 RESULTS_DIR = Path(__file__).parent / "results"
@@ -96,7 +96,9 @@ def build_registry(session, calls: dict[str, list[dict[str, Any]]]) -> dict[str,
     for call in calls["user"]:
         legitimate[call["suite"]].add(call["function"])
 
-    all_functions = {c["function"] for c in calls["user"]} | {c["function"] for c in calls["injection"]}
+    all_functions = {c["function"] for c in calls["user"]} | {
+        c["function"] for c in calls["injection"]
+    }
     for function in sorted(all_functions):
         upsert_tool(
             session,
@@ -107,7 +109,9 @@ def build_registry(session, calls: dict[str, list[dict[str, Any]]]) -> dict[str,
         )
 
     slugs: dict[str, str] = {}
-    for suite in sorted({c["suite"] for c in calls["user"]} | {c["suite"] for c in calls["injection"]}):
+    for suite in sorted(
+        {c["suite"] for c in calls["user"]} | {c["suite"] for c in calls["injection"]}
+    ):
         slug = f"agentdojo-{suite}"
         agent = register_agent(
             session,
@@ -197,14 +201,16 @@ def summarise(rows: list[dict[str, Any]]) -> dict[str, Any]:
     return {
         "benign_utility_allowed": pct(sum(1 for r in user if not r["contained"]), len(user)),
         "benign_blocked_examples": [
-            {"function": r["function"], "verdict": r["effective_verdict"], "rules": r["rules_fired"]}
+            {
+                "function": r["function"],
+                "verdict": r["effective_verdict"],
+                "rules": r["rules_fired"],
+            }
             for r in user
             if r["contained"]
         ][:10],
         "attack_calls_contained": pct(sum(1 for r in inj if r["contained"]), len(inj)),
-        "attack_acting_calls_contained": pct(
-            sum(1 for r in acting if r["contained"]), len(acting)
-        ),
+        "attack_acting_calls_contained": pct(sum(1 for r in acting if r["contained"]), len(acting)),
         "attack_read_only_calls_contained": pct(
             sum(1 for r in reading if r["contained"]), len(reading)
         ),
@@ -241,7 +247,12 @@ def main() -> None:
     for mode in ("detectors_on", "detectors_off"):
         print(f"\n== {mode}")
         for key, value in summary[mode].items():
-            if key in {"benign_blocked_examples", "attack_escaped_examples", "top_rules", "by_suite"}:
+            if key in {
+                "benign_blocked_examples",
+                "attack_escaped_examples",
+                "top_rules",
+                "by_suite",
+            }:
                 continue
             print(f"   {key:38s} {value}")
         print(f"   by_suite {summary[mode]['by_suite']}")

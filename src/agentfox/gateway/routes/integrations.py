@@ -173,9 +173,7 @@ class ConnectIn(BaseModel):
 
 
 def _get_connection(session: Session) -> GithubConnection | None:
-    return session.scalar(
-        select(GithubConnection).order_by(GithubConnection.created_at.desc())
-    )
+    return session.scalar(select(GithubConnection).order_by(GithubConnection.created_at.desc()))
 
 
 @router.post("/api/integrations/github/connect")
@@ -185,7 +183,10 @@ def connect(
     try:
         resp = httpx.get(
             f"{_GITHUB_API}/user",
-            headers={"Authorization": f"Bearer {payload.access_token}", "Accept": "application/vnd.github+json"},
+            headers={
+                "Authorization": f"Bearer {payload.access_token}",
+                "Accept": "application/vnd.github+json",
+            },
             timeout=15.0,
         )
         resp.raise_for_status()
@@ -421,7 +422,9 @@ class HostedApiScanIn(BaseModel):
 
 @router.post("/api/integrations/hosted-api/scan")
 def scan_hosted_api(
-    payload: HostedApiScanIn, session: Session = Depends(db), user: User = Depends(require("registry"))
+    payload: HostedApiScanIn,
+    session: Session = Depends(db),
+    user: User = Depends(require("registry")),
 ) -> dict[str, Any]:
     host = urlparse(payload.endpoint_url).hostname or payload.endpoint_url
 
@@ -478,7 +481,10 @@ def scan_hosted_api(
             rules=[],
         )
         policy, _version = save_policy(
-            session, doc, author=user.email or user.id, notes=f"Proposed by scan {run.id}",
+            session,
+            doc,
+            author=user.email or user.id,
+            notes=f"Proposed by scan {run.id}",
             bind_mode="observe",
         )
         policy.proposed = True
@@ -531,8 +537,12 @@ def approve_agent(
     agent.registered = True
     session.flush()
     chain.append(
-        session, "agent.draft.approved", actor_type="user", actor_id=user.email or user.id,
-        subject_type="agent", subject_id=agent.id,
+        session,
+        "agent.draft.approved",
+        actor_type="user",
+        actor_id=user.email or user.id,
+        subject_type="agent",
+        subject_id=agent.id,
     )
     session.commit()
     return {"id": agent.id, "status": agent.status}
@@ -550,8 +560,12 @@ def reject_agent(
     agent.status = "rejected"
     session.flush()
     chain.append(
-        session, "agent.draft.rejected", actor_type="user", actor_id=user.email or user.id,
-        subject_type="agent", subject_id=agent.id,
+        session,
+        "agent.draft.rejected",
+        actor_type="user",
+        actor_id=user.email or user.id,
+        subject_type="agent",
+        subject_id=agent.id,
     )
     session.commit()
     return {"id": agent.id, "status": agent.status}
@@ -567,8 +581,12 @@ def approve_policy(
     policy.proposed = False
     session.flush()
     chain.append(
-        session, "policy.draft.approved", actor_type="user", actor_id=user.email or user.id,
-        subject_type="policy", subject_id=policy.id,
+        session,
+        "policy.draft.approved",
+        actor_type="user",
+        actor_id=user.email or user.id,
+        subject_type="policy",
+        subject_id=policy.id,
     )
     session.commit()
     return {"id": policy.id, "proposed": policy.proposed}
@@ -584,14 +602,17 @@ def reject_policy(
     if policy is None or not policy.proposed:
         raise HTTPException(404, "no proposed policy with that id")
     version_ids = [
-        v.id for v in session.scalars(select(PolicyVersion).where(PolicyVersion.policy_id == policy.id))
+        v.id
+        for v in session.scalars(select(PolicyVersion).where(PolicyVersion.policy_id == policy.id))
     ]
     if version_ids:
         for binding in session.scalars(
             select(PolicyBinding).where(PolicyBinding.policy_version_id.in_(version_ids))
         ):
             session.delete(binding)
-        for version in session.scalars(select(PolicyVersion).where(PolicyVersion.policy_id == policy.id)):
+        for version in session.scalars(
+            select(PolicyVersion).where(PolicyVersion.policy_id == policy.id)
+        ):
             session.delete(version)
         # `PolicyVersion.policy_id` is a bare FK column with no ORM relationship() to
         # Policy, so the unit-of-work has no dependency edge telling it to delete
@@ -601,8 +622,12 @@ def reject_policy(
     session.delete(policy)
     session.flush()
     chain.append(
-        session, "policy.draft.rejected", actor_type="user", actor_id=user.email or user.id,
-        subject_type="policy", subject_id=policy_id,
+        session,
+        "policy.draft.rejected",
+        actor_type="user",
+        actor_id=user.email or user.id,
+        subject_type="policy",
+        subject_id=policy_id,
     )
     session.commit()
     return {"id": policy_id, "status": "rejected"}

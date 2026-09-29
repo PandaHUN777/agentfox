@@ -817,8 +817,11 @@ def revoke_suppression(
         reason=reason or "suppression revoked",
         subject_type="detector",
         subject_id=suppression.detector_key,
-        before={"suppressed_since": suppression.created_at.isoformat()
-                if getattr(suppression, "created_at", None) else None},
+        before={
+            "suppressed_since": suppression.created_at.isoformat()
+            if getattr(suppression, "created_at", None)
+            else None
+        },
     )
 
 

@@ -36,8 +36,7 @@ agents_app = typer.Typer(
     no_args_is_help=True,
 )
 policy_app = typer.Typer(
-    help="Write the rules, try them against recorded traffic, then turn them on "
-    "(Pillar 6).",
+    help="Write the rules, try them against recorded traffic, then turn them on (Pillar 6).",
     no_args_is_help=True,
 )
 eval_app = typer.Typer(
@@ -53,8 +52,7 @@ evidence_app = typer.Typer(
     no_args_is_help=True,
 )
 compliance_app = typer.Typer(
-    help="Where this deployment stands against each framework, computed from "
-    "telemetry (Pillar 6).",
+    help="Where this deployment stands against each framework, computed from telemetry (Pillar 6).",
     no_args_is_help=True,
 )
 redteam_app = typer.Typer(
@@ -65,12 +63,13 @@ scan_app = typer.Typer(
     help="Snapshot an MCP server's tools and check them for hygiene (Pillar 1).",
     no_args_is_help=True,
 )
-db_app = typer.Typer(
-    help="Apply, roll back and inspect the database schema.", no_args_is_help=True
+hooks_app = typer.Typer(
+    help="Run AgentFox where the agent already is: a warm daemon and a thin per-call hook.",
+    no_args_is_help=True,
 )
+db_app = typer.Typer(help="Apply, roll back and inspect the database schema.", no_args_is_help=True)
 tools_app = typer.Typer(
-    help="Declare what each tool can do, so containment has something to reason "
-    "over (P9).",
+    help="Declare what each tool can do, so containment has something to reason over (P9).",
     no_args_is_help=True,
 )
 access_app = typer.Typer(
@@ -90,6 +89,7 @@ app.add_typer(scan_app, name="scan")
 app.add_typer(tools_app, name="tools")
 app.add_typer(access_app, name="access")
 app.add_typer(db_app, name="db")
+app.add_typer(hooks_app, name="hooks")
 
 # The three commands a new user runs, registered as top-level verbs. The rest of this
 # CLI is right for an operator running a governance programme and wrong for the first
@@ -447,6 +447,61 @@ def _agent_state(slug: str, state: str, reason: str) -> None:
 # ---------------------------------------------------------------------------
 # policy
 # ---------------------------------------------------------------------------
+
+
+@policy_app.command("packs")
+def policy_packs() -> None:
+    """Policy packs on disk, and where each came from.
+
+    `policy list` reads the database: what is installed and what mode it is in.
+    This reads the filesystem and answers the question an operator has about a
+    policy they did not write — which file is this, and did something override
+    it. A project pack replacing a shipped one is invisible in `policy list`,
+    because by then they are the same row.
+    """
+    from ..policy import PolicyPackError, pack_sources, project_policy_dir
+
+    try:
+        rows = pack_sources()
+    except PolicyPackError as exc:
+        console.print(f"[red]a policy pack could not be read[/]\n  {exc}")
+        raise typer.Exit(1) from exc
+    if not rows:
+        console.print("[dim]no policy packs found — this is a broken install.[/]")
+        raise typer.Exit(1)
+
+    table = Table(box=None, pad_edge=False)
+    for column in ("pack", "origin", "mode", "rules", "file"):
+        table.add_column(column, style="bold" if column == "pack" else None)
+    for row in rows:
+        origin = row["origin"]
+        table.add_row(
+            row["key"],
+            f"[cyan]{origin}[/]" if origin == "project" else f"[dim]{origin}[/]",
+            row["mode"],
+            row["rules"],
+            f"[dim]{row['path']}[/]",
+        )
+    console.print(table)
+
+    overrides = [r for r in rows if r["overrides"]]
+    for row in overrides:
+        console.print(
+            f"  [yellow]{row['key']}[/] replaces the shipped pack at [dim]{row['overrides']}[/]"
+        )
+
+    project = project_policy_dir()
+    if not project.exists():
+        console.print(
+            f"\n[dim]Put your own packs in {PROJECT_DIR_HINT} and they travel with the "
+            "repository — `agentfox init` installs them alongside the shipped ones.[/]"
+        )
+
+
+#: Written out rather than interpolated from `project_policy_dir()`, which is
+#: absolute: the hint is about what to create, and an absolute path from
+#: whatever directory the operator happened to be in reads as a demand.
+PROJECT_DIR_HINT = ".agentfox/policies/"
 
 
 @policy_app.command("list")
@@ -1255,8 +1310,7 @@ def compliance_validate() -> None:
     console.print(f"  controls     {len(controls)}")
     console.print(f"  frameworks   {len(known)}")
     console.print(
-        f"  mappings     {mappings}  ([yellow]{mappings - reviewed} draft[/], "
-        f"{reviewed} reviewed)"
+        f"  mappings     {mappings}  ([yellow]{mappings - reviewed} draft[/], {reviewed} reviewed)"
     )
     console.print(f"  obligations  {len(obligations)}")
 
@@ -1289,15 +1343,15 @@ def compliance_review_packet(
     catalog = load_catalog()
     known = {f.get("key") if isinstance(f, dict) else f for f in catalog.get("frameworks", [])}
     if framework not in known:
-        console.print(f"[red]unknown framework '{framework}'[/] — known: {', '.join(sorted(known))}")
+        console.print(
+            f"[red]unknown framework '{framework}'[/] — known: {', '.join(sorted(known))}"
+        )
         raise typer.Exit(1)
 
     controls = {c["key"]: c for c in catalog.get("controls", [])}
     with _session() as session:
         mappings = list(
-            session.scalars(
-                select(FrameworkMapping).where(FrameworkMapping.framework == framework)
-            )
+            session.scalars(select(FrameworkMapping).where(FrameworkMapping.framework == framework))
         )
         rows = [
             {
@@ -1319,7 +1373,7 @@ def compliance_review_packet(
         "",
         "For each row: does this control, as implemented, support the clause claimed? Approve with",
         "`agentfox compliance review <control> --framework "
-        f"{framework} --reviewer \"<your name>\"`, optionally `--reference` for a single clause.",
+        f'{framework} --reviewer "<your name>"`, optionally `--reference` for a single clause.',
         "",
     ]
     for key in sorted({r["control_key"] for r in rows}):
@@ -1330,7 +1384,10 @@ def compliance_review_packet(
             "",
             f"**Objective.** {objective}" if objective else "",
             f"**Implemented by.** {', '.join(control.get('implemented_by', [])) or 'not recorded'}",
-            f"**Evidence produced.** {', '.join(control.get('evidence_sources', [])) or 'not recorded'}",
+            (
+                "**Evidence produced.** "
+                f"{', '.join(control.get('evidence_sources', [])) or 'not recorded'}"
+            ),
             "",
             "| Clause claimed | Current status | Reviewed by |",
             "|---|---|---|",
@@ -1351,9 +1408,13 @@ def compliance_review_packet(
 def compliance_review(
     control: str,
     framework: str = typer.Option(..., "--framework"),
-    reviewer: str = typer.Option(..., "--reviewer", help="The human accountable for this sign-off."),
+    reviewer: str = typer.Option(
+        ..., "--reviewer", help="The human accountable for this sign-off."
+    ),
     reference: str | None = typer.Option(
-        None, "--reference", help="Sign off one clause only; default is every clause for the control."
+        None,
+        "--reference",
+        help="Sign off one clause only; default is every clause for the control.",
     ),
 ) -> None:
     """Record a qualified reviewer's sign-off on a control's framework mapping(s).
@@ -1601,7 +1662,9 @@ def redteam_run(
             result = "[green]blocked[/]"
         else:
             result = "[green]allowed[/]"
-        table.add_row(row["probe"], row["severity"], row["owasp"] or "—", row["verdict"] or "—", result)
+        table.add_row(
+            row["probe"], row["severity"], row["owasp"] or "—", row["verdict"] or "—", result
+        )
     console.print(table)
 
 
@@ -1631,6 +1694,76 @@ def redteam_probes() -> None:
             for name, ok in runners.items()
         )
     )
+
+
+@scan_app.command("skills")
+def scan_skills(
+    path: Path = typer.Argument(Path("."), help="Directory to search for SKILL.md files."),
+    persist: bool = typer.Option(
+        True, "--persist/--no-persist", help="Raise findings, or just print."
+    ),
+) -> None:
+    """Scan agent skills for planted instructions and declared danger (P1-5).
+
+    A skill is the same object as an MCP tool one layer up: a description the
+    model reads to decide whether to invoke it, and instructions it then obeys.
+    OWASP published an Agentic Skills Top 10 in 2026 and we scanned servers but
+    not skills.
+    """
+    from ..findings import raise_finding
+    from ..registry.skills import scan_skills_dir
+
+    results = scan_skills_dir(path)
+    if not results:
+        console.print(f"[dim]no SKILL.md files under {path}[/]")
+        return
+
+    total = 0
+    for result in results:
+        issues = result["issues"]
+        total += len(issues)
+        head = f"[bold]{result['skill']}[/]  [dim]{result['path']}[/]"
+        if not issues:
+            console.print(f"{head}\n  [green]clean[/]")
+            continue
+        console.print(head)
+        for issue in issues:
+            colour = SEVERITY_COLOUR.get(issue["severity"], "dim")
+            extra = issue.get("risk") or issue.get("location") or ""
+            console.print(
+                f"  [{colour}]{issue['severity']}[/] {issue['type']}"
+                + (f" — {extra}" if extra else "")
+            )
+            if issue.get("excerpt"):
+                console.print(f"      [dim]{issue['excerpt'][:160]}[/]")
+
+    if persist:
+        with _session() as session:
+            for result in results:
+                for issue in result["issues"]:
+                    raise_finding(
+                        session,
+                        type=issue["type"],
+                        severity=issue["severity"],
+                        title=f"Skill '{result['skill']}': {issue['type'].replace('_', ' ')}",
+                        subject_type="skill",
+                        subject_id=None,
+                        evidence={**issue, "path": result["path"], "digest": result["digest"]},
+                        control_keys=["NOM-DSC-05"],
+                        fingerprint_parts=(result["skill"], issue["type"], issue.get("risk")),
+                    )
+
+    console.print(
+        f"\n  {len(results)} skill(s) · {total} issue(s)"
+        + ("" if persist else "  [dim](not recorded: --no-persist)[/]")
+    )
+    # Said plainly rather than left to be discovered: this is a static read.
+    console.print(
+        "  [dim]Static: nothing here runs a skill or reads its bundled scripts, and a "
+        "skill that describes dangerous behaviour in plain prose is not caught.[/]"
+    )
+    if total:
+        raise typer.Exit(1)
 
 
 @scan_app.command("mcp")
@@ -1688,6 +1821,217 @@ def scan_mcp(
         console.print(f"  [dim]mcp-scan: {external['reason']}[/]")
 
 
+@hooks_app.command("daemon")
+def hooks_daemon(
+    socket: Path | None = typer.Option(None, "--socket", help="Override the socket path."),
+) -> None:
+    """Run the warm process a hook talks to.
+
+    A harness spawns its hook as a fresh process per tool call, and importing
+    AgentFox costs seconds — measured here at 3.9s on the first call against a
+    cold daemon, then 6ms once warm. That gap is the whole reason this exists:
+    a hook that costs two seconds a call is a hook the operator removes.
+    """
+    from ..hooks import HookDaemon
+    from ..hooks.daemon import warm
+
+    daemon = HookDaemon(socket)
+    console.print("[bold]AgentFox hook daemon[/]")
+    console.print(f"  socket   [dim]{daemon.path}[/]")
+    with console.status("warming detectors and the database…"):
+        warm()
+    daemon.start()
+    console.print("  [green]ready[/]  [dim]ctrl-c to stop[/]")
+    try:
+        daemon.serve_forever()
+    except KeyboardInterrupt:
+        console.print("\n  stopping")
+    finally:
+        daemon.stop()
+
+
+@hooks_app.command("run")
+def hooks_run(
+    harness: str = typer.Option(..., "--harness", help="Which harness is calling."),
+    agent: str = typer.Option("", "--agent", help="Agent slug to govern this session as."),
+) -> None:
+    """The per-call hook. Reads the harness payload on stdin, writes its reply.
+
+    Everything in this path runs in a process the harness creates and destroys
+    per tool call, so it does the least possible: parse, ask the daemon, print.
+    Measured against a warm daemon, the round trip is about 6ms; the same work
+    without one is 3.9 seconds, because `import agentfox` is.
+    """
+    import json as _json
+
+    from ..hooks import DaemonUnavailable, client
+    from ..hooks import harness as harness_mod
+
+    raw = sys.stdin.read()
+    try:
+        payload = _json.loads(raw or "{}")
+    except _json.JSONDecodeError as exc:
+        # Exit 0: a hook that cannot parse its input must not take the agent
+        # down with it. It says so on stderr, where the harness shows it.
+        print(f"agentfox: could not parse the hook payload: {exc}", file=sys.stderr)
+        raise typer.Exit(0) from exc
+
+    try:
+        call = harness_mod.parse(harness, payload)
+    except harness_mod.UnknownHarness as exc:
+        print(f"agentfox: {exc}", file=sys.stderr)
+        raise typer.Exit(0) from exc
+
+    try:
+        verdict = client.guard_tool_call(
+            agent=agent or call.session_id or "unknown",
+            tool=call.tool,
+            arguments=call.arguments,
+        )
+    except DaemonUnavailable as exc:
+        client.report_unavailable(exc)
+        raise typer.Exit(0) from exc
+
+    print(_json.dumps(harness_mod.render(harness, call, verdict)))
+
+
+@hooks_app.command("install")
+def hooks_install(
+    harness: str = typer.Option("claude", "--harness"),
+    agent: str = typer.Option(..., "--agent", help="Agent slug these calls are governed as."),
+    path: Path = typer.Option(Path("."), "--path", help="Project to install into."),
+    write: bool = typer.Option(False, "--write", help="Actually write the settings file."),
+) -> None:
+    """Show, or write, the hook configuration for a harness.
+
+    Dry by default. This edits a file that decides whether the operator's agent
+    runs at all, so it prints what it would do and waits to be told twice.
+    """
+    import json as _json
+
+    from ..hooks import capability
+    from ..hooks import harness as harness_mod
+
+    if harness not in harness_mod.known_harnesses():
+        known = ", ".join(harness_mod.known_harnesses())
+        console.print(f"[red]no adapter for {harness!r}[/] — known: {known}")
+        raise typer.Exit(1)
+
+    settings = path / ".claude" / "settings.json"
+    command = f"agentfox hooks run --harness {harness} --agent {agent}"
+    block = {
+        "hooks": {
+            "PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": command}]}]
+        }
+    }
+
+    console.print(f"  [bold]{settings}[/]")
+    console.print(f"[dim]{_json.dumps(block, indent=2)}[/]")
+
+    # The honest line, and the reason the capability table exists.
+    console.print(f"\n  {capability.describe(harness, 'PreToolUse')}")
+    if not capability.capability_of(harness, "PreToolUse"):
+        console.print(
+            "  [yellow]This hook will record and will not be relied on to stop "
+            "anything[/] until that is probed."
+        )
+    console.print(
+        "\n  [dim]A hook governs the agent on this machine. It is not a boundary: "
+        "anything not going through this harness is not going through this.[/]"
+    )
+
+    if not write:
+        console.print("\n  [dim]Nothing written. Re-run with --write.[/]")
+        return
+    if not client_daemon_running():
+        console.print(
+            "\n  [yellow]The daemon is not running[/] — every call will report "
+            "unchecked until `agentfox hooks daemon` is up."
+        )
+    # Declare the harness's own tools first. Without them every call trips
+    # `tool.not_declared` and the agent reads "the registry has never seen
+    # this tool" instead of the control it actually broke.
+    declared = _declare_harness_tools(harness)
+    if declared:
+        console.print(f"  [green]declared[/] {declared} {harness} tool(s) in the registry")
+
+    settings.parent.mkdir(parents=True, exist_ok=True)
+    existing = {}
+    if settings.exists():
+        try:
+            existing = _json.loads(settings.read_text())
+        except _json.JSONDecodeError:
+            console.print(f"[red]{settings} is not valid JSON[/] — not overwriting it.")
+            raise typer.Exit(1) from None
+    hooks = existing.setdefault("hooks", {}).setdefault("PreToolUse", [])
+    if any(command in _json.dumps(entry) for entry in hooks):
+        console.print("\n  [dim]already installed.[/]")
+        return
+    hooks.extend(block["hooks"]["PreToolUse"])
+    settings.write_text(_json.dumps(existing, indent=2) + "\n")
+    console.print(f"\n  [green]written[/] {settings}")
+
+
+def _declare_harness_tools(harness: str) -> int:
+    """Register the harness's built-in tools, with the impact each really has."""
+    from sqlalchemy import select
+
+    from ..hooks.harness import HARNESS_TOOLS
+    from ..models import Tool
+
+    wanted = HARNESS_TOOLS.get(harness, {})
+    added = 0
+    with _session() as session:
+        for key, impact in wanted.items():
+            if session.scalar(select(Tool).where(Tool.key == key)) is not None:
+                continue
+            session.add(
+                Tool(
+                    key=key,
+                    name=f"{harness}:{key}",
+                    impact=impact,
+                    description=f"{harness} built-in tool",
+                )
+            )
+            added += 1
+    return added
+
+
+def client_daemon_running() -> bool:
+    from ..hooks import ping
+
+    return ping()
+
+
+@hooks_app.command("status")
+def hooks_status() -> None:
+    """Is the daemon up, and does a deny on this harness actually stop anything?"""
+    from ..hooks import capability, ping, socket_path
+
+    path = socket_path()
+    up = ping()
+    console.print(f"  socket    [dim]{path}[/]")
+    console.print(f"  daemon    {'[green]listening[/]' if up else '[red]not running[/]'}")
+    if not up:
+        console.print("            [dim]start it with `agentfox hooks daemon`[/]")
+
+    console.print(f"\n  verified harness events: {len(capability.CAPABILITY)}")
+    if not capability.CAPABILITY:
+        # The honest state, and said as a fact rather than a gap to apologise
+        # for. A table filled with plausible values would be worse than empty.
+        console.print(
+            "  [dim]None yet. Whether a deny stops a call is a property of each\n"
+            "  harness's own wire contract, and this table only holds rows somebody\n"
+            "  has probed. Until then a hook observes and records; it does not\n"
+            "  promise to block.[/]"
+        )
+        return
+    for (harness, event), row in sorted(capability.CAPABILITY.items()):
+        console.print(
+            f"  {harness}/{event}: {row.capability}  [dim]{row.evidence} {row.version}[/]"
+        )
+
+
 @app.command()
 def analyse_action(
     statement: str = typer.Argument(..., help="SQL, shell command or URL to analyse"),
@@ -1732,7 +2076,10 @@ def tools_declare(
     impact: str = typer.Option(
         ...,
         "--impact",
-        help="read | write | high_impact | irreversible — the axis every containment rule reasons over.",
+        help=(
+            "read | write | high_impact | irreversible — the axis every containment rule "
+            "reasons over."
+        ),
     ),
     name: str = typer.Option("", "--name"),
     description: str = typer.Option("", "--description"),
@@ -1806,7 +2153,9 @@ def tools_list(as_json: bool = typer.Option(False, "--json")) -> None:
         colour = {"irreversible": "red", "high_impact": "yellow", "write": "cyan"}.get(
             row["impact"], "dim"
         )
-        table.add_row(row["key"], f"[{colour}]{row['impact']}[/]", ", ".join(row["triggers"]) or "—")
+        table.add_row(
+            row["key"], f"[{colour}]{row['impact']}[/]", ", ".join(row["triggers"]) or "—"
+        )
     console.print(table)
 
 
@@ -1843,9 +2192,7 @@ def tools_set_triggers(
 @access_app.command("declare-scope")
 def access_declare_scope(
     table: str = typer.Argument(..., help="Table name"),
-    column: str = typer.Option(
-        ..., "--column", help="Column that decides whose row it is"
-    ),
+    column: str = typer.Option(..., "--column", help="Column that decides whose row it is"),
     principal_key: str = typer.Option(
         "id",
         "--principal-key",
@@ -1868,9 +2215,7 @@ def access_declare_scope(
 
     restricted = [c.strip() for c in restricted_columns.split(",") if c.strip()]
     with _session() as session:
-        rule = session.scalar(
-            select(AccessScopeRule).where(AccessScopeRule.table_name == table)
-        )
+        rule = session.scalar(select(AccessScopeRule).where(AccessScopeRule.table_name == table))
         if rule is None:
             rule = AccessScopeRule(table_name=table)
             session.add(rule)
@@ -1897,9 +2242,7 @@ def access_declare_reference(
     from ..models import AccessScopeRule
 
     with _session() as session:
-        rule = session.scalar(
-            select(AccessScopeRule).where(AccessScopeRule.table_name == table)
-        )
+        rule = session.scalar(select(AccessScopeRule).where(AccessScopeRule.table_name == table))
         if rule is None:
             rule = AccessScopeRule(table_name=table, is_reference=True)
             session.add(rule)
@@ -2028,9 +2371,7 @@ def proposals_approve(
     """Approve a proven proposal. An org-level loosening needs two different people."""
     from ..improvement.proposals import decide
 
-    _proposal_step(
-        proposal_id, lambda s, p: decide(s, p, approve=True, actor=actor, note=note)
-    )
+    _proposal_step(proposal_id, lambda s, p: decide(s, p, approve=True, actor=actor, note=note))
 
 
 @proposals_app.command("reject")
@@ -2042,9 +2383,7 @@ def proposals_reject(
     """Reject a proposal."""
     from ..improvement.proposals import decide
 
-    _proposal_step(
-        proposal_id, lambda s, p: decide(s, p, approve=False, actor=actor, note=note)
-    )
+    _proposal_step(proposal_id, lambda s, p: decide(s, p, approve=False, actor=actor, note=note))
 
 
 @proposals_app.command("apply")
@@ -2082,7 +2421,6 @@ def proposals_rollback(
         proposal_id,
         lambda s, p: rollback_proposal(s, p, reason=reason, actor=actor),
     )
-
 
 
 @proposals_app.command("verify")
@@ -2127,6 +2465,7 @@ def proposals_from_labels(
     for skip in report["skipped"]:
         where = "/".join(str(skip[k]) for k in ("detector_key", "policy", "rule_id") if k in skip)
         console.print(f"  [dim]skipped {where}: {skip['reason']}[/]")
+
 
 def main() -> None:  # pragma: no cover - console entry point
     try:

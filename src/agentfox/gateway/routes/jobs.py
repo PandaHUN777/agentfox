@@ -101,7 +101,11 @@ def _require_cron_secret(
     expected = _cron_secrets()
     if not expected:
         raise HTTPException(
-            503, "no cron secret is configured (NOMETRIA_CRON_SECRET or CRON_SECRET) — this endpoint is disabled"
+            503,
+            (
+                "no cron secret is configured (NOMETRIA_CRON_SECRET or CRON_SECRET) — this "
+                "endpoint is disabled"
+            ),
         )
     given = (authorization or "").removeprefix("Bearer ").strip()
     # Compare against every candidate without short-circuiting, so timing does not

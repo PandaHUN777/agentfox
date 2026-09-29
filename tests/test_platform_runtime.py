@@ -18,8 +18,7 @@ from agentfox.models import Job
 
 def run(tools_and_observations, budget=None):
     return govern_loop(
-        [{"tool": t, "arguments": a, "observation": o}
-         for t, a, o in tools_and_observations],
+        [{"tool": t, "arguments": a, "observation": o} for t, a, o in tools_and_observations],
         budget=budget,
     )
 
@@ -50,7 +49,7 @@ def test_a_longer_cycle_is_caught_too():
 
 
 def test_steps_that_produce_nothing_new_are_escalated_with_the_range():
-    """"Budget exhausted" tells an operator nothing. A step range tells them where to
+    """ "Budget exhausted" tells an operator nothing. A step range tells them where to
     look."""
     verdict = run([(f"t{i}", {"i": i}, "unchanged") for i in range(7)])
     assert verdict.decision == ESCALATE
@@ -79,8 +78,7 @@ def test_the_same_tool_with_different_arguments_is_progress():
 def test_a_legitimate_repeating_pipeline_is_not_flagged_as_a_cycle():
     """A single tool repeated is caught by the repeat rule; a cycle needs two distinct
     tools, or every batch pipeline would trip it."""
-    verdict = run([("step", {"n": i}, i) for i in range(6)],
-                  budget=LoopBudget(max_repeats=99))
+    verdict = run([("step", {"n": i}, i) for i in range(6)], budget=LoopBudget(max_repeats=99))
     assert verdict.decision == CONTINUE
 
 
@@ -288,7 +286,9 @@ def test_db_queue_dead_lettered_work_can_be_replayed_once_the_cause_is_fixed(ses
 def test_db_queue_retry_dead_is_a_noop_on_a_job_that_is_not_dead(session):
     jobs_db.register("test.noop", lambda s, p: {})
     job = jobs_db.enqueue(session, "test.noop", org_id="org-1")
-    assert jobs_db.retry_dead(session, job.id) is None, "job is pending, not dead — nothing to revive"
+    assert jobs_db.retry_dead(session, job.id) is None, (
+        "job is pending, not dead — nothing to revive"
+    )
 
 
 def test_db_queue_run_pending_with_an_org_id_never_touches_another_tenants_jobs(session):
@@ -299,7 +299,9 @@ def test_db_queue_run_pending_with_an_org_id_never_touches_another_tenants_jobs(
 
     assert finished == 0
     session.refresh(other_org_job)
-    assert other_org_job.status == "pending", "a request in one tenant must never run another tenant's queued work"
+    assert other_org_job.status == "pending", (
+        "a request in one tenant must never run another tenant's queued work"
+    )
 
 
 def test_db_queue_run_pending_with_no_org_id_is_the_cron_backstop_across_every_tenant(session):

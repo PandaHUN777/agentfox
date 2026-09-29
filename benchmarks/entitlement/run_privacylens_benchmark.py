@@ -135,7 +135,9 @@ def main() -> None:
                     )
 
             # Negative case: same resource, its own declared (original) purpose.
-            neg_decision = filter_retrieval(session, principal, [chunk], purpose="original_collection")
+            neg_decision = filter_retrieval(
+                session, principal, [chunk], purpose="original_collection"
+            )
             allowed_correctly = bool(neg_decision.visible) and not neg_decision.withheld
             if allowed_correctly:
                 neg_tn += 1

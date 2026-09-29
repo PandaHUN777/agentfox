@@ -126,9 +126,7 @@ def test_the_high_risk_agent_picks_up_a_rule_the_ordinary_one_does_not(session) 
     enforcer = Enforcer(session)
     fired = {}
     for agent in (ordinary, high):
-        result = enforcer.evaluate(
-            agent=agent, identity=None, content=INJECTION, surface="input"
-        )
+        result = enforcer.evaluate(agent=agent, identity=None, content=INJECTION, surface="input")
         fired[agent.slug] = {r.get("rule_id") for r in (result.rules_fired or [])}
         # Observe either way: the tier changes WHICH rules apply, never whether
         # they block.

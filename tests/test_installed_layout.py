@@ -231,9 +231,7 @@ def test_every_dockerfile_that_installs_the_package_copies_the_forced_includes()
         if not installs_the_package.search(text):
             continue
         checked += 1
-        copied = " ".join(
-            line for line in text.splitlines() if line.startswith("COPY")
-        )
+        copied = " ".join(line for line in text.splitlines() if line.startswith("COPY"))
         for source in forced:
             assert re.search(rf"(?<![\w/.-]){re.escape(source)}(?![\w/.-])", copied), (
                 f"{dockerfile.name} runs `pip install .` but never COPYs "

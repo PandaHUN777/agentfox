@@ -73,6 +73,25 @@ rules:
     reason: "Instruction-like content found in a memory write or inter-agent message."
     controls: [NOM-RTG-13, NOM-IAM-08]
 
+  - id: injection.adopted_in_reasoning
+    description: >
+      Instruction-like content in the model's own reasoning. Every other injection
+      rule fires on a payload *arriving*; this one fires on evidence the model took
+      it up, which is a later and worse point in the same attack.
+    when:
+      surface: [reasoning]
+      # A lower bar than the arrival rules on purpose. On `retrieved`, 0.6
+      # filters the ordinary false positives of scanning documents nobody
+      # wrote for us. Reasoning is the model's own words about what it is
+      # about to do, so instruction-shaped text there is far more likely to
+      # mean what it looks like, and the cost of missing it is that the next
+      # thing to happen is the tool call.
+      detection: {entity_prefix: INJECTION, min_score: 0.4}
+    effect: block
+    severity: critical
+    reason: "The model's reasoning has taken up an instruction it was not given."
+    controls: [NOM-RTG-13]
+
   # --- Secrets (NOM-RTG-03) -------------------------------------------
   - id: secrets.block
     description: Never let a credential transit the agent, in either direction.

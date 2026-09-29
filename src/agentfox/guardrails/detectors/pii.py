@@ -93,6 +93,9 @@ class NativePiiDetector(BaseDetector):
         # A completion claim is content too, and for a deployment that only
         # gates the end of a run this is the last place anything reads it.
         "completion",
+        # The model's own reasoning: a detection here means the payload
+        # was adopted, not merely present.
+        "reasoning",
     )
 
     def __init__(self, packs: tuple[str, ...] = DEFAULT_PACKS) -> None:

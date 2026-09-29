@@ -34,14 +34,12 @@ import json
 import os
 from pathlib import Path
 
+from _util import wipe_db
+
 from agentfox import db
 from agentfox.config import get_settings, reset_settings_cache
 from agentfox.enforcement import Enforcer
-from agentfox.identity import ensure_identity, grant_capability
-from agentfox.registry.service import register_agent
 from agentfox.seed import seed
-
-from _util import wipe_db
 
 DATA_PATH = Path(__file__).parent / "data" / "tier_c_cases.json"
 RESULTS_DIR = Path(__file__).parent / "results"

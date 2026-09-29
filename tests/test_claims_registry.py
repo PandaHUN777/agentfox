@@ -52,8 +52,12 @@ def sandbox(tmp_path):
     import yaml
 
     (tmp_path / "claims.yaml").write_text(yaml.safe_dump(manifest))
-    (tmp_path / "results.json").write_text(json.dumps({"headline": {"contained": "8/8"}, "rate": 0.856}))
-    (tmp_path / "README.md").write_text("We saw **8/8 attacks\ncontained** and a recall of 85.6% overall.")
+    (tmp_path / "results.json").write_text(
+        json.dumps({"headline": {"contained": "8/8"}, "rate": 0.856})
+    )
+    (tmp_path / "README.md").write_text(
+        "We saw **8/8 attacks\ncontained** and a recall of 85.6% overall."
+    )
     return tmp_path
 
 
@@ -67,14 +71,18 @@ def test_matching_ignores_emphasis_and_line_wraps(sandbox):
 
 
 def test_a_benchmark_that_changes_under_a_document_is_caught(sandbox):
-    (sandbox / "results.json").write_text(json.dumps({"headline": {"contained": "7/8"}, "rate": 0.856}))
+    (sandbox / "results.json").write_text(
+        json.dumps({"headline": {"contained": "7/8"}, "rate": 0.856})
+    )
     _, drifts = run(sandbox)
     assert [d.claim for d in drifts] == ["demo.contained"]
     assert "7/8 attacks contained" in drifts[0].expected
 
 
 def test_a_document_edited_without_rerunning_anything_is_caught(sandbox):
-    (sandbox / "README.md").write_text("We saw 8/8 attacks contained and a recall of 98.0% overall.")
+    (sandbox / "README.md").write_text(
+        "We saw 8/8 attacks contained and a recall of 98.0% overall."
+    )
     _, drifts = run(sandbox)
     assert [d.claim for d in drifts] == ["demo.rate"]
 

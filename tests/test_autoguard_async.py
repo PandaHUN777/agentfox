@@ -546,18 +546,14 @@ def test_stream_usage_is_charged_to_the_budget(app_db, fake_openai, monkeypatch)
 async def test_an_async_openai_stream_is_governed(app_db, fake_openai):
     completions, _calls = fake_openai
     auto(agent="support-triage", quiet=True)
-    stream = await completions.AsyncCompletions().create(
-        model="gpt-4o", messages=_HI, stream=True
-    )
+    stream = await completions.AsyncCompletions().create(model="gpt-4o", messages=_HI, stream=True)
     parts = [c.choices[0].delta.content async for c in stream if c.choices]
     assert "".join(parts) == "hello back from a stream"
     assert _llm_outputs() == ["hello back from a stream"]
     assert state().calls_governed == 1
 
 
-async def test_an_async_anthropic_stream_works_as_an_async_context_manager(
-    app_db, fake_anthropic
-):
+async def test_an_async_anthropic_stream_works_as_an_async_context_manager(app_db, fake_anthropic):
     messages, _calls = fake_anthropic
     auto(agent="support-triage", quiet=True)
     stream = await messages.AsyncMessages().create(

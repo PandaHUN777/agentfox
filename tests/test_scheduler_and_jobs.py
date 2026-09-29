@@ -15,7 +15,16 @@ import pytest
 
 from agentfox import job_handlers, jobs_db, scheduler
 from agentfox.config import get_settings
-from agentfox.models import DriftWindow, EvalCase, EvalResult, EvalRun, EvalSuite, Finding, Job, JobSchedule
+from agentfox.models import (
+    DriftWindow,
+    EvalCase,
+    EvalResult,
+    EvalRun,
+    EvalSuite,
+    Finding,
+    Job,
+    JobSchedule,
+)
 from tests.conftest import as_user
 
 NOW = dt.datetime(2026, 9, 16, 12, 0, tzinfo=dt.UTC)
@@ -222,7 +231,13 @@ def test_every_deferrable_kind_but_retrieval_has_a_handler():
 
     for kind in ("eval.run", "compliance.recompute", "evidence.package", "redteam.sweep"):
         assert kind in DEFERRABLE
-    for kind in ("eval.run", "compliance.recompute", "canary.advance", "drift.check", "redteam.posture"):
+    for kind in (
+        "eval.run",
+        "compliance.recompute",
+        "canary.advance",
+        "drift.check",
+        "redteam.posture",
+    ):
         assert kind in jobs_db._HANDLERS
         assert job_handlers.HANDLERS[kind] is jobs_db._HANDLERS[kind]
 
@@ -241,7 +256,10 @@ def test_eval_run_enqueues_and_runs(seeded):
     )
     seeded.flush()
     job = jobs_db.enqueue(
-        seeded, "eval.run", {"suite": "sched-suite", "target": {"agent": "support-triage"}}, org_id="org_default"
+        seeded,
+        "eval.run",
+        {"suite": "sched-suite", "target": {"agent": "support-triage"}},
+        org_id="org_default",
     )
     jobs_db.run_pending(seeded, org_id=job.org_id)
     seeded.refresh(job)
@@ -395,11 +413,17 @@ def _seed_online_scores(agent: str):
             (now - dt.timedelta(days=3), [0.9, 0.92, 0.95, 0.91, 0.93, 0.94]),
             (now - dt.timedelta(hours=2), [0.1, 0.15, 0.2, 0.12, 0.11, 0.18]),
         ):
-            run = EvalRun(suite_id="online", mode="online", target_json={"agent": agent}, created_at=when)
+            run = EvalRun(
+                suite_id="online", mode="online", target_json={"agent": agent}, created_at=when
+            )
             s.add(run)
             s.flush()
             for i, score in enumerate(scores):
-                s.add(EvalResult(run_id=run.id, case_id=f"c{i}", scorer_key="groundedness", score=score))
+                s.add(
+                    EvalResult(
+                        run_id=run.id, case_id=f"c{i}", scorer_key="groundedness", score=score
+                    )
+                )
 
 
 def test_get_drift_writes_nothing_and_post_records_it(client):
@@ -428,7 +452,9 @@ def test_get_drift_writes_nothing_and_post_records_it(client):
 
 def test_drift_check_job_persists_drift(session):
     _seed_online_scores("support-triage")
-    job = jobs_db.enqueue(session, "drift.check", {"agents": ["support-triage"]}, org_id="org_default")
+    job = jobs_db.enqueue(
+        session, "drift.check", {"agents": ["support-triage"]}, org_id="org_default"
+    )
     jobs_db.run_pending(session, org_id=job.org_id)
     session.refresh(job)
     assert job.status == "done", job.last_error

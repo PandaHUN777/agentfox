@@ -17,14 +17,19 @@ Idempotent — re-running it is safe and just confirms the existing state.
 from __future__ import annotations
 
 import _env  # noqa: F401  -- must run before anything imports agentfox settings
+from support_tools import (
+    AGENT_SLUG,
+    CAPABILITY_GRANTS,
+    SERVER_NAME,
+    TOOL_DESCRIPTORS,
+    declared_tool_keys,
+)
 
 from agentfox.db import init_db, session_scope
 from agentfox.identity import ensure_identity, grant_capability
 from agentfox.integrations.mcp import McpGovernor, tool_key
 from agentfox.policy import load_from_dir, save_policy
 from agentfox.registry.service import register_agent, upsert_tool
-
-from support_tools import AGENT_SLUG, CAPABILITY_GRANTS, SERVER_NAME, TOOL_DESCRIPTORS, declared_tool_keys
 
 
 def main() -> None:
@@ -62,7 +67,9 @@ def main() -> None:
         # here from the same TOOL_DESCRIPTORS the tools themselves implement,
         # rather than trusting the heuristic.
         for descriptor in TOOL_DESCRIPTORS:
-            upsert_tool(session, tool_key(SERVER_NAME, descriptor["name"]), impact=descriptor["impact"])
+            upsert_tool(
+                session, tool_key(SERVER_NAME, descriptor["name"]), impact=descriptor["impact"]
+            )
 
         granted = 0
         for grant in CAPABILITY_GRANTS:

@@ -35,6 +35,7 @@ def _session():
     init_db()
     return session_scope()
 
+
 OUTCOME_COLOUR = {
     "allow": "green",
     "verify": "cyan",

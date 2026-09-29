@@ -82,9 +82,7 @@ def _canonical(value: Any) -> Any:
 
 
 def _strip_owned(evidence: dict[str, Any] | None) -> dict[str, Any]:
-    return {
-        k: v for k, v in (evidence or {}).items() if k not in (FIRST_SEEN_KEY, RECURRENCES_KEY)
-    }
+    return {k: v for k, v in (evidence or {}).items() if k not in (FIRST_SEEN_KEY, RECURRENCES_KEY)}
 
 
 def raise_finding(

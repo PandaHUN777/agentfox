@@ -323,7 +323,9 @@ def _rebind(session: Session, canary: PolicyCanary, version_id: str) -> None:
     """Point the policy's live binding at ``version_id``, closing whichever is open."""
     open_binding = session.scalar(
         select(PolicyBinding).where(
-            PolicyBinding.policy_version_id.in_([canary.stable_version_id, canary.candidate_version_id]),
+            PolicyBinding.policy_version_id.in_(
+                [canary.stable_version_id, canary.candidate_version_id]
+            ),
             PolicyBinding.effective_to.is_(None),
         )
     )
@@ -344,7 +346,9 @@ def _rebind(session: Session, canary: PolicyCanary, version_id: str) -> None:
     session.flush()
 
 
-def rollback_canary(session: Session, canary_id: str, reason: str = "manual rollback") -> PolicyCanary:
+def rollback_canary(
+    session: Session, canary_id: str, reason: str = "manual rollback"
+) -> PolicyCanary:
     canary = session.get(PolicyCanary, canary_id)
     if canary is None:
         raise CanaryError(f"unknown canary '{canary_id}'")

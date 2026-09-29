@@ -27,8 +27,8 @@ Two invariants are enforced here rather than assumed:
 from __future__ import annotations
 
 import datetime as dt
-import json
 import functools
+import json
 import logging
 import time
 from collections.abc import Iterator
@@ -67,8 +67,6 @@ from .business.ladder import evaluate as evaluate_ladder
 from .business.store import load_ladders
 from .commitments import adverse_action_risk, check_disclosure, detect_commitments
 from .config import get_settings
-from .control_flow import Plan
-from .control_flow import check_selection as check_tool_selection
 from .context_integrity import (
     assemble_context,
     chunk_quality,
@@ -77,16 +75,19 @@ from .context_integrity import (
     retrieval_drift,
 )
 from .context_integrity import worst as worst_context_verdict
+from .control_flow import Plan
+from .control_flow import check_selection as check_tool_selection
 from .crypto import DecryptionFailed, decrypt_secret
+from .data_access import ReferenceTable, ScopeRule
+from .data_access import analyse_access as analyse_data_access
+from .effects import cascade_risk
 from .entitlement import (
     aggregation_risk,
     filter_retrieval,
     inference_risk,
     record_disclosure,
 )
-from .data_access import ReferenceTable, ScopeRule
-from .data_access import analyse_access as analyse_data_access
-from .effects import cascade_risk
+from .findings import raise_finding, record_detector_health
 from .guardrails import (
     DetectionContext,
     DetectorPipeline,
@@ -98,7 +99,6 @@ from .guardrails.actions import summarise as summarise_actions
 from .guardrails.base import taint_rank
 from .guardrails.composition import check_composed_escalation
 from .guardrails.taint import _flatten
-from .findings import raise_finding, record_detector_health
 from .guardrails.tuning import (
     LatencyLedger,
     active_suppressions,
@@ -113,7 +113,6 @@ from .integrations.correlation import (
     refs_from_headers,
 )
 from .integrity import assess_integrity
-from .sycophancy import check_premises
 from .models import (
     AccessScopeRule,
     Agent,
@@ -146,6 +145,7 @@ from .reliability import (
     raise_budget_finding,
 )
 from .reliability import Rung as _Rung
+from .sycophancy import check_premises
 from .trajectory import ENTITY as TRAJECTORY_ENTITY
 from .trajectory import SCAN_CHARS as TRAJECTORY_SCAN_CHARS
 from .trajectory import assess as assess_trajectory
@@ -245,10 +245,8 @@ def _detection_title(effective: str, applied: str, surface: str, entity_types: l
     # Observe: recorded, not acted on. Naming both is what makes the row
     # actionable — it says what would change if this policy were promoted.
     return (
-        f"Would have been {_PAST_TENSE.get(effective, effective).lower()} "
-        f"on {surface}: {entities}"
+        f"Would have been {_PAST_TENSE.get(effective, effective).lower()} on {surface}: {entities}"
     )
-
 
 
 #: Which shipped packs apply to a deployment that has configured nothing.
@@ -295,6 +293,12 @@ def _fallback_policies(risk_tier: str | None = None) -> tuple:
     within a process. Cleared by `_fallback_policies.cache_clear()` in tests
     that swap the policies directory.
     """
+    # Shipped packs only, deliberately — not `load_available()`. This is the
+    # path for a deployment that has bound nothing, so the guarantee it makes
+    # has to be the same everywhere; reading a project directory here would
+    # make "what protects an unconfigured deployment" depend on the working
+    # directory of whatever process happened to start, and this result is
+    # cached per tier and would not notice it changing.
     from .policy import load_from_dir
 
     wanted = _FALLBACK_FOR_TIER.get((risk_tier or "").lower(), _FALLBACK_DEFAULT)
@@ -314,6 +318,11 @@ def _fallback_policies(risk_tier: str | None = None) -> tuple:
     # whatever order the directory listing happened to produce.
     return tuple(by_key[k] for k in wanted if k in by_key)
 
+
+#: Which of two verdicts is the stronger claim, for picking between the
+#: layers of one file. Ordinary verdict comparison is scattered across the
+#: engine; this is the one place that needs only "which is worse".
+_VERDICT_RANK = {"allow": 0, "alter": 1, "redact": 1, "mask": 1, "escalate": 2, "block": 3}
 
 
 @dataclass
@@ -339,6 +348,10 @@ class EnforcementResult:
     explanation: dict[str, Any] = field(default_factory=dict)
     suppressed: list[dict[str, Any]] = field(default_factory=list)
     latency_budget: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def detections_found(self) -> bool:
+        return bool(self.entities) or bool(self.rules_fired)
 
     @property
     def blocked(self) -> bool:
@@ -782,7 +795,6 @@ class Enforcer:
         # or binds their own, this stops applying and their policies decide. A
         # fallback that seeded itself into the database would be a tool editing
         # the configuration it is supposed to be governed by.
-        used_fallback = False
         if not bound:
             fallback = _fallback_policies(getattr(agent, "risk_tier", None))
             if fallback:
@@ -791,7 +803,6 @@ class Enforcer:
                     for doc in fallback
                     if doc.matches_scope(agent_slug, environment)
                 ]
-                used_fallback = bool(bound)
         evaluated = [
             (doc, version, self.engine.evaluate(doc, pinput)) for doc, version, _b in bound
         ]
@@ -1460,7 +1471,11 @@ class Enforcer:
         if persist and result.verdict not in ("block", "escalate", "abstain"):
             expires_at = None
             if verified_by is None:
-                ttl = ttl_seconds if ttl_seconds is not None else self.settings.memory_unverified_ttl_seconds
+                ttl = (
+                    ttl_seconds
+                    if ttl_seconds is not None
+                    else self.settings.memory_unverified_ttl_seconds
+                )
                 expires_at = utcnow() + dt.timedelta(seconds=ttl)
             entry = MemoryEntry(
                 agent_id=agent.id if agent else None,
@@ -1527,6 +1542,125 @@ class Enforcer:
             completion=completion or {},
             persist=persist,
         )
+
+    def guard_reasoning(
+        self,
+        *,
+        agent_slug: str,
+        content: str,
+        intent: str | None = None,
+        taint_source: str = "tool_result",
+        trace: Trace | None = None,
+        credential: str | None = None,
+        persist: bool = True,
+    ) -> EnforcementResult:
+        """Check the model's reasoning before it acts on it.
+
+        This is the surface that separates *an injection arrived* from *an
+        injection landed*. `retrieved` and `tool_result` see a payload entering
+        the context; nothing saw whether the model took it up. By the time a
+        tool call exists the goal substitution has already happened, and taint
+        tracking can say the argument came from untrusted content without ever
+        saying the agent changed its mind.
+
+        So a detection here is weighted differently from the same detection
+        anywhere else, and the shipped rule says so: injection-shaped text in a
+        retrieved document is an attempt, and the same text in the model's own
+        reasoning is a compromise in progress. That is the whole argument for
+        the surface existing, and it is why `taint_source` defaults to
+        `tool_result` rather than `user` — reasoning is derived content, never
+        something the operator typed.
+
+        Honest about what it is not. This reads reasoning the caller hands over;
+        it cannot see reasoning a provider does not expose, and a model that
+        reaches the same conclusion without narrating it is invisible here. It
+        is an additional place to catch the failure, not a guarantee of catching
+        it — which is why nothing above this line depends on it.
+        """
+        agent, identity, _ = self.resolve(agent_slug, credential)
+        return self.evaluate(
+            agent=agent,
+            identity=identity,
+            content=content,
+            surface="reasoning",
+            intent=intent,
+            taint_source=taint_source,
+            trace=trace,
+            persist=persist,
+        )
+
+    def guard_file(
+        self,
+        *,
+        agent_slug: str,
+        filename: str,
+        data: bytes,
+        trace: Trace | None = None,
+        credential: str | None = None,
+        persist: bool = True,
+    ) -> EnforcementResult:
+        """Check a file an agent is about to read, layer by layer (a4).
+
+        A document is not a string. It has a body a person proofreads and
+        parts nobody opens — document properties, review comments, alt text,
+        an SVG `<title>` — and the model reads all of them. The attack is
+        old and specific: a resume whose white-on-white text tells the
+        screening agent to rank the candidate first.
+
+        So the file is split by `guardrails.files.normalise` and the hidden
+        layers are checked **separately from the visible ones**, with the
+        hidden result taking precedence. The same sentence in the body is a
+        sentence somebody wrote; in `docProps` it is a sentence nobody was
+        meant to read, and treating those alike throws away the only signal
+        that distinguishes a document from an attack.
+
+        A layer that could not be read is recorded on the result as a
+        degradation rather than dropped. An image needs OCR and a PDF needs a
+        parser; when either is missing the answer is "this was not checked",
+        which the caller can act on. Returning no findings for a file nobody
+        looked inside is the failure this product exists to argue against.
+        """
+        from .guardrails.files import normalise
+
+        scan = normalise(filename, data)
+        agent, identity, _ = self.resolve(agent_slug, credential)
+
+        # Hidden first: if anything is going to decide the verdict it should
+        # be the layer with the stronger claim, and `evaluate` persists a
+        # decision per call.
+        ordered = [(True, scan.hidden_text), (False, scan.visible_text)]
+        result: EnforcementResult | None = None
+        for is_hidden, text in ordered:
+            if not text.strip():
+                continue
+            outcome = self.evaluate(
+                agent=agent,
+                identity=identity,
+                content=text,
+                surface="retrieved",
+                taint_source="tool_result",
+                trace=trace,
+                persist=persist,
+            )
+            if is_hidden and outcome.detections_found:
+                outcome.reason = (
+                    f"{outcome.reason} — found in a part of '{filename}' a reader would not see"
+                ).strip(" —")
+            if result is None or _VERDICT_RANK.get(
+                outcome.effective_verdict, 0
+            ) > _VERDICT_RANK.get(result.effective_verdict, 0):
+                result = outcome
+
+        if result is None:
+            result = EnforcementResult(verdict="allow", effective_verdict="allow")
+
+        for gap in scan.unread:
+            # Surfaced the way a timed-out detector is: the gap is part of the
+            # decision record, not a silence.
+            result.degraded.append(f"file.unread:{gap['part']}")
+            result.explanation.setdefault("unread_layers", []).append(gap)
+        result.explanation["file"] = scan.to_json()
+        return result
 
     def guard_agent_message(
         self,
@@ -1626,9 +1760,7 @@ class Enforcer:
             result.effective_verdict = "block"
             result.reason = f"replayed message: (sender='{sender_slug}', nonce) was already seen"
             result.rules_fired.append(
-                _fired_rule(
-                    "agent_message.replay", "block", result.reason, controls=["NOM-IAM-08"]
-                )
+                _fired_rule("agent_message.replay", "block", result.reason, controls=["NOM-IAM-08"])
             )
         elif not agent_card_match:
             effect = "escalate" if result.verdict == "allow" else result.verdict
@@ -2242,9 +2374,7 @@ class Enforcer:
             out["risks"] = risks
         return out
 
-    def _trajectory_checks(
-        self, surface: str, window: list[str] | None
-    ) -> dict[str, Any]:
+    def _trajectory_checks(self, surface: str, window: list[str] | None) -> dict[str, Any]:
         """F9.4 — whether the *conversation* is escalating, not whether this turn is.
 
         Built to the shape `_commitment_checks` established, for the same reason: the
@@ -3319,8 +3449,11 @@ class Enforcer:
             # consecutively. Falls through to the naive counter below only when a
             # caller has no step history to give it yet (see the `elif`).
             replay = [
-                Step(tool=s.get("tool", ""), arguments=s.get("arguments") or {},
-                     observation=s.get("observation"))
+                Step(
+                    tool=s.get("tool", ""),
+                    arguments=s.get("arguments") or {},
+                    observation=s.get("observation"),
+                )
                 for s in prior_steps
             ] + [Step(tool=tool_key, arguments=arguments or {}, observation=None)]
             verdict = govern_loop(

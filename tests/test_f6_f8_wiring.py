@@ -84,9 +84,7 @@ def test_a_hedged_near_miss_is_not_a_commitment(seeded, enforcer, agent):
     assert findings_of(seeded, "binding_commitment") == []
 
 
-def test_an_authorised_commitment_is_recorded_without_becoming_a_finding(
-    seeded, enforcer, agent
-):
+def test_an_authorised_commitment_is_recorded_without_becoming_a_finding(seeded, enforcer, agent):
     """An approval the agent was entitled to grant is still recorded — someone has to be
     able to show what was promised — but it is not a breach."""
     enforcer.evidence = {"authorised": True}
@@ -136,20 +134,14 @@ def test_ordinary_support_prose_is_not_a_register_breach(seeded, enforcer, agent
 # --- F6.3 AI disclosure ----------------------------------------------------
 
 
-def test_missing_ai_disclosure_is_caught_when_a_counterparty_is_declared(
-    seeded, enforcer, agent
-):
+def test_missing_ai_disclosure_is_caught_when_a_counterparty_is_declared(seeded, enforcer, agent):
     enforcer.evidence = {"channel": "chat", "counterparty": "human"}
-    result = enforcer.evaluate(
-        agent=agent, identity=None, content=ORDINARY, surface="output"
-    )
+    result = enforcer.evaluate(agent=agent, identity=None, content=ORDINARY, surface="output")
     assert result.taint["ai_disclosure"]["breach"] is True
     assert len(findings_of(seeded, "ai_disclosure_missing")) == 1
 
 
-def test_a_message_that_identifies_itself_satisfies_the_obligation(
-    seeded, enforcer, agent
-):
+def test_a_message_that_identifies_itself_satisfies_the_obligation(seeded, enforcer, agent):
     enforcer.evidence = {"channel": "chat", "counterparty": "human"}
     result = enforcer.evaluate(
         agent=agent,
@@ -161,16 +153,12 @@ def test_a_message_that_identifies_itself_satisfies_the_obligation(
     assert findings_of(seeded, "ai_disclosure_missing") == []
 
 
-def test_disclosure_is_never_inferred_when_the_caller_declared_nothing(
-    seeded, enforcer, agent
-):
+def test_disclosure_is_never_inferred_when_the_caller_declared_nothing(seeded, enforcer, agent):
     """The obligation resolves to *breach* for any message on a human channel. Correct
     as an obligation, catastrophic as a default — inferred, it would report a breach on
     essentially every response this product has ever governed."""
     enforcer.evidence = {}
-    result = enforcer.evaluate(
-        agent=agent, identity=None, content=ORDINARY, surface="output"
-    )
+    result = enforcer.evaluate(agent=agent, identity=None, content=ORDINARY, surface="output")
     assert "ai_disclosure" not in result.taint
     assert findings_of(seeded, "ai_disclosure_missing") == []
 
@@ -197,7 +185,7 @@ def test_an_adverse_decision_with_no_reason_is_caught(seeded, enforcer, agent):
 
 
 def test_boilerplate_is_treated_as_no_reason(seeded, enforcer, agent):
-    """"Does not meet our criteria" satisfies a field and tells the applicant nothing
+    """ "Does not meet our criteria" satisfies a field and tells the applicant nothing
     they could act on, which is what the statute exists to prevent."""
     enforcer.evidence = {
         "decision": {
@@ -215,9 +203,7 @@ def test_boilerplate_is_treated_as_no_reason(seeded, enforcer, agent):
     assert len(findings_of(seeded, "adverse_action")) == 1
 
 
-def test_a_substantive_reason_that_was_actually_communicated_is_compliant(
-    seeded, enforcer, agent
-):
+def test_a_substantive_reason_that_was_actually_communicated_is_compliant(seeded, enforcer, agent):
     enforcer.evidence = {
         "decision": {
             "outcome": "declined",
@@ -258,9 +244,7 @@ def test_fairness_probe_is_deliberately_not_on_the_per_request_path(enforcer, ag
     """It is an aggregate over a decision population — selection rates by group with a
     30-observation floor. One request cannot exhibit disparate impact, and calling it
     per-request could only ever return `underpowered` while implying a check had run."""
-    result = enforcer.evaluate(
-        agent=agent, identity=None, content=ORDINARY, surface="output"
-    )
+    result = enforcer.evaluate(agent=agent, identity=None, content=ORDINARY, surface="output")
     assert "fairness" not in result.taint
     body = pathlib.Path(enforcement.__file__).read_text()
     assert "fairness_probe(" not in body
@@ -295,9 +279,7 @@ def test_clean_retrieved_prose_produces_nothing(seeded, enforcer, agent):
     assert findings_of(seeded, "context_integrity") == []
 
 
-def test_an_ordinary_json_tool_result_is_not_flagged_as_a_bad_document(
-    seeded, enforcer, agent
-):
+def test_an_ordinary_json_tool_result_is_not_flagged_as_a_bad_document(seeded, enforcer, agent):
     """The false-positive floor, and the reason `tool_result` is narrowed to corruption
     codes: a serialised structure is mostly punctuation and digits, so the prose-shape
     heuristic `low-text-density` fires on every healthy JSON payload. Measured directly
@@ -305,8 +287,7 @@ def test_an_ordinary_json_tool_result_is_not_flagged_as_a_bad_document(
     payload = json.dumps(
         {
             "orders": [
-                {"id": f"ORD-{i}", "total": round(19.99 + i, 2), "qty": i % 5}
-                for i in range(30)
+                {"id": f"ORD-{i}", "total": round(19.99 + i, 2), "qty": i % 5} for i in range(30)
             ]
         }
     )
@@ -412,9 +393,7 @@ def test_an_unbound_memory_entry_is_reported_rather_than_assumed_safe(seeded, en
     """An entry with no subject was written by someone, about someone, and nothing
     records who."""
     enforcer.evidence = {"principal": "alice"}
-    enforcer.guard_memory_write(
-        agent_slug="support-triage", content="Prefers email contact."
-    )
+    enforcer.guard_memory_write(agent_slug="support-triage", content="Prefers email contact.")
     assert "unbound-memory" in codes(seeded, "context_integrity")
 
 
@@ -473,9 +452,7 @@ def test_none_of_these_block_by_default(enforcer, agent, content, surface, evide
     """The product's whole stance is observe-first. Every one of these records a finding
     and returns an allow; none of them is a new hard-coded block."""
     enforcer.evidence = dict(evidence)
-    result = enforcer.evaluate(
-        agent=agent, identity=None, content=content, surface=surface
-    )
+    result = enforcer.evaluate(agent=agent, identity=None, content=content, surface=surface)
     assert not result.blocked
     assert result.verdict == "allow"
 
@@ -537,9 +514,7 @@ def test_a_policy_author_can_turn_a_commitment_into_a_block(seeded, enforcer, ag
 
 def test_the_same_policy_leaves_ordinary_answers_alone(seeded, enforcer, agent):
     save_policy(seeded, PolicyDocument.from_yaml(COMMITMENT_POLICY), bind_mode="enforce")
-    result = enforcer.evaluate(
-        agent=agent, identity=None, content=ORDINARY, surface="output"
-    )
+    result = enforcer.evaluate(agent=agent, identity=None, content=ORDINARY, surface="output")
     assert not result.blocked
 
 
@@ -568,7 +543,5 @@ def test_the_cap_is_a_documented_limit_not_a_silent_one(enforcer, agent):
     full coverage."""
     buried = ("filler sentence. " * 3_000) + "Your refund has been approved."
     assert len(buried) > 32_000
-    result = enforcer.evaluate(
-        agent=agent, identity=None, content=buried, surface="output"
-    )
+    result = enforcer.evaluate(agent=agent, identity=None, content=buried, surface="output")
     assert "commitments" not in result.taint

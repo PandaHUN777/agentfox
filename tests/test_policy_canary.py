@@ -51,8 +51,7 @@ def _make_two_versions(session):
     save_policy(session, PolicyDocument.from_yaml(TIGHTER), bind_mode="enforce")
     policy = session.query(Policy).filter_by(key="canary-test").one()
     versions = {
-        v.version: v
-        for v in session.query(PolicyVersion).filter_by(policy_id=policy.id).all()
+        v.version: v for v in session.query(PolicyVersion).filter_by(policy_id=policy.id).all()
     }
     return policy, versions[1], versions[2]
 
@@ -108,7 +107,7 @@ def test_pick_version_id_is_roughly_proportional(session):
 
 def test_active_policies_splits_traffic_between_stable_and_candidate(session):
     policy, v1, v2 = _make_two_versions(session)
-    canary = start_canary(session, "canary-test", steps=[50, 100])
+    start_canary(session, "canary-test", steps=[50, 100])
     seen_versions = set()
     for _ in range(200):
         bound = active_policies(session, agent_slug="any-agent")

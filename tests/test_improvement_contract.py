@@ -18,14 +18,18 @@ def test_loosening_is_never_automatic_at_any_level():
 def test_never_automatic_kinds_stay_manual_even_when_labelled_tightening(kind):
     for level in c.AUTONOMY_LEVELS:
         for direction in (c.TIGHTENS, c.NEUTRAL):
-            assert not c.may_apply_automatically(direction=direction, kind=kind, autonomy_level=level)
+            assert not c.may_apply_automatically(
+                direction=direction, kind=kind, autonomy_level=level
+            )
 
 
 def test_only_l3_and_l4_apply_without_a_person():
     allowed = {
         level
         for level in c.AUTONOMY_LEVELS
-        if c.may_apply_automatically(direction=c.TIGHTENS, kind="grant.narrow", autonomy_level=level)
+        if c.may_apply_automatically(
+            direction=c.TIGHTENS, kind="grant.narrow", autonomy_level=level
+        )
     }
     assert allowed == {"L3", "L4"}
 

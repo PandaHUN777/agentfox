@@ -86,9 +86,7 @@ def _show(result, label: str, session=None) -> None:
         pack, mode = modes.get(rule_id, ("", ""))
         # The mode that decided this rule's effect, not the mode of the merged set.
         where = f"  [dim]{pack} is in {mode}[/]" if mode else ""
-        console.print(
-            f"      [magenta]{rule_id}[/] → {rule.get('effect')}{where}"
-        )
+        console.print(f"      [magenta]{rule_id}[/] → {rule.get('effect')}{where}")
         console.print(f"        [dim]{rule.get('reason', '')[:110]}[/]")
         if rule.get("controls"):
             console.print(f"        [dim]controls: {', '.join(rule['controls'])}[/]")

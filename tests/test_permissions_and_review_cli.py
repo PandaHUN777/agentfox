@@ -22,7 +22,15 @@ runner = CliRunner()
 def test_declaring_a_tool_records_its_impact(isolated_db):
     result = runner.invoke(
         app,
-        ["tools", "declare", "payments.wire", "--impact", "irreversible", "--triggers", "ledger.write"],
+        [
+            "tools",
+            "declare",
+            "payments.wire",
+            "--impact",
+            "irreversible",
+            "--triggers",
+            "ledger.write",
+        ],
     )
     assert result.exit_code == 0, result.output
     listed = runner.invoke(app, ["tools", "list", "--json"])
@@ -78,7 +86,15 @@ def test_sign_off_moves_a_mapping_out_of_draft_and_names_the_reviewer(isolated_d
     runner.invoke(app, ["init", "--path", str(tmp_path)])
     result = runner.invoke(
         app,
-        ["compliance", "review", "NOM-IAM-03", "--framework", "eu-ai-act", "--reviewer", "A. Counsel"],
+        [
+            "compliance",
+            "review",
+            "NOM-IAM-03",
+            "--framework",
+            "eu-ai-act",
+            "--reviewer",
+            "A. Counsel",
+        ],
     )
     assert result.exit_code == 0, result.output
     assert "reviewed" in result.output and "A. Counsel" in result.output

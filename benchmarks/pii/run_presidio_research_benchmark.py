@@ -107,11 +107,7 @@ def street_address_spans_for_row(row: dict) -> list[tuple[int, int]]:
 
 
 def pred_spans(detections, canonical_types: set[str]) -> list[tuple[int, int, str]]:
-    return [
-        (d.start, d.end, d.entity_type)
-        for d in detections
-        if d.entity_type in canonical_types
-    ]
+    return [(d.start, d.end, d.entity_type) for d in detections if d.entity_type in canonical_types]
 
 
 def score_row(
@@ -201,12 +197,18 @@ def run_config(name: str, detector, rows: list[dict], ctx: DetectionContext) -> 
     for t, (tp, fp, fn) in sorted(per_type.items()):
         p, r, f = prf1(tp, fp, fn)
         by_type[t] = {
-            "tp": tp, "fp": fp, "fn": fn,
-            "precision": round(p, 4), "recall": round(r, 4), "f1": round(f, 4),
+            "tp": tp,
+            "fp": fp,
+            "fn": fn,
+            "precision": round(p, 4),
+            "recall": round(r, 4),
+            "f1": round(f, 4),
         }
     return {
         "config": name,
-        "tp": total_tp, "fp": total_fp, "fn": total_fn,
+        "tp": total_tp,
+        "fp": total_fp,
+        "fn": total_fn,
         "excluded_contained_in_street_address": total_excluded,
         "precision": round(precision, 4),
         "recall": round(recall, 4),
@@ -244,7 +246,9 @@ def main() -> None:
     out_path.write_text(json.dumps(summary, indent=2))
     print(f"\nWrote {out_path}\n")
 
-    print(f"{'config':<24}{'precision':<12}{'recall':<12}{'f1':<12}{'tp':<8}{'fp':<8}{'fn':<8}{'excl':<6}")
+    print(
+        f"{'config':<24}{'precision':<12}{'recall':<12}{'f1':<12}{'tp':<8}{'fp':<8}{'fn':<8}{'excl':<6}"
+    )
     for r in results:
         print(
             f"{r['config']:<24}{r['precision']:<12}{r['recall']:<12}{r['f1']:<12}"

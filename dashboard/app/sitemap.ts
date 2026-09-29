@@ -35,6 +35,7 @@ const ROUTES: Entry[] = [
   { path: "/how-it-works", changeFrequency: "monthly", priority: 0.8 },
   { path: "/playground", changeFrequency: "monthly", priority: 0.8 },
   { path: "/benchmark", changeFrequency: "monthly", priority: 0.7 },
+  { path: "/coverage", changeFrequency: "weekly", priority: 0.8 },
   // /compare is the page a buyer searches for by name ("agentfox vs ..."), so it
   // ranks above the other secondary pages. /pricing is expected to exist whether or
   // not anything is priced, and /support is where an existing user goes, not a

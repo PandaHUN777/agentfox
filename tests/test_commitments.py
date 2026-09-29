@@ -84,10 +84,13 @@ def test_an_authorised_commitment_is_not_a_finding():
 def test_ordinary_helpful_prose_binds_nothing():
     """The false-positive floor. An agent that cannot say anything reassuring is an
     agent nobody deploys."""
-    assert detect_commitments(
-        "I'm sorry to hear about the delay. Let me check the status of your order and "
-        "explain what the usual process looks like from here."
-    ) == []
+    assert (
+        detect_commitments(
+            "I'm sorry to hear about the delay. Let me check the status of your order and "
+            "explain what the usual process looks like from here."
+        )
+        == []
+    )
 
 
 # --- AI disclosure (F6.3) --------------------------------------------------
@@ -99,9 +102,7 @@ def test_a_human_on_a_conversational_channel_is_owed_a_disclosure():
 
 
 def test_saying_so_satisfies_it():
-    assert not check_disclosure(
-        "Hi, I'm an AI assistant — how can I help?", channel="chat"
-    ).breach
+    assert not check_disclosure("Hi, I'm an AI assistant — how can I help?", channel="chat").breach
 
 
 def test_disclosure_is_per_conversation_not_per_message():
@@ -164,7 +165,7 @@ def test_a_specific_reason_that_was_communicated_passes():
         reasons=["debt-to-income ratio above 45 percent"],
         domain="lending",
         text="Your application was declined because your debt-to-income ratio is above "
-             "our limit of 45 percent.",
+        "our limit of 45 percent.",
     )
     assert action.compliant
     assert action.verdict == "allow"
