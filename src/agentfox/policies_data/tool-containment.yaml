@@ -123,6 +123,29 @@ rules:
     reason: "The same tool has been called repeatedly in one execution path — runaway loop."
     controls: [NOM-RTG-08]
 
+  # --- The rule the other rules depend on ------------------------------
+  # An agent that can pause enforcement can switch off everything above this
+  # line, so this one is not optional: `policy.PROTECTED_RULES` refuses to load
+  # a tool-containment pack that has removed or disabled it. The enforcement is
+  # at load, not a warning at runtime, for the same reason `availability.py`
+  # puts NEVER_OPEN in the constructor — a setting that can be changed under
+  # pressure at three in the morning is not a guarantee.
+  #
+  # Read-only governance commands are deliberately not matched. `agentfox policy
+  # list`, `findings` and `doctor` are how an agent is supposed to inspect its
+  # own governance, and blocking those would teach people to turn this off.
+  - id: control_plane.tamper
+    description: >
+      A command that would disable AgentFox's own enforcement — putting a policy back
+      into observe mode, changing its own grants, rolling back the schema, minting a
+      token, or writing to the config, the database or the state directory.
+    when:
+      action_risk: "control-plane-tamper"
+    effect: block
+    severity: critical
+    reason: "This command would switch off the controls governing this agent."
+    controls: [NOM-RTG-04, NOM-IAM-02]
+
   # --- Cascade risk (P9) and data-access scoping (P18) -----------------
   # action_risk matches on the same action.risks[].code every SQL/shell/HTTP
   # finding already lands in (guardrails/actions.py) — cascade_risk() and
