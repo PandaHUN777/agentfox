@@ -459,7 +459,17 @@ class InjectionHeuristicDetector(BaseDetector):
     handles_views = True
     key = "injection.heuristic"
     version = "1.2"
-    surfaces = ("input", "retrieved", "tool_result", "output", "memory_write", "agent_message")
+    surfaces = (
+        "input",
+        "retrieved",
+        "tool_result",
+        "output",
+        "memory_write",
+        "agent_message",
+        # The model's own reasoning: a detection here means the payload
+        # was adopted, not merely present.
+        "reasoning",
+    )
 
     def _detect(self, content: str, context: DetectionContext) -> list[Detection]:
         if not content:

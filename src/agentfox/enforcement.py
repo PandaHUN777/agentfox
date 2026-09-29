@@ -1528,6 +1528,52 @@ class Enforcer:
             persist=persist,
         )
 
+    def guard_reasoning(
+        self,
+        *,
+        agent_slug: str,
+        content: str,
+        intent: str | None = None,
+        taint_source: str = "tool_result",
+        trace: Trace | None = None,
+        credential: str | None = None,
+        persist: bool = True,
+    ) -> EnforcementResult:
+        """Check the model's reasoning before it acts on it.
+
+        This is the surface that separates *an injection arrived* from *an
+        injection landed*. `retrieved` and `tool_result` see a payload entering
+        the context; nothing saw whether the model took it up. By the time a
+        tool call exists the goal substitution has already happened, and taint
+        tracking can say the argument came from untrusted content without ever
+        saying the agent changed its mind.
+
+        So a detection here is weighted differently from the same detection
+        anywhere else, and the shipped rule says so: injection-shaped text in a
+        retrieved document is an attempt, and the same text in the model's own
+        reasoning is a compromise in progress. That is the whole argument for
+        the surface existing, and it is why `taint_source` defaults to
+        `tool_result` rather than `user` — reasoning is derived content, never
+        something the operator typed.
+
+        Honest about what it is not. This reads reasoning the caller hands over;
+        it cannot see reasoning a provider does not expose, and a model that
+        reaches the same conclusion without narrating it is invisible here. It
+        is an additional place to catch the failure, not a guarantee of catching
+        it — which is why nothing above this line depends on it.
+        """
+        agent, identity, _ = self.resolve(agent_slug, credential)
+        return self.evaluate(
+            agent=agent,
+            identity=identity,
+            content=content,
+            surface="reasoning",
+            intent=intent,
+            taint_source=taint_source,
+            trace=trace,
+            persist=persist,
+        )
+
     def guard_agent_message(
         self,
         *,

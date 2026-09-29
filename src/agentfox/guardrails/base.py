@@ -33,6 +33,10 @@ SURFACES = (
     # a claim, checked against what actually happened. See
     # `Enforcer.guard_completion`.
     "completion",
+    # The model's own reasoning, before it acts on it. The only surface where a
+    # detection means the payload was *adopted* rather than merely present —
+    # see `Enforcer.guard_reasoning`.
+    "reasoning",
 )
 
 # Trust sources, ordered least → most dangerous. Used for taint comparison.
