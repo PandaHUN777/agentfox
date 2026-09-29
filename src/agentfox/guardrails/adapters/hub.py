@@ -78,40 +78,65 @@ class HubValidator:
 CATALOGUE: tuple[HubValidator, ...] = (
     # --- Injection and jailbreak → INJECTION.*, matched by baseline's rules ---
     HubValidator(
-        "detect_jailbreak", "Detect Jailbreak", "INJECTION.JAILBREAK",
+        "detect_jailbreak",
+        "Detect Jailbreak",
+        "INJECTION.JAILBREAK",
         ("input", "retrieved", "tool_result", "agent_message"),
-        owasp_id="LLM01", atlas_id="AML.T0054", timeout_ms=400,
+        owasp_id="LLM01",
+        atlas_id="AML.T0054",
+        timeout_ms=400,
         note="Model-backed. Downloads weights on first use.",
     ),
     HubValidator(
-        "detect_prompt_injection", "Detect Prompt Injection", "INJECTION.CLASSIFIER",
+        "detect_prompt_injection",
+        "Detect Prompt Injection",
+        "INJECTION.CLASSIFIER",
         ("input", "retrieved", "tool_result", "memory_write", "agent_message"),
-        owasp_id="LLM01", atlas_id="AML.T0051", timeout_ms=400,
+        owasp_id="LLM01",
+        atlas_id="AML.T0051",
+        timeout_ms=400,
         note="Model-backed. Downloads weights on first use.",
     ),
     HubValidator(
-        "unusual_prompt", "Unusual Prompt", "INJECTION.UNUSUAL",
-        ("input", "retrieved"), owasp_id="LLM01", timeout_ms=600,
+        "unusual_prompt",
+        "Unusual Prompt",
+        "INJECTION.UNUSUAL",
+        ("input", "retrieved"),
+        owasp_id="LLM01",
+        timeout_ms=600,
         note="Calls an LLM to judge the prompt. Costs a model call per check.",
     ),
     # --- Disclosure ---
     HubValidator(
-        "detect_system_prompt_leakage", "Detect System Prompt Leakage",
-        "DISCLOSURE.SYSTEM_PROMPT", ("output",), owasp_id="LLM07",
+        "detect_system_prompt_leakage",
+        "Detect System Prompt Leakage",
+        "DISCLOSURE.SYSTEM_PROMPT",
+        ("output",),
+        owasp_id="LLM07",
     ),
     # --- Data protection → the prefixes pii.native and secrets.native use ---
     HubValidator(
-        "detect_pii", "Detect PII", "PII.HUB",
-        ("input", "output", "retrieved", "tool_args", "tool_result"), owasp_id="LLM02",
+        "detect_pii",
+        "Detect PII",
+        "PII.HUB",
+        ("input", "output", "retrieved", "tool_args", "tool_result"),
+        owasp_id="LLM02",
     ),
     HubValidator(
-        "secrets_present", "Secrets Present", "SECRET.HUB",
-        ("input", "output", "tool_args", "tool_result", "memory_write"), owasp_id="LLM02",
+        "secrets_present",
+        "Secrets Present",
+        "SECRET.HUB",
+        ("input", "output", "tool_args", "tool_result", "memory_write"),
+        owasp_id="LLM02",
     ),
     # --- Content safety → SAFETY.*, matched by baseline's safety rules ---
     HubValidator(
-        "toxic_language", "Toxic Language", "SAFETY.TOXIC",
-        ("input", "output", "agent_message"), owasp_id="LLM09", timeout_ms=400,
+        "toxic_language",
+        "Toxic Language",
+        "SAFETY.TOXIC",
+        ("input", "output", "agent_message"),
+        owasp_id="LLM09",
+        timeout_ms=400,
         note="Model-backed. Downloads weights on first use.",
     ),
     HubValidator("nsfw_text", "NSFW Text", "SAFETY.NSFW", ("output",), timeout_ms=400),
@@ -121,33 +146,54 @@ CATALOGUE: tuple[HubValidator, ...] = (
     HubValidator("bias_check", "Bias Check", "SAFETY.BIAS", ("output",), timeout_ms=400),
     # --- Scope and brand ---
     HubValidator(
-        "restrict_to_topic", "Restrict To Topic", "TOPIC.OUT_OF_SCOPE",
-        ("output",), timeout_ms=400,
+        "restrict_to_topic",
+        "Restrict To Topic",
+        "TOPIC.OUT_OF_SCOPE",
+        ("output",),
+        timeout_ms=400,
         note="Complements the knowledge boundary (P7), which answers a different "
-             "question: whether the agent had the data, not whether the topic is in scope.",
+        "question: whether the agent had the data, not whether the topic is in scope.",
     ),
     HubValidator("competitor_check", "Competitor Check", "BRAND.COMPETITOR", ("output",)),
     # --- Generated code and statements → the action side ---
     HubValidator(
-        "valid_sql", "Valid SQL", "SCHEMA.SQL_INVALID", ("tool_args", "output"),
+        "valid_sql",
+        "Valid SQL",
+        "SCHEMA.SQL_INVALID",
+        ("tool_args", "output"),
         note="Syntax only. analyse_sql (P9) is what refuses an unbounded DELETE.",
     ),
     HubValidator(
-        "exclude_sql_predicates", "Exclude SQL Predicates", "ACTION.SQL_PREDICATE",
-        ("tool_args",), owasp_id="LLM05",
+        "exclude_sql_predicates",
+        "Exclude SQL Predicates",
+        "ACTION.SQL_PREDICATE",
+        ("tool_args",),
+        owasp_id="LLM05",
     ),
     HubValidator(
-        "web_sanitization", "Web Sanitization", "CODE.XSS", ("output",), owasp_id="LLM05",
+        "web_sanitization",
+        "Web Sanitization",
+        "CODE.XSS",
+        ("output",),
+        owasp_id="LLM05",
     ),
     HubValidator("valid_json", "Valid JSON", "SCHEMA.JSON_INVALID", ("output", "tool_args")),
     # --- Safety models someone may already run ---
     HubValidator(
-        "llama_guard", "Llama Guard", "SAFETY.LLAMA_GUARD", ("input", "output"),
-        timeout_ms=900, note="Licence-gated model. Read Meta's terms before enabling.",
+        "llama_guard",
+        "Llama Guard",
+        "SAFETY.LLAMA_GUARD",
+        ("input", "output"),
+        timeout_ms=900,
+        note="Licence-gated model. Read Meta's terms before enabling.",
     ),
     HubValidator(
-        "shield_gemma", "Shield Gemma", "SAFETY.SHIELD_GEMMA", ("input", "output"),
-        timeout_ms=900, note="Licence-gated model. Read Google's terms before enabling.",
+        "shield_gemma",
+        "Shield Gemma",
+        "SAFETY.SHIELD_GEMMA",
+        ("input", "output"),
+        timeout_ms=900,
+        note="Licence-gated model. Read Google's terms before enabling.",
     ),
 )
 
@@ -452,8 +498,9 @@ class HubValidatorDetector(BaseDetector):
         try:
             validator.validate("ok", {})
         except Exception as exc:
-            log.warning("guardrails hub validator %s constructed but cannot run: %s",
-                        self.spec.slug, exc)
+            log.warning(
+                "guardrails hub validator %s constructed but cannot run: %s", self.spec.slug, exc
+            )
             detail = " ".join(str(exc).split())
             self._load_error = f"{type(exc).__name__}: {detail[:160]}"
             self._unusable = True
@@ -480,9 +527,10 @@ class HubValidatorDetector(BaseDetector):
         # says so too. Matching on the name ALONE was the first version of this
         # and it silently treated every failure as a pass the moment a subclass
         # or a rename appeared.
-        failed = bool(getattr(outcome, "error_message", None)) or "fail" in type(
-            outcome
-        ).__name__.lower()
+        failed = (
+            bool(getattr(outcome, "error_message", None))
+            or "fail" in type(outcome).__name__.lower()
+        )
         if not failed:
             return []
 

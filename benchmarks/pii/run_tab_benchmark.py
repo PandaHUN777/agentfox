@@ -77,7 +77,14 @@ def gt_spans_for_row(row: dict) -> list[tuple[int, int, str, str]]:
             if key in seen:
                 continue
             seen.add(key)
-            out.append((mention["start_offset"], mention["end_offset"], canonical, mention.get("identifier_type", "UNKNOWN")))
+            out.append(
+                (
+                    mention["start_offset"],
+                    mention["end_offset"],
+                    canonical,
+                    mention.get("identifier_type", "UNKNOWN"),
+                )
+            )
     return out
 
 
@@ -135,7 +142,14 @@ def prf1(tp: int, fp: int, fn: int) -> tuple[float, float, float]:
 
 def summarize(tp: int, fp: int, fn: int) -> dict:
     p, r, f = prf1(tp, fp, fn)
-    return {"tp": tp, "fp": fp, "fn": fn, "precision": round(p, 4), "recall": round(r, 4), "f1": round(f, 4)}
+    return {
+        "tp": tp,
+        "fp": fp,
+        "fn": fn,
+        "precision": round(p, 4),
+        "recall": round(r, 4),
+        "f1": round(f, 4),
+    }
 
 
 def run_config(name: str, detector, rows: list[dict], ctx: DetectionContext) -> dict:

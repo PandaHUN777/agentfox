@@ -383,6 +383,4 @@ def test_the_control_plane_is_not_locked_out_by_the_outage(client, monkeypatch):
     _break_detector_pipeline(monkeypatch)
 
     assert client.get("/api/health").status_code == 200
-    assert (
-        client.get("/api/reliability", headers=as_user("admin@example.com")).status_code == 200
-    )
+    assert client.get("/api/reliability", headers=as_user("admin@example.com")).status_code == 200

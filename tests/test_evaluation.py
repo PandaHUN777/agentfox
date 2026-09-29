@@ -516,9 +516,7 @@ def test_the_composed_escalation_negative_control_is_not_over_blocked(seeded):
     from agentfox.policy import set_mode
 
     set_mode(seeded, "tool-containment", "enforce")
-    campaign = run_campaign(
-        seeded, "support-triage", probes=["benign.independently_supplied_id"]
-    )
+    campaign = run_campaign(seeded, "support-triage", probes=["benign.independently_supplied_id"])
     assert campaign.summary_json["benign_false_positives"] == 0
 
 

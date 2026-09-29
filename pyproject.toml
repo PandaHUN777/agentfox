@@ -115,7 +115,25 @@ filterwarnings = ["ignore::DeprecationWarning"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
+# Alembic writes these. Reformatting a shipped revision to satisfy a line
+# length is a change to a migration that has already run somewhere, for no
+# benefit — and the generated header is over the limit in every one of them.
+extend-exclude = ["migrations/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
 ignore = ["B008"]  # FastAPI Depends() in defaults is the framework idiom
+
+[tool.ruff.lint.per-file-ignores]
+# The poisoned-skill fixture's `description:` has to stay on one line: that is
+# what makes YAML read `IMPORTANT:` as a nested key and raise, which is the
+# behaviour the test exists to pin. Wrapping it would make the YAML parse and
+# the test would quietly stop testing anything.
+"tests/test_skill_scanning.py" = ["E501"]
+# E501 only, and only here. The long lines in these trees are *data* — attack
+# payloads, model prompts, embedded HTML — where the width carries no
+# maintenance cost and rewrapping risks silently altering a string a benchmark
+# measures or a red-team demo fires. Every other rule still applies, so an
+# unused import or an undefined name in a benchmark still fails CI.
+"benchmarks/**" = ["E501"]
+"demo/**" = ["E501"]

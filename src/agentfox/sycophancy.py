@@ -29,7 +29,9 @@ from .integrity import numbers_in
 
 #: Phrases that mark a premise smuggled in as shared knowledge. Their presence is what
 #: makes an assertion worth checking; their absence means the user asked rather than told.
-_ASSERTION_LEAD = r"(?:as you know|as we discussed|remember|recall|since|given that|obviously|clearly)"
+_ASSERTION_LEAD = (
+    r"(?:as you know|as we discussed|remember|recall|since|given that|obviously|clearly)"
+)
 
 _PATTERNS = (
     # "as you know, the deadline is Friday" / "since the balance is 400"

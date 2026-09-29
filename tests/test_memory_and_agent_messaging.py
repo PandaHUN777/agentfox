@@ -9,7 +9,7 @@ from agentfox.agent_messaging import mint_signing_key, sign_message
 from agentfox.models import Agent, AgentMessageLog, MemoryEntry
 from agentfox.policy import set_mode
 
-from .conftest import INDIRECT_INJECTION, PII_TEXT, SECRET_TEXT, as_user
+from .conftest import INDIRECT_INJECTION, SECRET_TEXT, as_user
 
 
 @pytest.fixture
@@ -102,7 +102,9 @@ def test_pii_write_persists_redacted(seeded, enforcer):
 
 def test_guard_memory_write_endpoint(client):
     payload = {"agent": "support-triage", "content": "The user's timezone is PST."}
-    resp = client.post("/v1/guard/memory_write", json=payload, headers=as_user("marcus@example.com"))
+    resp = client.post(
+        "/v1/guard/memory_write", json=payload, headers=as_user("marcus@example.com")
+    )
     assert resp.status_code == 200
     body = resp.json()
     assert body["verdict"] == "allow"
@@ -146,7 +148,9 @@ def test_unregistered_sender_fails_the_agent_card_check(seeded, enforcer):
 
 def test_replayed_nonce_is_blocked(seeded, enforcer):
     enforcer.guard_agent_message(sender_slug="support-triage", content="first", nonce="dupe")
-    result = enforcer.guard_agent_message(sender_slug="support-triage", content="second", nonce="dupe")
+    result = enforcer.guard_agent_message(
+        sender_slug="support-triage", content="second", nonce="dupe"
+    )
     assert result.blocked
     assert any(r["rule_id"] == "agent_message.replay" for r in result.rules_fired)
 
@@ -165,7 +169,9 @@ def test_signed_message_verifies(seeded, enforcer, encryption_key):
     )
     assert "unsigned" not in result.taint
     assert not any(r["rule_id"] == "agent_message.bad_signature" for r in result.rules_fired)
-    log = seeded.query(AgentMessageLog).filter_by(sender_slug="support-triage", nonce="sig1").first()
+    log = (
+        seeded.query(AgentMessageLog).filter_by(sender_slug="support-triage", nonce="sig1").first()
+    )
     assert log.signature_valid is True
 
 
@@ -173,7 +179,9 @@ def test_tampered_signature_is_blocked(seeded, enforcer, encryption_key):
     agent = seeded.query(Agent).filter_by(slug="support-triage").first()
     _key, raw = mint_signing_key(seeded, agent.id)
     seeded.flush()
-    signature, ts = sign_message(raw, sender="support-triage", nonce="sig2", payload="original payload")
+    signature, ts = sign_message(
+        raw, sender="support-triage", nonce="sig2", payload="original payload"
+    )
     result = enforcer.guard_agent_message(
         sender_slug="support-triage",
         content="a different payload entirely",  # signed payload doesn't match

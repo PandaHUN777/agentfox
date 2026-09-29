@@ -39,14 +39,14 @@ import json
 import os
 from pathlib import Path
 
+from _util import wipe_db
+
 from agentfox import db
 from agentfox.config import get_settings, reset_settings_cache
 from agentfox.enforcement import Enforcer
 from agentfox.models import ConversationTurn
 from agentfox.policy import set_mode
 from agentfox.seed import seed
-
-from _util import wipe_db
 
 RESULTS_DIR = Path(__file__).parent / "results"
 
@@ -82,8 +82,8 @@ SCENARIOS = [
 
 
 def score_turn_alone(pipeline_text: str) -> bool:
-    from agentfox.guardrails.detectors.injection import InjectionHeuristicDetector
     from agentfox.guardrails.base import DetectionContext
+    from agentfox.guardrails.detectors.injection import InjectionHeuristicDetector
 
     result = InjectionHeuristicDetector().detect(pipeline_text, DetectionContext(surface="input"))
     return bool(result.detections)
@@ -107,7 +107,9 @@ def run_scenario(session, scenario: dict) -> dict:
         session_id=scenario["session_id"],
         new_user_text=scenario["final_turn"],
     )
-    window_flagged = window_result.blocked or window_result.escalated or bool(window_result.entities)
+    window_flagged = (
+        window_result.blocked or window_result.escalated or bool(window_result.entities)
+    )
 
     correct = (
         single_turn_flagged == scenario["expect_single_turn_flagged"]

@@ -323,7 +323,9 @@ _LEXICAL: list[tuple[re.Pattern[str], str, float]] = [
         0.85,
     ),
     (
-        re.compile(r"\b(?:developer|god|admin|debug|dan)\s+mode\s+(?:enabled|on|activated)\b", re.I),
+        re.compile(
+            r"\b(?:developer|god|admin|debug|dan)\s+mode\s+(?:enabled|on|activated)\b", re.I
+        ),
         "INJECTION.PERSONA_OVERRIDE",
         0.75,
     ),

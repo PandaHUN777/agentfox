@@ -256,9 +256,7 @@ def reframing_markers(text: str) -> list[str]:
     """Which scaffolding families this turn uses. Names, not a score."""
     body = (text or "")[:_SCAN_CHARS]
     return sorted(
-        family
-        for family, patterns in _MARKER_RE.items()
-        if any(p.search(body) for p in patterns)
+        family for family, patterns in _MARKER_RE.items() if any(p.search(body) for p in patterns)
     )
 
 
@@ -428,10 +426,7 @@ def assess(
     resolved = bool(turns and turns[-1].resolved)
 
     fired = (
-        len(turns) >= 3
-        and gradient >= slope_threshold
-        and level >= level_floor
-        and not resolved
+        len(turns) >= 3 and gradient >= slope_threshold and level >= level_floor and not resolved
     )
     if fired:
         families = sorted({m for t in turns for m in t.markers})

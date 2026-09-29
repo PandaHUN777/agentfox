@@ -82,9 +82,7 @@ def test_the_system_chain_is_independently_verifiable(isolated_db):
         entries = session.scalars(
             select(AuditEntry).where(AuditEntry.org_id == SYSTEM_ORG_ID)
         ).all()
-        result = chain.verify(
-            [chain.entry_to_row(e) for e in entries], expect_genesis=True
-        )
+        result = chain.verify([chain.entry_to_row(e) for e in entries], expect_genesis=True)
     assert result.valid
     assert result.entries_checked == 3
 

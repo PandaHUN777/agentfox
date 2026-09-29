@@ -69,7 +69,7 @@ def test_prose_with_no_requirements_yields_none():
 
 
 def test_a_summary_that_reads_perfectly_can_drop_every_constraint():
-    """"Process this refund" is a faithful summary of the request and a total loss
+    """ "Process this refund" is a faithful summary of the request and a total loss
     of the requirements on it."""
     handoff = handoff_fidelity(BRIEF, "Process this refund.")
     assert handoff.fidelity == 0.0
@@ -110,8 +110,10 @@ def test_compounding_loss_across_a_chain_no_single_hop_looks_bad():
     """Three hops that each keep most constraints keep few between them."""
     chain = [
         {"agent": "intake", "instruction": BRIEF},
-        {"agent": "triage",
-         "instruction": "Urgent refund on #445120, under £500, needs finance approval."},
+        {
+            "agent": "triage",
+            "instruction": "Urgent refund on #445120, under £500, needs finance approval.",
+        },
         {"agent": "worker", "instruction": "Refund #445120, under £500."},
         {"agent": "executor", "instruction": "Refund #445120."},
     ]
@@ -131,7 +133,7 @@ def test_a_faithful_handoff_is_silent():
 
 
 def test_a_written_constraint_outside_the_five_kinds_is_not_silently_dropped():
-    """"Make sure the vendor doesn't find out about the discount" is a real,
+    """ "Make sure the vendor doesn't find out about the discount" is a real,
     written-down requirement (confidentiality) that matches none of LIMIT/
     PROHIBITION/URGENCY/IDENTIFIER/APPROVAL — mirroring attribute()'s own
     confident=False honesty pattern for the handoff side, this is surfaced
@@ -160,7 +162,8 @@ def test_a_capability_constraint_is_kept_even_when_no_prose_mentions_it():
     into `kept` even when neither instruction says anything about it, rather
     than leaving a reader to conclude the constraint does not exist anywhere."""
     handoff = handoff_fidelity(
-        "Refund the customer.", "Refund the customer.",
+        "Refund the customer.",
+        "Refund the customer.",
         capability_constraints={"amount": {"lt": 500}},
     )
     assert any(c.kind == "capability" for c in handoff.kept)
@@ -172,7 +175,8 @@ def test_a_dropped_prose_limit_still_backed_by_a_capability_is_visible_as_both()
     alone would see nothing enforcing it) but the capability-backed limit is
     also visible in `kept` — a fuller picture than prose-only analysis gives."""
     handoff = handoff_fidelity(
-        "Refund the customer, keep it under $500.", "Refund the customer.",
+        "Refund the customer, keep it under $500.",
+        "Refund the customer.",
         capability_constraints={"amount": {"lt": 500}},
     )
     assert LIMIT in kinds(handoff.dropped)
@@ -216,8 +220,12 @@ def test_an_intent_with_no_constraints_cannot_drift():
 TRACE = [
     {"id": "1", "actor": "planner", "inputs": {"q": "what is owed?"}, "output": "need the balance"},
     {"id": "3", "actor": "calculator", "inputs": {"rate": "0.04"}, "output": "total is 4500"},
-    {"id": "5", "actor": "summariser", "inputs": {"t": "total is 4500"},
-     "output": "the total is 4500"},
+    {
+        "id": "5",
+        "actor": "summariser",
+        "inputs": {"t": "total is 4500"},
+        "output": "the total is 4500",
+    },
     {"id": "8", "actor": "payer", "inputs": {"amount": "4500"}, "output": "transfer 4500 FAILED"},
 ]
 

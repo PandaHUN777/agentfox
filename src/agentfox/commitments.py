@@ -176,8 +176,12 @@ class DisclosureCheck:
         return self.required and not self.present
 
     def to_json(self) -> dict[str, Any]:
-        return {"required": self.required, "present": self.present,
-                "breach": self.breach, "reason": self.reason}
+        return {
+            "required": self.required,
+            "present": self.present,
+            "breach": self.breach,
+            "reason": self.reason,
+        }
 
 
 def disclosure_required(
@@ -217,8 +221,10 @@ def check_disclosure(
 ) -> DisclosureCheck:
     """The obligation, resolved against what the message actually said."""
     check = disclosure_required(
-        channel=channel, counterparty=counterparty,
-        already_disclosed=already_disclosed, exempt=exempt,
+        channel=channel,
+        counterparty=counterparty,
+        already_disclosed=already_disclosed,
+        exempt=exempt,
     )
     if not check.required or check.present:
         return check
@@ -231,14 +237,35 @@ def check_disclosure(
 
 #: Outcomes that carry a reason-giving obligation.
 ADVERSE_OUTCOMES = (
-    "denied", "declined", "rejected", "refused", "cancelled", "canceled",
-    "terminated", "suspended", "closed", "revoked", "ineligible", "unsuccessful",
-    "not approved", "withdrawn",
+    "denied",
+    "declined",
+    "rejected",
+    "refused",
+    "cancelled",
+    "canceled",
+    "terminated",
+    "suspended",
+    "closed",
+    "revoked",
+    "ineligible",
+    "unsuccessful",
+    "not approved",
+    "withdrawn",
 )
 
 #: Domains where the obligation is statutory rather than good practice.
-REGULATED_DOMAINS = ("credit", "lending", "loan", "mortgage", "insurance", "employment",
-                     "hiring", "housing", "tenancy", "benefits")
+REGULATED_DOMAINS = (
+    "credit",
+    "lending",
+    "loan",
+    "mortgage",
+    "insurance",
+    "employment",
+    "hiring",
+    "housing",
+    "tenancy",
+    "benefits",
+)
 
 #: Words that look like a reason and are not one. A reason has to let the person
 #: understand what to change; these tell them only that a rule exists.
@@ -272,9 +299,15 @@ class AdverseAction:
         return "block" if self.statutory else "escalate"
 
     def to_json(self) -> dict[str, Any]:
-        return {"outcome": self.outcome, "reasons": self.reasons, "domain": self.domain,
-                "statutory": self.statutory, "compliant": self.compliant,
-                "verdict": self.verdict, "findings": self.findings}
+        return {
+            "outcome": self.outcome,
+            "reasons": self.reasons,
+            "domain": self.domain,
+            "statutory": self.statutory,
+            "compliant": self.compliant,
+            "verdict": self.verdict,
+            "findings": self.findings,
+        }
 
 
 def adverse_action_risk(
@@ -300,23 +333,22 @@ def adverse_action_risk(
     is_adverse = any(word in lowered for word in ADVERSE_OUTCOMES)
     statutory = any(word in domain.lower() for word in REGULATED_DOMAINS)
 
-    action = AdverseAction(outcome=outcome, reasons=reasons, domain=domain,
-                           statutory=statutory)
+    action = AdverseAction(outcome=outcome, reasons=reasons, domain=domain, statutory=statutory)
     if not is_adverse:
         return action
 
     substantive = [r for r in reasons if not _NON_REASONS.match(r.strip())]
     if not reasons:
-        action.findings.append(
-            "an adverse decision was recorded with no reason at all"
-        )
+        action.findings.append("an adverse decision was recorded with no reason at all")
     elif not substantive:
         action.findings.append(
             "the recorded reason is boilerplate — it satisfies a field and tells the "
             f"person nothing they could act on: {reasons!r}"
         )
-    if substantive and text and not any(
-        _key_terms(reason) & _key_terms(text) for reason in substantive
+    if (
+        substantive
+        and text
+        and not any(_key_terms(reason) & _key_terms(text) for reason in substantive)
     ):
         action.findings.append(
             "the reasons on the decision record do not appear in what the person was "
@@ -430,10 +462,7 @@ def fairness_probe(
     best = max(rates, key=lambda r: r.rate)
     worst_rate = min(r.rate for r in rates)
     ratio = worst_rate / best.rate if best.rate else 1.0
-    disadvantaged = [
-        r.group for r in rates
-        if best.rate and r.rate / best.rate < threshold
-    ]
+    disadvantaged = [r.group for r in rates if best.rate and r.rate / best.rate < threshold]
     return FairnessResult(
         rates=rates,
         ratio=ratio,
@@ -488,9 +517,13 @@ def assess_liability(
     return LiabilityAssessment(
         commitments=detect_commitments(text, authorised=authorised),
         disclosure=check_disclosure(
-            text, channel=channel, counterparty=counterparty,
-            already_disclosed=already_disclosed, exempt=exempt,
+            text,
+            channel=channel,
+            counterparty=counterparty,
+            already_disclosed=already_disclosed,
+            exempt=exempt,
         ),
         adverse=adverse_action_risk(outcome, reasons=reasons, domain=domain, text=text)
-        if outcome else None,
+        if outcome
+        else None,
     )

@@ -387,9 +387,7 @@ _SHELL_CONTROL_PLANE = [
     # `agentfox.toml` is ordinary, overwriting it is how enforcement is turned
     # off without running the CLI at all.
     (
-        re.compile(
-            r"(?:>|>>|\btee\b|\brm\b|\bmv\b|\btruncate\b)[^|;&]*\bagentfox\.toml\b", re.I
-        ),
+        re.compile(r"(?:>|>>|\btee\b|\brm\b|\bmv\b|\btruncate\b)[^|;&]*\bagentfox\.toml\b", re.I),
         "writing to or removing the AgentFox config file",
     ),
     (
@@ -775,8 +773,19 @@ _PATH_TRAVERSAL_RE = re.compile(r"\.\.[/\\]")
 #: gained once real English collisions (`Call`, `Attach`) showed up in testing.
 _REAL_STATEMENT_NODE_TYPES = frozenset(
     {
-        "Select", "Insert", "Update", "Delete", "Drop", "Alter", "Create",
-        "Grant", "Revoke", "Merge", "TruncateTable", "Union", "With",
+        "Select",
+        "Insert",
+        "Update",
+        "Delete",
+        "Drop",
+        "Alter",
+        "Create",
+        "Grant",
+        "Revoke",
+        "Merge",
+        "TruncateTable",
+        "Union",
+        "With",
     }
 )
 
@@ -911,8 +920,21 @@ def analyse_scope(key: str, value: str) -> ActionAnalysis | None:
 _SQL_KEYS_UNCONDITIONAL = ("sql", "statement", "command_text")
 _SQL_KEYS_AMBIGUOUS = ("query",)
 _SQL_LEADING_VERBS = (
-    "SELECT", "INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE",
-    "TRUNCATE", "GRANT", "REVOKE", "MERGE", "WITH", "EXPLAIN", "SHOW", "DESCRIBE",
+    "SELECT",
+    "INSERT",
+    "UPDATE",
+    "DELETE",
+    "DROP",
+    "ALTER",
+    "CREATE",
+    "TRUNCATE",
+    "GRANT",
+    "REVOKE",
+    "MERGE",
+    "WITH",
+    "EXPLAIN",
+    "SHOW",
+    "DESCRIBE",
 )
 _SHELL_KEYS = ("command", "cmd", "script", "shell")
 _URL_KEYS = ("url", "endpoint", "path")

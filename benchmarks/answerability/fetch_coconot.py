@@ -41,7 +41,9 @@ URL = (
 
 def main() -> None:
     if pq is None:
-        raise SystemExit("Run with: uv run --with pyarrow python benchmarks/answerability/fetch_coconot.py")
+        raise SystemExit(
+            "Run with: uv run --with pyarrow python benchmarks/answerability/fetch_coconot.py"
+        )
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     raw_path = DATA_DIR / "_coconot_contrast_raw.parquet"

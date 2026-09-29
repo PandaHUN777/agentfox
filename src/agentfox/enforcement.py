@@ -27,8 +27,8 @@ Two invariants are enforced here rather than assumed:
 from __future__ import annotations
 
 import datetime as dt
-import json
 import functools
+import json
 import logging
 import time
 from collections.abc import Iterator
@@ -67,8 +67,6 @@ from .business.ladder import evaluate as evaluate_ladder
 from .business.store import load_ladders
 from .commitments import adverse_action_risk, check_disclosure, detect_commitments
 from .config import get_settings
-from .control_flow import Plan
-from .control_flow import check_selection as check_tool_selection
 from .context_integrity import (
     assemble_context,
     chunk_quality,
@@ -77,16 +75,19 @@ from .context_integrity import (
     retrieval_drift,
 )
 from .context_integrity import worst as worst_context_verdict
+from .control_flow import Plan
+from .control_flow import check_selection as check_tool_selection
 from .crypto import DecryptionFailed, decrypt_secret
+from .data_access import ReferenceTable, ScopeRule
+from .data_access import analyse_access as analyse_data_access
+from .effects import cascade_risk
 from .entitlement import (
     aggregation_risk,
     filter_retrieval,
     inference_risk,
     record_disclosure,
 )
-from .data_access import ReferenceTable, ScopeRule
-from .data_access import analyse_access as analyse_data_access
-from .effects import cascade_risk
+from .findings import raise_finding, record_detector_health
 from .guardrails import (
     DetectionContext,
     DetectorPipeline,
@@ -98,7 +99,6 @@ from .guardrails.actions import summarise as summarise_actions
 from .guardrails.base import taint_rank
 from .guardrails.composition import check_composed_escalation
 from .guardrails.taint import _flatten
-from .findings import raise_finding, record_detector_health
 from .guardrails.tuning import (
     LatencyLedger,
     active_suppressions,
@@ -113,7 +113,6 @@ from .integrations.correlation import (
     refs_from_headers,
 )
 from .integrity import assess_integrity
-from .sycophancy import check_premises
 from .models import (
     AccessScopeRule,
     Agent,
@@ -146,6 +145,7 @@ from .reliability import (
     raise_budget_finding,
 )
 from .reliability import Rung as _Rung
+from .sycophancy import check_premises
 from .trajectory import ENTITY as TRAJECTORY_ENTITY
 from .trajectory import SCAN_CHARS as TRAJECTORY_SCAN_CHARS
 from .trajectory import assess as assess_trajectory
@@ -245,10 +245,8 @@ def _detection_title(effective: str, applied: str, surface: str, entity_types: l
     # Observe: recorded, not acted on. Naming both is what makes the row
     # actionable — it says what would change if this policy were promoted.
     return (
-        f"Would have been {_PAST_TENSE.get(effective, effective).lower()} "
-        f"on {surface}: {entities}"
+        f"Would have been {_PAST_TENSE.get(effective, effective).lower()} on {surface}: {entities}"
     )
-
 
 
 #: Which shipped packs apply to a deployment that has configured nothing.
@@ -319,7 +317,6 @@ def _fallback_policies(risk_tier: str | None = None) -> tuple:
     # Ordered by `wanted`, so the set in force is deterministic rather than
     # whatever order the directory listing happened to produce.
     return tuple(by_key[k] for k in wanted if k in by_key)
-
 
 
 @dataclass
@@ -788,7 +785,6 @@ class Enforcer:
         # or binds their own, this stops applying and their policies decide. A
         # fallback that seeded itself into the database would be a tool editing
         # the configuration it is supposed to be governed by.
-        used_fallback = False
         if not bound:
             fallback = _fallback_policies(getattr(agent, "risk_tier", None))
             if fallback:
@@ -797,7 +793,6 @@ class Enforcer:
                     for doc in fallback
                     if doc.matches_scope(agent_slug, environment)
                 ]
-                used_fallback = bool(bound)
         evaluated = [
             (doc, version, self.engine.evaluate(doc, pinput)) for doc, version, _b in bound
         ]
@@ -1466,7 +1461,11 @@ class Enforcer:
         if persist and result.verdict not in ("block", "escalate", "abstain"):
             expires_at = None
             if verified_by is None:
-                ttl = ttl_seconds if ttl_seconds is not None else self.settings.memory_unverified_ttl_seconds
+                ttl = (
+                    ttl_seconds
+                    if ttl_seconds is not None
+                    else self.settings.memory_unverified_ttl_seconds
+                )
                 expires_at = utcnow() + dt.timedelta(seconds=ttl)
             entry = MemoryEntry(
                 agent_id=agent.id if agent else None,
@@ -1678,9 +1677,7 @@ class Enforcer:
             result.effective_verdict = "block"
             result.reason = f"replayed message: (sender='{sender_slug}', nonce) was already seen"
             result.rules_fired.append(
-                _fired_rule(
-                    "agent_message.replay", "block", result.reason, controls=["NOM-IAM-08"]
-                )
+                _fired_rule("agent_message.replay", "block", result.reason, controls=["NOM-IAM-08"])
             )
         elif not agent_card_match:
             effect = "escalate" if result.verdict == "allow" else result.verdict
@@ -2294,9 +2291,7 @@ class Enforcer:
             out["risks"] = risks
         return out
 
-    def _trajectory_checks(
-        self, surface: str, window: list[str] | None
-    ) -> dict[str, Any]:
+    def _trajectory_checks(self, surface: str, window: list[str] | None) -> dict[str, Any]:
         """F9.4 — whether the *conversation* is escalating, not whether this turn is.
 
         Built to the shape `_commitment_checks` established, for the same reason: the
@@ -3371,8 +3366,11 @@ class Enforcer:
             # consecutively. Falls through to the naive counter below only when a
             # caller has no step history to give it yet (see the `elif`).
             replay = [
-                Step(tool=s.get("tool", ""), arguments=s.get("arguments") or {},
-                     observation=s.get("observation"))
+                Step(
+                    tool=s.get("tool", ""),
+                    arguments=s.get("arguments") or {},
+                    observation=s.get("observation"),
+                )
                 for s in prior_steps
             ] + [Step(tool=tool_key, arguments=arguments or {}, observation=None)]
             verdict = govern_loop(

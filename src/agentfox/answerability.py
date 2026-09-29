@@ -373,7 +373,7 @@ class AnswerabilityVerdict:
 
 
 def _article(word: str) -> str:
-    """"a opinion question" is the kind of slip that makes a refusal look automated.
+    """ "a opinion question" is the kind of slip that makes a refusal look automated.
 
     Every value that reaches this is one of QUESTION_TYPES — plain ASCII words — so
     the vowel test is exact here and does not need a general a/an library.
@@ -382,7 +382,7 @@ def _article(word: str) -> str:
 
 
 def _or_list(items: list[str]) -> str:
-    """"fact or aggregate or procedure" reads as a machine listing enum members."""
+    """ "fact or aggregate or procedure" reads as a machine listing enum members."""
     items = list(items)
     if len(items) <= 2:
         return " or ".join(items)

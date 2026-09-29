@@ -450,7 +450,9 @@ def _lc_messages_from(chat_input: Any) -> list[dict[str, Any]]:
         if content is None and msg_type is None:
             continue
         role = _LC_ROLES.get(str(msg_type), str(msg_type or "user"))
-        messages.append({"role": role, "content": content if isinstance(content, str) else str(content)})
+        messages.append(
+            {"role": role, "content": content if isinstance(content, str) else str(content)}
+        )
     return messages
 
 
@@ -642,9 +644,7 @@ def _run_preflight(
     return call, result, enforced, effective
 
 
-def _preflight(
-    state: AutoState, kwargs: dict[str, Any], evidence: dict[str, Any]
-) -> _Call | None:
+def _preflight(state: AutoState, kwargs: dict[str, Any], evidence: dict[str, Any]) -> _Call | None:
     """Pre-flight, decided. Raises `Blocked` when the call must be refused under
     ``state.mode`` (or pre-flight failed with ``fail_mode=closed``); returns None when
     pre-flight failed open, in which case the call proceeds ungoverned."""
@@ -1101,12 +1101,22 @@ def _patch_openai(state: AutoState) -> list[PatchResult]:
     version = getattr(openai, "__version__", None)
     return [
         _patch_attr(
-            "openai", "openai", getattr(completions, "Completions", None), "create",
-            _sdk_method(state, is_async=False), version, "chat.completions.create",
+            "openai",
+            "openai",
+            getattr(completions, "Completions", None),
+            "create",
+            _sdk_method(state, is_async=False),
+            version,
+            "chat.completions.create",
         ),
         _patch_attr(
-            "openai.async", "openai", getattr(completions, "AsyncCompletions", None), "create",
-            _sdk_method(state, is_async=True), version, "AsyncCompletions.create",
+            "openai.async",
+            "openai",
+            getattr(completions, "AsyncCompletions", None),
+            "create",
+            _sdk_method(state, is_async=True),
+            version,
+            "AsyncCompletions.create",
         ),
     ]
 
@@ -1121,12 +1131,22 @@ def _patch_anthropic(state: AutoState) -> list[PatchResult]:
     version = getattr(anthropic, "__version__", None)
     return [
         _patch_attr(
-            "anthropic", "anthropic", getattr(messages_module, "Messages", None), "create",
-            _sdk_method(state, is_async=False), version, "messages.create",
+            "anthropic",
+            "anthropic",
+            getattr(messages_module, "Messages", None),
+            "create",
+            _sdk_method(state, is_async=False),
+            version,
+            "messages.create",
         ),
         _patch_attr(
-            "anthropic.async", "anthropic", getattr(messages_module, "AsyncMessages", None),
-            "create", _sdk_method(state, is_async=True), version, "AsyncMessages.create",
+            "anthropic.async",
+            "anthropic",
+            getattr(messages_module, "AsyncMessages", None),
+            "create",
+            _sdk_method(state, is_async=True),
+            version,
+            "AsyncMessages.create",
         ),
     ]
 
@@ -1140,12 +1160,22 @@ def _patch_litellm(state: AutoState) -> list[PatchResult]:
     version = getattr(litellm, "__version__", None)
     return [
         _patch_attr(
-            "litellm", "litellm", litellm, "completion",
-            _sdk_method(state, is_async=False), version, "litellm.completion",
+            "litellm",
+            "litellm",
+            litellm,
+            "completion",
+            _sdk_method(state, is_async=False),
+            version,
+            "litellm.completion",
         ),
         _patch_attr(
-            "litellm.async", "litellm", litellm, "acompletion",
-            _sdk_method(state, is_async=True), version, "litellm.acompletion",
+            "litellm.async",
+            "litellm",
+            litellm,
+            "acompletion",
+            _sdk_method(state, is_async=True),
+            version,
+            "litellm.acompletion",
         ),
     ]
 
@@ -1160,12 +1190,22 @@ def _patch_langchain(state: AutoState) -> list[PatchResult]:
     version = getattr(langchain_core, "__version__", None)
     return [
         _patch_attr(
-            "langchain", "langchain-core", BaseChatModel, "invoke",
-            _lc_method(state, is_async=False), version, "BaseChatModel.invoke",
+            "langchain",
+            "langchain-core",
+            BaseChatModel,
+            "invoke",
+            _lc_method(state, is_async=False),
+            version,
+            "BaseChatModel.invoke",
         ),
         _patch_attr(
-            "langchain.async", "langchain-core", BaseChatModel, "ainvoke",
-            _lc_method(state, is_async=True), version, "BaseChatModel.ainvoke",
+            "langchain.async",
+            "langchain-core",
+            BaseChatModel,
+            "ainvoke",
+            _lc_method(state, is_async=True),
+            version,
+            "BaseChatModel.ainvoke",
         ),
     ]
 

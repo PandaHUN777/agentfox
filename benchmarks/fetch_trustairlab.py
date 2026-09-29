@@ -74,7 +74,9 @@ def main() -> None:
     rng.shuffle(combined)
 
     (DATA_DIR / "trustairlab.json").write_text(json.dumps(combined, indent=2))
-    print(f"wrote {len(combined)} rows ({len(jailbreak_rows)} positive / {len(regular_sample)} negative)")
+    print(
+        f"wrote {len(combined)} rows ({len(jailbreak_rows)} positive / {len(regular_sample)} negative)"
+    )
 
 
 if __name__ == "__main__":

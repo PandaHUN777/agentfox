@@ -18,7 +18,6 @@ from sqlalchemy.orm import Session
 
 from ...audit import chain
 from ...models import Policy, PolicyBinding, PolicyCanary, PolicyVersion, User
-from ...policy.canary import evaluate_gate
 from ...policy import (
     LEVELS,
     MODES,
@@ -39,6 +38,7 @@ from ...policy import (
     simulate,
     start_canary,
 )
+from ...policy.canary import evaluate_gate
 from ..deps import current_user, db, require
 
 router = APIRouter(prefix="/api/policies", tags=["policy"])
@@ -56,7 +56,10 @@ def list_policies(
     # `active_policies` here means the filter agrees with what actually gets
     # enforced at request time, rather than a second, looser notion of "applies to".
     scoped_policy_ids = (
-        {version.policy_id for _doc, version, _binding in active_policies(session, agent_slug=agent)}
+        {
+            version.policy_id
+            for _doc, version, _binding in active_policies(session, agent_slug=agent)
+        }
         if agent
         else None
     )
@@ -454,8 +457,12 @@ def advance_policy_canary(
     if canary.status != before_status or canary.percent != before_percent:
         chain.append(
             session,
-            "policy.canary_rolled_back" if canary.status == "rolled_back" else (
-                "policy.canary_completed" if canary.status == "completed" else "policy.canary_advanced"
+            "policy.canary_rolled_back"
+            if canary.status == "rolled_back"
+            else (
+                "policy.canary_completed"
+                if canary.status == "completed"
+                else "policy.canary_advanced"
             ),
             actor_type="user",
             actor_id=user.email or user.id,

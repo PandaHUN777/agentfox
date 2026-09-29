@@ -217,9 +217,7 @@ def check(
     as_json: bool = typer.Option(
         False, "--json", help="Full records for scripts: every site, whole paths, no table."
     ),
-    limit: int = typer.Option(
-        15, "--limit", "-n", help="How many sites to show, worst first."
-    ),
+    limit: int = typer.Option(15, "--limit", "-n", help="How many sites to show, worst first."),
     fail_on_ungoverned: bool = typer.Option(
         False, "--fail", help="Exit non-zero if any model call is ungoverned (for CI)."
     ),
@@ -269,8 +267,7 @@ def check(
             # Pluralise. "16 shell call" reads as a truncation bug on the first
             # command a new user runs, which is the worst place to have one.
             + ", ".join(
-                f"{v} {k.replace('_', ' ')}{'' if v == 1 else 's'}"
-                for k, v in other.items()
+                f"{v} {k.replace('_', ' ')}{'' if v == 1 else 's'}" for k, v in other.items()
             )
         )
 
@@ -555,9 +552,7 @@ def findings_cmd(
         "-s",
         help="Show only this severity: critical, high, medium, low or info.",
     ),
-    limit: int = typer.Option(
-        20, "--limit", "-n", help="How many findings to show, worst first."
-    ),
+    limit: int = typer.Option(20, "--limit", "-n", help="How many findings to show, worst first."),
     as_json: bool = typer.Option(
         False,
         "--json",
@@ -576,8 +571,7 @@ def findings_cmd(
 
     if severity and severity not in SEVERITY_RANK:
         console.print(
-            f"[red]unknown severity '{severity}'[/]. Use one of: "
-            f"{', '.join(SEVERITY_RANK)}"
+            f"[red]unknown severity '{severity}'[/]. Use one of: {', '.join(SEVERITY_RANK)}"
         )
         raise typer.Exit(2)
 
@@ -589,9 +583,7 @@ def findings_cmd(
         stmt = select(Finding).where(Finding.status == "open")
         if severity:
             stmt = stmt.where(Finding.severity == severity)
-        total = session.scalar(
-            select(func.count()).select_from(stmt.subquery())
-        )
+        total = session.scalar(select(func.count()).select_from(stmt.subquery()))
         rows = [
             {
                 "id": f.id,

@@ -57,13 +57,13 @@ DB_PATH = Path(tempfile.gettempdir()) / "agentfox_containment_benchmark.db"
 os.environ["NOMETRIA_DATABASE_URL"] = f"sqlite:///{DB_PATH}"
 os.environ.setdefault("NOMETRIA_CONFIG", "none")
 
+from _util import wipe_db  # noqa: E402
+
 from agentfox import db  # noqa: E402
 from agentfox.config import get_settings, reset_settings_cache  # noqa: E402
 from agentfox.enforcement import Enforcer  # noqa: E402
 from agentfox.registry.control import quarantine  # noqa: E402
 from agentfox.seed import seed  # noqa: E402
-
-from _util import wipe_db  # noqa: E402
 
 RESULTS_DIR = Path(__file__).parent / "results"
 
@@ -306,7 +306,9 @@ def run_scenario(scenario: dict[str, Any], detectors_enabled: bool) -> dict[str,
     # 2. The action the compromised agent now attempts.
     if scenario.get("quarantine_first"):
         with db.session_scope() as session:
-            quarantine(session, scenario["agent"], reason="containment benchmark", actor="benchmark")
+            quarantine(
+                session, scenario["agent"], reason="containment benchmark", actor="benchmark"
+            )
 
     with db.session_scope() as session:
         result = Enforcer(session).guard_tool_call(

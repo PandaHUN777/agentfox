@@ -57,7 +57,8 @@ def test_completion_conditions_without_the_completion_surface():
 def test_the_message_says_what_is_legal():
     doc = PolicyDocument(key="k", rules=[Rule(id="r", when=Condition(surface=["nope"]))])
     finding = next(
-        f for f in lint_policy([PolicyLayer(level="org", scope_id="o", document=doc)])
+        f
+        for f in lint_policy([PolicyLayer(level="org", scope_id="o", document=doc)])
         if f.code == "unreachable"
     )
     assert "can never fire" in finding.message

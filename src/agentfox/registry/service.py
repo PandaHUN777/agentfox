@@ -182,7 +182,10 @@ def propose_from_scan(
             rules=[],
         )
         policy, _version = save_policy(
-            session, doc, author=author, notes=f"Proposed by scan {run_id}",
+            session,
+            doc,
+            author=author,
+            notes=f"Proposed by scan {run_id}",
             bind_mode="observe",
         )
         policy.proposed = True
@@ -284,9 +287,7 @@ def detect_shadow_agents(session: Session, window_days: int = 30) -> list[dict[s
     since = utcnow() - dt.timedelta(days=window_days)
     out: list[dict[str, Any]] = []
     for agent in session.scalars(
-        select(Agent).where(
-            Agent.registered.is_(False), Agent.status.notin_(("draft", "rejected"))
-        )
+        select(Agent).where(Agent.registered.is_(False), Agent.status.notin_(("draft", "rejected")))
     ):
         traces = list(
             session.scalars(
@@ -577,9 +578,7 @@ def assess_delegation(session: Session) -> list[Finding]:
 
     edges = [
         (str(e.src_id), str(e.dst_id))
-        for e in session.scalars(
-            select(LineageEdge).where(LineageEdge.relation == "delegates_to")
-        )
+        for e in session.scalars(select(LineageEdge).where(LineageEdge.relation == "delegates_to"))
     ]
     if not edges:
         return []
@@ -827,7 +826,9 @@ def inventory(session: Session) -> dict[str, Any]:
         # "draft"/"rejected" are unregistered but were never observed running — see
         # detect_shadow_agents for why they don't belong in the same count as a
         # genuine shadow agent (traffic nobody registered first).
-        "shadow": sum(1 for a in agents if not a.registered and a.status not in ("draft", "rejected")),
+        "shadow": sum(
+            1 for a in agents if not a.registered and a.status not in ("draft", "rejected")
+        ),
         "unowned": sum(1 for a in agents if not a.is_owned),
         "by_risk_tier": by_tier,
         "by_environment": by_env,

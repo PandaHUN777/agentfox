@@ -110,8 +110,13 @@ def _file_min_score(session, to: float, *, scope_level="org", stage="direct", **
         title=f"Set injection.block min_score to {to}",
         rationale="precision report",
         direction="tightens",  # deliberately wrong for a raise: must be recomputed
-        diff={"policy": "proposal-test", "rule_id": "injection.block", "from": 0.8, "to": to,
-              "stage": stage},
+        diff={
+            "policy": "proposal-test",
+            "rule_id": "injection.block",
+            "from": 0.8,
+            "to": to,
+            "stage": stage,
+        },
         evidence={"precision": 0.4},
         autonomy_level="L3",
     )
@@ -141,9 +146,7 @@ def _live_min_score(session) -> tuple[float, PolicyVersion]:
 def _entries(session, proposal) -> list[AuditEntry]:
     return list(
         session.scalars(
-            select(AuditEntry)
-            .where(AuditEntry.subject_id == proposal.id)
-            .order_by(AuditEntry.seq)
+            select(AuditEntry).where(AuditEntry.subject_id == proposal.id).order_by(AuditEntry.seq)
         )
     )
 
@@ -153,10 +156,16 @@ def _entries(session, proposal) -> list[AuditEntry]:
 
 def test_the_same_problem_is_one_open_proposal(seeded, enforcer):
     suppression = _suppression(seeded, enforcer)
-    first = _file_revoke(seeded, suppression, fingerprint="fp-1", evidence={"hits": 0},
-                         related_finding_ids=["f1"])
-    second = _file_revoke(seeded, suppression, fingerprint="fp-1", evidence={"days_idle": 31},
-                          related_finding_ids=["f1", "f2"])
+    first = _file_revoke(
+        seeded, suppression, fingerprint="fp-1", evidence={"hits": 0}, related_finding_ids=["f1"]
+    )
+    second = _file_revoke(
+        seeded,
+        suppression,
+        fingerprint="fp-1",
+        evidence={"days_idle": 31},
+        related_finding_ids=["f1", "f2"],
+    )
     assert second.id == first.id
     assert seeded.query(ChangeProposal).count() == 1
     assert first.evidence_json == {"hits": 0, "days_idle": 31}
@@ -406,8 +415,9 @@ def test_suppression_revoke_applies_and_reverts(seeded, enforcer):
     assert not suppression.active
     assert suppression.revoked_at is not None
 
-    rollback_proposal(seeded, proposal, reason="detector is noisy again",
-                      actor="marcus@example.com")
+    rollback_proposal(
+        seeded, proposal, reason="detector is noisy again", actor="marcus@example.com"
+    )
     assert proposal.status == contract.ROLLED_BACK
     restored = [
         s for s in seeded.scalars(select(Suppression)) if s.id != suppression.id and s.active
@@ -450,8 +460,7 @@ def test_policy_apply_refuses_a_drifted_rule(seeded):
     proposal = _file_min_score(seeded, 0.6, scope_level="team")
     attach_proof(seeded, proposal, PROOF, passed=True)
     decide(seeded, proposal, approve=True, actor="marcus@example.com", note="ok")
-    save_policy(seeded, PolicyDocument.from_yaml(POLICY.replace("0.8", "0.7")),
-                bind_mode="enforce")
+    save_policy(seeded, PolicyDocument.from_yaml(POLICY.replace("0.8", "0.7")), bind_mode="enforce")
     with pytest.raises(ProposalError, match="drifted"):
         apply_proposal(seeded, proposal, actor="marcus@example.com", automated=False)
 
@@ -493,8 +502,9 @@ def test_a_completed_canary_settles_the_proposal_as_applied(seeded):
     apply_proposal(seeded, proposal, actor="marcus@example.com", automated=False)
     assert proposal.status == contract.APPLIED
     assert _live_min_score(seeded)[0] == 0.6
-    verify_proposal(seeded, proposal, verified=True, note="precision up",
-                    actor="marcus@example.com")
+    verify_proposal(
+        seeded, proposal, verified=True, note="precision up", actor="marcus@example.com"
+    )
     assert proposal.status == contract.VERIFIED
 
 
@@ -574,19 +584,36 @@ def test_api_reads_are_open_to_operators_and_writes_need_policy_production(clien
     body = {"approve": True, "note": "ok"}
     for writer_denied in ("priya@example.com", "aisha@example.com", "dana@example.com"):
         headers = as_user(writer_denied)
-        assert client.post(f"/api/proposals/{pid}/decide", json=body,
-                           headers=headers).status_code == 403
+        assert (
+            client.post(f"/api/proposals/{pid}/decide", json=body, headers=headers).status_code
+            == 403
+        )
         assert client.post(f"/api/proposals/{pid}/apply", headers=headers).status_code == 403
-        assert client.post(f"/api/proposals/{pid}/rollback", json={"reason": "x"},
-                           headers=headers).status_code == 403
-        assert client.post(f"/api/proposals/{pid}/verify",
-                           json={"verified": True, "note": "x"},
-                           headers=headers).status_code == 403
+        assert (
+            client.post(
+                f"/api/proposals/{pid}/rollback", json={"reason": "x"}, headers=headers
+            ).status_code
+            == 403
+        )
+        assert (
+            client.post(
+                f"/api/proposals/{pid}/verify",
+                json={"verified": True, "note": "x"},
+                headers=headers,
+            ).status_code
+            == 403
+        )
 
-    assert client.get("/api/proposals/chp_nope", headers=as_user("priya@example.com")
-                      ).status_code == 404
-    assert client.get("/api/proposals?kind=other", headers=as_user("priya@example.com")
-                      ).json()["proposals"] == []
+    assert (
+        client.get("/api/proposals/chp_nope", headers=as_user("priya@example.com")).status_code
+        == 404
+    )
+    assert (
+        client.get("/api/proposals?kind=other", headers=as_user("priya@example.com")).json()[
+            "proposals"
+        ]
+        == []
+    )
 
 
 def test_api_lifecycle_end_to_end(client):
@@ -596,8 +623,9 @@ def test_api_lifecycle_end_to_end(client):
     early = client.post(f"/api/proposals/{pid}/apply", headers=sec)
     assert early.status_code == 409
 
-    decided = client.post(f"/api/proposals/{pid}/decide", json={"approve": True, "note": "ok"},
-                          headers=sec)
+    decided = client.post(
+        f"/api/proposals/{pid}/decide", json={"approve": True, "note": "ok"}, headers=sec
+    )
     assert decided.status_code == 200, decided.text
     assert decided.json()["status"] == "approved"
 
@@ -605,12 +633,19 @@ def test_api_lifecycle_end_to_end(client):
     assert applied.status_code == 200, applied.text
     assert applied.json()["status"] == "applied"
 
-    rolled = client.post(f"/api/proposals/{pid}/rollback", json={"reason": "undo"},
-                         headers=as_user("admin@example.com"))
+    rolled = client.post(
+        f"/api/proposals/{pid}/rollback",
+        json={"reason": "undo"},
+        headers=as_user("admin@example.com"),
+    )
     assert rolled.status_code == 200, rolled.text
     assert rolled.json()["status"] == "rolled_back"
-    assert client.post(f"/api/proposals/{pid}/rollback", json={"reason": "again"},
-                       headers=sec).status_code == 409
+    assert (
+        client.post(
+            f"/api/proposals/{pid}/rollback", json={"reason": "again"}, headers=sec
+        ).status_code
+        == 409
+    )
 
     from agentfox.db import session_scope
 
@@ -635,8 +670,9 @@ def test_api_org_loosening_same_person_twice_is_refused(client):
     again = client.post(f"/api/proposals/{pid}/decide", json=body, headers=sec)
     assert again.status_code == 400
     assert "different person" in again.json()["detail"]
-    second = client.post(f"/api/proposals/{pid}/decide", json=body,
-                         headers=as_user("admin@example.com"))
+    second = client.post(
+        f"/api/proposals/{pid}/decide", json=body, headers=as_user("admin@example.com")
+    )
     assert second.json()["status"] == "approved"
 
 
@@ -657,21 +693,29 @@ def test_cli_proposals_group(client):
     assert pid in listed.output
     assert runner.invoke(app, ["proposals", "show", pid]).exit_code == 0
 
-    first = runner.invoke(app, ["proposals", "approve", pid, "--actor", "marcus@example.com",
-                                "--note", "ok"])
+    first = runner.invoke(
+        app, ["proposals", "approve", pid, "--actor", "marcus@example.com", "--note", "ok"]
+    )
     assert first.exit_code == 0 and "awaiting a second approver" in first.output
-    same = runner.invoke(app, ["proposals", "approve", pid, "--actor", "marcus@example.com",
-                               "--note", "ok"])
+    same = runner.invoke(
+        app, ["proposals", "approve", pid, "--actor", "marcus@example.com", "--note", "ok"]
+    )
     assert same.exit_code == 1 and "different person" in same.output
     auto = runner.invoke(app, ["proposals", "apply", pid, "--automated"])
     assert auto.exit_code == 1
-    second = runner.invoke(app, ["proposals", "approve", pid, "--actor", "admin@example.com",
-                                 "--note", "agreed"])
+    second = runner.invoke(
+        app, ["proposals", "approve", pid, "--actor", "admin@example.com", "--note", "agreed"]
+    )
     assert second.exit_code == 0 and "approved" in second.output
     applied = runner.invoke(app, ["proposals", "apply", pid, "--actor", "admin@example.com"])
     assert applied.exit_code == 0, applied.output
-    rolled = runner.invoke(app, ["proposals", "rollback", pid, "--actor", "admin@example.com",
-                                 "--reason", "undo"])
+    rolled = runner.invoke(
+        app, ["proposals", "rollback", pid, "--actor", "admin@example.com", "--reason", "undo"]
+    )
     assert rolled.exit_code == 0 and "rolled_back" in rolled.output
-    assert runner.invoke(app, ["proposals", "reject", pid, "--actor", "admin@example.com",
-                               "--note", "late"]).exit_code == 1
+    assert (
+        runner.invoke(
+            app, ["proposals", "reject", pid, "--actor", "admin@example.com", "--note", "late"]
+        ).exit_code
+        == 1
+    )

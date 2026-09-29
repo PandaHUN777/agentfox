@@ -77,8 +77,7 @@ def get_applier(kind: str) -> Applier:
     applier = _REGISTRY.get(kind)
     if applier is None:
         raise ApplierError(
-            f"no applier is registered for kind '{kind}'; it can be recommended but "
-            "not applied"
+            f"no applier is registered for kind '{kind}'; it can be recommended but not applied"
         )
     return applier
 
@@ -128,9 +127,7 @@ def _suppression_id(proposal: ChangeProposal) -> str:
 
 def _revertible_feedback(session: Session, suppression: Suppression) -> GuardrailFeedback:
     feedback = (
-        session.get(GuardrailFeedback, suppression.feedback_id)
-        if suppression.feedback_id
-        else None
+        session.get(GuardrailFeedback, suppression.feedback_id) if suppression.feedback_id else None
     )
     if feedback is None or feedback.label != "false_positive":
         raise ApplierError(
@@ -188,9 +185,7 @@ def _suppression_revert(
 
     expires = _aware(original.expires_at)
     now = dt.datetime.now(dt.UTC)
-    remaining_days = (
-        max(1, math.ceil((expires - now).total_seconds() / 86400)) if expires else 30
-    )
+    remaining_days = max(1, math.ceil((expires - now).total_seconds() / 86400)) if expires else 30
     restored = apply_suppression(
         session,
         feedback_id=feedback.id,
@@ -391,9 +386,7 @@ def _policy_revert(session: Session, proposal: ChangeProposal, *, actor: str) ->
     if canary_id:
         canary = session.get(PolicyCanary, canary_id)
         if canary is not None and canary.status == "rolling":
-            rollback_canary(
-                session, canary.id, reason=f"change proposal {proposal.id} rolled back"
-            )
+            rollback_canary(session, canary.id, reason=f"change proposal {proposal.id} rolled back")
             return {"rebound_to": prior_id, "canary_rolled_back": canary.id}
 
     open_on_new = _open_binding_for_version(session, new_id)

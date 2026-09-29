@@ -106,7 +106,9 @@ class EmbeddingSimilarityDetector(BaseDetector):
         import torch
 
         tokenizer, model = self._model
-        encoded = tokenizer(texts, padding=True, truncation=True, max_length=256, return_tensors="pt")
+        encoded = tokenizer(
+            texts, padding=True, truncation=True, max_length=256, return_tensors="pt"
+        )
         with torch.no_grad():
             out = model(**encoded)
         mask = encoded["attention_mask"].unsqueeze(-1).float()
@@ -122,7 +124,10 @@ class EmbeddingSimilarityDetector(BaseDetector):
 
     def warm(self) -> None:  # pragma: no cover - requires optional dependency
         if self.available():
-            self._corpus_embeddings
+            # Touching the cached_property is the warm-up. Bound to `_` so it
+            # reads as deliberate rather than as a statement someone forgot to
+            # finish.
+            _ = self._corpus_embeddings
 
     def _detect(self, content: str, context: DetectionContext) -> list[Detection]:
         if not content:

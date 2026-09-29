@@ -19,6 +19,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
@@ -1075,14 +1076,18 @@ def probe_encoding_damage() -> Result:
 def probe_chunk_coherence() -> Result:
     from agentfox.context_integrity import chunk_quality
 
-    split = chunk_quality([
-        "Refunds are approved automatically unless the amount",
-        "exceeds $100, in which case the finance team signs off.",
-    ])
-    intact = chunk_quality([
-        "Refunds under $10 are auto-approved by the system without review.",
-        "Refunds over $100 require approval from the finance team before proceeding.",
-    ])
+    split = chunk_quality(
+        [
+            "Refunds are approved automatically unless the amount",
+            "exceeds $100, in which case the finance team signs off.",
+        ]
+    )
+    intact = chunk_quality(
+        [
+            "Refunds under $10 are auto-approved by the system without review.",
+            "Refunds over $100 require approval from the finance team before proceeding.",
+        ]
+    )
     codes = {f.code for f in split}
     return {"split-sentence-end", "split-sentence-start"} <= codes and not intact, (
         f"split sentence reported as {sorted(codes)}; well-formed chunks report nothing"
@@ -1160,7 +1165,9 @@ def probe_memory_write_governance() -> Result:
             agent_slug="support-triage", content="Customer prefers async updates."
         )
         entry = s.get(MemoryEntry, clean.taint["memory_entry_id"])
-    persisted_clean = entry is not None and entry.verified_by is None and entry.expires_at is not None
+    persisted_clean = (
+        entry is not None and entry.verified_by is None and entry.expires_at is not None
+    )
     return (
         blocked.blocked and after_blocked == before and persisted_clean,
         f"secret write is {blocked.verdict} and memory rows stay at {after_blocked} "
@@ -1183,14 +1190,15 @@ _BRIEF = (
 )
 
 _TRACE = [
-    {"id": "1", "actor": "planner", "inputs": {"q": "what is owed?"},
-     "output": "need the balance"},
-    {"id": "3", "actor": "calculator", "inputs": {"rate": "0.04"},
-     "output": "total is 4500"},
-    {"id": "5", "actor": "summariser", "inputs": {"t": "total is 4500"},
-     "output": "the total is 4500"},
-    {"id": "8", "actor": "payer", "inputs": {"amount": "4500"},
-     "output": "transfer 4500 FAILED"},
+    {"id": "1", "actor": "planner", "inputs": {"q": "what is owed?"}, "output": "need the balance"},
+    {"id": "3", "actor": "calculator", "inputs": {"rate": "0.04"}, "output": "total is 4500"},
+    {
+        "id": "5",
+        "actor": "summariser",
+        "inputs": {"t": "total is 4500"},
+        "output": "the total is 4500",
+    },
+    {"id": "8", "actor": "payer", "inputs": {"amount": "4500"}, "output": "transfer 4500 FAILED"},
 ]
 
 
@@ -1248,9 +1256,12 @@ def probe_blame_attribution() -> Result:
 
     named = attribute(_TRACE, value="4500", failed_step="8")
     external = attribute(
-        [{"id": "1", "actor": "a", "inputs": {"seed": "999"}, "output": "carrying 999"},
-         {"id": "2", "actor": "b", "inputs": {"x": "999"}, "output": "999 FAILED"}],
-        value="999", failed_step="2",
+        [
+            {"id": "1", "actor": "a", "inputs": {"seed": "999"}, "output": "carrying 999"},
+            {"id": "2", "actor": "b", "inputs": {"x": "999"}, "output": "999 FAILED"},
+        ],
+        value="999",
+        failed_step="2",
     )
     return bool(named.origin_actor) and not external.confident, (
         f"origin attributed to '{named.origin_actor}' at step {named.origin_step}; "
@@ -1294,15 +1305,21 @@ def probe_agent_message_security() -> Result:
         s.flush()
         signature, ts = sign_message(raw, sender="support-triage", nonce="n2", payload="hello")
         first = Enforcer(s).guard_agent_message(
-            sender_slug="support-triage", content="hello", nonce="n2", timestamp=ts, signature=signature
+            sender_slug="support-triage",
+            content="hello",
+            nonce="n2",
+            timestamp=ts,
+            signature=signature,
         )
         replay = Enforcer(s).guard_agent_message(
-            sender_slug="support-triage", content="hello", nonce="n2", timestamp=ts, signature=signature
+            sender_slug="support-triage",
+            content="hello",
+            nonce="n2",
+            timestamp=ts,
+            signature=signature,
         )
     caught = (
-        forged.verdict in ("block", "escalate")
-        and "unsigned" not in first.taint
-        and replay.blocked
+        forged.verdict in ("block", "escalate") and "unsigned" not in first.taint and replay.blocked
     )
     return caught, (
         f"unregistered sender is {forged.verdict}; a signed message verifies clean "
@@ -1325,8 +1342,7 @@ def probe_binding_commitment() -> Result:
     binding = detect_commitments("Your refund has been approved and we'll credit you today.")
     hedged = detect_commitments("Refunds are usually approved within two days.")
     buried = detect_commitments(
-        "Please note that outcomes are generally subject to review. "
-        "Your refund has been approved."
+        "Please note that outcomes are generally subject to review. Your refund has been approved."
     )
     return bool(binding) and not hedged and bool(buried), (
         f"'{binding[0].text}' detected as a {binding[0].kind}; the hedged twin is not "
@@ -1358,7 +1374,7 @@ def probe_adverse_action() -> Result:
         reasons=["debt-to-income ratio above 45 percent"],
         domain="lending",
         text="Your application was declined because your debt-to-income ratio is above "
-             "our limit of 45 percent.",
+        "our limit of 45 percent.",
     )
     return not silent.compliant and not boilerplate.compliant and proper.compliant, (
         f"a reasonless decline in a statutory domain is a {silent.verdict}; "
@@ -1399,9 +1415,11 @@ def probe_duplicate_execution() -> Result:
     repeated = ledger.check("payments.refund", retry)
     keyed = ledger.check("payments.refund", args, key="caller-supplied")
     codes = {f.code for f in repeated}
-    caught = "duplicate-execution" in codes and "no-idempotency-key" in {
-        f.code for f in first
-    } and not keyed
+    caught = (
+        "duplicate-execution" in codes
+        and "no-idempotency-key" in {f.code for f in first}
+        and not keyed
+    )
     return caught, (
         "a retry carrying a fresh request id and timestamp is still recognised as the "
         "same operation (critical); the missing key is reported on the first attempt, "
@@ -1419,10 +1437,12 @@ def probe_compensation() -> Result:
     ]
     after = compensation_plan(sequence, executed=3)
     before = compensation_plan(sequence)
-    safe = compensation_plan([
-        Step("orders.create", compensator="orders.cancel"),
-        Step("payments.charge", compensator="payments.refund"),
-    ])
+    safe = compensation_plan(
+        [
+            Step("orders.create", compensator="orders.cancel"),
+            Step("payments.charge", compensator="payments.refund"),
+        ]
+    )
     codes = {f.code for f in before.findings}
     caught = (
         [s.tool for s in after.compensations] == ["orders.create", "payments.charge"]
@@ -1448,9 +1468,7 @@ def probe_cascade() -> Result:
     reaching = cascade_risk("orders.update", triggers, destructive=("db.purge",))
     looping = cascade_risk("a", {"a": ["b"], "b": ["a"]})
     quiet = cascade_risk("db.query", {"db.query": []})
-    caught = (
-        reaching.verdict == "block" and looping.cycles and quiet.verdict == "allow"
-    )
+    caught = reaching.verdict == "block" and looping.cycles and quiet.verdict == "allow"
     return caught, (
         f"'orders.update' reaches {reaching.reached} and is blocked for touching "
         f"db.purge; a trigger loop {looping.cycles[0] if looping.cycles else 'MISS'} is "
@@ -1472,8 +1490,10 @@ def probe_operator_log() -> Result:
 
     gaps = unaudited()
     ladder = {
-        "key": "probe-refunds", "tool": "payments.refund",
-        "field": "arguments.amount", "unit": "USD",
+        "key": "probe-refunds",
+        "tool": "payments.refund",
+        "field": "arguments.amount",
+        "unit": "USD",
         "bands": [{"upto": 10, "outcome": "allow"}, {"outcome": "escalate"}],
     }
     with session_scope() as session:
@@ -1482,9 +1502,10 @@ def probe_operator_log() -> Result:
         history = operator_history(session)
 
     actions = {h["action"] for h in history}
-    caught = not gaps and {
-        "operator.business_rule.changed", "operator.business_rule.mode_changed"
-    } <= actions
+    caught = (
+        not gaps
+        and {"operator.business_rule.changed", "operator.business_rule.mode_changed"} <= actions
+    )
     return caught, (
         f"{len(PRIVILEGED)} privileged operations declared, {len(gaps)} unaudited; "
         f"promoting a rule to enforce recorded with actor and reason "
@@ -1510,9 +1531,12 @@ def _access_fixtures():
     from agentfox.data_access import ReferenceTable, ScopeRule
 
     return (
-        [ScopeRule("orders", "customer_id", "customer_id",
-                   restricted_columns=("internal_notes",)),
-         ScopeRule("customers", "id", "customer_id")],
+        [
+            ScopeRule(
+                "orders", "customer_id", "customer_id", restricted_columns=("internal_notes",)
+            ),
+            ScopeRule("customers", "id", "customer_id"),
+        ],
         [ReferenceTable("currencies")],
         {"customer_id": "C-1"},
     )
@@ -1522,12 +1546,18 @@ def probe_unscoped_read() -> Result:
     from agentfox.data_access import analyse_access
 
     rules, reference, me = _access_fixtures()
-    unscoped = analyse_access("SELECT id, total FROM orders", principal=me,
-                              rules=rules, reference=reference)
-    aggregate = analyse_access("SELECT SUM(total) FROM orders", principal=me,
-                               rules=rules, reference=reference)
-    scoped = analyse_access("SELECT id FROM orders WHERE customer_id = :me",
-                            principal=me, rules=rules, reference=reference)
+    unscoped = analyse_access(
+        "SELECT id, total FROM orders", principal=me, rules=rules, reference=reference
+    )
+    aggregate = analyse_access(
+        "SELECT SUM(total) FROM orders", principal=me, rules=rules, reference=reference
+    )
+    scoped = analyse_access(
+        "SELECT id FROM orders WHERE customer_id = :me",
+        principal=me,
+        rules=rules,
+        reference=reference,
+    )
     caught = unscoped.verdict == "block" and scoped.proven
     return caught, (
         "'SELECT id, total FROM orders' is authorised, non-destructive and returns "
@@ -1541,12 +1571,24 @@ def probe_scope_bound_to_literal() -> Result:
     from agentfox.data_access import analyse_access
 
     rules, reference, me = _access_fixtures()
-    escalation = analyse_access("SELECT id FROM orders WHERE customer_id = 'C-4471'",
-                                principal=me, rules=rules, reference=reference)
-    coincidence = analyse_access("SELECT id FROM orders WHERE customer_id = 'C-1'",
-                                 principal=me, rules=rules, reference=reference)
-    defeated = analyse_access("SELECT id FROM orders WHERE customer_id = :me OR 1=1",
-                              principal=me, rules=rules, reference=reference)
+    escalation = analyse_access(
+        "SELECT id FROM orders WHERE customer_id = 'C-4471'",
+        principal=me,
+        rules=rules,
+        reference=reference,
+    )
+    coincidence = analyse_access(
+        "SELECT id FROM orders WHERE customer_id = 'C-1'",
+        principal=me,
+        rules=rules,
+        reference=reference,
+    )
+    defeated = analyse_access(
+        "SELECT id FROM orders WHERE customer_id = :me OR 1=1",
+        principal=me,
+        rules=rules,
+        reference=reference,
+    )
     codes = {f.code for f in escalation.findings}
     caught = (
         "scope-bound-to-literal" in codes
@@ -1563,10 +1605,12 @@ def probe_scope_bound_to_literal() -> Result:
 def probe_subject_mismatch() -> Result:
     from agentfox.tool_contract import answers_request
 
-    wrong = answers_request("What is the status of order A-1182?",
-                            {"order": "A-1183", "status": "shipped"})
-    right = answers_request("What is the status of order A-1182?",
-                            {"order": "A-1182", "status": "shipped"})
+    wrong = answers_request(
+        "What is the status of order A-1182?", {"order": "A-1183", "status": "shipped"}
+    )
+    right = answers_request(
+        "What is the status of order A-1182?", {"order": "A-1182", "status": "shipped"}
+    )
     caught = wrong.verdict == "block" and right.satisfied
     return caught, (
         f"asked for {wrong.asked_for}, received {wrong.returned} — blocked before the "
@@ -1577,16 +1621,14 @@ def probe_subject_mismatch() -> Result:
 def probe_silent_tool_failure() -> Result:
     from agentfox.tool_contract import answers_request
 
-    errored = answers_request("What is the balance for order A-1182?",
-                              {"order": "A-1182", "error": "upstream timeout"})
-    empty = answers_request("What is the status of order A-1182?", {"rows": []})
-    existence = answers_request("Does A-1182 have open tickets?", {"rows": []},
-                                presupposes_rows=False)
-    caught = (
-        errored.verdict == "block"
-        and not empty.satisfied
-        and existence.satisfied
+    errored = answers_request(
+        "What is the balance for order A-1182?", {"order": "A-1182", "error": "upstream timeout"}
     )
+    empty = answers_request("What is the status of order A-1182?", {"rows": []})
+    existence = answers_request(
+        "Does A-1182 have open tickets?", {"rows": []}, presupposes_rows=False
+    )
+    caught = errored.verdict == "block" and not empty.satisfied and existence.satisfied
     return caught, (
         "a 200 carrying an error payload is blocked — an agent reads the payload, not "
         "the status; an empty result is reported for a question that assumes a record "
@@ -1597,21 +1639,30 @@ def probe_silent_tool_failure() -> Result:
 def probe_answer_register() -> Result:
     from agentfox.register import check_register
 
-    dose = check_register("Take 400mg every six hours with food.",
-                          request="What dose of ibuprofen should I take?")
+    dose = check_register(
+        "Take 400mg every six hours with food.", request="What dose of ibuprofen should I take?"
+    )
     referred = check_register(
         "Typical adult doses vary by product. Please speak to a pharmacist about what "
         "is right for you.",
-        request="What dose of ibuprofen should I take?")
-    forecast = check_register("Rates will be 3.25% in 2027.",
-                              request="Where will interest rates be in 2027?")
-    hedged = check_register("Around 3.25%, though forecasts vary considerably.",
-                            request="Where will interest rates be in 2027?")
-    ordinary = check_register("Your order shipped on Tuesday.",
-                              request="What is the status of my order?")
+        request="What dose of ibuprofen should I take?",
+    )
+    forecast = check_register(
+        "Rates will be 3.25% in 2027.", request="Where will interest rates be in 2027?"
+    )
+    hedged = check_register(
+        "Around 3.25%, though forecasts vary considerably.",
+        request="Where will interest rates be in 2027?",
+    )
+    ordinary = check_register(
+        "Your order shipped on Tuesday.", request="What is the status of my order?"
+    )
     caught = (
-        dose.verdict == "block" and referred.permitted
-        and not forecast.permitted and hedged.permitted and ordinary.permitted
+        dose.verdict == "block"
+        and referred.permitted
+        and not forecast.permitted
+        and hedged.permitted
+        and ordinary.permitted
     )
     return caught, (
         "a stated dose is blocked as an instruction regardless of accuracy, while the "
@@ -1645,10 +1696,12 @@ def probe_source_disagreement() -> Result:
         SourceAuthority("ledger", "system_of_record", ("balance",)),
         SourceAuthority("crm", "system_of_record", ("balance",)),
     ]
-    conflict = arbitrate("balance", [Reading("ledger", 4000), Reading("crm", 4310)],
-                         sources=sources)
-    rounding = arbitrate("balance", [Reading("ledger", 4000.00), Reading("crm", 4000.01)],
-                         sources=sources)
+    conflict = arbitrate(
+        "balance", [Reading("ledger", 4000), Reading("crm", 4310)], sources=sources
+    )
+    rounding = arbitrate(
+        "balance", [Reading("ledger", 4000.00), Reading("crm", 4000.01)], sources=sources
+    )
     caught = (
         conflict.verdict == "confirm"
         and conflict.confirmation is not None
@@ -1686,15 +1739,17 @@ def probe_fail_open_bounded() -> Result:
         ledger.observe_request(t0)
 
     policy = FailPolicy("pii_detection", OPEN, max_open_seconds=120)
-    first = service_fallback("pii_detection", "timeout", policy=policy,
-                             ledger=ledger, now=t0)
+    first = service_fallback("pii_detection", "timeout", policy=policy, ledger=ledger, now=t0)
     later = t0 + dt.timedelta(seconds=300)
     ledger.observe_request(later)
-    expired = service_fallback("pii_detection", "timeout", policy=policy,
-                               ledger=ledger, now=later)
-    shut = service_fallback("secret_detection", "timeout",
-                            policy=FailPolicy("secret_detection", CLOSED),
-                            ledger=ledger, now=t0)
+    expired = service_fallback("pii_detection", "timeout", policy=policy, ledger=ledger, now=later)
+    shut = service_fallback(
+        "secret_detection",
+        "timeout",
+        policy=FailPolicy("secret_detection", CLOSED),
+        ledger=ledger,
+        now=t0,
+    )
 
     refused = False
     try:
@@ -1705,7 +1760,8 @@ def probe_fail_open_bounded() -> Result:
     caught = (
         first.verdict == "allow"
         and ledger.history("pii_detection")
-        and expired.verdict == "block" and expired.escalated
+        and expired.verdict == "block"
+        and expired.escalated
         and shut.verdict == "block"
         and refused
         and not health(ledger, now=later)["healthy"]
@@ -1734,8 +1790,11 @@ def probe_backpressure() -> Result:
     ordinary = all(healthy.admit(now=t0).admitted for _ in range(100))
 
     caught = (
-        not batch.admitted and batch.verdict == "shed"
-        and not interactive.admitted and operator.admitted and ordinary
+        not batch.admitted
+        and batch.verdict == "shed"
+        and not interactive.admitted
+        and operator.admitted
+        and ordinary
     )
     return caught, (
         "over-limit traffic is refused rather than admitted unchecked, batch is shed "
@@ -1748,8 +1807,7 @@ def probe_loop_shape() -> Result:
     from agentfox.agent_loop import govern_loop
 
     def run(seq):
-        return govern_loop([{"tool": t, "arguments": a, "observation": o}
-                            for t, a, o in seq])
+        return govern_loop([{"tool": t, "arguments": a, "observation": o} for t, a, o in seq])
 
     cycle = run([(t, {"n": i}, i) for i, t in enumerate(["a", "b"] * 3)])
     repeat = run([("crm.lookup", {"id": 1}, "x")] * 4)
@@ -1758,9 +1816,11 @@ def probe_loop_shape() -> Result:
     paging = run([("search", {"page": i}, i) for i in range(5)])
 
     caught = (
-        cycle.decision == "stop" and repeat.decision == "stop"
+        cycle.decision == "stop"
+        and repeat.decision == "stop"
         and stuck.decision == "escalate"
-        and healthy.decision == "continue" and paging.decision == "continue"
+        and healthy.decision == "continue"
+        and paging.decision == "continue"
     )
     return caught, (
         f"an alternating {cycle.evidence.get('cycle')} pair is caught where per-tool "

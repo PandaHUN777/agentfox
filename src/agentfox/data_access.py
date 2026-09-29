@@ -118,9 +118,14 @@ class AccessAnalysis:
 
     def to_json(self) -> dict[str, Any]:
         return {
-            "parsed": self.parsed, "proven": self.proven, "verdict": self.verdict,
-            "tables": self.tables, "scoped": self.scoped, "unscoped": self.unscoped,
-            "undeclared": self.undeclared, "parse_error": self.parse_error,
+            "parsed": self.parsed,
+            "proven": self.proven,
+            "verdict": self.verdict,
+            "tables": self.tables,
+            "scoped": self.scoped,
+            "unscoped": self.unscoped,
+            "undeclared": self.undeclared,
+            "parse_error": self.parse_error,
             "findings": [f.to_json() for f in self.findings],
         }
 
@@ -209,24 +214,34 @@ def analyse_access(
         return AccessAnalysis(
             parsed=False,
             parse_error="sqlglot is not installed, so access scoping cannot be proven",
-            findings=[AccessFinding(
-                "unprovable", "the SQL parser is unavailable; scoping cannot be "
-                "established and the statement is refused", "critical")],
+            findings=[
+                AccessFinding(
+                    "unprovable",
+                    "the SQL parser is unavailable; scoping cannot be "
+                    "established and the statement is refused",
+                    "critical",
+                )
+            ],
         )
 
     try:
         tree = sqlglot.parse_one(statement, read=dialect)
     except Exception as exc:
         return AccessAnalysis(
-            parsed=False, parse_error=str(exc),
-            findings=[AccessFinding(
-                "unparseable",
-                "the statement could not be parsed, so it cannot be shown to be "
-                f"scoped: {exc}", "critical")],
+            parsed=False,
+            parse_error=str(exc),
+            findings=[
+                AccessFinding(
+                    "unparseable",
+                    f"the statement could not be parsed, so it cannot be shown to be scoped: {exc}",
+                    "critical",
+                )
+            ],
         )
     if tree is None:
         return AccessAnalysis(
-            parsed=False, parse_error="empty statement",
+            parsed=False,
+            parse_error="empty statement",
             findings=[AccessFinding("unparseable", "empty statement", "critical")],
         )
 
@@ -238,7 +253,8 @@ def analyse_access(
         predicates = _conjuncts(where.this if where else None)
         # Predicates that were written but sit under an OR, for a better message.
         defeated = [
-            node for node in (where.find_all(exp.EQ) if where else [])
+            node
+            for node in (where.find_all(exp.EQ) if where else [])
             if node.find_ancestor(exp.Or) is not None
         ]
 
@@ -254,12 +270,15 @@ def analyse_access(
             if rule is None:
                 if table not in analysis.undeclared:
                     analysis.undeclared.append(table)
-                    analysis.findings.append(AccessFinding(
-                        "undeclared-table",
-                        f"'{table}' has no scope rule and is not declared as a "
-                        "reference table, so there is nothing to check it against",
-                        undeclared_severity, {"table": table},
-                    ))
+                    analysis.findings.append(
+                        AccessFinding(
+                            "undeclared-table",
+                            f"'{table}' has no scope rule and is not declared as a "
+                            "reference table, so there is nothing to check it against",
+                            undeclared_severity,
+                            {"table": table},
+                        )
+                    )
                 continue
 
             bound = False
@@ -273,7 +292,8 @@ def analyse_access(
                 if column.table and column.table.lower() not in (alias, table):
                     continue
                 value = (
-                    predicate.expression if isinstance(predicate, exp.EQ)
+                    predicate.expression
+                    if isinstance(predicate, exp.EQ)
                     else next(iter(predicate.expressions), None)
                 )
                 bound, how = _binds_to_principal(value, principal, rule.principal_key)
@@ -284,14 +304,17 @@ def analyse_access(
                 if table not in analysis.scoped:
                     analysis.scoped.append(table)
                 if how == "literal-matching-principal":
-                    analysis.findings.append(AccessFinding(
-                        "scope-literal-not-bound",
-                        f"'{table}.{rule.column}' is compared to a literal that happens "
-                        "to be the caller. It is correct this time by coincidence — the "
-                        "runtime did not put it there, and the model that chose it can "
-                        "choose differently on the next turn",
-                        "high", {"table": table, "column": rule.column},
-                    ))
+                    analysis.findings.append(
+                        AccessFinding(
+                            "scope-literal-not-bound",
+                            f"'{table}.{rule.column}' is compared to a literal that happens "
+                            "to be the caller. It is correct this time by coincidence — the "
+                            "runtime did not put it there, and the model that chose it can "
+                            "choose differently on the next turn",
+                            "high",
+                            {"table": table, "column": rule.column},
+                        )
+                    )
                 continue
 
             if table not in analysis.unscoped:
@@ -303,31 +326,42 @@ def analyse_access(
                 and node.this.name.lower() == rule.column.lower()
                 for node in defeated
             ):
-                analysis.findings.append(AccessFinding(
-                    "scope-defeated-by-or",
-                    f"'{table}' has a scope predicate on {rule.column}, but it sits "
-                    "under an OR and therefore constrains nothing",
-                    "critical", {"table": table, "column": rule.column},
-                ))
+                analysis.findings.append(
+                    AccessFinding(
+                        "scope-defeated-by-or",
+                        f"'{table}' has a scope predicate on {rule.column}, but it sits "
+                        "under an OR and therefore constrains nothing",
+                        "critical",
+                        {"table": table, "column": rule.column},
+                    )
+                )
             elif how == "literal":
-                analysis.findings.append(AccessFinding(
-                    "scope-bound-to-literal",
-                    f"'{table}.{rule.column}' is bound to a value the model supplied "
-                    "rather than to the caller. This is horizontal privilege "
-                    "escalation: the id may have come from a document, an earlier turn "
-                    "or an injected instruction",
-                    "critical", {"table": table, "column": rule.column},
-                ))
+                analysis.findings.append(
+                    AccessFinding(
+                        "scope-bound-to-literal",
+                        f"'{table}.{rule.column}' is bound to a value the model supplied "
+                        "rather than to the caller. This is horizontal privilege "
+                        "escalation: the id may have come from a document, an earlier turn "
+                        "or an injected instruction",
+                        "critical",
+                        {"table": table, "column": rule.column},
+                    )
+                )
             else:
                 aggregate = any(select.find_all(exp.AggFunc))
-                analysis.findings.append(AccessFinding(
-                    "unscoped-table",
-                    f"'{table}' carries per-{rule.principal_key} rows and this "
-                    + ("aggregate runs across every one of them"
-                       if aggregate else "query has no predicate binding it to the caller"),
-                    "critical", {"table": table, "column": rule.column,
-                                 "aggregate": aggregate},
-                ))
+                analysis.findings.append(
+                    AccessFinding(
+                        "unscoped-table",
+                        f"'{table}' carries per-{rule.principal_key} rows and this "
+                        + (
+                            "aggregate runs across every one of them"
+                            if aggregate
+                            else "query has no predicate binding it to the caller"
+                        ),
+                        "critical",
+                        {"table": table, "column": rule.column, "aggregate": aggregate},
+                    )
+                )
 
         # Restricted columns are checked only where the row itself is permitted.
         for table, _alias in _tables_in(select):
@@ -335,22 +369,26 @@ def analyse_access(
             if not rule or not rule.restricted_columns:
                 continue
             restricted = {c.lower() for c in rule.restricted_columns}
-            selected = {
-                c.name.lower() for c in select.expressions if isinstance(c, exp.Column)
-            }
+            selected = {c.name.lower() for c in select.expressions if isinstance(c, exp.Column)}
             if any(isinstance(e, exp.Star) for e in select.expressions):
-                analysis.findings.append(AccessFinding(
-                    "select-star-over-restricted",
-                    f"'SELECT *' on '{table}' returns {sorted(restricted)}, which this "
-                    "tool is not entitled to disclose even for the caller's own row",
-                    "high", {"table": table, "restricted": sorted(restricted)},
-                ))
+                analysis.findings.append(
+                    AccessFinding(
+                        "select-star-over-restricted",
+                        f"'SELECT *' on '{table}' returns {sorted(restricted)}, which this "
+                        "tool is not entitled to disclose even for the caller's own row",
+                        "high",
+                        {"table": table, "restricted": sorted(restricted)},
+                    )
+                )
             elif hit := sorted(selected & restricted):
-                analysis.findings.append(AccessFinding(
-                    "restricted-column",
-                    f"'{table}' column(s) {hit} are withheld from this tool",
-                    "high", {"table": table, "columns": hit},
-                ))
+                analysis.findings.append(
+                    AccessFinding(
+                        "restricted-column",
+                        f"'{table}' column(s) {hit} are withheld from this tool",
+                        "high",
+                        {"table": table, "columns": hit},
+                    )
+                )
 
     return analysis
 

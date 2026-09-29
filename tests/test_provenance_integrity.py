@@ -143,7 +143,9 @@ def test_a_non_url_key_is_reported_not_fetchable_rather_than_faked(seeded):
     register_source(seeded, "warehouse.finance.q3_actuals", tier=SYSTEM_OF_RECORD)
     result = validate_source(seeded, "warehouse.finance.q3_actuals")
     assert result["status"] == NOT_FETCHABLE
-    record = seeded.scalar(select(SourceRecord).where(SourceRecord.key == "warehouse.finance.q3_actuals"))
+    record = seeded.scalar(
+        select(SourceRecord).where(SourceRecord.key == "warehouse.finance.q3_actuals")
+    )
     assert record.last_validation_status == NOT_FETCHABLE
     assert record.last_validated_at is not None
 
@@ -689,12 +691,12 @@ def test_non_latin_numerals_still_pass():
     """Arabic-Indic and Devanagari digits worked before this change and must keep
     working: `\\d` and `float` are both Unicode-aware, and the separator rewrite must
     not quietly re-introduce an ASCII assumption."""
-    assert_same_verdict(check_arithmetic("5 + 3 = 9"), check_arithmetic("٥ + ٣ = ٩"), [
-        "arithmetic_error"
-    ])
-    assert_same_verdict(check_arithmetic("5 + 3 = 9"), check_arithmetic("५ + ३ = ९"), [
-        "arithmetic_error"
-    ])
+    assert_same_verdict(
+        check_arithmetic("5 + 3 = 9"), check_arithmetic("٥ + ٣ = ٩"), ["arithmetic_error"]
+    )
+    assert_same_verdict(
+        check_arithmetic("5 + 3 = 9"), check_arithmetic("५ + ३ = ९"), ["arithmetic_error"]
+    )
 
 
 def test_a_french_space_thousands_separator_is_read_as_one_number():

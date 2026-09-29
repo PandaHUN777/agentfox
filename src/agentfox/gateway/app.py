@@ -388,22 +388,18 @@ def create_app() -> FastAPI:
             )
         )
         session.execute(
-            text(
-                "CREATE INDEX IF NOT EXISTS ix_policy_canaries_status "
-                "ON policy_canaries (status)"
-            )
+            text("CREATE INDEX IF NOT EXISTS ix_policy_canaries_status ON policy_canaries (status)")
         )
         session.execute(
-            text(
-                "CREATE INDEX IF NOT EXISTS ix_policy_canaries_org_id "
-                "ON policy_canaries (org_id)"
-            )
+            text("CREATE INDEX IF NOT EXISTS ix_policy_canaries_org_id ON policy_canaries (org_id)")
         )
         session.commit()
 
         result = session.execute(text("UPDATE alembic_version SET version_num = 'a1b2c3d4e5f6'"))
         if result.rowcount == 0:
-            session.execute(text("INSERT INTO alembic_version (version_num) VALUES ('a1b2c3d4e5f6')"))
+            session.execute(
+                text("INSERT INTO alembic_version (version_num) VALUES ('a1b2c3d4e5f6')")
+            )
         session.commit()
 
         return {"migrated": True}
@@ -411,7 +407,7 @@ def create_app() -> FastAPI:
     @app.get("/api/detectors", tags=["platform"])
     def detectors(session: Session = Depends(db), _u=Depends(current_user)) -> dict[str, Any]:
         """P3-11 — which detectors exist, which are live, and how fast they are."""
-        from sqlalchemy import func, select
+        from sqlalchemy import func
 
         from ..models import DetectorRun
 
@@ -490,7 +486,6 @@ def create_app() -> FastAPI:
     @app.get("/api/reliability", tags=["platform"])
     def reliability(session: Session = Depends(db), _u=Depends(current_user)) -> dict[str, Any]:
         """P15 — circuit-breaker state and live budget consumption."""
-        from sqlalchemy import select
 
         from ..models import Agent, Budget
         from ..reliability import BREAKER, check_budget

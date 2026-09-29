@@ -373,9 +373,7 @@ def seed(
     # NOM-DSC-05 needs a real snapshot to compare future scans against — without
     # one, "has the tool surface drifted" has no baseline to answer from.
     if (
-        session.scalar(
-            select(McpToolSnapshot).where(McpToolSnapshot.mcp_server_id == server.id)
-        )
+        session.scalar(select(McpToolSnapshot).where(McpToolSnapshot.mcp_server_id == server.id))
         is None
     ):
         scan_mcp_server(
@@ -390,7 +388,10 @@ def seed(
                 {
                     "name": "tickets.create",
                     "description": "Open a support ticket on behalf of a customer.",
-                    "inputSchema": {"type": "object", "properties": {"summary": {"type": "string"}}},
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {"summary": {"type": "string"}},
+                    },
                 },
             ],
         )
@@ -630,8 +631,7 @@ def seed(
             session_id=session_id,
             agent_id=payments.id,
             user_text="I want a refund reversed and I want to speak to a manager.",
-            agent_text="I'm connecting you with a member of our team who can take this "
-            "further.",
+            agent_text="I'm connecting you with a member of our team who can take this further.",
             escalated=True,
         )
         raise_handoff(
@@ -649,7 +649,9 @@ def seed(
             ],
             context={
                 "user_request": "I want a refund reversed and I want to speak to a manager.",
-                "conversation_summary": "Customer disputes a refund denial and asked for a human twice.",
+                "conversation_summary": (
+                    "Customer disputes a refund denial and asked for a human twice."
+                ),
                 "attempted_actions": ["turn 0: answered", "turn 1: declined", "turn 2: escalated"],
                 "blocking_reason": "explicit escalation request",
                 "customer_reference": session_id,

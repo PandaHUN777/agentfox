@@ -5,17 +5,13 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 import pytest
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SOURCE_PACKAGE = REPO_ROOT / "src" / "agentfox"
 VENDOR_DIR = REPO_ROOT / "api" / "vendor"
 
 
 def _source_module_files(package_dir: Path) -> set[str]:
-    return {
-        path.relative_to(package_dir.parent).as_posix()
-        for path in package_dir.rglob("*.py")
-    }
+    return {path.relative_to(package_dir.parent).as_posix() for path in package_dir.rglob("*.py")}
 
 
 #: Copied into the wheel from the repository root rather than living under
@@ -43,18 +39,13 @@ def _assert_module_sets_match(source_modules: set[str], wheel_modules: set[str])
 
     differences: list[str] = []
     if missing_from_wheel:
-        differences.append(
-            "Missing from vendored wheel:\n  " + "\n  ".join(missing_from_wheel)
-        )
+        differences.append("Missing from vendored wheel:\n  " + "\n  ".join(missing_from_wheel))
     if stale_in_wheel:
-        differences.append(
-            "Present only in vendored wheel:\n  " + "\n  ".join(stale_in_wheel)
-        )
+        differences.append("Present only in vendored wheel:\n  " + "\n  ".join(stale_in_wheel))
 
     assert not differences, (
         "Vendored wheel module list does not match src/agentfox. "
-        "Rebuild it with `uv build --wheel --out-dir api/vendor`.\n\n"
-        + "\n\n".join(differences)
+        "Rebuild it with `uv build --wheel --out-dir api/vendor`.\n\n" + "\n\n".join(differences)
     )
 
 

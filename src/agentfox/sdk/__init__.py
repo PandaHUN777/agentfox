@@ -98,7 +98,9 @@ class AgentSession:
         self.tracker.mark(marker, "retrieved", text)
         return TaggedContent(text=text, source="retrieved", path=marker)
 
-    def tool_result(self, text: str, path: str | None = None, tool: str | None = None) -> TaggedContent:
+    def tool_result(
+        self, text: str, path: str | None = None, tool: str | None = None
+    ) -> TaggedContent:
         """Tag a tool's raw output as untrusted.
 
         ``tool`` names the *producing* tool (its registered `Tool.key`) so a later

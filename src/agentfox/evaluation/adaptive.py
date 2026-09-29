@@ -853,9 +853,7 @@ def deployment_profile(session: Session, agent_slug: str) -> dict[str, Any]:
             }
         )
 
-    granted_keys = {
-        k for k in tools if any(fnmatch.fnmatch(k, c.tool_key) for c in capabilities)
-    }
+    granted_keys = {k for k in tools if any(fnmatch.fnmatch(k, c.tool_key) for c in capabilities)}
     return {
         "agent": agent_slug,
         "known": True,
@@ -866,9 +864,7 @@ def deployment_profile(session: Session, agent_slug: str) -> dict[str, Any]:
         "grants": grants,
         "granted_tool_keys": sorted(granted_keys),
         "ungranted_registered_tools": sorted(set(tools) - granted_keys),
-        "declared_but_ungranted_tools": sorted(
-            set(agent.declared_tools or []) - granted_keys
-        ),
+        "declared_but_ungranted_tools": sorted(set(agent.declared_tools or []) - granted_keys),
         "tool_impacts": {k: t.impact for k, t in sorted(tools.items())},
         "bound_policies": _bound_policies(session, agent_slug),
     }
@@ -1010,9 +1006,7 @@ def generate_deployment_probes(session: Session, agent_slug: str) -> list[Probe]
                         tool_key=key,
                         tool_impact=impact,
                         arguments=_synth_arguments(tool),
-                        provenance={
-                            k: "retrieved" for k in _synth_arguments(tool)
-                        },
+                        provenance={k: "retrieved" for k in _synth_arguments(tool)},
                         grant=False,
                         target_class="granted.untrusted_provenance",
                         severity="critical" if impact == "irreversible" else "high",

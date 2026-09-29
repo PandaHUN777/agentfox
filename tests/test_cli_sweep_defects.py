@@ -54,7 +54,7 @@ def test_the_refusal_does_not_say_a_opinion_question():
 
 
 def test_the_refusal_lists_answerable_types_as_a_sentence():
-    """"fact or aggregate or procedure" reads as a machine listing enum members."""
+    """ "fact or aggregate or procedure" reads as a machine listing enum members."""
     from agentfox.answerability import classify_answerability
     from agentfox.models import KnowledgeBoundary
 
@@ -131,9 +131,7 @@ def test_an_armed_gate_does_not_carry_the_warning():
     """The notice must be about *this* gate, not printed on every pass."""
     _seed()
     runner.invoke(app, ["eval", "run", "support-quality"])
-    result = runner.invoke(
-        app, ["eval", "gate", "support-quality", "--min-pass-rate", "0.0"]
-    )
+    result = runner.invoke(app, ["eval", "gate", "support-quality", "--min-pass-rate", "0.0"])
     assert result.exit_code == 0
     assert "nothing to fail against" not in flat(result.output)
 
@@ -195,7 +193,7 @@ def test_proposals_list_says_something_when_there_are_none():
 
 
 def test_an_empty_filter_result_is_not_reported_as_an_empty_deployment():
-    """"there are none" and "none matched what you asked for" are different."""
+    """ "there are none" and "none matched what you asked for" are different."""
     result = runner.invoke(app, ["proposals", "list", "--status", "approved"])
     assert result.exit_code == 0
     assert "no proposals match that filter" in flat(result.output)

@@ -50,7 +50,6 @@ class Probe:
     test_files: tuple[str, ...] = ()
 
 
-
 @dataclass
 class Mode:
     """One catalogued failure mode and the marker that proves it is addressed.
@@ -177,8 +176,7 @@ FAMILIES: dict[str, tuple[str, list[Mode]]] = {
             # Decoder and tokeniser damage is detected where it leaves a trace — U+FFFD,
             # [UNK], latin-1 mojibake. A tokeniser that segments Thai or Khmer badly
             # without emitting any of those is not detected, so this is partial.
-            Mode("F8.2", "Tokeniser / script boundary failures", ["_UNKNOWN_TOKEN"],
-                 partial=True),
+            Mode("F8.2", "Tokeniser / script boundary failures", ["_UNKNOWN_TOKEN"], partial=True),
             Mode("F8.3", "Stale index", ["def index_freshness"]),
             Mode("F8.4", "Context-window truncation", ["def assemble_context"]),
             Mode("F8.5", "Memory contamination", ["def memory_binding_breach"]),
@@ -265,8 +263,14 @@ PROBES: list[Probe] = [
         "P9",
         "Action semantics, blast radius, verified-state preconditions",
         "9 Action Assurance",
-        ["def analyse_sql", "class ActionAnalysis", "def _verified_state_gate",
-         "def idempotency_key", "def compensation_plan", "def cascade_risk"],
+        [
+            "def analyse_sql",
+            "class ActionAnalysis",
+            "def _verified_state_gate",
+            "def idempotency_key",
+            "def compensation_plan",
+            "def cascade_risk",
+        ],
         [],
         "action|blast_radius|destructive|tautolog|unbounded|verified_state|dry_run|"
         "idempotency|compensation|cascade|duplicate|irreversible|effect",
@@ -320,8 +324,13 @@ PROBES: list[Probe] = [
         "P14",
         "Ingestion and retrieval quality gates",
         "14 Context Integrity",
-        ["def chunk_quality", "def document_quality", "def assemble_context",
-         "def retrieval_drift", "def memory_binding_breach"],
+        [
+            "def chunk_quality",
+            "def document_quality",
+            "def assemble_context",
+            "def retrieval_drift",
+            "def memory_binding_breach",
+        ],
         [],
         "",
         "gates the ingestion and assembly path. Semantic chunk-boundary repair and "
@@ -349,8 +358,7 @@ PROBES: list[Probe] = [
         "P13",
         "Failure attribution across handoffs",
         "13 Failure Attribution",
-        ["def attribute", "def handoff_fidelity", "def goal_drift",
-         "def delegation_graph"],
+        ["def attribute", "def handoff_fidelity", "def goal_drift", "def delegation_graph"],
         [],
         "",
         "attributes a failure to the step that originated the value and measures what "
@@ -431,8 +439,12 @@ PROBES: list[Probe] = [
         "kill|quarantine|control_",
     ),
     Probe(
-        "PL-4", "Agent loop governance", "Platform",
-        ["def govern_loop", "class LoopGovernor"], [], "",
+        "PL-4",
+        "Agent loop governance",
+        "Platform",
+        ["def govern_loop", "class LoopGovernor"],
+        [],
+        "",
         "governs the run rather than the step: identical re-issued calls, alternating "
         "cycles, and steps producing no new observation. All three are visible without "
         "understanding the task, which is what keeps it deterministic — an agent that "
@@ -440,8 +452,12 @@ PROBES: list[Probe] = [
         test_files=("test_platform_runtime.py",),
     ),
     Probe(
-        "PL-5", "Async workers", "Platform",
-        ["class JobQueue", "def run_pending"], [], "",
+        "PL-5",
+        "Async workers",
+        "Platform",
+        ["class JobQueue", "def run_pending"],
+        [],
+        "",
         "in-process with retries and a dead letter that is public state rather than a "
         "log line. The interface is the deliverable; a Redis or SQS implementation "
         "belongs behind it, and building that before anyone runs this at that scale "
@@ -459,8 +475,12 @@ PROBES: list[Probe] = [
         "under load is still untested",
     ),
     Probe(
-        "PL-7", "Service-level fail-open", "Platform",
-        ["def service_fallback", "class FailPolicy", "class AdmissionController"], [], "",
+        "PL-7",
+        "Service-level fail-open",
+        "Platform",
+        ["def service_fallback", "class FailPolicy", "class AdmissionController"],
+        [],
+        "",
         "fail-open is legitimate and must be visible, bounded and impossible for some "
         "controls. Admission control sheds work rather than governance. What is not "
         "built: distributed state, so the fail-open budget and the rate limit are "
@@ -482,8 +502,13 @@ PROBES: list[Probe] = [
         "P18",
         "Semantic contract: data access, result fidelity, register, source arbitration",
         "18 Tool Contract",
-        ["def analyse_access", "def answers_request", "def check_register",
-         "def arbitrate", "class ConfirmationStep"],
+        [
+            "def analyse_access",
+            "def answers_request",
+            "def check_register",
+            "def arbitrate",
+            "class ConfirmationStep",
+        ],
         [],
         "",
         "governs the gap between the request, the rows a tool touched and the answer. "
@@ -491,8 +516,12 @@ PROBES: list[Probe] = [
         "given — an undeclared table is reported, never assumed safe. Register checks "
         "are lexical and licensed per domain; they judge standing, not content, and a "
         "licensed operator turns them off deliberately",
-        test_files=("test_data_access.py", "test_tool_contract.py",
-                    "test_register.py", "test_arbitration.py"),
+        test_files=(
+            "test_data_access.py",
+            "test_tool_contract.py",
+            "test_register.py",
+            "test_arbitration.py",
+        ),
     ),
     Probe(
         "PL-10",
@@ -542,13 +571,19 @@ PROBES: list[Probe] = [
         "P16",
         "Business-process guardrails and the guardrail catalogue",
         "16 Business rules",
-        ["class Ladder", "def find_conflicts", "def run_verification", "CATALOGUE",
-         "def compile_document", "_EXTRACTORS"],
+        [
+            "class Ladder",
+            "def find_conflicts",
+            "def run_verification",
+            "CATALOGUE",
+            "def compile_document",
+            "_EXTRACTORS",
+        ],
         ["def compile_with_model"],
         "ladder|band|business|catalogue|guardrail_kind|conflict|verification|compil",
         "policy compilation is deterministic: 86% of a tuned document and 64% of a "
         "held-out one compile with no question. Prose with no parseable structure "
-        "(\"be courteous\") is reported as inexpressible rather than guessed at; a "
+        '("be courteous") is reported as inexpressible rather than guessed at; a '
         "model-assisted path for those sentences is not built",
     ),
     Probe(

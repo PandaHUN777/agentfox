@@ -81,8 +81,7 @@ def main() -> None:
         "budget": BUDGET,
         "seed": SEED,
         "operators": [
-            {"key": op.key, "class": op.mutation_class, "kinds": list(op.kinds)}
-            for op in OPERATORS
+            {"key": op.key, "class": op.mutation_class, "kinds": list(op.kinds)} for op in OPERATORS
         ],
         "agents": {},
         "by_mutation_class": {},
@@ -101,9 +100,7 @@ def main() -> None:
         sem_totals: dict[str, dict[str, int]] = {}
         for slug in slugs:
             static = run_campaign(session, slug, name=f"static-{slug}")
-            static_escapes = {
-                p["key"] for p in static.summary_json["probes"] if p["succeeded"]
-            }
+            static_escapes = {p["key"] for p in static.summary_json["probes"] if p["succeeded"]}
             campaign = run_campaign(
                 session,
                 slug,
@@ -223,15 +220,13 @@ def main() -> None:
     for cls, agg in results["by_mutation_class"].items():
         if agg["attempts"]:
             print(
-                f"  {cls:16s} {agg['escapes']:3d}/{agg['attempts']:3d} "
-                f"= {agg['escape_rate']:.0%}"
+                f"  {cls:16s} {agg['escapes']:3d}/{agg['attempts']:3d} = {agg['escape_rate']:.0%}"
             )
     print("\nescape rate by operator semantics:")
     for sem, agg in results["by_semantics"].items():
         if agg["attempts"]:
             print(
-                f"  {sem:16s} {agg['escapes']:3d}/{agg['attempts']:3d} "
-                f"= {agg['escape_rate']:.0%}"
+                f"  {sem:16s} {agg['escapes']:3d}/{agg['attempts']:3d} = {agg['escape_rate']:.0%}"
             )
     print("\nposture delta:")
     for key in ("campaign_1_direction", "campaign_2_direction", "campaign_3_direction"):

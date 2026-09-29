@@ -81,9 +81,12 @@ def test_an_operator_entry_lands_in_the_same_chain_as_the_decisions(seeded):
     decision recorded after it.
     """
     entry = record(
-        seeded, "operator.guardrail.suppressed",
-        actor="ops@example.com", reason="false positives on invoice numbers",
-        subject_type="detector", subject_id="pii.us_ssn",
+        seeded,
+        "operator.guardrail.suppressed",
+        actor="ops@example.com",
+        reason="false positives on invoice numbers",
+        subject_type="detector",
+        subject_id="pii.us_ssn",
     )
     assert entry.actor_type == "operator"
     assert entry.digest and entry.prev_digest
@@ -94,13 +97,15 @@ def test_an_operator_entry_lands_in_the_same_chain_as_the_decisions(seeded):
 
 
 def test_changing_a_business_rule_records_the_bands_it_replaced(seeded):
-    """"The threshold was changed" answers nothing an investigation asks."""
+    """ "The threshold was changed" answers nothing an investigation asks."""
     save_ladder(seeded, Ladder.model_validate(LADDER), actor="ops", reason="initial")
 
     loosened = dict(LADDER, bands=[{"upto": 5000, "outcome": "allow"}, {"outcome": "escalate"}])
     save_ladder(
-        seeded, Ladder.model_validate(loosened),
-        actor="ops", reason="finance asked for a higher auto-approve ceiling",
+        seeded,
+        Ladder.model_validate(loosened),
+        actor="ops",
+        reason="finance asked for a higher auto-approve ceiling",
     )
 
     history = operator_history(seeded)
@@ -119,8 +124,7 @@ def test_moving_a_rule_to_enforce_is_recorded_separately_from_its_definition(see
     set_mode(seeded, "refunds", "enforce", actor="ops", reason="observation period over")
 
     entry = next(
-        h for h in operator_history(seeded)
-        if h["action"] == "operator.business_rule.mode_changed"
+        h for h in operator_history(seeded) if h["action"] == "operator.business_rule.mode_changed"
     )
     assert entry["before"]["mode"] == "observe"
     assert entry["after"]["mode"] == "enforce"
@@ -143,9 +147,7 @@ def test_issuing_a_credential_never_records_the_credential(seeded):
         pytest.skip("no seeded user in this fixture")
 
     token, raw = issue_token(seeded, user, name="ci", actor="ops", reason="CI pipeline")
-    entry = next(
-        h for h in operator_history(seeded) if h["action"] == "operator.credential.issued"
-    )
+    entry = next(h for h in operator_history(seeded) if h["action"] == "operator.credential.issued")
     assert entry["subject"] == f"api_token:{token.id}"
     assert raw not in str(entry), "the raw token must never reach the log"
     assert token.key_prefix not in str(entry), "nor any part of the key"
@@ -165,6 +167,4 @@ def test_agent_decisions_are_not_returned_as_operator_actions(seeded):
 
     chain.append(seeded, "decision.recorded", actor_type="agent", actor_id="agent-1")
     record(seeded, "operator.business_rule.changed", actor="ops", reason="a change")
-    assert [h["action"] for h in operator_history(seeded)] == [
-        "operator.business_rule.changed"
-    ]
+    assert [h["action"] for h in operator_history(seeded)] == ["operator.business_rule.changed"]

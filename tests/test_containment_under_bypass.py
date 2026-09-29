@@ -138,7 +138,9 @@ def test_a_stopped_agent_executes_nothing_even_on_a_valid_call(seeded, no_detect
         ),
     ],
 )
-def test_legitimate_work_still_happens(seeded, no_detectors, agent, tool, arguments, provenance, intent):
+def test_legitimate_work_still_happens(
+    seeded, no_detectors, agent, tool, arguments, provenance, intent
+):
     """Containment that blocks everything is not containment, it is an outage."""
     result = Enforcer(seeded).guard_tool_call(
         agent_slug=agent,

@@ -114,20 +114,24 @@ def test_a_sentence_split_across_chunks_is_caught():
     Retrieval returns the fragment, groundedness confirms the answer matches the
     fragment, and the exception the other half carried is simply gone.
     """
-    findings = chunk_quality([
-        "Refunds are approved automatically unless the amount",
-        "exceeds $100, in which case the finance team signs off.",
-    ])
+    findings = chunk_quality(
+        [
+            "Refunds are approved automatically unless the amount",
+            "exceeds $100, in which case the finance team signs off.",
+        ]
+    )
     assert {"split-sentence-end", "split-sentence-start"} <= codes(findings)
     assert worst(findings) == "abstain"
 
 
 def test_a_boundary_inside_a_code_block_is_caught():
-    findings = chunk_quality([
-        "Run the migration with this command, which is safe to repeat:\n"
-        "```bash\nalembic upgrade head",
-        "```\nThen restart the workers so they pick up the new schema version.",
-    ])
+    findings = chunk_quality(
+        [
+            "Run the migration with this command, which is safe to repeat:\n"
+            "```bash\nalembic upgrade head",
+            "```\nThen restart the workers so they pick up the new schema version.",
+        ]
+    )
     assert "split-code-fence" in codes(findings)
 
 
@@ -143,10 +147,15 @@ def test_a_bare_heading_reports_once_not_three_times():
 
 def test_well_formed_chunks_produce_nothing():
     """The false-positive floor for chunking."""
-    assert chunk_quality([
-        "Refunds under $10 are auto-approved by the system without review.",
-        "Refunds over $100 require approval from the finance team before proceeding.",
-    ]) == []
+    assert (
+        chunk_quality(
+            [
+                "Refunds under $10 are auto-approved by the system without review.",
+                "Refunds over $100 require approval from the finance team before proceeding.",
+            ]
+        )
+        == []
+    )
 
 
 # --- Truncation (L2.10) and position (L2.11) -------------------------------
@@ -239,9 +248,7 @@ def test_memory_about_one_end_user_never_surfaces_for_another():
     A shared assistant holds memory for thousands of end users inside one org; the
     boundary that matters is the subject the memory is about.
     """
-    findings = memory_binding_breach(
-        [{"key": "pref", "subject": "bob"}], principal="alice"
-    )
+    findings = memory_binding_breach([{"key": "pref", "subject": "bob"}], principal="alice")
     assert codes(findings) == {"cross-subject-memory"}
     assert findings[0].verdict == "block"
 
@@ -253,17 +260,19 @@ def test_memory_with_no_subject_is_reported_rather_than_allowed():
 
 
 def test_shared_memory_is_allowed_through():
-    assert memory_binding_breach(
-        [{"key": "policy", "shared": True}], principal="alice"
-    ) == []
+    assert memory_binding_breach([{"key": "policy", "shared": True}], principal="alice") == []
 
 
 def test_the_end_users_own_memory_is_not_flagged():
     """The false-positive floor for memory."""
-    assert memory_binding_breach(
-        [{"key": "pref", "subject": "alice", "session": "s1"}],
-        principal="alice", session_id="s1",
-    ) == []
+    assert (
+        memory_binding_breach(
+            [{"key": "pref", "subject": "alice", "session": "s1"}],
+            principal="alice",
+            session_id="s1",
+        )
+        == []
+    )
 
 
 # --- Aggregate -------------------------------------------------------------

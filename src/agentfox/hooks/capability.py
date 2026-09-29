@@ -137,8 +137,7 @@ def describe(harness: str, event: str) -> str:
         )
     if known.capability == "block":
         return (
-            f"{harness}/{event}: a deny stops the call "
-            f"({known.evidence.lower()}, {known.version})."
+            f"{harness}/{event}: a deny stops the call ({known.evidence.lower()}, {known.version})."
         )
     return (
         f"{harness}/{event}: the call proceeds regardless — this event observes only "

@@ -14,9 +14,9 @@ from .adapters.classifiers import (
     RestrictedClassifierDetector,
 )
 from .adapters.embeddings import EmbeddingSimilarityDetector
-from .adapters.presidio import PresidioPiiDetector
 from .adapters.hub import CATALOGUE as HUB_CATALOGUE
 from .adapters.hub import HubValidatorDetector, hub_detectors
+from .adapters.presidio import PresidioPiiDetector
 from .adapters.rails import GuardrailsAiDetector, NemoRailsDetector
 from .base import (
     SURFACES,

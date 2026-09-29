@@ -291,9 +291,7 @@ def test_compliance_status_verbose_honours_the_framework():
         else:  # pragma: no cover - catalog shape guard
             pytest.skip("no framework maps a strict subset of controls")
 
-    result = runner.invoke(
-        app, ["compliance", "status", "--framework", framework, "--verbose"]
-    )
+    result = runner.invoke(app, ["compliance", "status", "--framework", framework, "--verbose"])
     assert result.exit_code == 0, result.output
     for key in inside:
         assert key in result.output

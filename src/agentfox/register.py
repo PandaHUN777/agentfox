@@ -56,15 +56,72 @@ SCIENTIFIC = "scientific"
 GENERAL = "general"
 
 _DOMAIN_MARKERS: list[tuple[str, tuple[str, ...]]] = [
-    (MEDICAL, ("dose", "dosage", "mg", "symptom", "diagnos", "treatment", "prescri",
-               "medication", "drug", "therapy", "pain", "infection", "blood pressure",
-               "side effect", "contraindicat")),
-    (LEGAL, ("contract", "liable", "liability", "sue", "lawsuit", "statute", "clause",
-             "terminate the agreement", "legally", "court", "damages", "breach of")),
-    (FINANCIAL, ("invest", "portfolio", "stock", "shares", "allocation", "returns",
-                 "interest rate", "yield", "tax", "pension", "mortgage rate")),
-    (SCIENTIFIC, ("causes", "mechanism", "efficacy", "statistically significant",
-                  "clinical trial", "p-value", "correlation", "study shows")),
+    (
+        MEDICAL,
+        (
+            "dose",
+            "dosage",
+            "mg",
+            "symptom",
+            "diagnos",
+            "treatment",
+            "prescri",
+            "medication",
+            "drug",
+            "therapy",
+            "pain",
+            "infection",
+            "blood pressure",
+            "side effect",
+            "contraindicat",
+        ),
+    ),
+    (
+        LEGAL,
+        (
+            "contract",
+            "liable",
+            "liability",
+            "sue",
+            "lawsuit",
+            "statute",
+            "clause",
+            "terminate the agreement",
+            "legally",
+            "court",
+            "damages",
+            "breach of",
+        ),
+    ),
+    (
+        FINANCIAL,
+        (
+            "invest",
+            "portfolio",
+            "stock",
+            "shares",
+            "allocation",
+            "returns",
+            "interest rate",
+            "yield",
+            "tax",
+            "pension",
+            "mortgage rate",
+        ),
+    ),
+    (
+        SCIENTIFIC,
+        (
+            "causes",
+            "mechanism",
+            "efficacy",
+            "statistically significant",
+            "clinical trial",
+            "p-value",
+            "correlation",
+            "study shows",
+        ),
+    ),
 ]
 
 
@@ -122,7 +179,8 @@ _UNCERTAINTY = re.compile(
 #: Causal language stated as settled.
 _CAUSAL_CLAIM = re.compile(
     r"\b(?:causes|is caused by|leads to|results in|proves|demonstrates that|"
-    r"is responsible for)\b", re.I
+    r"is responsible for)\b",
+    re.I,
 )
 
 #: Deferral to a qualified human — the register a regulated answer is entitled to.
@@ -160,10 +218,15 @@ class RegisterCheck:
         return "abstain" if severities else "allow"
 
     def to_json(self) -> dict[str, Any]:
-        return {"domain": self.domain, "question_type": self.question,
-                "hedged": self.hedged, "referred": self.referred,
-                "permitted": self.permitted, "verdict": self.verdict,
-                "findings": [f.to_json() for f in self.findings]}
+        return {
+            "domain": self.domain,
+            "question_type": self.question,
+            "hedged": self.hedged,
+            "referred": self.referred,
+            "permitted": self.permitted,
+            "verdict": self.verdict,
+            "findings": [f.to_json() for f in self.findings],
+        }
 
 
 #: Domains where instruction is regulated activity regardless of correctness.
@@ -199,54 +262,72 @@ def check_register(
     # --- an instruction in a regulated domain
     if regulated:
         if _DOSAGE.search(text):
-            check.findings.append(RegisterFinding(
-                "dosage-instruction",
-                f"the answer states a dose. In {resolved} the line is not accuracy but "
-                "instruction — telling someone what to take is regulated activity "
-                "whether or not the figure is right",
-                "critical", {"domain": resolved},
-            ))
+            check.findings.append(
+                RegisterFinding(
+                    "dosage-instruction",
+                    f"the answer states a dose. In {resolved} the line is not accuracy but "
+                    "instruction — telling someone what to take is regulated activity "
+                    "whether or not the figure is right",
+                    "critical",
+                    {"domain": resolved},
+                )
+            )
         elif _CONCLUSION.search(text):
-            check.findings.append(RegisterFinding(
-                "conclusion-about-the-person",
-                f"the answer reaches a {resolved} conclusion about the person rather "
-                "than describing what is generally true",
-                "critical", {"domain": resolved},
-            ))
+            check.findings.append(
+                RegisterFinding(
+                    "conclusion-about-the-person",
+                    f"the answer reaches a {resolved} conclusion about the person rather "
+                    "than describing what is generally true",
+                    "critical",
+                    {"domain": resolved},
+                )
+            )
         elif _INSTRUCTION.search(text):
-            check.findings.append(RegisterFinding(
-                "regulated-instruction",
-                f"the answer tells the person what to do in a {resolved} matter. "
-                "General information is not the same act as advice, and the difference "
-                "is the second person",
-                "high", {"domain": resolved},
-            ))
+            check.findings.append(
+                RegisterFinding(
+                    "regulated-instruction",
+                    f"the answer tells the person what to do in a {resolved} matter. "
+                    "General information is not the same act as advice, and the difference "
+                    "is the second person",
+                    "high",
+                    {"domain": resolved},
+                )
+            )
         if check.findings and not check.referred:
-            check.findings.append(RegisterFinding(
-                "no-referral",
-                "a regulated answer with no route to someone qualified leaves the "
-                "person with this as their only source",
-                "high", {"domain": resolved},
-            ))
+            check.findings.append(
+                RegisterFinding(
+                    "no-referral",
+                    "a regulated answer with no route to someone qualified leaves the "
+                    "person with this as their only source",
+                    "high",
+                    {"domain": resolved},
+                )
+            )
 
     # --- false precision about the future
     if qtype == PREDICTION:
         numbers = _POINT_ESTIMATE.findall(text)
         if numbers and not check.hedged:
-            check.findings.append(RegisterFinding(
-                "false-precision-about-the-future",
-                "the question is about the future, which has no system of record, and "
-                f"the answer gives a point estimate ({numbers[0]}) with no uncertainty. "
-                "'Rates will probably ease' is defensible; a number is something "
-                "somebody plans around",
-                "high", {"values": numbers[:3]},
-            ))
+            check.findings.append(
+                RegisterFinding(
+                    "false-precision-about-the-future",
+                    "the question is about the future, which has no system of record, and "
+                    f"the answer gives a point estimate ({numbers[0]}) with no uncertainty. "
+                    "'Rates will probably ease' is defensible; a number is something "
+                    "somebody plans around",
+                    "high",
+                    {"values": numbers[:3]},
+                )
+            )
         elif not check.hedged and text:
-            check.findings.append(RegisterFinding(
-                "unhedged-prediction",
-                "a claim about the future stated in the same register as a fact",
-                "medium", {},
-            ))
+            check.findings.append(
+                RegisterFinding(
+                    "unhedged-prediction",
+                    "a claim about the future stated in the same register as a fact",
+                    "medium",
+                    {},
+                )
+            )
 
     # "What dose should I take?" classifies as an opinion question because of the
     # "should I", so this would report a second time on the same sentence. In a
@@ -258,24 +339,30 @@ def check_register(
         and not check.hedged
         and _INSTRUCTION.search(text)
     ):
-        check.findings.append(RegisterFinding(
-            "preference-stated-as-fact",
-            "the question asked what the system thinks and the answer instructs "
-            "without marking it as a judgement",
-            "medium", {},
-        ))
+        check.findings.append(
+            RegisterFinding(
+                "preference-stated-as-fact",
+                "the question asked what the system thinks and the answer instructs "
+                "without marking it as a judgement",
+                "medium",
+                {},
+            )
+        )
 
     # --- settled causation
     # Medicine as well as science: "the drug causes the improvement" is the same
     # over-claim whichever bucket the wording lands in, and the domain classifier will
     # usually call that one medical.
     if resolved in (SCIENTIFIC, MEDICAL) and _CAUSAL_CLAIM.search(text) and not check.hedged:
-        check.findings.append(RegisterFinding(
-            "causal-claim-stated-as-settled",
-            "a causal mechanism is asserted without the qualification the evidence "
-            "carries. Correlation surviving into an answer as cause is the most common "
-            "way a correct citation produces a wrong claim",
-            "high", {},
-        ))
+        check.findings.append(
+            RegisterFinding(
+                "causal-claim-stated-as-settled",
+                "a causal mechanism is asserted without the qualification the evidence "
+                "carries. Correlation surviving into an answer as cause is the most common "
+                "way a correct citation produces a wrong claim",
+                "high",
+                {},
+            )
+        )
 
     return check

@@ -239,8 +239,11 @@ def test_observe_sandbox_records_the_mode_that_governed_the_decision(client):
             )
         # A decision that fired nothing has nothing it could have enforced, so it may
         # report the binding. It must never claim to have enforced a refusal.
-        assert not (decision["mode"] == "enforce" and decision["verdict"] == "allow"
-                    and any(r["effect"] != "allow" for r in decision["rules_fired"]))
+        assert not (
+            decision["mode"] == "enforce"
+            and decision["verdict"] == "allow"
+            and any(r["effect"] != "allow" for r in decision["rules_fired"])
+        )
 
 
 def test_every_fired_rule_carries_the_mode_it_was_evaluated_under(client):
@@ -292,9 +295,7 @@ def test_decision_row_mode_matches_the_returned_verdict(client):
         },
     ).json()
 
-    detail = client.get(
-        f"/api/playground/sessions/{session_id}/trace/{body['trace_id']}"
-    ).json()
+    detail = client.get(f"/api/playground/sessions/{session_id}/trace/{body['trace_id']}").json()
     for decision in detail["decisions"]:
         if decision["mode"] == "enforce":
             assert decision["verdict"] == "block"

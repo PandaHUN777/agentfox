@@ -99,8 +99,12 @@ class ConfirmationStep:
     topic: str = ""
 
     def to_json(self) -> dict[str, Any]:
-        return {"question": self.question, "options": self.options,
-                "because": self.because, "topic": self.topic}
+        return {
+            "question": self.question,
+            "options": self.options,
+            "because": self.because,
+            "topic": self.topic,
+        }
 
 
 @dataclass
@@ -111,8 +115,12 @@ class ArbitrationFinding:
     evidence: dict[str, Any] = field(default_factory=dict)
 
     def to_json(self) -> dict[str, Any]:
-        return {"code": self.code, "detail": self.detail, "severity": self.severity,
-                "evidence": self.evidence}
+        return {
+            "code": self.code,
+            "detail": self.detail,
+            "severity": self.severity,
+            "evidence": self.evidence,
+        }
 
 
 @dataclass
@@ -136,8 +144,10 @@ class Arbitration:
 
     def to_json(self) -> dict[str, Any]:
         return {
-            "topic": self.topic, "chosen": self.chosen,
-            "authoritative": self.authoritative, "verdict": self.verdict,
+            "topic": self.topic,
+            "chosen": self.chosen,
+            "authoritative": self.authoritative,
+            "verdict": self.verdict,
             "confirmation": self.confirmation.to_json() if self.confirmation else None,
             "findings": [f.to_json() for f in self.findings],
         }
@@ -200,64 +210,76 @@ def arbitrate(
 
     covering = [s for s in sources if s.covers(topic)]
     best_rank = min((TIER_RANK.get(s.tier, 9) for s in covering), default=9)
-    result.authoritative = sorted(
-        s.key for s in covering if TIER_RANK.get(s.tier, 9) == best_rank
-    )
+    result.authoritative = sorted(s.key for s in covering if TIER_RANK.get(s.tier, 9) == best_rank)
 
     if not readings:
         return result
 
     ranked = sorted(
         readings,
-        key=lambda r: (TIER_RANK.get(by_key[r.source].tier, 9) if r.source in by_key else 9,
-                       r.age_seconds if r.age_seconds is not None else 0),
+        key=lambda r: (
+            TIER_RANK.get(by_key[r.source].tier, 9) if r.source in by_key else 9,
+            r.age_seconds if r.age_seconds is not None else 0,
+        ),
     )
     result.chosen = ranked[0].source
 
     for reading in readings:
         source = by_key.get(reading.source)
         if source is None:
-            result.findings.append(ArbitrationFinding(
-                "undeclared-source",
-                f"'{reading.source}' answered and has no declared standing, so there is "
-                "nothing to weigh it against",
-                "high", {"source": reading.source},
-            ))
+            result.findings.append(
+                ArbitrationFinding(
+                    "undeclared-source",
+                    f"'{reading.source}' answered and has no declared standing, so there is "
+                    "nothing to weigh it against",
+                    "high",
+                    {"source": reading.source},
+                )
+            )
             continue
         if (
             source.max_age_seconds is not None
             and reading.age_seconds is not None
             and reading.age_seconds > source.max_age_seconds
         ):
-            result.findings.append(ArbitrationFinding(
-                "stale-reading",
-                f"'{reading.source}' answered from data {reading.age_seconds}s old, "
-                f"past its {source.max_age_seconds}s limit",
-                "high", {"source": reading.source, "age_seconds": reading.age_seconds},
-            ))
+            result.findings.append(
+                ArbitrationFinding(
+                    "stale-reading",
+                    f"'{reading.source}' answered from data {reading.age_seconds}s old, "
+                    f"past its {source.max_age_seconds}s limit",
+                    "high",
+                    {"source": reading.source, "age_seconds": reading.age_seconds},
+                )
+            )
 
     # --- a lesser source was used while an authoritative one was reachable
     used = {r.source for r in readings}
     if result.authoritative and not (used & set(result.authoritative)):
-        result.findings.append(ArbitrationFinding(
-            "authoritative-source-bypassed",
-            f"{sorted(used)} answered for '{topic}' while {result.authoritative} is the "
-            "system of record and was not consulted. The answer will be grounded, cited "
-            "and out of date",
-            "critical", {"used": sorted(used), "authoritative": result.authoritative},
-        ))
+        result.findings.append(
+            ArbitrationFinding(
+                "authoritative-source-bypassed",
+                f"{sorted(used)} answered for '{topic}' while {result.authoritative} is the "
+                "system of record and was not consulted. The answer will be grounded, cited "
+                "and out of date",
+                "critical",
+                {"used": sorted(used), "authoritative": result.authoritative},
+            )
+        )
 
     # --- disagreement
     disagreeing = _disagreements(readings, tolerance)
     if disagreeing:
         pair = disagreeing[0]
-        result.findings.append(ArbitrationFinding(
-            "sources-disagree",
-            f"'{pair[0].source}' says {pair[0].value!r} and '{pair[1].source}' says "
-            f"{pair[1].value!r}. Picking one is the mistake — the disagreement means "
-            "something is out of sync, and that is the finding",
-            "critical", {"readings": [r.to_json() for r in readings]},
-        ))
+        result.findings.append(
+            ArbitrationFinding(
+                "sources-disagree",
+                f"'{pair[0].source}' says {pair[0].value!r} and '{pair[1].source}' says "
+                f"{pair[1].value!r}. Picking one is the mistake — the disagreement means "
+                "something is out of sync, and that is the finding",
+                "critical",
+                {"readings": [r.to_json() for r in readings]},
+            )
+        )
         if require_confirmation:
             result.confirmation = ConfirmationStep(
                 question=f"Two systems disagree about {topic}. Which should be used?",
@@ -276,7 +298,7 @@ def arbitrate(
 def _disagreements(readings: list[Reading], tolerance: float) -> list[tuple[Reading, Reading]]:
     out: list[tuple[Reading, Reading]] = []
     for i, left in enumerate(readings):
-        for right in readings[i + 1:]:
+        for right in readings[i + 1 :]:
             if materially_differ(left.value, right.value, tolerance=tolerance):
                 out.append((left, right))
     return out
@@ -300,10 +322,9 @@ def confirmation_for_ambiguous_source(
     if len(tied) < 2:
         return None
     return ConfirmationStep(
-        question=f"Several systems are equally authoritative for {topic}. Which should "
-                 "answer?",
+        question=f"Several systems are equally authoritative for {topic}. Which should answer?",
         options=sorted(tied),
         because="the answer depends on which system is consulted, and nothing in the "
-                "declaration decides between them",
+        "declaration decides between them",
         topic=topic,
     )

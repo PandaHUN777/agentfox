@@ -119,7 +119,7 @@ def test_adaptive_finds_escapes_the_static_suite_misses(enforcing):
 
 
 def test_a_working_mutation_class_is_surfaced_as_a_finding(enforcing):
-    """"Encoding defeats this deployment" is an actionable sentence; "escape rate 4%"
+    """ "Encoding defeats this deployment" is an actionable sentence; "escape rate 4%"
     is the shape that lets a real gap ship as a KPI. It must be a Finding."""
     from agentfox.models import Finding
 
@@ -252,6 +252,7 @@ def test_a_different_seed_explores_a_different_path(enforcing):
     fixed seed" is true only because nothing varies at all."""
     a = run_campaign(enforcing, "support-triage", adaptive=True, budget=4, seed=1337, name="a")
     b = run_campaign(enforcing, "support-triage", adaptive=True, budget=4, seed=99, name="b")
+
     def chains(campaign):
         return {
             (e["origin"], tuple(e["mutation_chain"]))
@@ -277,6 +278,7 @@ def test_probe_rngs_are_independent_of_seed_list_order(enforcing):
         include_deployment_probes=False,
     )
     want = "jailbreak.persona"
+
     def chain_for(campaign):
         return [
             tuple(e["mutation_chain"])
@@ -369,9 +371,7 @@ def test_benign_controls_are_never_mutated(enforcing):
     from agentfox.models import RedTeamFinding
 
     campaign = run_campaign(enforcing, "support-triage", adaptive=True, budget=4)
-    benign_keys = {
-        p["key"] for p in campaign.summary_json["probes"] if not p["expect_blocked"]
-    }
+    benign_keys = {p["key"] for p in campaign.summary_json["probes"] if not p["expect_blocked"]}
     rows = enforcing.query(RedTeamFinding).filter_by(campaign_id=campaign.id).all()
     for row in rows:
         origin = row.evidence_json.get("origin") or row.probe
@@ -533,7 +533,7 @@ def test_the_scope_statement_refuses_the_robustness_reading(enforcing):
 
 
 def test_headline_is_the_posture_sentence_not_a_pass_rate(enforcing):
-    """"92% blocked" is the number this feature must not lead with — a red-team pass
+    """ "92% blocked" is the number this feature must not lead with — a red-team pass
     rate goes up the weaker your probe set is."""
     campaign = run_campaign(enforcing, "support-triage", adaptive=True, budget=2)
     headline = campaign.summary_json["headline"]

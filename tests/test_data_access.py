@@ -21,8 +21,7 @@ from agentfox.data_access import (
 )
 
 RULES = [
-    ScopeRule("orders", "customer_id", "customer_id",
-              restricted_columns=("internal_notes",)),
+    ScopeRule("orders", "customer_id", "customer_id", restricted_columns=("internal_notes",)),
     ScopeRule("customers", "id", "customer_id"),
 ]
 REFERENCE = [ReferenceTable("currencies")]
@@ -140,7 +139,10 @@ def test_strict_mode_promotes_an_undeclared_table_to_a_block():
     into that outright, rather than the standard "a human should look" default."""
     analysis = analyse_access(
         "SELECT id FROM audit_log WHERE 1=1",
-        principal=ME, rules=RULES, reference=REFERENCE, strictness="strict",
+        principal=ME,
+        rules=RULES,
+        reference=REFERENCE,
+        strictness="strict",
     )
     assert "undeclared-table" in codes(analysis)
     assert analysis.verdict == "block"

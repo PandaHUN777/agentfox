@@ -20,7 +20,14 @@ import logging
 from dataclasses import dataclass, field
 from typing import Any
 
-from .scorers import BaseScorer, ScoreContext, ScoreResult, content_tokens, register_scorer, sentences
+from .scorers import (
+    BaseScorer,
+    ScoreContext,
+    ScoreResult,
+    content_tokens,
+    register_scorer,
+    sentences,
+)
 
 log = logging.getLogger(__name__)
 
@@ -185,7 +192,10 @@ def _context_list(ctx: ScoreContext) -> list[str]:
     for key in ("retrieved", "context", "documents", "sources"):
         value = ctx.context.get(key)
         if isinstance(value, list) and value:
-            return [v if isinstance(v, str) else str(v.get("text") or v.get("content") or "") for v in value]
+            return [
+                v if isinstance(v, str) else str(v.get("text") or v.get("content") or "")
+                for v in value
+            ]
         if isinstance(value, str) and value.strip():
             return [value]
     return []

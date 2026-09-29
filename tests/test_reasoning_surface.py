@@ -106,7 +106,10 @@ def test_the_rule_does_not_reach_other_surfaces(seeded):
     leaked onto `retrieved` it would be a false-positive machine."""
     packs = load_from_dir(get_settings().policies_dir)
     rule = next(
-        r for p in packs if p.key == "baseline" for r in p.rules
+        r
+        for p in packs
+        if p.key == "baseline"
+        for r in p.rules
         if r.id == "injection.adopted_in_reasoning"
     )
     assert rule.when.surface == ["reasoning"]

@@ -62,7 +62,9 @@ def _aware(value):
 
 def test_a_candidate_that_blocks_less_is_rolled_back_as_a_loosening(session):
     v1, v2 = _versions(session)
-    canary = start_canary(session, "gate-test", min_sample=10, max_block_rate_drop=0.15, min_dwell_seconds=0)
+    canary = start_canary(
+        session, "gate-test", min_sample=10, max_block_rate_drop=0.15, min_dwell_seconds=0
+    )
     _decisions(session, v1.id, total=100, blocked=40)  # stable blocks 40%
     _decisions(session, v2.id, total=50, blocked=5)  # candidate blocks 10%
     result = canary_rollout(session, canary.id)
@@ -70,13 +72,19 @@ def test_a_candidate_that_blocks_less_is_rolled_back_as_a_loosening(session):
     assert result.percent == 0
     assert "LESS" in result.rollback_reason
     assert "loosen" in result.rollback_reason
-    bound = session.query(PolicyBinding).filter_by(policy_version_id=v1.id, effective_to=None).one_or_none()
+    bound = (
+        session.query(PolicyBinding)
+        .filter_by(policy_version_id=v1.id, effective_to=None)
+        .one_or_none()
+    )
     assert bound is not None, "binding restored to stable"
 
 
 def test_a_candidate_that_blocks_more_is_still_rolled_back(session):
     v1, v2 = _versions(session)
-    canary = start_canary(session, "gate-test", min_sample=10, max_block_rate_delta=0.15, min_dwell_seconds=0)
+    canary = start_canary(
+        session, "gate-test", min_sample=10, max_block_rate_delta=0.15, min_dwell_seconds=0
+    )
     _decisions(session, v1.id, total=100, blocked=5)
     _decisions(session, v2.id, total=50, blocked=30)
     result = canary_rollout(session, canary.id)
@@ -87,7 +95,12 @@ def test_a_candidate_that_blocks_more_is_still_rolled_back(session):
 def test_a_small_drop_within_the_gate_is_not_a_rollback(session):
     v1, v2 = _versions(session)
     canary = start_canary(
-        session, "gate-test", steps=[10, 100], min_sample=10, max_block_rate_drop=0.15, min_dwell_seconds=0
+        session,
+        "gate-test",
+        steps=[10, 100],
+        min_sample=10,
+        max_block_rate_drop=0.15,
+        min_dwell_seconds=0,
     )
     _decisions(session, v1.id, total=100, blocked=20)
     _decisions(session, v2.id, total=50, blocked=6)  # 12% vs 20%: an 8-point drop
@@ -98,7 +111,9 @@ def test_a_small_drop_within_the_gate_is_not_a_rollback(session):
 
 def test_holds_inside_dwell_time_and_advances_after_it(session):
     v1, v2 = _versions(session)
-    canary = start_canary(session, "gate-test", steps=[10, 50, 100], min_sample=10, min_dwell_seconds=3600)
+    canary = start_canary(
+        session, "gate-test", steps=[10, 50, 100], min_sample=10, min_dwell_seconds=3600
+    )
     started = _aware(canary.last_advanced_at)
     assert started is not None, "the first step's start is recorded"
     _decisions(session, v1.id, total=50, blocked=5)
@@ -173,7 +188,9 @@ def test_start_route_accepts_and_defaults_the_new_gate_fields(client):
 
 def test_scheduled_canary_advance_moves_rolling_canaries_through_the_gate(session):
     v1, v2 = _versions(session)
-    canary = start_canary(session, "gate-test", steps=[10, 50, 100], min_sample=10, min_dwell_seconds=3600)
+    canary = start_canary(
+        session, "gate-test", steps=[10, 50, 100], min_sample=10, min_dwell_seconds=3600
+    )
     canary.last_advanced_at = dt.datetime.now(dt.UTC) - dt.timedelta(hours=2)
     session.flush()
     _decisions(session, v1.id, total=50, blocked=5)

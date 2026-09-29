@@ -206,9 +206,10 @@ def _after_commit(session: Session) -> None:
             data = {**snapshot, **state.dict}  # latest in-memory values, no lazy load
             if SEVERITY_RANK.get(str(data.get("severity", "")).lower(), 0) < threshold:
                 continue
-            if event_name != EVENT_FINDING_CREATED and _STATUS_EVENTS.get(
-                str(data.get("status"))
-            ) != event_name:
+            if (
+                event_name != EVENT_FINDING_CREATED
+                and _STATUS_EVENTS.get(str(data.get("status"))) != event_name
+            ):
                 # Changed again before commit (resolved, then reopened in the same
                 # transaction): only the status that was actually committed is news.
                 continue

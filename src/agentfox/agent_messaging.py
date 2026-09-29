@@ -50,7 +50,9 @@ def mint_signing_key(
         existing.revoked_at = None
         key = existing
     else:
-        key = AgentSigningKey(agent_id=agent_id, key_encrypted=encrypt_secret(raw), created_by=created_by)
+        key = AgentSigningKey(
+            agent_id=agent_id, key_encrypted=encrypt_secret(raw), created_by=created_by
+        )
         session.add(key)
     session.flush()
     return key, raw
@@ -62,7 +64,9 @@ def _canonical(sender: str, nonce: str, timestamp: float, payload: str) -> bytes
     return f"{sender}\n{nonce}\n{timestamp:.6f}\n{payload}".encode()
 
 
-def sign_message(raw_key: str, *, sender: str, nonce: str, payload: str, timestamp: float | None = None) -> tuple[str, float]:
+def sign_message(
+    raw_key: str, *, sender: str, nonce: str, payload: str, timestamp: float | None = None
+) -> tuple[str, float]:
     ts = timestamp if timestamp is not None else time.time()
     mac = hmac.new(raw_key.encode(), _canonical(sender, nonce, ts, payload), hashlib.sha256)
     return mac.hexdigest(), ts
@@ -80,7 +84,9 @@ def verify_message(
 ) -> bool:
     if abs(time.time() - timestamp) > validity_seconds:
         return False
-    expected = hmac.new(raw_key.encode(), _canonical(sender, nonce, timestamp, payload), hashlib.sha256).hexdigest()
+    expected = hmac.new(
+        raw_key.encode(), _canonical(sender, nonce, timestamp, payload), hashlib.sha256
+    ).hexdigest()
     # constant-time compare — a timing side-channel here would leak the signature
     # byte by byte, defeating the point of signing at all.
     return hmac.compare_digest(expected, signature)

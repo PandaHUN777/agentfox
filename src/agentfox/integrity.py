@@ -68,22 +68,72 @@ _GROUP_SPACES = "     "
 #: `5`, `2,5`, `2.5` and `1234.56`, none of which are grouped. Space grouping demands
 #: strictly-three-digit groups after a 1-3 digit lead, which is what keeps "in 2024
 #: 500 units" from being read as 2024500.
-_NUM_TOKEN = (
-    r"(?:\d{1,3}(?:[.,      ]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)"
-)
+_NUM_TOKEN = r"(?:\d{1,3}(?:[.,      ]\d{3})+(?:[.,]\d+)?|\d+(?:[.,]\d+)?)"
 _NUMBER = re.compile(rf"[-+]?{_NUM_TOKEN}")
 
 #: Which separator is the decimal point. Locales are mapped rather than guessed, and
 #: an unrecognised tag is treated as *undeclared* — a wrong resolution is worse than
 #: no resolution.
 _DECIMAL_COMMA_LOCALES = {
-    "de", "fr", "es", "it", "pt", "nl", "da", "fi", "sv", "nb", "no", "pl", "cs", "sk",
-    "sl", "hr", "hu", "ro", "bg", "el", "ru", "uk", "tr", "lv", "lt", "et", "is", "ca",
-    "af", "id", "vi", "sq", "sr", "be", "az",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "nl",
+    "da",
+    "fi",
+    "sv",
+    "nb",
+    "no",
+    "pl",
+    "cs",
+    "sk",
+    "sl",
+    "hr",
+    "hu",
+    "ro",
+    "bg",
+    "el",
+    "ru",
+    "uk",
+    "tr",
+    "lv",
+    "lt",
+    "et",
+    "is",
+    "ca",
+    "af",
+    "id",
+    "vi",
+    "sq",
+    "sr",
+    "be",
+    "az",
 }
 _DECIMAL_POINT_LOCALES = {
-    "en", "ja", "zh", "ko", "he", "th", "hi", "ta", "bn", "ms", "ga", "mt", "sw", "ar",
-    "fa", "ur", "km", "my", "si", "ne", "ka", "am",
+    "en",
+    "ja",
+    "zh",
+    "ko",
+    "he",
+    "th",
+    "hi",
+    "ta",
+    "bn",
+    "ms",
+    "ga",
+    "mt",
+    "sw",
+    "ar",
+    "fa",
+    "ur",
+    "km",
+    "my",
+    "si",
+    "ne",
+    "ka",
+    "am",
 }
 
 #: The two conventions a literal can be read under, in the order they are tried.
@@ -294,9 +344,7 @@ _SCALE = {
     "mil milhões": 1_000_000_000,  # pt
 }
 #: Longest alternative first, or `Mio.` would match as `m` and `Mrd.` as `m`.
-_SCALE_ALTERNATION = "|".join(
-    re.escape(word) for word in sorted(_SCALE, key=len, reverse=True)
-)
+_SCALE_ALTERNATION = "|".join(re.escape(word) for word in sorted(_SCALE, key=len, reverse=True))
 _SCALE_RE = re.compile(rf"{_NUM_TOKEN}\s*({_SCALE_ALTERNATION})\b", re.I)
 
 _CURRENCY_SYMBOLS = {"£": "GBP", "$": "USD", "€": "EUR", "¥": "JPY"}
@@ -304,9 +352,7 @@ _CURRENCY_CODES = re.compile(r"\b(USD|EUR|GBP|JPY|CHF|CAD|AUD|INR|CNY)\b")
 
 #: Equality words, so that "5 + 3 ergibt 9" is checked like "5 + 3 is 9". Each needs a
 #: number on both sides to match at all, which is what keeps the short ones honest.
-_EQUALS = (
-    r"=|equals|is|are|ist|sind|ergibt|macht|est|font|égale|egale|es|son|è|fa|é|são|sao"
-)
+_EQUALS = r"=|equals|is|are|ist|sind|ergibt|macht|est|font|égale|egale|es|son|è|fa|é|são|sao"
 _ARITHMETIC = re.compile(
     rf"([-+]?{_NUM_TOKEN})\s*([+\-*/x×])\s*([-+]?{_NUM_TOKEN})\s*(?:{_EQUALS})\s*"
     rf"([-+]?{_NUM_TOKEN})",

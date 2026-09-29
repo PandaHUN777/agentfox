@@ -30,7 +30,6 @@ from pathlib import Path
 import typer
 from rich.console import Console
 from rich.panel import Panel
-from rich.table import Table
 
 console = Console()
 
@@ -146,7 +145,9 @@ def quickscan(
                 f"{len(report.projects)} project(s)"
             )
             if report.mcp_servers:
-                console.print(f"    [dim]MCP servers connected:[/] {', '.join(sorted(report.mcp_servers))}")
+                console.print(
+                    f"    [dim]MCP servers connected:[/] {', '.join(sorted(report.mcp_servers))}"
+                )
             if report.tools_used:
                 top = sorted(report.tools_used.items(), key=lambda kv: -kv[1])[:5]
                 console.print(
@@ -156,7 +157,9 @@ def quickscan(
             console.print("  [dim]no supported AI-tool sessions found on this machine[/]")
 
     # -- 3. Live proof -----------------------------------------------------
-    console.print("\n[bold]Live proof[/]  [dim]same detectors, run against known attacks, right now[/]")
+    console.print(
+        "\n[bold]Live proof[/]  [dim]same detectors, run against known attacks, right now[/]"
+    )
     tone = "green" if caught == total else "yellow"
     console.print(
         f"  [{tone}]{caught}/{total}[/] adversarial probes caught in "

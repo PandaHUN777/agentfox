@@ -91,7 +91,10 @@ def decide_route(
     proposal = _load(session, proposal_id)
     try:
         decide(
-            session, proposal, approve=payload.approve, actor=user.email or user.id,
+            session,
+            proposal,
+            approve=payload.approve,
+            actor=user.email or user.id,
             note=payload.note,
         )
     except ValueError as exc:
@@ -150,7 +153,10 @@ def verify_route(
     proposal = _load(session, proposal_id)
     try:
         verify_proposal(
-            session, proposal, verified=payload.verified, note=payload.note,
+            session,
+            proposal,
+            verified=payload.verified,
+            note=payload.note,
             actor=user.email or user.id,
         )
     except ValueError as exc:

@@ -51,15 +51,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import _env  # noqa: F401  -- must run before anything imports agentfox settings
-
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.tools import tool
+from support_tools import AGENT_SLUG, GovernedToolkit, decision_summary
 
 import agentfox
 from agentfox.db import init_db, session_scope
-from support_tools import AGENT_SLUG, GovernedToolkit, decision_summary
 
 
 class MissingApiKey(RuntimeError):

@@ -74,9 +74,7 @@ def test_genuinely_different_arguments_are_not_a_duplicate():
     ledger = EffectLedger()
     ledger.record("payments.refund", REFUND, key="k1")
     other = dict(REFUND, order="A-2")
-    assert "duplicate-execution" not in codes(
-        ledger.check("payments.refund", other, key="k2")
-    )
+    assert "duplicate-execution" not in codes(ledger.check("payments.refund", other, key="k2"))
 
 
 def test_a_read_is_not_an_effect():
@@ -94,9 +92,7 @@ def test_the_window_expires_so_the_ledger_does_not_grow_forever():
     start = dt.datetime(2026, 1, 1, tzinfo=dt.UTC)
     ledger.record("payments.refund", REFUND, now=start)
     later = start + dt.timedelta(seconds=120)
-    assert "duplicate-execution" not in codes(
-        ledger.check("payments.refund", REFUND, now=later)
-    )
+    assert "duplicate-execution" not in codes(ledger.check("payments.refund", REFUND, now=later))
 
 
 @pytest.mark.parametrize("tool", ["payments.refund", "email.send", "orders.ship"])
@@ -152,10 +148,12 @@ def test_only_the_steps_that_ran_are_compensated():
 
 def test_a_fully_reversible_sequence_needs_no_warning():
     """The false-positive floor for compensation."""
-    plan = compensation_plan([
-        Step("orders.create", compensator="orders.cancel"),
-        Step("payments.charge", compensator="payments.refund"),
-    ])
+    plan = compensation_plan(
+        [
+            Step("orders.create", compensator="orders.cancel"),
+            Step("payments.charge", compensator="payments.refund"),
+        ]
+    )
     assert plan.complete
     assert plan.verdict == "allow"
     assert plan.findings == []
@@ -228,8 +226,12 @@ def test_the_aggregate_takes_the_worst_of_the_three():
     args = {"order": "A-1"}
     ledger.record("orders.update", args)
     result = assess_effects(
-        "orders.update", args,
-        ledger=ledger, steps=SEQUENCE, triggers=TRIGGERS, destructive=("db.purge",),
+        "orders.update",
+        args,
+        ledger=ledger,
+        steps=SEQUENCE,
+        triggers=TRIGGERS,
+        destructive=("db.purge",),
     )
     assert result.verdict == "block"
     assert {"duplicate-execution", "no-compensation", "cascade-reaches-destructive"} <= codes(
@@ -239,7 +241,8 @@ def test_the_aggregate_takes_the_worst_of_the_three():
 
 def test_a_well_arranged_call_passes_every_gate():
     result = assess_effects(
-        "orders.create", {"id": "A-1"},
+        "orders.create",
+        {"id": "A-1"},
         ledger=EffectLedger(),
         key="caller-key",
         steps=[Step("orders.create", compensator="orders.cancel")],

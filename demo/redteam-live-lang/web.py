@@ -20,16 +20,12 @@ import json
 import os
 
 import _env  # noqa: F401  -- must run before anything imports agentfox settings
-
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
-
 import seed_demo_agent
 from agent import MissingApiKey, SessionState, run_turn
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 from langchain_core.messages import AIMessage, HumanMessage
-from agentfox.autoguard import Blocked
-from agentfox.db import init_db, session_scope
+from pydantic import BaseModel
 from recorded_scenarios import (
     ALLOW_TURNS,
     BLOCK_TURNS,
@@ -37,6 +33,9 @@ from recorded_scenarios import (
     COMPOSED_TURNS,
     ESCALATE_TURNS,
 )
+
+from agentfox.autoguard import Blocked
+from agentfox.db import init_db, session_scope
 
 app = FastAPI(title="AgentFox red-team live demo (LangChain)")
 
@@ -142,8 +141,9 @@ def redteam() -> dict:
     """Runs the same built-in probe suite `agentfox redteam run` does, against this
     demo's seeded agent, and returns the campaign summary as JSON."""
     _ensure_seeded()
-    from agentfox.evaluation.redteam import BUILTIN_PROBES, run_campaign
     from support_tools import AGENT_SLUG
+
+    from agentfox.evaluation.redteam import BUILTIN_PROBES, run_campaign
 
     init_db()
     with session_scope() as session:
@@ -167,7 +167,9 @@ def redteam() -> dict:
 def health() -> dict:
     return {
         "status": "ok",
-        "has_llm_key": bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY")),
+        "has_llm_key": bool(
+            os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY")
+        ),
     }
 
 
@@ -612,6 +614,7 @@ document.getElementById('rt-btn').addEventListener('click', async () => {
 </script>
 </body>
 </html>"""
+
 
 def _safe_js(value: object) -> str:
     """`</script>` inside a JSON string embedded in an inline <script> tag would

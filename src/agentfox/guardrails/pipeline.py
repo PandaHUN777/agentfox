@@ -60,6 +60,7 @@ def _get_shared_pools(max_workers: int) -> tuple[ThreadPoolExecutor, ThreadPoolE
             _shared_pools[max_workers] = pools
         return pools
 
+
 #: Rough relative cost, used to start cheap detectors first so that a budget
 #: breach loses the expensive-but-marginal signal rather than the cheap-and-decisive
 #: one. Unlisted detectors sort last.

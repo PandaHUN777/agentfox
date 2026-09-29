@@ -277,7 +277,9 @@ def loop_governor(seeded):
     for tool in tools:
         grant_capability(seeded, identity, tool_key("loop-server", tool["name"]))
     gov = McpGovernor(
-        session=seeded, agent_slug="support-triage", server_name="loop-server",
+        session=seeded,
+        agent_slug="support-triage",
+        server_name="loop-server",
         intent="routine test calls",
     )
     gov.register_tools(tools)

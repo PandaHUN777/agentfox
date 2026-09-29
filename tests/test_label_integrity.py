@@ -230,16 +230,25 @@ def _two_detector_decision(seeded) -> tuple[Decision, str]:
     seeded.add_all(
         [
             DetectionFinding(
-                detector_run_id=other_run.id, trace_id=trace_id, entity_type="SECRET_KEY",
-                score=0.99, sample="sk-live-something",
+                detector_run_id=other_run.id,
+                trace_id=trace_id,
+                entity_type="SECRET_KEY",
+                score=0.99,
+                sample="sk-live-something",
             ),
             DetectionFinding(
-                detector_run_id=unrelated_run.id, trace_id=trace_id, entity_type="PII_EMAIL",
-                score=0.95, sample="someone.else@example.com",
+                detector_run_id=unrelated_run.id,
+                trace_id=trace_id,
+                entity_type="PII_EMAIL",
+                score=0.95,
+                sample="someone.else@example.com",
             ),
             DetectionFinding(
-                detector_run_id=pii_run.id, trace_id=trace_id, entity_type="PII_EMAIL",
-                score=0.8, sample="jane.doe@example.com",
+                detector_run_id=pii_run.id,
+                trace_id=trace_id,
+                entity_type="PII_EMAIL",
+                score=0.8,
+                sample="jane.doe@example.com",
             ),
         ]
     )
@@ -278,8 +287,11 @@ def test_an_exact_suppression_without_a_sample_is_refused_not_widened(seeded):
     seeded.add(decision)
     seeded.flush()
     feedback = record_feedback(
-        seeded, decision_id=decision.id, label="false_positive",
-        detector_key="pii.native", actor="priya@example.com",
+        seeded,
+        decision_id=decision.id,
+        label="false_positive",
+        detector_key="pii.native",
+        actor="priya@example.com",
     )
     with pytest.raises(ValueError, match="exact"):
         apply_suppression(seeded, feedback_id=feedback.id, exact=True, actor="marcus@example.com")
@@ -291,8 +303,11 @@ def test_an_unknown_scope_is_refused_rather_than_going_global(seeded, scope):
     suppression — a typo silenced a detector for every agent."""
     decision, _ = _two_detector_decision(seeded)
     feedback = record_feedback(
-        seeded, decision_id=decision.id, label="false_positive",
-        detector_key="pii.native", actor="priya@example.com",
+        seeded,
+        decision_id=decision.id,
+        label="false_positive",
+        detector_key="pii.native",
+        actor="priya@example.com",
     )
     with pytest.raises(ValueError, match="scope"):
         apply_suppression(seeded, feedback_id=feedback.id, scope=scope, actor="marcus@example.com")
@@ -301,8 +316,11 @@ def test_an_unknown_scope_is_refused_rather_than_going_global(seeded, scope):
 def test_global_scope_must_be_asked_for_by_name(seeded):
     decision, _ = _two_detector_decision(seeded)
     feedback = record_feedback(
-        seeded, decision_id=decision.id, label="false_positive",
-        detector_key="pii.native", actor="priya@example.com",
+        seeded,
+        decision_id=decision.id,
+        label="false_positive",
+        detector_key="pii.native",
+        actor="priya@example.com",
     )
     suppression = apply_suppression(
         seeded, feedback_id=feedback.id, scope="global", actor="marcus@example.com"
@@ -327,9 +345,7 @@ def test_an_unknown_scope_is_a_400_over_the_api(client, decision_id):
 
 
 def _assess(client, user, **body):
-    return client.post(
-        "/api/risk/assessments/support-triage", json=body, headers=as_user(user)
-    )
+    return client.post("/api/risk/assessments/support-triage", json=body, headers=as_user(user))
 
 
 def test_sign_off_is_the_authenticated_caller(client):

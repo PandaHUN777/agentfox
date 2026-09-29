@@ -155,9 +155,7 @@ def drive(enforcer, session, session_id: str, turns: list[str]) -> list:
                 agent_slug="support-triage", session_id=session_id, new_user_text=text
             )
         )
-        session.add(
-            ConversationTurn(session_id=session_id, turn_index=index, user_text=text)
-        )
+        session.add(ConversationTurn(session_id=session_id, turn_index=index, user_text=text))
         session.flush()
     return results
 
@@ -376,9 +374,7 @@ def test_the_finding_is_filed_so_an_operator_can_see_it(enforcer, session):
 
     drive(enforcer, session, "filed", CRESCENDO_DELETE)
 
-    findings = session.scalars(
-        select(Finding).where(Finding.type == "trajectory_drift")
-    ).all()
+    findings = session.scalars(select(Finding).where(Finding.type == "trajectory_drift")).all()
     assert findings
     assert ENTITY in findings[0].title
 

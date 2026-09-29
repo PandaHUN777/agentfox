@@ -41,7 +41,9 @@ def main() -> None:
 
     license_text = _fetch(LICENSE_URL)
     if "MIT License" not in license_text:
-        raise SystemExit("PrivacyLens LICENSE no longer reads as MIT — re-verify before using this data.")
+        raise SystemExit(
+            "PrivacyLens LICENSE no longer reads as MIT — re-verify before using this data."
+        )
 
     raw = _fetch(URL)
     rows = json.loads(raw)

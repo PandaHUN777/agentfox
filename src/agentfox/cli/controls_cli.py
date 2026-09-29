@@ -35,6 +35,7 @@ def _session():
     init_db()
     return session_scope()
 
+
 TIER_COLOUR = {
     "system_of_record": "green",
     "approved": "cyan",
@@ -483,8 +484,7 @@ def entitlement_report(days: int = typer.Option(7, "--days")) -> None:
 
 def register(app: typer.Typer) -> None:
     boundary_app = typer.Typer(
-        help="Declare what an agent has no data for, so it says so instead of "
-        "guessing (P7).",
+        help="Declare what an agent has no data for, so it says so instead of guessing (P7).",
         no_args_is_help=True,
     )
     boundary_app.command(name="set")(boundary_set)

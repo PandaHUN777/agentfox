@@ -40,16 +40,46 @@ from .finding import RiskFinding
 #: them in the key makes every retry look new, which is the failure this exists to
 #: prevent — so the default list is generous and the caller can extend it.
 VOLATILE_ARGS = (
-    "timestamp", "time", "now", "requested_at", "created_at", "sent_at",
-    "request_id", "trace_id", "span_id", "correlation_id", "message_id", "nonce",
-    "attempt", "retry", "retry_count", "idempotency_key", "client_token",
-    "session_id", "user_agent", "ip", "signature",
+    "timestamp",
+    "time",
+    "now",
+    "requested_at",
+    "created_at",
+    "sent_at",
+    "request_id",
+    "trace_id",
+    "span_id",
+    "correlation_id",
+    "message_id",
+    "nonce",
+    "attempt",
+    "retry",
+    "retry_count",
+    "idempotency_key",
+    "client_token",
+    "session_id",
+    "user_agent",
+    "ip",
+    "signature",
 )
 
 #: Tools whose effects are visible outside the system. A duplicate here cannot be
 #: cleaned up quietly.
-_EXTERNAL_HINTS = ("payment", "refund", "transfer", "charge", "email", "sms", "notify",
-                   "publish", "webhook", "ship", "order", "invoice", "provision")
+_EXTERNAL_HINTS = (
+    "payment",
+    "refund",
+    "transfer",
+    "charge",
+    "email",
+    "sms",
+    "notify",
+    "publish",
+    "webhook",
+    "ship",
+    "order",
+    "invoice",
+    "provision",
+)
 
 
 def _canonical(value: Any) -> Any:
@@ -91,7 +121,9 @@ def idempotency_key(
     }
     payload = json.dumps(
         {"scope": scope, "tool": tool, "arguments": significant},
-        sort_keys=True, separators=(",", ":"), default=str,
+        sort_keys=True,
+        separators=(",", ":"),
+        default=str,
     )
     return hashlib.sha256(payload.encode()).hexdigest()[:32]
 
@@ -155,23 +187,27 @@ class EffectLedger:
 
         derived = key or idempotency_key(tool, arguments)
         if key is None:
-            findings.append(ReplayFinding(
-                "no-idempotency-key",
-                f"'{tool}' has an external effect and carries no caller-supplied "
-                "idempotency key, so a transport retry cannot be distinguished from a "
-                "second genuine request",
-                "high" if is_external(tool) else "medium",
-                {"tool": tool, "derived_key": derived},
-            ))
+            findings.append(
+                ReplayFinding(
+                    "no-idempotency-key",
+                    f"'{tool}' has an external effect and carries no caller-supplied "
+                    "idempotency key, so a transport retry cannot be distinguished from a "
+                    "second genuine request",
+                    "high" if is_external(tool) else "medium",
+                    {"tool": tool, "derived_key": derived},
+                )
+            )
 
         if (previous := self._entries.get(derived)) is not None:
             age = (now - previous.at).total_seconds()
-            findings.append(ReplayFinding(
-                "duplicate-execution",
-                f"'{tool}' with these arguments already executed {age:.0f}s ago",
-                "critical" if is_external(tool) else "high",
-                {"tool": tool, "key": derived, "seconds_ago": round(age, 1)},
-            ))
+            findings.append(
+                ReplayFinding(
+                    "duplicate-execution",
+                    f"'{tool}' with these arguments already executed {age:.0f}s ago",
+                    "critical" if is_external(tool) else "high",
+                    {"tool": tool, "key": derived, "seconds_ago": round(age, 1)},
+                )
+            )
         return findings
 
     def record(
@@ -269,34 +305,38 @@ def compensation_plan(steps: list[Step], *, executed: int | None = None) -> Plan
 
     findings: list[ReplayFinding] = []
     for step in unrecoverable:
-        findings.append(ReplayFinding(
-            "no-compensation",
-            f"'{step.tool}' has already run and "
-            + ("cannot be undone — the effect has left the system"
-               if step.irreversible else "declares no compensating action"),
-            "critical" if step.irreversible else "high",
-            {"tool": step.tool, "irreversible": step.irreversible},
-        ))
+        findings.append(
+            ReplayFinding(
+                "no-compensation",
+                f"'{step.tool}' has already run and "
+                + (
+                    "cannot be undone — the effect has left the system"
+                    if step.irreversible
+                    else "declares no compensating action"
+                ),
+                "critical" if step.irreversible else "high",
+                {"tool": step.tool, "irreversible": step.irreversible},
+            )
+        )
 
     # The ordering rule: any irreversible step that is not last leaves everything after
     # it unable to fail safely.
     ordering_hint: list[str] = []
-    last_irreversible = max(
-        (i for i, s in enumerate(steps) if not s.recoverable), default=-1
-    )
+    last_irreversible = max((i for i, s in enumerate(steps) if not s.recoverable), default=-1)
     if 0 <= last_irreversible < len(steps) - 1:
-        exposed = [s.tool for s in steps[last_irreversible + 1:]]
-        findings.append(ReplayFinding(
-            "irreversible-before-fallible",
-            f"'{steps[last_irreversible].tool}' cannot be undone and runs before "
-            f"{exposed} — if any of those fail, the sequence cannot be unwound",
-            "high",
-            {"irreversible": steps[last_irreversible].tool, "exposed": exposed},
-        ))
-        ordering_hint = (
-            [s.tool for s in steps if s.recoverable]
-            + [s.tool for s in steps if not s.recoverable]
+        exposed = [s.tool for s in steps[last_irreversible + 1 :]]
+        findings.append(
+            ReplayFinding(
+                "irreversible-before-fallible",
+                f"'{steps[last_irreversible].tool}' cannot be undone and runs before "
+                f"{exposed} — if any of those fail, the sequence cannot be unwound",
+                "high",
+                {"irreversible": steps[last_irreversible].tool, "exposed": exposed},
+            )
         )
+        ordering_hint = [s.tool for s in steps if s.recoverable] + [
+            s.tool for s in steps if not s.recoverable
+        ]
 
     return Plan(compensations, unrecoverable, findings, ordering_hint)
 
@@ -321,9 +361,14 @@ class Cascade:
         return "escalate" if self.findings else "allow"
 
     def to_json(self) -> dict[str, Any]:
-        return {"root": self.root, "reached": self.reached, "depth": self.depth,
-                "cycles": self.cycles, "verdict": self.verdict,
-                "findings": [f.to_json() for f in self.findings]}
+        return {
+            "root": self.root,
+            "reached": self.reached,
+            "depth": self.depth,
+            "cycles": self.cycles,
+            "verdict": self.verdict,
+            "findings": [f.to_json() for f in self.findings],
+        }
 
 
 def cascade_risk(
@@ -355,7 +400,7 @@ def cascade_risk(
         nonlocal max_depth
         for child in triggers.get(node, []):
             if child in path:
-                cycle = path[path.index(child):] + [child]
+                cycle = path[path.index(child) :] + [child]
                 core = tuple(cycle[:-1])
                 spin = min(range(len(core)), key=lambda i: core[i])
                 canonical = core[spin:] + core[:spin]
@@ -372,33 +417,44 @@ def cascade_risk(
 
     findings: list[ReplayFinding] = []
     if cycles:
-        findings.append(ReplayFinding(
-            "cascade-cycle",
-            f"the declared triggers form a loop: {' -> '.join(cycles[0])}",
-            "critical", {"cycles": cycles},
-        ))
+        findings.append(
+            ReplayFinding(
+                "cascade-cycle",
+                f"the declared triggers form a loop: {' -> '.join(cycles[0])}",
+                "critical",
+                {"cycles": cycles},
+            )
+        )
     if max_depth > depth_limit:
-        findings.append(ReplayFinding(
-            "cascade-too-deep",
-            f"one call to '{tool}' reaches {max_depth} levels of downstream effect",
-            "high", {"depth": max_depth, "limit": depth_limit},
-        ))
+        findings.append(
+            ReplayFinding(
+                "cascade-too-deep",
+                f"one call to '{tool}' reaches {max_depth} levels of downstream effect",
+                "high",
+                {"depth": max_depth, "limit": depth_limit},
+            )
+        )
     if len(reached) > fan_out_limit:
-        findings.append(ReplayFinding(
-            "cascade-fan-out",
-            f"one call to '{tool}' sets off {len(reached)} further effects",
-            "high", {"reached": len(reached), "limit": fan_out_limit},
-        ))
+        findings.append(
+            ReplayFinding(
+                "cascade-fan-out",
+                f"one call to '{tool}' sets off {len(reached)} further effects",
+                "high",
+                {"reached": len(reached), "limit": fan_out_limit},
+            )
+        )
     hit = [t for t in reached if t in destructive]
     if hit:
-        findings.append(ReplayFinding(
-            "cascade-reaches-destructive",
-            f"'{tool}' looks harmless but reaches {hit} through declared triggers",
-            "critical", {"destructive": hit},
-        ))
+        findings.append(
+            ReplayFinding(
+                "cascade-reaches-destructive",
+                f"'{tool}' looks harmless but reaches {hit} through declared triggers",
+                "critical",
+                {"destructive": hit},
+            )
+        )
 
-    return Cascade(root=tool, reached=reached, depth=max_depth, cycles=cycles,
-                   findings=findings)
+    return Cascade(root=tool, reached=reached, depth=max_depth, cycles=cycles, findings=findings)
 
 
 # --- Aggregate -------------------------------------------------------------
@@ -453,9 +509,7 @@ def assess_effects(
 ) -> EffectAssessment:
     """Everything F3 can say about one effectful call, before it is made."""
     return EffectAssessment(
-        replay=(ledger.check(tool, arguments, key=key, effectful=effectful)
-                if ledger else []),
+        replay=(ledger.check(tool, arguments, key=key, effectful=effectful) if ledger else []),
         plan=compensation_plan(steps) if steps else None,
-        cascade=(cascade_risk(tool, triggers, destructive=destructive)
-                 if triggers else None),
+        cascade=(cascade_risk(tool, triggers, destructive=destructive) if triggers else None),
     )

@@ -135,9 +135,7 @@ def analyse_skill(
             )
 
     # --- 3. capability the description does not mention -------------------
-    executables = sorted(
-        f for f in sibling_files if Path(f).suffix.lower() in _EXECUTABLE_SUFFIXES
-    )
+    executables = sorted(f for f in sibling_files if Path(f).suffix.lower() in _EXECUTABLE_SUFFIXES)
     if executables:
         issues.append(
             _issue(

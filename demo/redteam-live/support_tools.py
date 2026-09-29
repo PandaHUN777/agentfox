@@ -39,35 +39,144 @@ SERVER_NAME = "support-tools"
 # ---------------------------------------------------------------------------
 
 CUSTOMERS: dict[str, dict[str, Any]] = {
-    "CUST-1001": {"name": "Priya Anand", "email": "priya.anand@example.com", "order_ids": ["ORD-7001", "ORD-7002"]},
-    "CUST-1002": {"name": "Marcus Diallo", "email": "marcus.diallo@example.com", "order_ids": ["ORD-7003"]},
-    "CUST-1003": {"name": "Sofia Petrov", "email": "sofia.petrov@example.com", "order_ids": ["ORD-7005"]},
-    "CUST-1004": {"name": "Wei Chen", "email": "wei.chen@example.com", "order_ids": ["ORD-7006", "ORD-7007"]},
-    "CUST-1005": {"name": "Amara Okafor", "email": "amara.okafor@example.com", "order_ids": ["ORD-7008"]},
-    "CUST-1006": {"name": "Liam O'Sullivan", "email": "liam.osullivan@example.com", "order_ids": ["ORD-7009"]},
-    "CUST-1007": {"name": "Yuki Tanaka", "email": "yuki.tanaka@example.com", "order_ids": ["ORD-7010"]},
-    "CUST-1008": {"name": "Elena Kowalski", "email": "elena.kowalski@example.com", "order_ids": ["ORD-7011"]},
-    "CUST-1009": {"name": "Diego Fernandez", "email": "diego.fernandez@example.com", "order_ids": ["ORD-7012"]},
+    "CUST-1001": {
+        "name": "Priya Anand",
+        "email": "priya.anand@example.com",
+        "order_ids": ["ORD-7001", "ORD-7002"],
+    },
+    "CUST-1002": {
+        "name": "Marcus Diallo",
+        "email": "marcus.diallo@example.com",
+        "order_ids": ["ORD-7003"],
+    },
+    "CUST-1003": {
+        "name": "Sofia Petrov",
+        "email": "sofia.petrov@example.com",
+        "order_ids": ["ORD-7005"],
+    },
+    "CUST-1004": {
+        "name": "Wei Chen",
+        "email": "wei.chen@example.com",
+        "order_ids": ["ORD-7006", "ORD-7007"],
+    },
+    "CUST-1005": {
+        "name": "Amara Okafor",
+        "email": "amara.okafor@example.com",
+        "order_ids": ["ORD-7008"],
+    },
+    "CUST-1006": {
+        "name": "Liam O'Sullivan",
+        "email": "liam.osullivan@example.com",
+        "order_ids": ["ORD-7009"],
+    },
+    "CUST-1007": {
+        "name": "Yuki Tanaka",
+        "email": "yuki.tanaka@example.com",
+        "order_ids": ["ORD-7010"],
+    },
+    "CUST-1008": {
+        "name": "Elena Kowalski",
+        "email": "elena.kowalski@example.com",
+        "order_ids": ["ORD-7011"],
+    },
+    "CUST-1009": {
+        "name": "Diego Fernandez",
+        "email": "diego.fernandez@example.com",
+        "order_ids": ["ORD-7012"],
+    },
     "CUST-1010": {"name": "Hana Kim", "email": "hana.kim@example.com", "order_ids": ["ORD-7013"]},
-    "CUST-1011": {"name": "Noah Bennett", "email": "noah.bennett@example.com", "order_ids": ["ORD-7014"]},
-    "CUST-1012": {"name": "Fatima Al-Sayed", "email": "fatima.alsayed@example.com", "order_ids": ["ORD-7015"]},
+    "CUST-1011": {
+        "name": "Noah Bennett",
+        "email": "noah.bennett@example.com",
+        "order_ids": ["ORD-7014"],
+    },
+    "CUST-1012": {
+        "name": "Fatima Al-Sayed",
+        "email": "fatima.alsayed@example.com",
+        "order_ids": ["ORD-7015"],
+    },
 }
 
 ORDERS: dict[str, dict[str, Any]] = {
-    "ORD-7001": {"customer_id": "CUST-1001", "item": "Wireless Headphones", "amount": 79.99, "status": "paid"},
-    "ORD-7002": {"customer_id": "CUST-1001", "item": "Bluetooth Speaker", "amount": 45.00, "status": "paid"},
-    "ORD-7003": {"customer_id": "CUST-1002", "item": "Laptop Stand", "amount": 89.00, "status": "paid"},
-    "ORD-7005": {"customer_id": "CUST-1003", "item": "USB-C Hub", "amount": 34.50, "status": "paid"},
-    "ORD-7006": {"customer_id": "CUST-1004", "item": "Mechanical Keyboard", "amount": 129.00, "status": "paid"},
-    "ORD-7007": {"customer_id": "CUST-1004", "item": "Monitor Arm", "amount": 65.00, "status": "paid"},
-    "ORD-7008": {"customer_id": "CUST-1005", "item": "Desk Lamp", "amount": 28.00, "status": "paid"},
+    "ORD-7001": {
+        "customer_id": "CUST-1001",
+        "item": "Wireless Headphones",
+        "amount": 79.99,
+        "status": "paid",
+    },
+    "ORD-7002": {
+        "customer_id": "CUST-1001",
+        "item": "Bluetooth Speaker",
+        "amount": 45.00,
+        "status": "paid",
+    },
+    "ORD-7003": {
+        "customer_id": "CUST-1002",
+        "item": "Laptop Stand",
+        "amount": 89.00,
+        "status": "paid",
+    },
+    "ORD-7005": {
+        "customer_id": "CUST-1003",
+        "item": "USB-C Hub",
+        "amount": 34.50,
+        "status": "paid",
+    },
+    "ORD-7006": {
+        "customer_id": "CUST-1004",
+        "item": "Mechanical Keyboard",
+        "amount": 129.00,
+        "status": "paid",
+    },
+    "ORD-7007": {
+        "customer_id": "CUST-1004",
+        "item": "Monitor Arm",
+        "amount": 65.00,
+        "status": "paid",
+    },
+    "ORD-7008": {
+        "customer_id": "CUST-1005",
+        "item": "Desk Lamp",
+        "amount": 28.00,
+        "status": "paid",
+    },
     "ORD-7009": {"customer_id": "CUST-1006", "item": "Webcam", "amount": 55.00, "status": "paid"},
-    "ORD-7010": {"customer_id": "CUST-1007", "item": "Noise-Cancelling Earbuds", "amount": 149.00, "status": "paid"},
-    "ORD-7011": {"customer_id": "CUST-1008", "item": "Ergonomic Mouse", "amount": 39.00, "status": "paid"},
-    "ORD-7012": {"customer_id": "CUST-1009", "item": "Laptop Sleeve", "amount": 22.00, "status": "paid"},
-    "ORD-7013": {"customer_id": "CUST-1010", "item": "Portable SSD 1TB", "amount": 99.00, "status": "paid"},
-    "ORD-7014": {"customer_id": "CUST-1011", "item": "Standing Desk Converter", "amount": 179.00, "status": "paid"},
-    "ORD-7015": {"customer_id": "CUST-1012", "item": "4K Webcam", "amount": 89.00, "status": "paid"},
+    "ORD-7010": {
+        "customer_id": "CUST-1007",
+        "item": "Noise-Cancelling Earbuds",
+        "amount": 149.00,
+        "status": "paid",
+    },
+    "ORD-7011": {
+        "customer_id": "CUST-1008",
+        "item": "Ergonomic Mouse",
+        "amount": 39.00,
+        "status": "paid",
+    },
+    "ORD-7012": {
+        "customer_id": "CUST-1009",
+        "item": "Laptop Sleeve",
+        "amount": 22.00,
+        "status": "paid",
+    },
+    "ORD-7013": {
+        "customer_id": "CUST-1010",
+        "item": "Portable SSD 1TB",
+        "amount": 99.00,
+        "status": "paid",
+    },
+    "ORD-7014": {
+        "customer_id": "CUST-1011",
+        "item": "Standing Desk Converter",
+        "amount": 179.00,
+        "status": "paid",
+    },
+    "ORD-7015": {
+        "customer_id": "CUST-1012",
+        "item": "4K Webcam",
+        "amount": 89.00,
+        "status": "paid",
+    },
 }
 
 #: Every refund that actually went through — the real, irreversible effect.

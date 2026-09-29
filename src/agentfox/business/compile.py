@@ -40,43 +40,139 @@ from .ladder import KNOWN_UNITS, Ladder
 # --- Lexicon ---------------------------------------------------------------
 
 _CURRENCY_WORD = {
-    "dollar": "USD", "dollars": "USD", "usd": "USD", "$": "USD",
-    "euro": "EUR", "euros": "EUR", "eur": "EUR", "€": "EUR",
-    "pound": "GBP", "pounds": "GBP", "gbp": "GBP", "£": "GBP",
-    "yen": "JPY", "jpy": "JPY", "¥": "JPY",
+    "dollar": "USD",
+    "dollars": "USD",
+    "usd": "USD",
+    "$": "USD",
+    "euro": "EUR",
+    "euros": "EUR",
+    "eur": "EUR",
+    "€": "EUR",
+    "pound": "GBP",
+    "pounds": "GBP",
+    "gbp": "GBP",
+    "£": "GBP",
+    "yen": "JPY",
+    "jpy": "JPY",
+    "¥": "JPY",
 }
 
 #: Words that place a threshold. The direction matters more than the word.
-_UPPER = ("under", "below", "less than", "up to", "at most", "no more than", "fewer than",
-          "not exceeding", "beneath", "within")
-_LOWER = ("over", "above", "more than", "greater than", "exceeding", "exceeds", "at least",
-          "in excess of", "beyond", "from")
+_UPPER = (
+    "under",
+    "below",
+    "less than",
+    "up to",
+    "at most",
+    "no more than",
+    "fewer than",
+    "not exceeding",
+    "beneath",
+    "within",
+)
+_LOWER = (
+    "over",
+    "above",
+    "more than",
+    "greater than",
+    "exceeding",
+    "exceeds",
+    "at least",
+    "in excess of",
+    "beyond",
+    "from",
+)
 
 #: How an outcome is written in prose, mapped to what the ladder does.
 _OUTCOME_WORDS: list[tuple[tuple[str, ...], str]] = [
-    (("auto-approve", "auto approve", "automatically approve", "automatically approved",
-      "no approval", "without approval", "auto-approved", "approve automatically",
-      "may proceed", "allowed", "no approval required", "no approval needed",
-      "does not require approval", "not require approval"), "allow"),
-    (("human review", "manual review", "human approval", "manager approval", "sign-off",
-      "sign off", "approval from", "approved by", "escalate", "escalated", "reviewed by",
-      "requires approval", "require approval", "second pair of eyes", "four eyes"),
-     "escalate"),
-    (("validate", "validation", "verify", "verification", "check with", "cross-reference",
-      "confirm with", "run a check", "fraud check", "risk check"), "verify"),
-    (("must not", "never", "prohibited", "forbidden", "block", "blocked", "deny", "denied",
-      "not permitted", "refuse"), "block"),
+    (
+        (
+            "auto-approve",
+            "auto approve",
+            "automatically approve",
+            "automatically approved",
+            "no approval",
+            "without approval",
+            "auto-approved",
+            "approve automatically",
+            "may proceed",
+            "allowed",
+            "no approval required",
+            "no approval needed",
+            "does not require approval",
+            "not require approval",
+        ),
+        "allow",
+    ),
+    (
+        (
+            "human review",
+            "manual review",
+            "human approval",
+            "manager approval",
+            "sign-off",
+            "sign off",
+            "approval from",
+            "approved by",
+            "escalate",
+            "escalated",
+            "reviewed by",
+            "requires approval",
+            "require approval",
+            "second pair of eyes",
+            "four eyes",
+        ),
+        "escalate",
+    ),
+    (
+        (
+            "validate",
+            "validation",
+            "verify",
+            "verification",
+            "check with",
+            "cross-reference",
+            "confirm with",
+            "run a check",
+            "fraud check",
+            "risk check",
+        ),
+        "verify",
+    ),
+    (
+        (
+            "must not",
+            "never",
+            "prohibited",
+            "forbidden",
+            "block",
+            "blocked",
+            "deny",
+            "denied",
+            "not permitted",
+            "refuse",
+        ),
+        "block",
+    ),
     (("redact", "mask", "remove", "strip"), "redact"),
 ]
 
 #: Role words to an approver role. Deliberately small — a wrong guess here is a rule
 #: that routes an approval to the wrong queue, so anything unrecognised is a question.
 _ROLES = {
-    "finance": "finance", "financial": "finance", "accounting": "finance",
-    "manager": "manager", "management": None, "supervisor": "manager",
-    "legal": "legal", "compliance": "compliance", "security": "security",
-    "support": "support", "customer support": "support",
-    "hr": "hr", "human resources": "hr",
+    "finance": "finance",
+    "financial": "finance",
+    "accounting": "finance",
+    "manager": "manager",
+    "management": None,
+    "supervisor": "manager",
+    "legal": "legal",
+    "compliance": "compliance",
+    "security": "security",
+    "support": "support",
+    "customer support": "support",
+    "hr": "hr",
+    "human resources": "hr",
 }
 
 #: Domain words to the tool a rule most likely governs. Used only as a suggestion —
@@ -224,12 +320,14 @@ class Compilation:
         total = self.governance_sentences
         if not total:
             return 1.0
-        blocked = len({
-            sentence
-            for item in self.review
-            if item.blocking
-            for sentence in (item.covers or [item.source])
-        })
+        blocked = len(
+            {
+                sentence
+                for item in self.review
+                if item.blocking
+                for sentence in (item.covers or [item.source])
+            }
+        )
         return (total - blocked - len(self.unmappable)) / total
 
     def to_json(self) -> dict[str, Any]:
@@ -355,8 +453,9 @@ def _clauses(sentence: str) -> list[_Clause]:
     $100 verify, above $100 needs review" — so splitting on commas and conjunctions
     recovers the bands that a per-sentence parser would collapse into one.
     """
-    parts = re.split(r",|;| and (?=[^,]*\b(?:under|over|above|below|between|more|less)\b)",
-                     sentence)
+    parts = re.split(
+        r",|;| and (?=[^,]*\b(?:under|over|above|below|between|more|less)\b)", sentence
+    )
     out: list[_Clause] = []
     for part in parts:
         text = part.strip()
@@ -372,8 +471,9 @@ def _clauses(sentence: str) -> list[_Clause]:
         if between:
             low, low_unit = _amount(between.group(1))
             high, high_unit = _amount(between.group(2))
-            out.append(_Clause(low, high, outcome, low_unit or high_unit, role, text,
-                               sentence, ambiguous))
+            out.append(
+                _Clause(low, high, outcome, low_unit or high_unit, role, text, sentence, ambiguous)
+            )
             continue
 
         value, unit = _amount(text)
@@ -403,8 +503,18 @@ _PROHIBITION = re.compile(
 )
 
 _NOT_GOVERNANCE = (
-    "this document", "purpose", "scope", "definitions", "revision", "version",
-    "approved by", "effective date", "contact", "see also", "appendix", "table of",
+    "this document",
+    "purpose",
+    "scope",
+    "definitions",
+    "revision",
+    "version",
+    "approved by",
+    "effective date",
+    "contact",
+    "see also",
+    "appendix",
+    "table of",
 )
 
 
@@ -488,11 +598,13 @@ def _handle_non_threshold(
             if extraction := extractor(sentence, lowered):
                 kind = next(k for k in CATALOGUE if k.id == kind_id)
                 extraction.confidence = min(extraction.confidence, 0.65)
-                extraction.assumptions.append(Assumption(
-                    what=f"read as {kind.name.lower()} from the settings it names",
-                    why="the wording matched no guardrail in the catalogue, but the "
+                extraction.assumptions.append(
+                    Assumption(
+                        what=f"read as {kind.name.lower()} from the settings it names",
+                        why="the wording matched no guardrail in the catalogue, but the "
                         "values this kind needs are all present in the sentence",
-                ))
+                    )
+                )
                 _emit(result, kind, extraction, sentence, key_prefix)
                 return True
         if not quiet:
@@ -510,7 +622,7 @@ def _handle_non_threshold(
                 question="Does this apply to every call, or only above some amount?",
                 source=sentence,
                 why="approval language with no threshold compiles to an unconditional "
-                    "rule, which fires on every request",
+                "rule, which fires on every request",
                 options=["unconditional", "add a threshold"],
                 blocking=True,
             )
@@ -531,7 +643,7 @@ def _handle_non_threshold(
             question=f"This reads like {kind.name.lower()}. What should {needed} be?",
             source=sentence,
             why="the guardrail is clear from the wording but its settings are not "
-                "stated, and a rule with empty settings enforces nothing",
+            "stated, and a rule with empty settings enforces nothing",
             blocking=True,
             rule_key=f"{key_prefix}-{kind.id.replace('_', '-')}",
         )
@@ -574,32 +686,74 @@ class _Extraction:
 
 
 _PII_ENTITIES = {
-    "email": "EMAIL_ADDRESS", "email address": "EMAIL_ADDRESS",
-    "phone": "PHONE_NUMBER", "phone number": "PHONE_NUMBER",
-    "ssn": "US_SSN", "social security": "US_SSN",
-    "credit card": "CREDIT_CARD", "card number": "CREDIT_CARD",
-    "home address": "LOCATION", "date of birth": "DATE_TIME",
-    "passport": "US_PASSPORT", "bank account": "US_BANK_NUMBER",
-    "ip address": "IP_ADDRESS", "medical": "MEDICAL_LICENSE",
+    "email": "EMAIL_ADDRESS",
+    "email address": "EMAIL_ADDRESS",
+    "phone": "PHONE_NUMBER",
+    "phone number": "PHONE_NUMBER",
+    "ssn": "US_SSN",
+    "social security": "US_SSN",
+    "credit card": "CREDIT_CARD",
+    "card number": "CREDIT_CARD",
+    "home address": "LOCATION",
+    "date of birth": "DATE_TIME",
+    "passport": "US_PASSPORT",
+    "bank account": "US_BANK_NUMBER",
+    "ip address": "IP_ADDRESS",
+    "medical": "MEDICAL_LICENSE",
 }
 
 #: Words that name a protected subject when a sentence forbids disclosing it.
-_SENSITIVE = ("salary", "compensation", "payroll", "pay data", "headcount", "pricing",
-              "margin", "cost basis", "roadmap", "legal", "litigation", "personnel",
-              "performance review", "termination", "acquisition", "merger")
+_SENSITIVE = (
+    "salary",
+    "compensation",
+    "payroll",
+    "pay data",
+    "headcount",
+    "pricing",
+    "margin",
+    "cost basis",
+    "roadmap",
+    "legal",
+    "litigation",
+    "personnel",
+    "performance review",
+    "termination",
+    "acquisition",
+    "merger",
+)
 
-_REGULATED = ("legal advice", "medical", "health", "tax advice", "immigration",
-              "investment advice", "financial advice", "diagnosis", "prescription")
+_REGULATED = (
+    "legal advice",
+    "medical",
+    "health",
+    "tax advice",
+    "immigration",
+    "investment advice",
+    "financial advice",
+    "diagnosis",
+    "prescription",
+)
 
-_DESTRUCTIVE_VERBS = ("delete", "drop", "truncate", "destructive", "wipe", "purge",
-                      "mass update", "bulk update", "alter")
+_DESTRUCTIVE_VERBS = (
+    "delete",
+    "drop",
+    "truncate",
+    "destructive",
+    "wipe",
+    "purge",
+    "mass update",
+    "bulk update",
+    "alter",
+)
 
 
 def _audience(text: str) -> tuple[list[str], str | None]:
     """Who a disclosure is permitted to. Returns (roles, unmapped_word)."""
     scope = re.search(
         r"\b(?:outside(?: of)?|other than|except(?: for)?|besides|beyond)\s+"
-        r"(?:the\s+)?([A-Za-z][\w \-]{1,40})", text)
+        r"(?:the\s+)?([A-Za-z][\w \-]{1,40})",
+        text,
+    )
     if not scope:
         return [], None
     role, ambiguous = _role(scope.group(1))
@@ -613,7 +767,9 @@ def _extract_entitlement(sentence: str, lowered: str) -> _Extraction | None:
         obj = re.search(
             r"\b(?:disclose|share|reveal|expose|send|provide|show|give)\s+"
             r"(?:any\s+|all\s+|the\s+)?([\w \-]{3,40}?)\s+"
-            r"(?:to|with|outside|for)\b", lowered)
+            r"(?:to|with|outside|for)\b",
+            lowered,
+        )
         if not obj:
             return None
         subjects = [obj.group(1).strip()]
@@ -621,20 +777,26 @@ def _extract_entitlement(sentence: str, lowered: str) -> _Extraction | None:
     roles, ambiguous = _audience(lowered)
     review: list[ReviewItem] = []
     if ambiguous:
-        review.append(ReviewItem(
-            question=f"Which role is '{ambiguous}'?",
-            source="", why="the audience decides who this rule lets through, and "
-                           "guessing it wrong either leaks or blocks everyone",
-            options=sorted({r for r in _ROLES.values() if r}),
-        ))
+        review.append(
+            ReviewItem(
+                question=f"Which role is '{ambiguous}'?",
+                source="",
+                why="the audience decides who this rule lets through, and "
+                "guessing it wrong either leaks or blocks everyone",
+                options=sorted({r for r in _ROLES.values() if r}),
+            )
+        )
     definition: dict[str, Any] = {
-        "engine": "native", "default": "deny",
+        "engine": "native",
+        "default": "deny",
         "protected_subjects": sorted(set(subjects)),
     }
-    assumptions = [Assumption(
-        what="default deny — anyone not named is refused",
-        why="a disclosure rule written as a prohibition is a deny-list by intent",
-    )]
+    assumptions = [
+        Assumption(
+            what="default deny — anyone not named is refused",
+            why="a disclosure rule written as a prohibition is a deny-list by intent",
+        )
+    ]
     if roles:
         definition["permitted_roles"] = roles
     return _Extraction(definition, assumptions, review, 0.85 if roles else 0.75)
@@ -646,11 +808,13 @@ def _extract_escalation(sentence: str, lowered: str) -> _Extraction | None:
 
     if re.search(r"\b(frustrat|angry|upset|abusive|irate|distress|dissatisf|complain)", lowered):
         definition["sentiment_below"] = 0.3
-        assumptions.append(Assumption(
-            what="'frustrated' read as sentiment below 0.3",
-            why="the policy names a feeling, not a number; 0.3 is the tuned default and "
+        assumptions.append(
+            Assumption(
+                what="'frustrated' read as sentiment below 0.3",
+                why="the policy names a feeling, not a number; 0.3 is the tuned default and "
                 "is the one setting here worth revisiting after a week of traffic",
-        ))
+            )
+        )
     if m := re.search(r"after\s+(\d+)\s+(?:failed|unsuccessful|repeated)", lowered):
         definition["repeated_failure"] = int(m.group(1))
     if m := re.search(r"after\s+(\d+)\s+(?:turns?|messages?|exchanges?|replies)", lowered):
@@ -669,11 +833,14 @@ def _extract_escalation(sentence: str, lowered: str) -> _Extraction | None:
     if role:
         definition["to_role"] = role
     elif ambiguous:
-        review.append(ReviewItem(
-            question=f"Which approver role is '{ambiguous}'?",
-            source="", why="escalation has to name a queue that exists, or it lands nowhere",
-            options=sorted({r for r in _ROLES.values() if r}),
-        ))
+        review.append(
+            ReviewItem(
+                question=f"Which approver role is '{ambiguous}'?",
+                source="",
+                why="escalation has to name a queue that exists, or it lands nowhere",
+                options=sorted({r for r in _ROLES.values() if r}),
+            )
+        )
     return _Extraction(definition, assumptions, review, 0.85)
 
 
@@ -693,11 +860,13 @@ def _extract_source_authority(sentence: str, lowered: str) -> _Extraction | None
         hours = int(m.group(1)) * (24 if m.group(2).startswith("day") else 1)
         definition["max_age_hours"] = hours
     else:
-        assumptions.append(Assumption(
-            what="no freshness limit — any age of source satisfies this",
-            why="the policy sets an authority bar but no staleness bar, and inventing "
+        assumptions.append(
+            Assumption(
+                what="no freshness limit — any age of source satisfies this",
+                why="the policy sets an authority bar but no staleness bar, and inventing "
                 "one would reject sources the author meant to allow",
-        ))
+            )
+        )
     if m := re.search(r"\bfor\s+([\w \-]{3,30}?)\s+(?:questions|queries|topics|matters)", lowered):
         definition["topic"] = m.group(1).strip()
     return _Extraction(definition, assumptions, [], 0.85)
@@ -716,14 +885,14 @@ def _extract_action_analysis(sentence: str, lowered: str) -> _Extraction | None:
     assumptions = [
         Assumption(
             what="'destructive' read as DELETE, DROP, TRUNCATE, ALTER, and UPDATE "
-                 "with no WHERE clause",
+            "with no WHERE clause",
             why="the policy names the category, not the statements; this is the set the "
-                "SQL analyser already recognises as irreversible",
+            "SQL analyser already recognises as irreversible",
         ),
         Assumption(
             what="parsed with the generic SQL dialect",
             why="no dialect is named, and the generic parser reads all five verbs "
-                "correctly — only dialect-specific syntax would need this changed",
+            "correctly — only dialect-specific syntax would need this changed",
         ),
     ]
     return _Extraction(definition, assumptions, [], 0.85)
@@ -732,15 +901,18 @@ def _extract_action_analysis(sentence: str, lowered: str) -> _Extraction | None:
 def _extract_pii(sentence: str, lowered: str) -> _Extraction | None:
     entities = sorted({v for k, v in _PII_ENTITIES.items() if k in lowered})
     if not entities:
-        if not re.search(r"\b(pii|personal (?:data|information)|personally identifiable)\b",
-                         lowered):
+        if not re.search(
+            r"\b(pii|personal (?:data|information)|personally identifiable)\b", lowered
+        ):
             return None
         entities = ["EMAIL_ADDRESS", "PHONE_NUMBER", "US_SSN", "CREDIT_CARD", "PERSON"]
-        assumptions = [Assumption(
-            what="'personal data' read as the standard entity set",
-            why="the policy names the category rather than the fields, and this is the "
+        assumptions = [
+            Assumption(
+                what="'personal data' read as the standard entity set",
+                why="the policy names the category rather than the fields, and this is the "
                 "set the detector treats as personal data by default",
-        )]
+            )
+        ]
     else:
         assumptions = []
     redaction = "tokenize" if "tokenis" in lowered or "tokeniz" in lowered else "mask"
@@ -748,17 +920,22 @@ def _extract_pii(sentence: str, lowered: str) -> _Extraction | None:
 
 
 def _extract_aggregation_floor(sentence: str, lowered: str) -> _Extraction | None:
-    if m := re.search(r"(?:fewer than|less than|at least|minimum of)\s+(\d+)\s+"
-                      r"(?:people|employees|individuals|contributors|records|respondents)",
-                      lowered):
+    if m := re.search(
+        r"(?:fewer than|less than|at least|minimum of)\s+(\d+)\s+"
+        r"(?:people|employees|individuals|contributors|records|respondents)",
+        lowered,
+    ):
         return _Extraction({"k": int(m.group(1))}, [], [], 0.9)
     return None
 
 
 def _extract_spend_budget(sentence: str, lowered: str) -> _Extraction | None:
     definition: dict[str, Any] = {}
-    if m := re.search(r"(?:no more than|at most|up to|maximum of)\s+(\d[\d,]*)\s+"
-                      r"(?:calls?|requests?|invocations?)", lowered):
+    if m := re.search(
+        r"(?:no more than|at most|up to|maximum of)\s+(\d[\d,]*)\s+"
+        r"(?:calls?|requests?|invocations?)",
+        lowered,
+    ):
         definition["max_calls"] = int(m.group(1).replace(",", ""))
     if m := re.search(r"\$\s*(\d[\d,]*(?:\.\d+)?)\s*(?:per|a|each)\b", lowered):
         definition["max_cost_usd"] = float(m.group(1).replace(",", ""))
@@ -766,11 +943,17 @@ def _extract_spend_budget(sentence: str, lowered: str) -> _Extraction | None:
         return None
     window = re.search(r"\bper\s+(hour|day|week|month|minute)\b", lowered)
     definition["window"] = f"1{window.group(1)[0]}" if window else "1d"
-    assumptions = [] if window else [Assumption(
-        what="budget window read as one day",
-        why="no window is stated, and a budget with no window is either unlimited or "
-            "instantly exhausted depending on how it is read",
-    )]
+    assumptions = (
+        []
+        if window
+        else [
+            Assumption(
+                what="budget window read as one day",
+                why="no window is stated, and a budget with no window is either unlimited or "
+                "instantly exhausted depending on how it is read",
+            )
+        ]
+    )
     return _Extraction(definition, assumptions, [], 0.8)
 
 
@@ -788,17 +971,25 @@ def _extract_knowledge_boundary(sentence: str, lowered: str) -> _Extraction | No
 
 
 def _extract_taint_ceiling(sentence: str, lowered: str) -> _Extraction | None:
-    for word, level in (("web", "retrieved"), ("retrieved", "retrieved"),
-                        ("search result", "retrieved"), ("user", "user"),
-                        ("tool", "tool_result"), ("memory", "memory")):
+    for word, level in (
+        ("web", "retrieved"),
+        ("retrieved", "retrieved"),
+        ("search result", "retrieved"),
+        ("user", "user"),
+        ("tool", "tool_result"),
+        ("memory", "memory"),
+    ):
         if word in lowered:
             return _Extraction({"max_taint": level}, [], [], 0.75)
     return None
 
 
 def _extract_rate_of_change(sentence: str, lowered: str) -> _Extraction | None:
-    if m := re.search(r"(?:no more than|at most|maximum of)\s+(\d+)\s+"
-                      r"(?:times?|repeats?|attempts?|retries)", lowered):
+    if m := re.search(
+        r"(?:no more than|at most|maximum of)\s+(\d+)\s+"
+        r"(?:times?|repeats?|attempts?|retries)",
+        lowered,
+    ):
         return _Extraction({"max_repeats": int(m.group(1))}, [], [], 0.9)
     return None
 
@@ -813,11 +1004,16 @@ def _extract_verified_state(sentence: str, lowered: str) -> _Extraction | None:
     if re.search(r"\b(?:re-?read|re-?check|confirm|verify)\b.*\bbefore\b", lowered):
         return _Extraction(
             {"max_age_seconds": 60},
-            [Assumption(
-                what="the read must be under 60 seconds old",
-                why="the policy requires a fresh read but does not say how fresh; 60s is "
+            [
+                Assumption(
+                    what="the read must be under 60 seconds old",
+                    why="the policy requires a fresh read but does not say how fresh; 60s is "
                     "the default and the one number here worth confirming",
-            )], [], 0.7)
+                )
+            ],
+            [],
+            0.7,
+        )
     return None
 
 
@@ -850,7 +1046,7 @@ def _build_ladders(clauses: list[_Clause], result: Compilation, key_prefix: str)
                 question=f"These thresholds mix {sorted(units)}. Which currency governs?",
                 source=" / ".join(source_fragments[:2]),
                 why="a threshold agreed in one currency must not silently apply in "
-                    "another, and converting is not ours to decide",
+                "another, and converting is not ours to decide",
                 options=sorted(units),
                 covers=source_sentences,
             )
@@ -867,7 +1063,7 @@ def _build_ladders(clauses: list[_Clause], result: Compilation, key_prefix: str)
                 question="What unit are these numbers in?",
                 source=source_fragments[0],
                 why="a bare threshold is the bug that approves a hundred-fold larger "
-                    "refund when one team means cents and another means dollars",
+                "refund when one team means cents and another means dollars",
                 options=[u for u in KNOWN_UNITS if not u.endswith("_CENTS")],
                 covers=source_sentences,
             )
@@ -878,12 +1074,13 @@ def _build_ladders(clauses: list[_Clause], result: Compilation, key_prefix: str)
         result.review.append(
             ReviewItem(
                 question=(
-                    f"Which tool handles {subject}?" if (subject := _subject(source_sentences[0]))
+                    f"Which tool handles {subject}?"
+                    if (subject := _subject(source_sentences[0]))
                     else "Which tool does this govern?"
                 ),
                 source=source_fragments[0],
                 why="a ladder with no tool would band every call that happens to carry "
-                    "a matching field",
+                "a matching field",
                 options=sorted(set(_TOOL_HINTS.values())),
                 covers=source_sentences,
             )
@@ -903,8 +1100,11 @@ def _build_ladders(clauses: list[_Clause], result: Compilation, key_prefix: str)
 
     bands: list[dict[str, Any]] = []
     for clause in bounded:
-        band: dict[str, Any] = {"upto": clause.upper, "outcome": clause.outcome,
-                                "reason": clause.source[:120]}
+        band: dict[str, Any] = {
+            "upto": clause.upper,
+            "outcome": clause.outcome,
+            "reason": clause.source[:120],
+        }
         if clause.outcome == "verify":
             band["verify"] = {"check": "risk.check", "on_fail": "escalate"}
             assumptions.append(
@@ -931,13 +1131,17 @@ def _build_ladders(clauses: list[_Clause], result: Compilation, key_prefix: str)
             (c.outcome for c in clauses),
             key=lambda o: ["allow", "verify", "redact", "escalate", "block"].index(o),
         )
-        bands.append({"outcome": strictest,
-                      "reason": "closes the ladder; no sentence covered the top of the range"})
+        bands.append(
+            {
+                "outcome": strictest,
+                "reason": "closes the ladder; no sentence covered the top of the range",
+            }
+        )
         assumptions.append(
             Assumption(
                 what=f"values above the highest threshold are '{strictest}'",
                 why="no sentence covered them, and a ladder with an open top has the "
-                    "silent gap this construct exists to remove",
+                "silent gap this construct exists to remove",
             )
         )
 
@@ -972,7 +1176,7 @@ def _build_ladders(clauses: list[_Clause], result: Compilation, key_prefix: str)
     assumptions.append(
         Assumption(
             what="each threshold is inclusive — 'under $10' and 'from $10' both put 10 "
-                 "in the lower band",
+            "in the lower band",
             why="the wording leaves the endpoint open and only one reading leaves no gap",
         )
     )

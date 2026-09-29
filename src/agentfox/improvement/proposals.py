@@ -361,8 +361,7 @@ def attach_proof(
     """Record the proof bundle. Only a passing proof makes a proposal ``proven``."""
     if proposal.status != contract.PROPOSED:
         raise IllegalTransition(
-            f"proof can only be attached to a proposed change; {proposal.id} is "
-            f"'{proposal.status}'"
+            f"proof can only be attached to a proposed change; {proposal.id} is '{proposal.status}'"
         )
     if not isinstance(proof, dict) or not proof:
         raise ProposalError("proof must be a non-empty object")
@@ -411,8 +410,12 @@ def decide(
             **attribution,
             subject_type=SUBJECT_TYPE,
             subject_id=proposal.id,
-            payload={"approve": False, "reason": note, "from_status": from_status,
-                     "status": proposal.status},
+            payload={
+                "approve": False,
+                "reason": note,
+                "from_status": from_status,
+                "status": proposal.status,
+            },
         )
         return proposal
 
@@ -525,8 +528,10 @@ def apply_proposal(
         return proposal
 
     # --- making the change ------------------------------------------------
-    target = contract.CANARY if (proposal.diff_json or {}).get("stage") == "canary" else (
-        contract.APPLIED
+    target = (
+        contract.CANARY
+        if (proposal.diff_json or {}).get("stage") == "canary"
+        else (contract.APPLIED)
     )
     direction = _refresh_direction(session, proposal, automated=automated, actor=actor_id)
     level = proposal.autonomy_level

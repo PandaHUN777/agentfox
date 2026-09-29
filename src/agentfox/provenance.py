@@ -165,7 +165,9 @@ def _validate_database(
     """
     config = connection.config_json or {}
     dialect = config.get("dialect", "postgresql")
-    password = decrypt_secret(connection.credential_encrypted) if connection.credential_encrypted else None
+    password = (
+        decrypt_secret(connection.credential_encrypted) if connection.credential_encrypted else None
+    )
     url = URL.create(
         drivername=dialect,
         username=config.get("username") or None,
@@ -174,7 +176,9 @@ def _validate_database(
         port=config.get("port") or None,
         database=config.get("database") or None,
     )
-    connect_args = {"connect_timeout": int(VALIDATE_TIMEOUT_SECONDS)} if dialect in _TIMED_DIALECTS else {}
+    connect_args = (
+        {"connect_timeout": int(VALIDATE_TIMEOUT_SECONDS)} if dialect in _TIMED_DIALECTS else {}
+    )
 
     engine = create_engine(url, connect_args=connect_args)
     try:
@@ -224,7 +228,9 @@ def _validate_api(
         )
         resp.raise_for_status()
     except httpx.HTTPError as exc:
-        return _finish(session, record, now, UNREACHABLE, reason=f"'{base_url}' could not be fetched: {exc}")
+        return _finish(
+            session, record, now, UNREACHABLE, reason=f"'{base_url}' could not be fetched: {exc}"
+        )
 
     new_hash = hashlib.sha256(resp.content[:VALIDATE_MAX_BYTES]).hexdigest()
     status = VALID if record.content_hash in (None, new_hash) else CHANGED
@@ -237,7 +243,9 @@ def _validate_api(
     return result
 
 
-def validate_source(session: Session, key: str, *, now: dt.datetime | None = None) -> dict[str, Any]:
+def validate_source(
+    session: Session, key: str, *, now: dt.datetime | None = None
+) -> dict[str, Any]:
     """F2 — check that a registered source is actually there, not just declared.
 
     Registering a source tiers it; it says nothing about whether the content
@@ -278,7 +286,9 @@ def validate_source(session: Session, key: str, *, now: dt.datetime | None = Non
         resp = httpx.get(key, timeout=VALIDATE_TIMEOUT_SECONDS, follow_redirects=True)
         resp.raise_for_status()
     except httpx.HTTPError as exc:
-        return _finish(session, record, now, UNREACHABLE, reason=f"'{key}' could not be fetched: {exc}")
+        return _finish(
+            session, record, now, UNREACHABLE, reason=f"'{key}' could not be fetched: {exc}"
+        )
 
     new_hash = hashlib.sha256(resp.content[:VALIDATE_MAX_BYTES]).hexdigest()
     status = VALID if record.content_hash in (None, new_hash) else CHANGED

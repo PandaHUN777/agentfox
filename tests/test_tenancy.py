@@ -13,9 +13,9 @@ count, the legacy query API, and the threading model of the web framework.
 from __future__ import annotations
 
 import pytest
+import sqlalchemy as sa
 from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
-import sqlalchemy as sa
 from sqlalchemy import String, delete, func, select, update
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -445,7 +445,10 @@ def test_shared_reference_catalog_syncs_independently_per_org(isolated_db):
             keys = set(session.scalars(select(Control.key)))
             assert "NOM-DSC-01" in keys, f"{org} cannot see its own synced catalog"
 
-    with system_scope("counting rows across both tenants", routine=True), session_scope() as session:
+    with (
+        system_scope("counting rows across both tenants", routine=True),
+        session_scope() as session,
+    ):
         acme_count = session.scalar(
             select(func.count()).select_from(Control).where(Control.org_id == ACME)
         )

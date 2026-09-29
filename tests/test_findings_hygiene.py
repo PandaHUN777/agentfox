@@ -173,7 +173,9 @@ def _pipeline(**statuses):
 def test_a_degraded_detector_is_one_finding_and_closes_on_recovery(session):
     for _ in range(3):
         record_detector_health(
-            session, subject_id="agent_1", surface="input",
+            session,
+            subject_id="agent_1",
+            surface="input",
             pipeline_result=_pipeline(**{"pii.native": "timeout", "secrets.native": "ok"}),
         )
     rows = _rows(session, "budget_breach")
@@ -182,14 +184,18 @@ def test_a_degraded_detector_is_one_finding_and_closes_on_recovery(session):
     assert rows[0].evidence_json["detector_key"] == "pii.native"
 
     record_detector_health(
-        session, subject_id="agent_1", surface="input",
+        session,
+        subject_id="agent_1",
+        surface="input",
         pipeline_result=_pipeline(**{"pii.native": "ok"}),
     )
     assert rows[0].status == "resolved"
     assert "completed normally" in rows[0].resolution_note
 
     record_detector_health(
-        session, subject_id="agent_1", surface="input",
+        session,
+        subject_id="agent_1",
+        surface="input",
         pipeline_result=_pipeline(**{"pii.native": "skipped_budget"}),
     )
     assert rows[0].status == "open" and len(_rows(session, "budget_breach")) == 1
@@ -198,15 +204,21 @@ def test_a_degraded_detector_is_one_finding_and_closes_on_recovery(session):
 def test_recovery_checks_are_throttled_on_the_request_path(session, monkeypatch):
     monkeypatch.setattr(findings_mod, "RECOVERY_CHECK_INTERVAL_SECONDS", 3600.0)
     record_detector_health(
-        session, subject_id="agent_1", surface="input",
+        session,
+        subject_id="agent_1",
+        surface="input",
         pipeline_result=_pipeline(**{"secrets.native": "ok"}),
     )
     record_detector_health(
-        session, subject_id="agent_1", surface="input",
+        session,
+        subject_id="agent_1",
+        surface="input",
         pipeline_result=_pipeline(**{"pii.native": "timeout"}),
     )
     record_detector_health(
-        session, subject_id="agent_1", surface="input",
+        session,
+        subject_id="agent_1",
+        surface="input",
         pipeline_result=_pipeline(**{"pii.native": "ok"}),
     )
     assert _rows(session, "budget_breach")[0].status == "open"
@@ -247,9 +259,7 @@ def test_budget_exhaustion_counts_then_closes_when_the_window_rolls(seeded, enfo
     assert rows[0].evidence_json["recurrences"]
 
 
-def test_drift_is_one_finding_per_scorer_and_closes_when_the_window_is_clean(
-    session, monkeypatch
-):
+def test_drift_is_one_finding_per_scorer_and_closes_when_the_window_is_clean(session, monkeypatch):
     from agentfox.evaluation import drift
 
     series = {"current": [0.9, 0.92, 0.95, 0.91], "baseline": [0.1, 0.12, 0.15, 0.11]}
@@ -275,12 +285,18 @@ def test_a_false_resolution_rescan_does_not_refile(seeded):
 
     agent = seeded.scalar(select(Agent).where(Agent.slug == "support-triage"))
     record_turn(
-        seeded, session_id="fr-1", agent_id=agent.id,
-        user_text="my card was declined", agent_text="I've resolved that for you.",
+        seeded,
+        session_id="fr-1",
+        agent_id=agent.id,
+        user_text="my card was declined",
+        agent_text="I've resolved that for you.",
     )
     record_turn(
-        seeded, session_id="fr-1", agent_id=agent.id,
-        user_text="it's still declined", agent_text="Let me check again.",
+        seeded,
+        session_id="fr-1",
+        agent_id=agent.id,
+        user_text="it's still declined",
+        agent_text="Let me check again.",
     )
     for _ in range(3):
         detect_false_resolution(seeded)
@@ -364,8 +380,13 @@ def test_resuming_an_agent_closes_its_stop_finding_and_a_new_stop_reopens_it(see
 def _committed_finding(severity: str = "high") -> str:
     with session_scope() as s:
         finding, _ = raise_finding(
-            s, type="unit_problem", title="Needs a human", severity=severity,
-            subject_type="agent", subject_id="agent_1", evidence={"k": "v"},
+            s,
+            type="unit_problem",
+            title="Needs a human",
+            severity=severity,
+            subject_type="agent",
+            subject_id="agent_1",
+            evidence={"k": "v"},
             control_keys=["NOM-RTG-01"],
         )
         return finding.id
@@ -390,7 +411,9 @@ def _bodies(receiver):  # noqa: F811 - fixture name reused as parameter
 
 
 def test_resolving_and_suppressing_emit_signed_webhook_events(
-    monkeypatch, receiver, client  # noqa: F811
+    monkeypatch,
+    receiver,  # noqa: F811 - the fixture shadows the import above, deliberately
+    client,
 ):
     configure(monkeypatch, receiver.url)
     resolved_id = _committed_finding()
@@ -430,8 +453,14 @@ def test_automated_resolution_and_recurrence_emit_events(monkeypatch, receiver):
         finding = s.get(Finding, finding_id)
         resolve_finding(s, finding, actor="agentfox.test", note="cleared", automated=True)
     with session_scope() as s:
-        _raise(s, type="unit_problem", title="Needs a human", severity="high",
-               subject_id="agent_1", fingerprint_parts=None)
+        _raise(
+            s,
+            type="unit_problem",
+            title="Needs a human",
+            severity="high",
+            subject_id="agent_1",
+            fingerprint_parts=None,
+        )
     assert webhooks.wait_for_delivery(5)
     assert [b["event"] for b in _bodies(receiver)] == [
         "finding.created",

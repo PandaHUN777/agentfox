@@ -123,8 +123,7 @@ def _printable_ratio(text: str) -> float:
     if not text:
         return 1.0
     bad = sum(
-        1 for ch in text
-        if unicodedata.category(ch) in ("Cc", "Co", "Cs") and ch not in "\n\r\t"
+        1 for ch in text if unicodedata.category(ch) in ("Cc", "Co", "Cs") and ch not in "\n\r\t"
     )
     return 1.0 - bad / len(text)
 
@@ -142,68 +141,86 @@ def document_quality(text: str, *, source_key: str = "") -> DocumentQuality:
     if not text or not text.strip():
         return DocumentQuality(
             0.0,
-            [Finding("empty-extraction", "the document extracted to nothing", REJECT,
-                     {**evidence_base})],
+            [
+                Finding(
+                    "empty-extraction",
+                    "the document extracted to nothing",
+                    REJECT,
+                    {**evidence_base},
+                )
+            ],
         )
 
     length = len(text)
 
     if hits := _MOJIBAKE.findall(text):
-        findings.append(Finding(
-            "mojibake",
-            f"UTF-8 text decoded as latin-1 in {len(hits)} place(s) — re-extract with "
-            "the correct encoding rather than ingesting this",
-            REJECT if len(hits) > length / 500 else DEGRADED,
-            {**evidence_base, "samples": sorted(set(hits))[:5], "count": len(hits)},
-        ))
+        findings.append(
+            Finding(
+                "mojibake",
+                f"UTF-8 text decoded as latin-1 in {len(hits)} place(s) — re-extract with "
+                "the correct encoding rather than ingesting this",
+                REJECT if len(hits) > length / 500 else DEGRADED,
+                {**evidence_base, "samples": sorted(set(hits))[:5], "count": len(hits)},
+            )
+        )
 
     if hits := _UNKNOWN_TOKEN.findall(text):
         ratio = len(hits) / max(1, length)
-        findings.append(Finding(
-            "unknown-characters",
-            f"{len(hits)} character(s) the decoder or tokeniser could not represent",
-            REJECT if ratio > 0.01 else DEGRADED,
-            {**evidence_base, "count": len(hits), "ratio": round(ratio, 5)},
-        ))
+        findings.append(
+            Finding(
+                "unknown-characters",
+                f"{len(hits)} character(s) the decoder or tokeniser could not represent",
+                REJECT if ratio > 0.01 else DEGRADED,
+                {**evidence_base, "count": len(hits), "ratio": round(ratio, 5)},
+            )
+        )
 
     printable = _printable_ratio(text)
     if printable < 0.99:
-        findings.append(Finding(
-            "control-characters",
-            f"{(1 - printable) * 100:.1f}% of the document is control or private-use "
-            "characters, which usually means a binary was read as text",
-            REJECT if printable < 0.95 else WARN,
-            {**evidence_base, "printable_ratio": round(printable, 4)},
-        ))
+        findings.append(
+            Finding(
+                "control-characters",
+                f"{(1 - printable) * 100:.1f}% of the document is control or private-use "
+                "characters, which usually means a binary was read as text",
+                REJECT if printable < 0.95 else WARN,
+                {**evidence_base, "printable_ratio": round(printable, 4)},
+            )
+        )
 
     runs = _LONG_RUN.findall(text)
     if runs:
-        findings.append(Finding(
-            "lost-word-boundaries",
-            f"{len(runs)} run(s) of 28+ letters with no space — the extractor dropped "
-            "the space glyph, and no retriever will match the terms inside them",
-            DEGRADED if len(runs) > 3 else WARN,
-            {**evidence_base, "samples": runs[:3], "count": len(runs)},
-        ))
+        findings.append(
+            Finding(
+                "lost-word-boundaries",
+                f"{len(runs)} run(s) of 28+ letters with no space — the extractor dropped "
+                "the space glyph, and no retriever will match the terms inside them",
+                DEGRADED if len(runs) > 3 else WARN,
+                {**evidence_base, "samples": runs[:3], "count": len(runs)},
+            )
+        )
 
     if breaks := _SOFT_HYPHEN_BREAK.findall(text):
-        findings.append(Finding(
-            "hyphenated-line-breaks",
-            f"{len(breaks)} word(s) split by an end-of-line hyphen; de-hyphenate before "
-            "chunking or the split halves become the index terms",
-            WARN,
-            {**evidence_base, "count": len(breaks)},
-        ))
+        findings.append(
+            Finding(
+                "hyphenated-line-breaks",
+                f"{len(breaks)} word(s) split by an end-of-line hyphen; de-hyphenate before "
+                "chunking or the split halves become the index terms",
+                WARN,
+                {**evidence_base, "count": len(breaks)},
+            )
+        )
 
     letters = sum(1 for ch in text if ch.isalpha())
     if length > 200 and letters / length < 0.5:
-        findings.append(Finding(
-            "low-text-density",
-            f"only {letters / length:.0%} of the document is letters — this is usually a "
-            "table of contents, a scanned page that failed OCR, or layout debris",
-            WARN,
-            {**evidence_base, "letter_ratio": round(letters / length, 3)},
-        ))
+        findings.append(
+            Finding(
+                "low-text-density",
+                f"only {letters / length:.0%} of the document is letters — this is usually a "
+                "table of contents, a scanned page that failed OCR, or layout debris",
+                WARN,
+                {**evidence_base, "letter_ratio": round(letters / length, 3)},
+            )
+        )
 
     penalty = {WARN: 0.1, DEGRADED: 0.3, REJECT: 0.6}
     score = max(0.0, 1.0 - sum(penalty[f.severity] for f in findings))
@@ -254,45 +271,60 @@ def chunk_quality(chunks: list[Any]) -> list[Finding]:
         # findings for a chunk with a single, different problem.
         is_heading = bool(_HEADING_ONLY.match(stripped)) and "\n" not in stripped
         if is_heading:
-            findings.append(Finding(
-                "heading-without-body",
-                f"chunk {index} is a heading with no content under it — it will be "
-                "retrieved and will answer nothing",
-                WARN, {**where, "heading": stripped[:60]},
-            ))
+            findings.append(
+                Finding(
+                    "heading-without-body",
+                    f"chunk {index} is a heading with no content under it — it will be "
+                    "retrieved and will answer nothing",
+                    WARN,
+                    {**where, "heading": stripped[:60]},
+                )
+            )
             continue
 
         if len(stripped) < MIN_CHUNK_CHARS:
-            findings.append(Finding(
-                "orphan-chunk",
-                f"chunk {index} is {len(stripped)} characters — too short to answer "
-                "anything on its own, and it will still be retrieved",
-                WARN, {**where, "length": len(stripped)},
-            ))
+            findings.append(
+                Finding(
+                    "orphan-chunk",
+                    f"chunk {index} is {len(stripped)} characters — too short to answer "
+                    "anything on its own, and it will still be retrieved",
+                    WARN,
+                    {**where, "length": len(stripped)},
+                )
+            )
 
         if _OPENS_MID_SENTENCE.match(stripped) and not stripped.startswith(("http", "www")):
-            findings.append(Finding(
-                "split-sentence-start",
-                f"chunk {index} opens mid-sentence; the subject of the clause is in the "
-                "previous chunk and will not be retrieved with it",
-                DEGRADED, {**where, "opens": stripped[:60]},
-            ))
+            findings.append(
+                Finding(
+                    "split-sentence-start",
+                    f"chunk {index} opens mid-sentence; the subject of the clause is in the "
+                    "previous chunk and will not be retrieved with it",
+                    DEGRADED,
+                    {**where, "opens": stripped[:60]},
+                )
+            )
 
         if not _CLOSES_CLEANLY.search(stripped):
-            findings.append(Finding(
-                "split-sentence-end",
-                f"chunk {index} ends mid-sentence — whatever qualifies the claim is in "
-                "the next chunk",
-                DEGRADED, {**where, "ends": stripped[-60:]},
-            ))
+            findings.append(
+                Finding(
+                    "split-sentence-end",
+                    f"chunk {index} ends mid-sentence — whatever qualifies the claim is in "
+                    "the next chunk",
+                    DEGRADED,
+                    {**where, "ends": stripped[-60:]},
+                )
+            )
 
         if stripped.count("```") % 2:
-            findings.append(Finding(
-                "split-code-fence",
-                f"chunk {index} has an unbalanced code fence, so the boundary fell "
-                "inside a code block",
-                DEGRADED, where,
-            ))
+            findings.append(
+                Finding(
+                    "split-code-fence",
+                    f"chunk {index} has an unbalanced code fence, so the boundary fell "
+                    "inside a code block",
+                    DEGRADED,
+                    where,
+                )
+            )
 
     return findings
 
@@ -322,8 +354,11 @@ class Assembly:
 
     def to_json(self) -> dict[str, Any]:
         return {
-            "kept": self.kept, "dropped": self.dropped, "order": self.order,
-            "tokens": self.tokens, "findings": [f.to_json() for f in self.findings],
+            "kept": self.kept,
+            "dropped": self.dropped,
+            "order": self.order,
+            "tokens": self.tokens,
+            "findings": [f.to_json() for f in self.findings],
         }
 
 
@@ -378,22 +413,27 @@ def assemble_context(
 
     dropped_required = [i for i in required if i in dropped]
     if dropped_required:
-        findings.append(Finding(
-            "required-evidence-truncated",
-            f"chunk(s) {dropped_required} are cited by the answer but do not fit in "
-            f"{budget} tokens — the model is being asked to support a claim from "
-            "evidence it cannot see",
-            REJECT, {"dropped": dropped_required, "budget_tokens": budget},
-        ))
+        findings.append(
+            Finding(
+                "required-evidence-truncated",
+                f"chunk(s) {dropped_required} are cited by the answer but do not fit in "
+                f"{budget} tokens — the model is being asked to support a claim from "
+                "evidence it cannot see",
+                REJECT,
+                {"dropped": dropped_required, "budget_tokens": budget},
+            )
+        )
     elif dropped:
         top_dropped = min(dropped)
-        findings.append(Finding(
-            "context-truncated",
-            f"{len(dropped)} of {len(chunks)} chunks did not fit; the highest-ranked "
-            f"one dropped was #{top_dropped}",
-            DEGRADED if top_dropped < 3 else WARN,
-            {"dropped": dropped, "budget_tokens": budget, "highest_dropped": top_dropped},
-        ))
+        findings.append(
+            Finding(
+                "context-truncated",
+                f"{len(dropped)} of {len(chunks)} chunks did not fit; the highest-ranked "
+                f"one dropped was #{top_dropped}",
+                DEGRADED if top_dropped < 3 else WARN,
+                {"dropped": dropped, "budget_tokens": budget, "highest_dropped": top_dropped},
+            )
+        )
 
     order = list(kept)
     if reorder and len(kept) >= 5:
@@ -404,22 +444,28 @@ def assemble_context(
         for position, index in enumerate(kept):
             (front if position % 2 == 0 else back).append(index)
         order = front + back[::-1]
-        findings.append(Finding(
-            "reordered-for-salience",
-            "the highest-ranked passages were moved to the start and end of the "
-            "context; material in the middle of a long context is attended to least",
-            WARN, {"from": kept, "to": order},
-        ))
+        findings.append(
+            Finding(
+                "reordered-for-salience",
+                "the highest-ranked passages were moved to the start and end of the "
+                "context; material in the middle of a long context is attended to least",
+                WARN,
+                {"from": kept, "to": order},
+            )
+        )
     elif len(kept) >= 5 and required:
-        middle = set(kept[len(kept) // 4: -len(kept) // 4 or None])
+        middle = set(kept[len(kept) // 4 : -len(kept) // 4 or None])
         buried = [i for i in required if i in middle]
         if buried:
-            findings.append(Finding(
-                "evidence-buried-mid-context",
-                f"required chunk(s) {buried} sit in the middle of a "
-                f"{len(kept)}-chunk context, where they are least likely to be used",
-                DEGRADED, {"buried": buried},
-            ))
+            findings.append(
+                Finding(
+                    "evidence-buried-mid-context",
+                    f"required chunk(s) {buried} sit in the middle of a "
+                    f"{len(kept)}-chunk context, where they are least likely to be used",
+                    DEGRADED,
+                    {"buried": buried},
+                )
+            )
 
     return Assembly(kept=kept, dropped=dropped, order=order, findings=findings, tokens=spent)
 
@@ -481,8 +527,11 @@ def retrieval_drift(current: dict, baseline: dict, *, tolerance: float = 0.05) -
             continue
         delta = (after - before) / before
         if delta < -tolerance:
-            regressions[metric] = {"baseline": before, "current": after,
-                                   "relative_change": round(delta, 4)}
+            regressions[metric] = {
+                "baseline": before,
+                "current": after,
+                "relative_change": round(delta, 4),
+            }
     if not regressions:
         return None
     worst_drop = min(r["relative_change"] for r in regressions.values())
@@ -523,28 +572,37 @@ def memory_binding_breach(
         subject = entry.get("subject") or entry.get("principal")
         where = {"entry": index, "key": entry.get("key", "")}
         if subject is None:
-            findings.append(Finding(
-                "unbound-memory",
-                f"memory entry {index} records no subject, so there is nothing to check "
-                "it against before showing it to someone else",
-                DEGRADED, where,
-            ))
+            findings.append(
+                Finding(
+                    "unbound-memory",
+                    f"memory entry {index} records no subject, so there is nothing to check "
+                    "it against before showing it to someone else",
+                    DEGRADED,
+                    where,
+                )
+            )
             continue
         if subject != principal:
-            findings.append(Finding(
-                "cross-subject-memory",
-                f"memory written about '{subject}' surfaced for '{principal}'",
-                REJECT, {**where, "subject": subject, "principal": principal},
-            ))
+            findings.append(
+                Finding(
+                    "cross-subject-memory",
+                    f"memory written about '{subject}' surfaced for '{principal}'",
+                    REJECT,
+                    {**where, "subject": subject, "principal": principal},
+                )
+            )
             continue
         origin = entry.get("session")
         if session_id and origin and origin != session_id and not entry.get("durable"):
-            findings.append(Finding(
-                "cross-session-memory",
-                f"memory entry {index} was written in session '{origin}' and is not "
-                "marked durable, but is being read in session '{}'".format(session_id),
-                WARN, {**where, "written_in": origin, "read_in": session_id},
-            ))
+            findings.append(
+                Finding(
+                    "cross-session-memory",
+                    f"memory entry {index} was written in session '{origin}' and is not "
+                    "marked durable, but is being read in session '{}'".format(session_id),
+                    WARN,
+                    {**where, "written_in": origin, "read_in": session_id},
+                )
+            )
     return findings
 
 

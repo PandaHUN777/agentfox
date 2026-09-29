@@ -71,12 +71,18 @@ def _record_turn(
         from ...models import Agent
 
         user_text = next(
-            (str(m.get("content") or "") for m in reversed(messages) if str(m.get("role")) == "user"),
+            (
+                str(m.get("content") or "")
+                for m in reversed(messages)
+                if str(m.get("role")) == "user"
+            ),
             "",
         )
         if not user_text:
             return
-        agent = session.scalar(select(Agent).where(Agent.slug == agent_slug)) if agent_slug else None
+        agent = (
+            session.scalar(select(Agent).where(Agent.slug == agent_slug)) if agent_slug else None
+        )
         record_turn(
             session,
             session_id=session_id or trace_id,
@@ -120,7 +126,9 @@ def _evidence_from_body(session: Session, body: dict[str, Any]) -> dict[str, Any
         subject = (
             principal_ref.get("subject") if isinstance(principal_ref, dict) else str(principal_ref)
         )
-        principal = session.scalar(select(EndUserPrincipal).where(EndUserPrincipal.subject == subject))
+        principal = session.scalar(
+            select(EndUserPrincipal).where(EndUserPrincipal.subject == subject)
+        )
     return {"principal": principal, "chunks": chunks or [], "purpose": body.get("purpose")}
 
 
@@ -458,11 +466,7 @@ def _stream_openai(events, model: str):
             # Trailing governance metadata: verdict is only knowable at the end, and
             # headers were already flushed when the stream opened.
             yield _sse(
-                {
-                    "agentfox": with_verdict_aliases(event.result.to_json())
-                    if event.result
-                    else {}
-                }
+                {"agentfox": with_verdict_aliases(event.result.to_json()) if event.result else {}}
             )
             yield "data: [DONE]\n\n"
             return
@@ -911,7 +915,9 @@ class GuardAgentMessageRequest(BaseModel):
     session_id: str | None = None
 
 
-@router.post("/v1/guard/agent_message", summary="Authorise an inter-agent message (P17, NOM-IAM-08)")
+@router.post(
+    "/v1/guard/agent_message", summary="Authorise an inter-agent message (P17, NOM-IAM-08)"
+)
 def guard_agent_message(
     payload: GuardAgentMessageRequest,
     session: Session = Depends(db),

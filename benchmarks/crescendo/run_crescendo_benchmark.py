@@ -556,9 +556,7 @@ def score_conversation(
         "trajectory_caught_before_final_turn": (
             first_trajectory is not None and first_trajectory < len(convo["turns"]) - 1
         ),
-        "trajectory_markers": sorted(
-            {m for r in windowed for m in r["trajectory_markers"]}
-        ),
+        "trajectory_markers": sorted({m for r in windowed for m in r["trajectory_markers"]}),
         "id": convo["id"],
         "family": convo["family"],
         "goal": convo.get("goal"),

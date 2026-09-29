@@ -83,9 +83,7 @@ def test_the_client_imports_nothing_heavy():
         "'agentfox.guardrails') if m in sys.modules]; "
         "print(','.join(heavy))"
     )
-    out = subprocess.run(
-        [sys.executable, "-c", source], capture_output=True, text=True, check=True
-    )
+    out = subprocess.run([sys.executable, "-c", source], capture_output=True, text=True, check=True)
     assert out.stdout.strip() == "", f"the hook client pulled in {out.stdout.strip()}"
 
 

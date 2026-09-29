@@ -245,14 +245,20 @@ def test_a_declared_trigger_reaching_a_destructive_tool_is_blocked(seeded, enfor
     identity = ensure_identity(seeded, agent)
     grant_capability(seeded, identity, "cascade-server/reader")
     seeded.add(
-        Tool(key="cascade-server/reader", name="reader", impact="read",
-             triggers_json=["cascade-server/notifier"])
+        Tool(
+            key="cascade-server/reader",
+            name="reader",
+            impact="read",
+            triggers_json=["cascade-server/notifier"],
+        )
     )
     seeded.add(Tool(key="cascade-server/notifier", name="notifier", impact="irreversible"))
     seeded.flush()
 
     result = enforcer.guard_tool_call(
-        agent_slug="support-triage", tool_key="cascade-server/reader", arguments={"q": "x"},
+        agent_slug="support-triage",
+        tool_key="cascade-server/reader",
+        arguments={"q": "x"},
     )
     assert result.taint["action"]["cascade"]["verdict"] == "block"
     codes = [r["code"] for r in result.taint["action"]["cascade"]["findings"]]
@@ -299,7 +305,9 @@ def test_an_undeclared_trigger_stays_invisible(seeded, enforcer):
     seeded.flush()
 
     result = enforcer.guard_tool_call(
-        agent_slug="support-triage", tool_key="cascade-server/reader", arguments={"q": "x"},
+        agent_slug="support-triage",
+        tool_key="cascade-server/reader",
+        arguments={"q": "x"},
     )
     assert result.taint["action"]["cascade"]["reached"] == []
     assert result.taint["action"]["cascade"]["verdict"] == "allow"
@@ -605,7 +613,9 @@ def test_evidence_build_job_is_recorded_done_in_the_job_queue(client):
     assert job["status"] == "done"
     assert job["result"]["evidence_package_id"] == build.json()["id"]
 
-    listing = client.get("/api/jobs?kind=evidence.package", headers=as_user("aisha@example.com")).json()
+    listing = client.get(
+        "/api/jobs?kind=evidence.package", headers=as_user("aisha@example.com")
+    ).json()
     assert any(j["id"] == job_id for j in listing["jobs"])
 
 
@@ -722,12 +732,20 @@ def test_policy_simulation_reports_a_diff(client):
 def test_policy_canary_lifecycle_via_api(client):
     """P12-6, end to end through the routes: start, check health, roll back."""
     body = "key: canary-api\nmode: enforce\ndefault_effect: allow\nrules: []\n"
-    client.post("/api/policies", json={"body": body, "mode": "enforce"}, headers=as_user("marcus@example.com"))
+    client.post(
+        "/api/policies",
+        json={"body": body, "mode": "enforce"},
+        headers=as_user("marcus@example.com"),
+    )
     body2 = (
         "key: canary-api\nmode: enforce\ndefault_effect: allow\n"
         "rules:\n  - id: all\n    when: {}\n    effect: block\n"
     )
-    client.post("/api/policies", json={"body": body2, "mode": "enforce"}, headers=as_user("marcus@example.com"))
+    client.post(
+        "/api/policies",
+        json={"body": body2, "mode": "enforce"},
+        headers=as_user("marcus@example.com"),
+    )
 
     start = client.post(
         "/api/policies/canary-api/canary/start", json={}, headers=as_user("marcus@example.com")
@@ -761,12 +779,20 @@ def test_policy_canary_lifecycle_via_api(client):
 
 def test_only_production_roles_can_start_a_canary(client):
     body = "key: canary-rbac\nmode: enforce\ndefault_effect: allow\nrules: []\n"
-    client.post("/api/policies", json={"body": body, "mode": "enforce"}, headers=as_user("marcus@example.com"))
+    client.post(
+        "/api/policies",
+        json={"body": body, "mode": "enforce"},
+        headers=as_user("marcus@example.com"),
+    )
     body2 = (
         "key: canary-rbac\nmode: enforce\ndefault_effect: allow\n"
         "rules:\n  - id: x\n    when: {}\n    effect: block\n"
     )
-    client.post("/api/policies", json={"body": body2, "mode": "enforce"}, headers=as_user("marcus@example.com"))
+    client.post(
+        "/api/policies",
+        json={"body": body2, "mode": "enforce"},
+        headers=as_user("marcus@example.com"),
+    )
     response = client.post(
         "/api/policies/canary-rbac/canary/start", json={}, headers=as_user("aisha@example.com")
     )
@@ -894,7 +920,12 @@ def test_get_finding_returns_the_full_evidence(client):
     assert detail["evidence"] == findings["findings"][0]["evidence"]
     assert "controls" in detail and "status" in detail
 
-    assert client.get("/api/findings/no-such-finding", headers=as_user("admin@example.com")).status_code == 404
+    assert (
+        client.get(
+            "/api/findings/no-such-finding", headers=as_user("admin@example.com")
+        ).status_code
+        == 404
+    )
 
 
 def test_unknown_user_is_rejected(client):
@@ -929,7 +960,12 @@ def test_assigning_an_owner_updates_the_agent_and_is_role_gated(client):
     assert again["owner_email"] == "grace@example.com"
     assert again["owner_team"] == "People Ops"
 
-    assert client.patch("/api/agents/no-such-agent", json={}, headers=as_user("admin@example.com")).status_code == 404
+    assert (
+        client.patch(
+            "/api/agents/no-such-agent", json={}, headers=as_user("admin@example.com")
+        ).status_code
+        == 404
+    )
 
 
 def test_control_catalog_sync_populates_controls_and_is_idempotent(client):
@@ -958,7 +994,7 @@ def test_control_catalog_sync_populates_controls_and_is_idempotent(client):
 
 
 def test_sdk_local_session_guards_a_tool(seeded):
-    from agentfox.sdk import ApprovalRequired, AgentFox
+    from agentfox.sdk import AgentFox, ApprovalRequired
 
     nom = AgentFox(agent="payments-ops", session=seeded)
     with nom.session(intent="refund a duplicate charge") as agent_session:
@@ -1003,8 +1039,11 @@ def test_borderline_eval_results_appear_in_the_annotation_queue(client):
         s.flush()
         # exact_match's own threshold is 1.0 — 0.95 sits within the default 0.1 band.
         result = EvalResult(
-            run_id=run.id, case_id="case-1", scorer_key="exact_match",
-            score=0.95, passed=False,
+            run_id=run.id,
+            case_id="case-1",
+            scorer_key="exact_match",
+            score=0.95,
+            passed=False,
         )
         s.add(result)
         s.flush()
@@ -1044,8 +1083,11 @@ def test_annotating_without_a_note_is_rejected(client):
         s.add(run)
         s.flush()
         result = EvalResult(
-            run_id=run.id, case_id="case-1", scorer_key="exact_match",
-            score=1.0, passed=True,
+            run_id=run.id,
+            case_id="case-1",
+            scorer_key="exact_match",
+            score=1.0,
+            passed=True,
         )
         s.add(result)
         s.flush()
@@ -1069,14 +1111,24 @@ def test_scorer_disagreement_on_the_same_case_is_flagged_even_when_no_score_is_b
         run = EvalRun(suite_id="test-suite-disagree", status="completed")
         s.add(run)
         s.flush()
-        s.add(EvalResult(
-            run_id=run.id, case_id="case-1", scorer_key="exact_match",
-            score=0.5, passed=False,  # far from exact_match's threshold=1.0
-        ))
-        s.add(EvalResult(
-            run_id=run.id, case_id="case-1", scorer_key="fuzzy_match",
-            score=0.9, passed=True,  # far from fuzzy_match's threshold=0.8
-        ))
+        s.add(
+            EvalResult(
+                run_id=run.id,
+                case_id="case-1",
+                scorer_key="exact_match",
+                score=0.5,
+                passed=False,  # far from exact_match's threshold=1.0
+            )
+        )
+        s.add(
+            EvalResult(
+                run_id=run.id,
+                case_id="case-1",
+                scorer_key="fuzzy_match",
+                score=0.9,
+                passed=True,  # far from fuzzy_match's threshold=0.8
+            )
+        )
         s.flush()
         run_id = run.id
 
@@ -1093,12 +1145,19 @@ def test_get_eval_suite_returns_its_cases(client):
     # seed.py creates "support-quality" with real cases — the dashboard's suite
     # detail page needs this route to show them, which no GET previously did
     # (list_suites only returned a case count).
-    detail = client.get("/api/eval/suites/support-quality", headers=as_user("admin@example.com")).json()
+    detail = client.get(
+        "/api/eval/suites/support-quality", headers=as_user("admin@example.com")
+    ).json()
     assert detail["key"] == "support-quality"
     assert detail["cases"], "seeded suite should have cases"
     assert "input" in detail["cases"][0] and "expected" in detail["cases"][0]
 
-    assert client.get("/api/eval/suites/no-such-suite", headers=as_user("admin@example.com")).status_code == 404
+    assert (
+        client.get(
+            "/api/eval/suites/no-such-suite", headers=as_user("admin@example.com")
+        ).status_code
+        == 404
+    )
 
 
 def test_create_suite_add_case_and_run_it(client):
@@ -1111,12 +1170,17 @@ def test_create_suite_add_case_and_run_it(client):
 
     case = client.post(
         "/api/eval/suites/dashboard-created/cases",
-        json={"input": {"prompt": "What is our refund policy?"}, "expected": {"goal": "cite the policy"}},
+        json={
+            "input": {"prompt": "What is our refund policy?"},
+            "expected": {"goal": "cite the policy"},
+        },
         headers=as_user("admin@example.com"),
     )
     assert case.status_code == 201
 
-    detail = client.get("/api/eval/suites/dashboard-created", headers=as_user("admin@example.com")).json()
+    detail = client.get(
+        "/api/eval/suites/dashboard-created", headers=as_user("admin@example.com")
+    ).json()
     assert len(detail["cases"]) == 1
 
     run = client.post(

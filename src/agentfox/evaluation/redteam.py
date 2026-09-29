@@ -484,9 +484,7 @@ def _provision_tool_and_grant(
     if existing is None:
         from ..identity.service import grant_capability
 
-        grant_capability(
-            session, identity, tool_key, constraints=constraints, max_taint=max_taint
-        )
+        grant_capability(session, identity, tool_key, constraints=constraints, max_taint=max_taint)
 
 
 class NativeRedTeamRunner:
@@ -997,9 +995,7 @@ def run_campaign(
     session.flush()
 
     if adaptive:
-        outcomes = run_adaptive_probes(
-            session, agent_slug, selected, budget=budget, seed=seed
-        )
+        outcomes = run_adaptive_probes(session, agent_slug, selected, budget=budget, seed=seed)
     else:
         outcomes = NativeRedTeamRunner().run_probes(session, agent_slug, selected)
 
@@ -1135,7 +1131,10 @@ def run_campaign(
             session,
             type="redteam",
             severity="critical" if campaign.summary_json["critical_breaches"] else "high",
-            title=f"Agent '{agent_slug}' did not block {breaches} of {attacks_total} simulated attacks",
+            title=(
+                f"Agent '{agent_slug}' did not block {breaches} of {attacks_total} "
+                "simulated attacks"
+            ),
             subject_type="agent",
             subject_id=agent_slug,
             evidence={
@@ -1251,9 +1250,7 @@ def _close_covered(
             else f"campaign {campaign_id} re-ran all {len(keys)} probe(s); the set that "
             f"still reproduces is tracked as finding {current.id}"
         )
-        resolve_finding(
-            session, finding, actor="agentfox.redteam", note=note, automated=True
-        )
+        resolve_finding(session, finding, actor="agentfox.redteam", note=note, automated=True)
 
 
 def _by_category(outcomes: list[ProbeOutcome]) -> dict[str, dict[str, int]]:

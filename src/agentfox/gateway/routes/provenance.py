@@ -22,9 +22,9 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ...context_integrity import chunk_quality, document_quality
 from ...crypto import DecryptionFailed, EncryptionNotConfigured
 from ...models import SourceConnection, SourceRecord, User
-from ...context_integrity import chunk_quality, document_quality
 from ...provenance import (
     CONNECTION_KINDS,
     TIERS,
@@ -188,9 +188,7 @@ class ContextCheckIn(BaseModel):
 
 
 @router.post("/context-check")
-def context_check(
-    payload: ContextCheckIn, _user: User = Depends(current_user)
-) -> dict[str, Any]:
+def context_check(payload: ContextCheckIn, _user: User = Depends(current_user)) -> dict[str, Any]:
     """P14 — would this document or chunk set be fit to enter the corpus?
 
     A dry run against pasted or re-fetched text, in the same spirit as `/assess`:
@@ -268,7 +266,8 @@ class ConnectionIn(BaseModel):
         ),
     )
     credential: str | None = Field(
-        None, description="The raw password or token — encrypted immediately, never stored in the clear."
+        None,
+        description="The raw password or token — encrypted immediately, never stored in the clear.",
     )
 
 

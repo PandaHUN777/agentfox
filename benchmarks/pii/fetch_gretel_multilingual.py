@@ -44,7 +44,9 @@ PARQUET_URL = (
 
 def main() -> None:
     if pq is None:
-        raise SystemExit("Run with: uv run --with pyarrow python benchmarks/pii/fetch_gretel_multilingual.py")
+        raise SystemExit(
+            "Run with: uv run --with pyarrow python benchmarks/pii/fetch_gretel_multilingual.py"
+        )
 
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     raw_path = DATA_DIR / "_gretel_multilingual_raw.parquet"
@@ -68,8 +70,7 @@ def main() -> None:
                 "language": row["language"],
                 "text": row["generated_text"],
                 "spans": [
-                    {"start": s["start"], "end": s["end"], "label": s["label"]}
-                    for s in spans
+                    {"start": s["start"], "end": s["end"], "label": s["label"]} for s in spans
                 ],
             }
         )

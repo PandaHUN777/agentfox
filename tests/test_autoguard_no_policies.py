@@ -18,7 +18,7 @@ from __future__ import annotations
 from agentfox.autoguard import AutoState
 
 
-def _state(**kw) -> GuardState:
+def _state(**kw) -> AutoState:
     return AutoState(agent="a", mode="enforce", environment="development", **kw)
 
 

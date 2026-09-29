@@ -58,10 +58,16 @@ _TABLE_HINTS: dict[str, str] = {
     "source_records": "Tier a source on the Sources page.",
     "knowledge_boundaries": "Declare what an agent may answer, from that agent's page.",
     "handoffs": "Raise or detect a hand-off on the Escalation page.",
-    "retention_policies": "Seeded worlds carry one. There is no command or screen to add another yet, so this stays open on a fresh tenant.",
+    "retention_policies": (
+        "Seeded worlds carry one. There is no command or screen to add another yet, "
+        "so this stays open on a fresh tenant."
+    ),
     "redteam_campaigns": "Run a red-team campaign on the Evaluation page.",
     "eval_runs": "Create and run an eval suite on the Evaluation page.",
-    "budgets": "Seeded worlds carry one. There is no command or screen to add another yet, so this stays open on a fresh tenant.",
+    "budgets": (
+        "Seeded worlds carry one. There is no command or screen to add another yet, "
+        "so this stays open on a fresh tenant."
+    ),
     "slos": "Declare a reliability objective on the Evaluation page.",
     "mcp_tool_snapshots": "Connect an MCP server on the Connect page.",
 }
@@ -515,8 +521,12 @@ def posture(session: Session, framework: str | None = None) -> dict[str, Any]:
         "controls": len(keys),
         "counts": counts,
         "effectiveness": round(counts["effective"] / assessed, 4) if assessed else None,
-        "failing_controls": sorted(k for k in keys if k in statuses and statuses[k].status == "failing"),
-        "degraded_controls": sorted(k for k in keys if k in statuses and statuses[k].status == "degraded"),
+        "failing_controls": sorted(
+            k for k in keys if k in statuses and statuses[k].status == "failing"
+        ),
+        "degraded_controls": sorted(
+            k for k in keys if k in statuses and statuses[k].status == "degraded"
+        ),
         "not_implemented": sorted(
             k for k in keys if k in statuses and statuses[k].status == "not_implemented"
         ),

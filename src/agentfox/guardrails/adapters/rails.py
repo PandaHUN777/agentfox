@@ -259,7 +259,7 @@ class GuardrailsAiDetector(BaseDetector):
             return (
                 "Guardrails AI is installed but has no validators to run. Name "
                 "them in `guardrails_ai_validators` (AGENTFOX_GUARDRAILS_AI_"
-                "VALIDATORS), e.g. [\"valid_json\", \"detect_pii\"], and install "
+                'VALIDATORS), e.g. ["valid_json", "detect_pii"], and install '
                 "each one — Hub validators carry licences independent of the "
                 "Apache-2.0 core, so none is enabled by inheritance. Prefer the "
                 "per-validator `rails.hub.*` detectors unless you specifically "

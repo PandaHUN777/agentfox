@@ -28,10 +28,9 @@ from __future__ import annotations
 import json
 
 import _env  # noqa: F401
+from support_tools import ORDERS, GovernedToolkit
 
 from agentfox.db import init_db, session_scope
-
-from support_tools import ORDERS, GovernedToolkit
 
 FAILURES = 0
 
@@ -57,14 +56,20 @@ def main() -> None:
 
     print("### 0. PII lookup (real tool, granted capability) ###")
     with session_scope() as session:
-        toolkit = GovernedToolkit(session=session, session_id="verify-0-lookup", intent="account lookup")
+        toolkit = GovernedToolkit(
+            session=session, session_id="verify-0-lookup", intent="account lookup"
+        )
         payload = _print("lookup_customer(CUST-1001)", toolkit.lookup_customer("CUST-1001"))
         _check("lookup returned Priya's real record", payload.get("name") == "Priya Anand")
 
     print("\n### 1. Clean refund — order id and amount both user-declared ###")
     with session_scope() as session:
-        toolkit = GovernedToolkit(session=session, session_id="verify-1-clean", intent="refund a duplicate charge")
-        payload = _print("issue_refund('ORD-7002', $45.00)", toolkit.issue_refund("ORD-7002", 45.00))
+        toolkit = GovernedToolkit(
+            session=session, session_id="verify-1-clean", intent="refund a duplicate charge"
+        )
+        payload = _print(
+            "issue_refund('ORD-7002', $45.00)", toolkit.issue_refund("ORD-7002", 45.00)
+        )
         _check("clean, in-cap refund was allowed", payload.get("status") == "refunded")
         _check("order state actually mutated", ORDERS["ORD-7002"]["status"] == "refunded")
 
@@ -79,9 +84,14 @@ def main() -> None:
         _check("oversized refund was BLOCKED", payload.get("status") == "BLOCKED_BY_AGENTFOX")
         _check(
             "a capability-denial rule fired",
-            any("capability" in rid and "denied" in rid for rid in (payload.get("rules_fired") or [])),
+            any(
+                "capability" in rid and "denied" in rid
+                for rid in (payload.get("rules_fired") or [])
+            ),
         )
-        _check("order state NOT mutated despite the attempt", ORDERS["ORD-7003"]["status"] == "paid")
+        _check(
+            "order state NOT mutated despite the attempt", ORDERS["ORD-7003"]["status"] == "paid"
+        )
 
     print("\n### 3. ATTACK — F3.8 composed escalation: search result -> refund argument ###")
     with session_scope() as session:

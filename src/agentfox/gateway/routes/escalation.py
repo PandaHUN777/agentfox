@@ -146,9 +146,7 @@ def conversation(
     agent = session.get(Agent, agent_id) if agent_id else None
     assessment = assess(turns, get_policy(session, agent_id))
     handoff = session.scalar(
-        select(Handoff)
-        .where(Handoff.session_id == session_id)
-        .order_by(Handoff.created_at.desc())
+        select(Handoff).where(Handoff.session_id == session_id).order_by(Handoff.created_at.desc())
     )
     return {
         "session_id": session_id,
@@ -195,9 +193,11 @@ def missed(
         session, since_hours=since_hours, agent_slug=agent, raise_findings=False
     )
     agent_ids = {m["agent_id"] for m in result["missed"] if m.get("agent_id")}
-    slugs = {
-        a.id: a.slug for a in session.scalars(select(Agent).where(Agent.id.in_(agent_ids)))
-    } if agent_ids else {}
+    slugs = (
+        {a.id: a.slug for a in session.scalars(select(Agent).where(Agent.id.in_(agent_ids)))}
+        if agent_ids
+        else {}
+    )
     for m in result["missed"]:
         m["agent_slug"] = slugs.get(m.get("agent_id"))
     return result

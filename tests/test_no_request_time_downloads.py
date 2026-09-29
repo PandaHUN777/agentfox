@@ -44,10 +44,7 @@ def test_a_detector_backed_by_a_download_checks_the_disk_first(key):
     adapter had no disk check at all.
     """
     detector = all_detectors()[key]
-    has_check = any(
-        hasattr(detector, name)
-        for name in ("_model_present", "_weights_present")
-    )
+    has_check = any(hasattr(detector, name) for name in ("_model_present", "_weights_present"))
     assert has_check, (
         f"{key} is backed by a downloadable asset and has no method that asks "
         "whether it is already on disk, so `available()` can only be answering "
@@ -69,7 +66,7 @@ def test_presidio_is_available_once_the_model_is_there(monkeypatch):
 
 
 def test_the_reason_names_the_command_that_fixes_it(monkeypatch):
-    """"unavailable" without the fix is just a dead end in the UI."""
+    """ "unavailable" without the fix is just a dead end in the UI."""
     monkeypatch.setattr(PresidioPiiDetector, "_model_present", staticmethod(lambda: False))
     reason = PresidioPiiDetector().unavailable_reason
     assert "python -m spacy download en_core_web_lg" in reason
@@ -91,9 +88,7 @@ def test_warm_does_not_build_the_engine_when_the_model_is_absent(monkeypatch):
     nobody asked for, and still egress from a deployment that declared none.
     """
     built = []
-    monkeypatch.setattr(
-        "agentfox.guardrails.adapters.presidio._analyzer", lambda: built.append(1)
-    )
+    monkeypatch.setattr("agentfox.guardrails.adapters.presidio._analyzer", lambda: built.append(1))
     monkeypatch.setattr(PresidioPiiDetector, "_model_present", staticmethod(lambda: False))
     PresidioPiiDetector().warm()
     assert built == []
@@ -153,6 +148,5 @@ def test_cached_weights_are_loaded_without_contacting_the_hub():
     assert not missing, (
         "these model loads do not pass local_files_only=True, so on an "
         "air-gapped host they hang on hub timeouts instead of reading the "
-        "cache that `_weights_present()` already confirmed:\n  "
-        + "\n  ".join(missing)
+        "cache that `_weights_present()` already confirmed:\n  " + "\n  ".join(missing)
     )

@@ -258,14 +258,22 @@ def test_precision_can_be_scoped_to_one_agent(seeded):
     payments = seeded.scalar(select(Agent).where(Agent.slug == "payments-ops"))
     seeded.add(
         GuardrailFeedback(
-            decision_id=None, detector_key="pii.native", entity_type="PII_SSN",
-            label="false_positive", score=0.4, agent_id=triage.id,
+            decision_id=None,
+            detector_key="pii.native",
+            entity_type="PII_SSN",
+            label="false_positive",
+            score=0.4,
+            agent_id=triage.id,
         )
     )
     seeded.add(
         GuardrailFeedback(
-            decision_id=None, detector_key="pii.native", entity_type="PII_SSN",
-            label="true_positive", score=0.9, agent_id=payments.id,
+            decision_id=None,
+            detector_key="pii.native",
+            entity_type="PII_SSN",
+            label="true_positive",
+            score=0.9,
+            agent_id=payments.id,
         )
     )
     seeded.flush()

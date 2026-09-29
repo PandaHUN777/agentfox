@@ -36,8 +36,7 @@ agents_app = typer.Typer(
     no_args_is_help=True,
 )
 policy_app = typer.Typer(
-    help="Write the rules, try them against recorded traffic, then turn them on "
-    "(Pillar 6).",
+    help="Write the rules, try them against recorded traffic, then turn them on (Pillar 6).",
     no_args_is_help=True,
 )
 eval_app = typer.Typer(
@@ -53,8 +52,7 @@ evidence_app = typer.Typer(
     no_args_is_help=True,
 )
 compliance_app = typer.Typer(
-    help="Where this deployment stands against each framework, computed from "
-    "telemetry (Pillar 6).",
+    help="Where this deployment stands against each framework, computed from telemetry (Pillar 6).",
     no_args_is_help=True,
 )
 redteam_app = typer.Typer(
@@ -69,12 +67,9 @@ hooks_app = typer.Typer(
     help="Run AgentFox where the agent already is: a warm daemon and a thin per-call hook.",
     no_args_is_help=True,
 )
-db_app = typer.Typer(
-    help="Apply, roll back and inspect the database schema.", no_args_is_help=True
-)
+db_app = typer.Typer(help="Apply, roll back and inspect the database schema.", no_args_is_help=True)
 tools_app = typer.Typer(
-    help="Declare what each tool can do, so containment has something to reason "
-    "over (P9).",
+    help="Declare what each tool can do, so containment has something to reason over (P9).",
     no_args_is_help=True,
 )
 access_app = typer.Typer(
@@ -1315,8 +1310,7 @@ def compliance_validate() -> None:
     console.print(f"  controls     {len(controls)}")
     console.print(f"  frameworks   {len(known)}")
     console.print(
-        f"  mappings     {mappings}  ([yellow]{mappings - reviewed} draft[/], "
-        f"{reviewed} reviewed)"
+        f"  mappings     {mappings}  ([yellow]{mappings - reviewed} draft[/], {reviewed} reviewed)"
     )
     console.print(f"  obligations  {len(obligations)}")
 
@@ -1349,15 +1343,15 @@ def compliance_review_packet(
     catalog = load_catalog()
     known = {f.get("key") if isinstance(f, dict) else f for f in catalog.get("frameworks", [])}
     if framework not in known:
-        console.print(f"[red]unknown framework '{framework}'[/] — known: {', '.join(sorted(known))}")
+        console.print(
+            f"[red]unknown framework '{framework}'[/] — known: {', '.join(sorted(known))}"
+        )
         raise typer.Exit(1)
 
     controls = {c["key"]: c for c in catalog.get("controls", [])}
     with _session() as session:
         mappings = list(
-            session.scalars(
-                select(FrameworkMapping).where(FrameworkMapping.framework == framework)
-            )
+            session.scalars(select(FrameworkMapping).where(FrameworkMapping.framework == framework))
         )
         rows = [
             {
@@ -1379,7 +1373,7 @@ def compliance_review_packet(
         "",
         "For each row: does this control, as implemented, support the clause claimed? Approve with",
         "`agentfox compliance review <control> --framework "
-        f"{framework} --reviewer \"<your name>\"`, optionally `--reference` for a single clause.",
+        f'{framework} --reviewer "<your name>"`, optionally `--reference` for a single clause.',
         "",
     ]
     for key in sorted({r["control_key"] for r in rows}):
@@ -1390,7 +1384,10 @@ def compliance_review_packet(
             "",
             f"**Objective.** {objective}" if objective else "",
             f"**Implemented by.** {', '.join(control.get('implemented_by', [])) or 'not recorded'}",
-            f"**Evidence produced.** {', '.join(control.get('evidence_sources', [])) or 'not recorded'}",
+            (
+                "**Evidence produced.** "
+                f"{', '.join(control.get('evidence_sources', [])) or 'not recorded'}"
+            ),
             "",
             "| Clause claimed | Current status | Reviewed by |",
             "|---|---|---|",
@@ -1411,9 +1408,13 @@ def compliance_review_packet(
 def compliance_review(
     control: str,
     framework: str = typer.Option(..., "--framework"),
-    reviewer: str = typer.Option(..., "--reviewer", help="The human accountable for this sign-off."),
+    reviewer: str = typer.Option(
+        ..., "--reviewer", help="The human accountable for this sign-off."
+    ),
     reference: str | None = typer.Option(
-        None, "--reference", help="Sign off one clause only; default is every clause for the control."
+        None,
+        "--reference",
+        help="Sign off one clause only; default is every clause for the control.",
     ),
 ) -> None:
     """Record a qualified reviewer's sign-off on a control's framework mapping(s).
@@ -1661,7 +1662,9 @@ def redteam_run(
             result = "[green]blocked[/]"
         else:
             result = "[green]allowed[/]"
-        table.add_row(row["probe"], row["severity"], row["owasp"] or "—", row["verdict"] or "—", result)
+        table.add_row(
+            row["probe"], row["severity"], row["owasp"] or "—", row["verdict"] or "—", result
+        )
     console.print(table)
 
 
@@ -1918,9 +1921,7 @@ def hooks_install(
     command = f"agentfox hooks run --harness {harness} --agent {agent}"
     block = {
         "hooks": {
-            "PreToolUse": [
-                {"matcher": "*", "hooks": [{"type": "command", "command": command}]}
-            ]
+            "PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": command}]}]
         }
     }
 
@@ -2027,8 +2028,7 @@ def hooks_status() -> None:
         return
     for (harness, event), row in sorted(capability.CAPABILITY.items()):
         console.print(
-            f"  {harness}/{event}: {row.capability}  "
-            f"[dim]{row.evidence} {row.version}[/]"
+            f"  {harness}/{event}: {row.capability}  [dim]{row.evidence} {row.version}[/]"
         )
 
 
@@ -2076,7 +2076,10 @@ def tools_declare(
     impact: str = typer.Option(
         ...,
         "--impact",
-        help="read | write | high_impact | irreversible — the axis every containment rule reasons over.",
+        help=(
+            "read | write | high_impact | irreversible — the axis every containment rule "
+            "reasons over."
+        ),
     ),
     name: str = typer.Option("", "--name"),
     description: str = typer.Option("", "--description"),
@@ -2150,7 +2153,9 @@ def tools_list(as_json: bool = typer.Option(False, "--json")) -> None:
         colour = {"irreversible": "red", "high_impact": "yellow", "write": "cyan"}.get(
             row["impact"], "dim"
         )
-        table.add_row(row["key"], f"[{colour}]{row['impact']}[/]", ", ".join(row["triggers"]) or "—")
+        table.add_row(
+            row["key"], f"[{colour}]{row['impact']}[/]", ", ".join(row["triggers"]) or "—"
+        )
     console.print(table)
 
 
@@ -2187,9 +2192,7 @@ def tools_set_triggers(
 @access_app.command("declare-scope")
 def access_declare_scope(
     table: str = typer.Argument(..., help="Table name"),
-    column: str = typer.Option(
-        ..., "--column", help="Column that decides whose row it is"
-    ),
+    column: str = typer.Option(..., "--column", help="Column that decides whose row it is"),
     principal_key: str = typer.Option(
         "id",
         "--principal-key",
@@ -2212,9 +2215,7 @@ def access_declare_scope(
 
     restricted = [c.strip() for c in restricted_columns.split(",") if c.strip()]
     with _session() as session:
-        rule = session.scalar(
-            select(AccessScopeRule).where(AccessScopeRule.table_name == table)
-        )
+        rule = session.scalar(select(AccessScopeRule).where(AccessScopeRule.table_name == table))
         if rule is None:
             rule = AccessScopeRule(table_name=table)
             session.add(rule)
@@ -2241,9 +2242,7 @@ def access_declare_reference(
     from ..models import AccessScopeRule
 
     with _session() as session:
-        rule = session.scalar(
-            select(AccessScopeRule).where(AccessScopeRule.table_name == table)
-        )
+        rule = session.scalar(select(AccessScopeRule).where(AccessScopeRule.table_name == table))
         if rule is None:
             rule = AccessScopeRule(table_name=table, is_reference=True)
             session.add(rule)
@@ -2372,9 +2371,7 @@ def proposals_approve(
     """Approve a proven proposal. An org-level loosening needs two different people."""
     from ..improvement.proposals import decide
 
-    _proposal_step(
-        proposal_id, lambda s, p: decide(s, p, approve=True, actor=actor, note=note)
-    )
+    _proposal_step(proposal_id, lambda s, p: decide(s, p, approve=True, actor=actor, note=note))
 
 
 @proposals_app.command("reject")
@@ -2386,9 +2383,7 @@ def proposals_reject(
     """Reject a proposal."""
     from ..improvement.proposals import decide
 
-    _proposal_step(
-        proposal_id, lambda s, p: decide(s, p, approve=False, actor=actor, note=note)
-    )
+    _proposal_step(proposal_id, lambda s, p: decide(s, p, approve=False, actor=actor, note=note))
 
 
 @proposals_app.command("apply")
@@ -2426,7 +2421,6 @@ def proposals_rollback(
         proposal_id,
         lambda s, p: rollback_proposal(s, p, reason=reason, actor=actor),
     )
-
 
 
 @proposals_app.command("verify")
@@ -2471,6 +2465,7 @@ def proposals_from_labels(
     for skip in report["skipped"]:
         where = "/".join(str(skip[k]) for k in ("detector_key", "policy", "rule_id") if k in skip)
         console.print(f"  [dim]skipped {where}: {skip['reason']}[/]")
+
 
 def main() -> None:  # pragma: no cover - console entry point
     try:

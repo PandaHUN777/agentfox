@@ -52,10 +52,16 @@ def test_capability_grant_writes_a_grant_the_engine_then_honours():
     result = runner.invoke(
         app,
         [
-            "capability", "grant", "support-triage", "reports.export",
-            "--action", "read",
-            "--limit", "rows:lte=500",
-            "--max-taint", "retrieved",
+            "capability",
+            "grant",
+            "support-triage",
+            "reports.export",
+            "--action",
+            "read",
+            "--limit",
+            "rows:lte=500",
+            "--max-taint",
+            "retrieved",
             "--yes",
         ],
     )
@@ -65,17 +71,11 @@ def test_capability_grant_writes_a_grant_the_engine_then_honours():
     with session_scope() as session:
         agent = session.scalar(select(Agent).where(Agent.slug == "support-triage"))
         identity = ensure_identity(session, agent)
-        allowed = check_capability(
-            session, identity, "reports.export", "read", {"rows": 100}
-        )
+        allowed = check_capability(session, identity, "reports.export", "read", {"rows": 100})
         assert allowed.granted, allowed.reasons
-        over = check_capability(
-            session, identity, "reports.export", "read", {"rows": 5000}
-        )
+        over = check_capability(session, identity, "reports.export", "read", {"rows": 5000})
         assert not over.granted
-        wrong_action = check_capability(
-            session, identity, "reports.export", "delete", {"rows": 1}
-        )
+        wrong_action = check_capability(session, identity, "reports.export", "delete", {"rows": 1})
         assert not wrong_action.granted
 
 
@@ -101,9 +101,7 @@ def test_capability_grant_is_recorded_in_the_audit_chain():
     from agentfox.models import AuditEntry
 
     _seed()
-    runner.invoke(
-        app, ["capability", "grant", "support-triage", "reports.export", "--yes"]
-    )
+    runner.invoke(app, ["capability", "grant", "support-triage", "reports.export", "--yes"])
     with session_scope() as session:
         kinds = [e.action for e in session.scalars(select(AuditEntry))]
         assert "capability.granted" in kinds
@@ -123,8 +121,13 @@ def test_capability_grant_expiry_stops_the_grant_matching():
     runner.invoke(
         app,
         [
-            "capability", "grant", "support-triage", "reports.export",
-            "--expires-in-days", "7", "--yes",
+            "capability",
+            "grant",
+            "support-triage",
+            "reports.export",
+            "--expires-in-days",
+            "7",
+            "--yes",
         ],
     )
     with session_scope() as session:
@@ -132,9 +135,7 @@ def test_capability_grant_expiry_stops_the_grant_matching():
         identity = ensure_identity(session, agent)
         assert check_capability(session, identity, "reports.export").granted
 
-        grant = session.scalar(
-            select(Capability).where(Capability.tool_key == "reports.export")
-        )
+        grant = session.scalar(select(Capability).where(Capability.tool_key == "reports.export"))
         assert grant.expires_at is not None
         grant.expires_at = utcnow() - dt.timedelta(days=1)
         session.flush()
@@ -149,9 +150,7 @@ def test_capability_revoke_takes_the_permission_away_and_audits_it():
     from agentfox.models import Agent, AuditEntry
 
     _seed()
-    runner.invoke(
-        app, ["capability", "grant", "support-triage", "reports.export", "--yes"]
-    )
+    runner.invoke(app, ["capability", "grant", "support-triage", "reports.export", "--yes"])
     listed = _json(runner.invoke(app, ["capability", "list", "--json"]).output)
     grant_id = next(r["id"] for r in listed if r["tool_key"] == "reports.export")
 
@@ -169,9 +168,7 @@ def test_capability_revoke_accepts_the_short_id_the_table_prints():
     from agentfox.cli._style import short_id
 
     _seed()
-    runner.invoke(
-        app, ["capability", "grant", "support-triage", "reports.export", "--yes"]
-    )
+    runner.invoke(app, ["capability", "grant", "support-triage", "reports.export", "--yes"])
     listed = _json(runner.invoke(app, ["capability", "list", "--json"]).output)
     grant_id = next(r["id"] for r in listed if r["tool_key"] == "reports.export")
 
@@ -196,8 +193,13 @@ def test_capability_grant_refuses_a_comparison_the_engine_cannot_evaluate():
     result = runner.invoke(
         app,
         [
-            "capability", "grant", "support-triage", "reports.export",
-            "--limit", "rows:nope=3", "--yes",
+            "capability",
+            "grant",
+            "support-triage",
+            "reports.export",
+            "--limit",
+            "rows:nope=3",
+            "--yes",
         ],
     )
     assert result.exit_code != 0
@@ -222,9 +224,7 @@ def test_doctor_names_the_capability_command_when_least_privilege_is_unconfigure
         assert session.query(Capability).count() == 0
 
     result = runner.invoke(app, ["doctor", "--json"])
-    containment = next(
-        c for c in _json(result.output) if c["check"] == "containment"
-    )
+    containment = next(c for c in _json(result.output) if c["check"] == "containment")
     assert "no capability grants" in containment["detail"]
     assert "agentfox capability grant" in containment["detail"]
 
@@ -240,22 +240,37 @@ def _raise_findings() -> None:
 
     with session_scope() as session:
         raise_finding(
-            session, type="unowned_agent", title="a medium one", severity="medium",
-            subject_type="agent", subject_id="a1",
+            session,
+            type="unowned_agent",
+            title="a medium one",
+            severity="medium",
+            subject_type="agent",
+            subject_id="a1",
         )
         raise_finding(
-            session, type="guardrail_detection",
+            session,
+            type="guardrail_detection",
             title="Blocked on tool_result: INJECTION.COVERT_INSTRUCTION, "
             "INJECTION.INSTRUCTION_OVERRIDE, INJECTION.ROLE_DELIMITER",
-            severity="high", subject_type="agent", subject_id="a2",
+            severity="high",
+            subject_type="agent",
+            subject_id="a2",
         )
         raise_finding(
-            session, type="stale_identity", title="another medium", severity="medium",
-            subject_type="agent", subject_id="a3",
+            session,
+            type="stale_identity",
+            title="another medium",
+            severity="medium",
+            subject_type="agent",
+            subject_id="a3",
         )
         raise_finding(
-            session, type="shadow_agent", title="a critical one", severity="critical",
-            subject_type="agent", subject_id="a4",
+            session,
+            type="shadow_agent",
+            title="a critical one",
+            severity="critical",
+            subject_type="agent",
+            subject_id="a4",
         )
 
 
@@ -279,12 +294,20 @@ def test_findings_ranks_before_it_limits():
     with session_scope() as session:
         for index in range(12):
             raise_finding(
-                session, type="stale_identity", title=f"low {index}", severity="low",
-                subject_type="agent", subject_id=f"low-{index}",
+                session,
+                type="stale_identity",
+                title=f"low {index}",
+                severity="low",
+                subject_type="agent",
+                subject_id=f"low-{index}",
             )
         raise_finding(
-            session, type="shadow_agent", title="the only critical", severity="critical",
-            subject_type="agent", subject_id="crit",
+            session,
+            type="shadow_agent",
+            title="the only critical",
+            severity="critical",
+            subject_type="agent",
+            subject_id="crit",
         )
 
     rows = _json(runner.invoke(app, ["findings", "--limit", "3", "--json"]).output)
@@ -312,8 +335,12 @@ def test_findings_surfaces_the_recurrence_count():
     with session_scope() as session:
         for _ in range(3):
             raise_finding(
-                session, type="shadow_agent", title="the same problem", severity="high",
-                subject_type="agent", subject_id="a1",
+                session,
+                type="shadow_agent",
+                title="the same problem",
+                severity="high",
+                subject_type="agent",
+                subject_id="a1",
             )
 
     rows = _json(runner.invoke(app, ["findings", "--json"]).output)
@@ -378,14 +405,12 @@ def test_check_marks_severity_with_a_word_not_only_a_colour(tmp_path):
 
 
 def test_check_overflow_hint_is_a_command_that_runs(tmp_path):
-    """"… and 91 more (--limit)" is a flag name, not something anyone can run."""
+    """ "… and 91 more (--limit)" is a flag name, not something anyone can run."""
     for index in range(8):
         (tmp_path / f"m{index}.py").write_text(
             "import openai\nopenai.chat.completions.create(model='gpt-4')\n"
         )
-    result = runner.invoke(
-        app, ["check", str(tmp_path), "--limit", "2", "--no-submit"]
-    )
+    result = runner.invoke(app, ["check", str(tmp_path), "--limit", "2", "--no-submit"])
     output = flat(result.output)
     assert "(--limit)" not in output
     hint = re.search(r"agentfox check .*?--limit (\d+)", output)
@@ -521,7 +546,7 @@ def test_demo_only_explains_matching_rows_when_they_really_do_match():
 
 
 def test_seed_does_not_open_by_reading_as_a_failure():
-    """"controls 0 created, 317 mappings" is the normal result of a second run."""
+    """ "controls 0 created, 317 mappings" is the normal result of a second run."""
     runner.invoke(app, ["seed"])
     output = flat(runner.invoke(app, ["seed"]).output)
     assert "0 created" not in output
