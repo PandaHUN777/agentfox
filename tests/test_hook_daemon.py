@@ -268,12 +268,17 @@ def test_the_gap_is_reported_as_a_gap(capsys):
 def test_the_capability_table_never_claims_block_for_an_unprobed_event():
     """ABSENT MEANS UNVERIFIED. A hedge rendered as a capability is still a
     claim, and an unverified claim about enforcement is what that table exists
-    to prevent."""
+    to prevent.
+
+    Uses cursor rather than claude: claude/PreToolUse has since been probed
+    live, and this test failing when that happened is the table working — the
+    assertion has to move to a harness nobody has checked, not be relaxed.
+    """
     from agentfox.hooks import capability_of, describe
 
-    assert capability_of("claude", "PreToolUse") is None
-    text = describe("claude", "PreToolUse")
-    assert text.startswith("claude/PreToolUse: unverified")
+    assert capability_of("cursor", "PreToolUse") is None
+    text = describe("cursor", "PreToolUse")
+    assert text.startswith("cursor/PreToolUse: unverified")
     # It may mention blocking — it says the question is open — but it must
     # never assert the affirmative.
     assert "a deny stops the call (" not in text

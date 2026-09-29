@@ -1847,6 +1847,161 @@ def hooks_daemon(
         daemon.stop()
 
 
+@hooks_app.command("run")
+def hooks_run(
+    harness: str = typer.Option(..., "--harness", help="Which harness is calling."),
+    agent: str = typer.Option("", "--agent", help="Agent slug to govern this session as."),
+) -> None:
+    """The per-call hook. Reads the harness payload on stdin, writes its reply.
+
+    Everything in this path runs in a process the harness creates and destroys
+    per tool call, so it does the least possible: parse, ask the daemon, print.
+    Measured against a warm daemon, the round trip is about 6ms; the same work
+    without one is 3.9 seconds, because `import agentfox` is.
+    """
+    import json as _json
+
+    from ..hooks import DaemonUnavailable, client
+    from ..hooks import harness as harness_mod
+
+    raw = sys.stdin.read()
+    try:
+        payload = _json.loads(raw or "{}")
+    except _json.JSONDecodeError as exc:
+        # Exit 0: a hook that cannot parse its input must not take the agent
+        # down with it. It says so on stderr, where the harness shows it.
+        print(f"agentfox: could not parse the hook payload: {exc}", file=sys.stderr)
+        raise typer.Exit(0) from exc
+
+    try:
+        call = harness_mod.parse(harness, payload)
+    except harness_mod.UnknownHarness as exc:
+        print(f"agentfox: {exc}", file=sys.stderr)
+        raise typer.Exit(0) from exc
+
+    try:
+        verdict = client.guard_tool_call(
+            agent=agent or call.session_id or "unknown",
+            tool=call.tool,
+            arguments=call.arguments,
+        )
+    except DaemonUnavailable as exc:
+        client.report_unavailable(exc)
+        raise typer.Exit(0) from exc
+
+    print(_json.dumps(harness_mod.render(harness, call, verdict)))
+
+
+@hooks_app.command("install")
+def hooks_install(
+    harness: str = typer.Option("claude", "--harness"),
+    agent: str = typer.Option(..., "--agent", help="Agent slug these calls are governed as."),
+    path: Path = typer.Option(Path("."), "--path", help="Project to install into."),
+    write: bool = typer.Option(False, "--write", help="Actually write the settings file."),
+) -> None:
+    """Show, or write, the hook configuration for a harness.
+
+    Dry by default. This edits a file that decides whether the operator's agent
+    runs at all, so it prints what it would do and waits to be told twice.
+    """
+    import json as _json
+
+    from ..hooks import capability
+    from ..hooks import harness as harness_mod
+
+    if harness not in harness_mod.known_harnesses():
+        known = ", ".join(harness_mod.known_harnesses())
+        console.print(f"[red]no adapter for {harness!r}[/] — known: {known}")
+        raise typer.Exit(1)
+
+    settings = path / ".claude" / "settings.json"
+    command = f"agentfox hooks run --harness {harness} --agent {agent}"
+    block = {
+        "hooks": {
+            "PreToolUse": [
+                {"matcher": "*", "hooks": [{"type": "command", "command": command}]}
+            ]
+        }
+    }
+
+    console.print(f"  [bold]{settings}[/]")
+    console.print(f"[dim]{_json.dumps(block, indent=2)}[/]")
+
+    # The honest line, and the reason the capability table exists.
+    console.print(f"\n  {capability.describe(harness, 'PreToolUse')}")
+    if not capability.capability_of(harness, "PreToolUse"):
+        console.print(
+            "  [yellow]This hook will record and will not be relied on to stop "
+            "anything[/] until that is probed."
+        )
+    console.print(
+        "\n  [dim]A hook governs the agent on this machine. It is not a boundary: "
+        "anything not going through this harness is not going through this.[/]"
+    )
+
+    if not write:
+        console.print("\n  [dim]Nothing written. Re-run with --write.[/]")
+        return
+    if not client_daemon_running():
+        console.print(
+            "\n  [yellow]The daemon is not running[/] — every call will report "
+            "unchecked until `agentfox hooks daemon` is up."
+        )
+    # Declare the harness's own tools first. Without them every call trips
+    # `tool.not_declared` and the agent reads "the registry has never seen
+    # this tool" instead of the control it actually broke.
+    declared = _declare_harness_tools(harness)
+    if declared:
+        console.print(f"  [green]declared[/] {declared} {harness} tool(s) in the registry")
+
+    settings.parent.mkdir(parents=True, exist_ok=True)
+    existing = {}
+    if settings.exists():
+        try:
+            existing = _json.loads(settings.read_text())
+        except _json.JSONDecodeError:
+            console.print(f"[red]{settings} is not valid JSON[/] — not overwriting it.")
+            raise typer.Exit(1) from None
+    hooks = existing.setdefault("hooks", {}).setdefault("PreToolUse", [])
+    if any(command in _json.dumps(entry) for entry in hooks):
+        console.print("\n  [dim]already installed.[/]")
+        return
+    hooks.extend(block["hooks"]["PreToolUse"])
+    settings.write_text(_json.dumps(existing, indent=2) + "\n")
+    console.print(f"\n  [green]written[/] {settings}")
+
+
+def _declare_harness_tools(harness: str) -> int:
+    """Register the harness's built-in tools, with the impact each really has."""
+    from sqlalchemy import select
+
+    from ..hooks.harness import HARNESS_TOOLS
+    from ..models import Tool
+
+    wanted = HARNESS_TOOLS.get(harness, {})
+    added = 0
+    with _session() as session:
+        for key, impact in wanted.items():
+            if session.scalar(select(Tool).where(Tool.key == key)) is not None:
+                continue
+            session.add(
+                Tool(
+                    key=key,
+                    name=f"{harness}:{key}",
+                    impact=impact,
+                    description=f"{harness} built-in tool",
+                )
+            )
+            added += 1
+    return added
+
+
+def client_daemon_running() -> bool:
+    from ..hooks import ping
+
+    return ping()
+
+
 @hooks_app.command("status")
 def hooks_status() -> None:
     """Is the daemon up, and does a deny on this harness actually stop anything?"""
@@ -1871,7 +2026,10 @@ def hooks_status() -> None:
         )
         return
     for (harness, event), row in sorted(capability.CAPABILITY.items()):
-        console.print(f"  {harness}/{event}: {row.capability}  [dim]{row.evidence} {row.version}[/]")
+        console.print(
+            f"  {harness}/{event}: {row.capability}  "
+            f"[dim]{row.evidence} {row.version}[/]"
+        )
 
 
 @app.command()
