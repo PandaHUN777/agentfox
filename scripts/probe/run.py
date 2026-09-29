@@ -15,6 +15,7 @@ embarrassing.
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 import tempfile
 from pathlib import Path
@@ -1794,10 +1795,60 @@ def run_one(scenario: Scenario) -> tuple[str, str, bool]:
     return observed, detail, agrees
 
 
+def _as_json(rows: list[tuple[Scenario, str, str, bool]]) -> dict[str, Any]:
+    """The coverage map as data.
+
+    Emits what is *observed*, not what is claimed: `verified` is true only
+    where a probe actually ran, so a consumer can tell "we executed this and it
+    held" from "somebody assessed it by reading the code". A page that showed
+    the two the same way would be overstating the product, which is the exact
+    thing this harness exists to prevent.
+    """
+    layers = []
+    for layer, scenarios in by_layer().items():
+        covered = sum(VERDICT_ORDER[s.expect] for s in scenarios)
+        layers.append(
+            {
+                "layer": layer,
+                "covered": round(covered, 1),
+                "total": len(scenarios),
+                "fraction": round(covered / len(scenarios), 4),
+            }
+        )
+
+    scored = sum(VERDICT_ORDER[s.expect] for s in SCENARIOS)
+    return {
+        "generated_by": "scripts/probe/run.py --json",
+        "scenarios": len(SCENARIOS),
+        "executable": sum(1 for s in SCENARIOS if s.probe),
+        "verified": sum(1 for _s, _o, _d, agrees in rows if _s.probe and agrees),
+        "weighted_coverage": round(scored / len(SCENARIOS), 4),
+        "disagreements": [s.id for s, _o, _d, agrees in rows if not agrees],
+        "layers": layers,
+        "rows": [
+            {
+                "id": s.id,
+                "layer": s.layer,
+                "name": s.name,
+                "verdict": s.expect,
+                "control": s.control,
+                "verified": bool(s.probe) and agrees,
+                "executable": bool(s.probe),
+                "tags": list(s.tags),
+            }
+            for s, _obs, _detail, agrees in rows
+        ],
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--md", action="store_true")
+    # JSON so the site can render the same numbers this harness verifies,
+    # rather than a marketing page retyping them and drifting. `claims.py`
+    # exists because two published figures were corrected by hand in one week.
+    parser.add_argument("--json", action="store_true")
     args = parser.parse_args()
 
     rows = []
@@ -1810,6 +1861,10 @@ def main() -> int:
 
     if args.md:
         print(_markdown(rows))
+        return 1 if disagreements else 0
+
+    if args.json:
+        print(json.dumps(_as_json(rows), indent=2))
         return 1 if disagreements else 0
 
     total = len(SCENARIOS)
