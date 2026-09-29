@@ -40,7 +40,7 @@ from .models import (
     User,
     utcnow,
 )
-from .policy import load_from_dir, save_policy
+from .policy import load_available, save_policy
 from .provenance import APPROVED, SYSTEM_OF_RECORD, register_source
 from .providers import script
 from .registry.service import register_agent, scan_mcp_server, upsert_mcp_server, upsert_tool
@@ -297,7 +297,7 @@ def seed(
     summary["obligations"] = sync_obligations(session)
 
     if with_policies:
-        policies = load_from_dir()
+        policies = load_available()
         for doc in policies:
             save_policy(session, doc, author="seed", notes="Shipped policy pack")
         summary["policies"] = [d.key for d in policies]

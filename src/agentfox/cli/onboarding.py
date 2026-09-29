@@ -144,7 +144,7 @@ def init(
     from ..compliance import load_catalog, sync_catalog
     from ..config import get_settings
     from ..db import init_db, session_scope
-    from ..policy import load_from_dir, save_policy
+    from ..policy import load_available, save_policy
 
     settings = get_settings()
     console.print("[bold]Setting up AgentFox[/]")
@@ -162,7 +162,11 @@ def init(
         )
 
         if settings.policies_dir.exists():
-            documents = load_from_dir(settings.policies_dir)
+            # The project's own packs too, not just the shipped ones: a team
+            # that keeps policy in `.agentfox/policies/` expects `init` to
+            # install it, and a pack the loader can see but `init` ignores is
+            # a policy that silently does nothing.
+            documents = load_available()
             for document in documents:
                 save_policy(session, document, author="init", notes="loaded by agentfox init")
             # Say the truth per pack: a blanket "observe mode" was wrong the moment one

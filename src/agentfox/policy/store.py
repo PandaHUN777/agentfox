@@ -39,14 +39,105 @@ def get_engine(name: str | None = None) -> PolicyEngine:
     return NativePolicyEngine()
 
 
+#: Where a project keeps policy packs of its own, relative to the working
+#: directory — the same convention `agentfox.toml` already uses.
+#:
+#: This is the distribution mechanism, and it is deliberately git rather than a
+#: hub. A competitor ships `policies add <owner>/<repo>`, which is a real
+#: advantage over three files baked into a wheel; but it also means the
+#: governance product reaches the network to fetch the rules it will enforce,
+#: on a deployment whose whole argument is that it does not reach the network.
+#: A directory in the repository gets the same result — a team's policies
+#: travel with the code, arrive by `git pull`, and are reviewed in a pull
+#: request like everything else — and the fetch stays where it belongs, with
+#: the operator and their existing supply-chain controls.
+PROJECT_POLICY_DIR = Path(".agentfox") / "policies"
+
+
+class PolicyPackError(RuntimeError):
+    """A pack on disk could not be read, named by file.
+
+    Without this a typo in somebody's own pack surfaces as a pydantic
+    `ValidationError` traceback with no filename in it, and the operator is
+    left diffing three YAML files to find which one. The underlying message is
+    kept — it is usually exact — and the path is put in front of it.
+    """
+
+    def __init__(self, path: Path, cause: Exception) -> None:
+        detail = " ".join(str(cause).split())
+        super().__init__(f"{path}: {detail}")
+        self.path = path
+        self.cause = cause
+
+
+def _read_pack(path: Path) -> PolicyDocument:
+    try:
+        return PolicyDocument.from_yaml(path.read_text())
+    except Exception as exc:
+        raise PolicyPackError(path, exc) from exc
+
+
+def project_policy_dir(root: Path | None = None) -> Path:
+    return (root or Path.cwd()) / PROJECT_POLICY_DIR
+
+
 def load_from_dir(directory: Path | None = None) -> list[PolicyDocument]:
     directory = directory or get_settings().policies_dir
     out: list[PolicyDocument] = []
     if not directory.exists():
         return out
     for path in sorted(directory.glob("*.y*ml")):
-        out.append(PolicyDocument.from_yaml(path.read_text()))
+        out.append(_read_pack(path))
     return out
+
+
+def load_available(root: Path | None = None) -> list[PolicyDocument]:
+    """Every pack this deployment can bind: the shipped ones, then the project's.
+
+    A project pack with the same key as a shipped one REPLACES it, and that is
+    the point — overriding `baseline` for your own deployment is the ordinary
+    reason to write one. Replacement rather than merge because a half-merged
+    policy is a policy nobody can predict, and `PolicyDocument`'s own
+    protected-rule check still applies to whatever replaces it, so a project
+    cannot quietly drop `control_plane.tamper` by shipping a thinner
+    `tool-containment`.
+    """
+    shipped = {doc.key: doc for doc in load_from_dir()}
+    for doc in load_from_dir(project_policy_dir(root)):
+        shipped[doc.key] = doc
+    return list(shipped.values())
+
+
+def pack_sources(root: Path | None = None) -> list[dict[str, str]]:
+    """Where each loadable pack came from, for `agentfox policy packs`.
+
+    Provenance is the question an operator actually has about a policy they did
+    not write, and "which file is this rule in" is not answerable from
+    `policy list`, which reads the database.
+    """
+    rows: list[dict[str, str]] = []
+    seen: dict[str, int] = {}
+    for origin, directory in (
+        ("shipped", get_settings().policies_dir),
+        ("project", project_policy_dir(root)),
+    ):
+        if not directory.exists():
+            continue
+        for path in sorted(directory.glob("*.y*ml")):
+            doc = _read_pack(path)
+            row = {
+                "key": doc.key,
+                "origin": origin,
+                "path": str(path),
+                "mode": doc.mode,
+                "rules": str(len(doc.rules)),
+                "overrides": "",
+            }
+            if doc.key in seen:
+                row["overrides"] = rows[seen[doc.key]]["path"]
+            seen[doc.key] = len(rows)
+            rows.append(row)
+    return rows
 
 
 def _currently_bound(session: Session) -> list[PolicyBinding]:

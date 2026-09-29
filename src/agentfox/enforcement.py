@@ -295,6 +295,12 @@ def _fallback_policies(risk_tier: str | None = None) -> tuple:
     within a process. Cleared by `_fallback_policies.cache_clear()` in tests
     that swap the policies directory.
     """
+    # Shipped packs only, deliberately — not `load_available()`. This is the
+    # path for a deployment that has bound nothing, so the guarantee it makes
+    # has to be the same everywhere; reading a project directory here would
+    # make "what protects an unconfigured deployment" depend on the working
+    # directory of whatever process happened to start, and this result is
+    # cached per tier and would not notice it changing.
     from .policy import load_from_dir
 
     wanted = _FALLBACK_FOR_TIER.get((risk_tier or "").lower(), _FALLBACK_DEFAULT)
