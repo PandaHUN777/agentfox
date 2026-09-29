@@ -32,6 +32,13 @@ type Entry = {
 const ROUTES: Entry[] = [
   { path: "/", changeFrequency: "weekly", priority: 1 },
   { path: "/product", changeFrequency: "weekly", priority: 0.9 },
+  // The product sub-pages. Each covers one part of the product in enough
+  // depth that it was crowding /product out — and /hooks is the one a reader
+  // can act on in two commands, so it ranks with the overview rather than
+  // below it.
+  { path: "/hooks", changeFrequency: "weekly", priority: 0.9 },
+  { path: "/control-points", changeFrequency: "monthly", priority: 0.8 },
+  { path: "/mcp", changeFrequency: "monthly", priority: 0.8 },
   { path: "/how-it-works", changeFrequency: "monthly", priority: 0.8 },
   { path: "/playground", changeFrequency: "monthly", priority: 0.8 },
   { path: "/benchmark", changeFrequency: "monthly", priority: 0.7 },

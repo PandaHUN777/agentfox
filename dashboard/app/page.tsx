@@ -4,7 +4,16 @@ import { CATEGORY_CAP } from "./how-it-works/_public";
 import { SITE_URL, SUPPORT_EMAIL, publicPageMetadata, HOME_TITLE, HOME_DESCRIPTION } from "@/lib/site";
 import { MarketingNav, REPO } from "@/components/marketing/nav";
 import { CTA, Footer } from "@/components/marketing/sections";
-import { Hero, Stack, Boundaries, Around, Proof, Limits } from "@/components/marketing/home";
+import {
+  Hero,
+  Stack,
+  ControlPoints,
+  Origins,
+  Boundaries,
+  Around,
+  Proof,
+  Limits,
+} from "@/components/marketing/home";
 
 export const dynamic = "force-dynamic";
 
@@ -147,9 +156,25 @@ function Landing() {
             rollout steps is a reader who has already decided; they can click
             through. Rollout and the FAQ now live only on /product, the editions
             table only on /pricing. */}
+        {/* Two sections added after reading the competitor pages that a
+            stranger could follow fastest. Both are legibility, not features.
+
+            `Origins` names the kinds of failure in plain sentences before any
+            mechanism appears — the page previously went from "runtime
+            firewall" straight to a three-stage worked example, which asks the
+            reader to already believe there is a problem worth three stages.
+
+            `ControlPoints` replaces nothing and says the thing the README
+            buried: six binding points, one policy set. It sits right after
+            the stack strip because "does it fit my stack" and "do I have to
+            re-architect" are the same question asked twice, and it also
+            carries the observe-mode line, which was shipped a year ago and
+            mentioned on no public page. */}
         <Hero />
         <Stack />
+        <Origins />
         <Boundaries />
+        <ControlPoints />
         <Proof />
         <Around />
         <Limits />

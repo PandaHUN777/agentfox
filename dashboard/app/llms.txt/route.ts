@@ -35,10 +35,13 @@ type Link = { path: string; note: string };
 
 const PRODUCT: Link[] = [
   { path: "/", note: "What AgentFox is, and the one idea it is built on: calls approach a capability check, most go through, one does not." },
-  { path: "/product", note: "The three gates — what an agent may read, may claim, and may do — and the controls at each." },
+  { path: "/product", note: "The three gates — what an agent may read, may claim, and may do — and the controls at each. The hub for the pages below." },
+  { path: "/hooks", note: "Governing a coding agent. Three Claude Code hook points, and which of them can actually stop a call: UserPromptSubmit and PreToolUse block, PostToolUse cannot because the call has already run." },
+  { path: "/control-points", note: "One policy set bound at six places — coding-agent hooks, HTTP gateway, Python SDK, MCP governor, LangGraph node, CLI — with what each one is blind to." },
+  { path: "/mcp", note: "MCP governance: rug-pull detection at call time, undeclared tools raised as findings, results treated as untrusted context. Two of six named MCP risks are not covered and are listed." },
   { path: "/how-it-works", note: "The decision path end to end: a call arrives, the pipeline runs under a budget, a policy decides, the record is chained." },
   { path: "/playground", note: "Run a real attack against the real detectors in the browser. No account, no signup." },
-  { path: "/coverage", note: "114 ways an agentic request can fail, scored against what AgentFox catches. 103 executed against the running product nightly; the gaps are listed too." },
+  { path: "/coverage", note: "116 ways an agentic request can fail, scored against what AgentFox catches, and cut by cause: external, internal, autonomous, intrinsic. 105 executed against the running product nightly; the gaps are listed too." },
   { path: "/benchmark", note: "Every published number and the run it came from. Detector precision and recall on named public datasets." },
   { path: "/compare", note: "How AgentFox differs from AI gateways, evaluation tools and the cloud providers' own filters." },
   { path: "/pricing", note: "Self-hosting is free and unlimited under Apache-2.0. Hosted is a waitlist." },

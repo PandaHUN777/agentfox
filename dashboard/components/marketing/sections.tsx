@@ -520,13 +520,17 @@ export function CTA() {
  */
 type FootLink = { label: string; href: string; out?: boolean };
 
+/* Two product columns rather than one of eleven. The first is the parts of
+   the product — each of these got its own page once it was clear it was
+   being crowded out of /product — and the second is the pages a reader uses
+   to check the claims those pages make. */
 const FOOT_PRODUCT: FootLink[] = [
   { label: "Product tour", href: "/product" },
+  { label: "Coding agents", href: "/hooks" },
+  { label: "MCP", href: "/mcp" },
+  { label: "Control points", href: "/control-points" },
   { label: "How it works", href: "/how-it-works" },
-  { label: "Compare", href: "/compare" },
   { label: "Pricing", href: "/pricing" },
-  { label: "Playground", href: "/playground" },
-  { label: "Benchmarks", href: "/benchmark" },
 ];
 
 const FOOT_PROJECT: FootLink[] = [

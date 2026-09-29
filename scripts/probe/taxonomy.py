@@ -35,6 +35,10 @@ class Scenario:
     #: Name of a probe function in `run.py`, when the claim is executable.
     probe: str = ""
     tags: list[str] = field(default_factory=list)
+    #: How the agent came to do the wrong thing. Set from `ORIGIN` below, not
+    #: at the constructor, so the whole classification is reviewable in one
+    #: table instead of scattered across 116 call sites.
+    origin: str = "intrinsic"
 
 
 LAYERS = [
@@ -49,6 +53,102 @@ LAYERS = [
     "L8 operational lifecycle",
     "L9 data governance",
 ]
+
+#: **Why** the agent did the wrong thing, as distinct from **where** it went
+#: wrong. `LAYERS` answers where; a reader who wants to know whether they have
+#: an attacker problem or a permissions problem cannot get it from a layer.
+#:
+#: The first three are Zenity's public framing, which is a better carve-up
+#: than anything we had, and the fourth is ours because theirs does not cover
+#: the whole space: a provider outage and an arithmetic error have no actor at
+#: all, and filing them under any of the first three would be a category
+#: error in the direction of making the product sound more security-shaped
+#: than it is.
+ORIGINS = {
+    "external": (
+        "An adversary put something in the agent's path. Injected text, a "
+        "poisoned document, a tool whose description changed after it was "
+        "approved."
+    ),
+    "internal": (
+        "Nobody attacked it. The agent was doing as it was told, holding "
+        "authority it should not have been given — a grant too broad, a scope "
+        "bound to the wrong value, the wrong environment."
+    ),
+    "autonomous": (
+        "No adversary and no excess grant. The agent hit a problem, "
+        "improvised, and took a route nobody sanctioned. This is the branch "
+        "with no one to blame and the hardest one to police, because every "
+        "individual step looks reasonable."
+    ),
+    "intrinsic": (
+        "No actor at all. The model was wrong, the retrieval was wrong, or "
+        "the platform underneath failed. Not a security failure, and counting "
+        "it as one would overstate what this product is."
+    ),
+}
+
+#: The classification. Anything unlisted is `intrinsic`, which is the right
+#: default: it claims the least.
+#:
+#: Where a scenario could be argued into two boxes it is filed by the thing
+#: that *initiated* it. L4.12 (a destructive shell command) is `autonomous`
+#: even though an injection could also produce one, because the scenario as
+#: written is the agent deciding on its own; the injected version of it is
+#: L1.x. L4.14 (an undeclared MCP tool) is `autonomous` rather than external
+#: for the same reason — the agent reached for something nobody registered.
+ORIGIN: dict[str, str] = {
+    # --- external: something was placed in its path ----------------------
+    "L1.1": "external",
+    "L1.2": "external",
+    "L1.3": "external",
+    "L1.4": "external",
+    "L1.5": "external",
+    "L1.6": "external",
+    "L1.9": "external",
+    "L2.14": "external",
+    "L2.17": "external",
+    "L2.18": "external",
+    "L2.19": "external",
+    "L4.3": "external",
+    "L4.7": "external",
+    "L4.13": "external",
+    "L6.5": "external",
+    "L6.7": "external",
+    "L9.4": "external",
+    # --- internal: it held authority it should not have ------------------
+    "L1.7": "internal",
+    "L1.8": "internal",
+    "L4.4": "internal",
+    "L4.6": "internal",
+    "L4.15": "internal",
+    "L4.16": "internal",
+    "L5.4": "internal",
+    "L6.4": "internal",
+    "L8.7": "internal",
+    "L8.9": "internal",
+    "L9.1": "internal",
+    "L9.2": "internal",
+    "L9.3": "internal",
+    # --- autonomous: it improvised -------------------------------------
+    "L3.1": "autonomous",
+    "L3.2": "autonomous",
+    "L3.3": "autonomous",
+    "L3.5": "autonomous",
+    "L3.6": "autonomous",
+    "L4.1": "autonomous",
+    "L4.2": "autonomous",
+    "L4.5": "autonomous",
+    "L4.9": "autonomous",
+    "L4.10": "autonomous",
+    "L4.11": "autonomous",
+    "L4.12": "autonomous",
+    "L4.14": "autonomous",
+    "L5.8": "autonomous",
+    "L6.6": "autonomous",
+    "L7.3": "autonomous",
+    "L7.4": "autonomous",
+}
 
 SCENARIOS: list[Scenario] = [
     # ---------------------------------------------------------------- L0
@@ -1379,3 +1479,24 @@ def _assert_unique_ids() -> None:
 
 
 _assert_unique_ids()
+
+
+def _apply_origins() -> None:
+    """Stamp the origin onto each scenario, and refuse an id that is not one.
+
+    A key in `ORIGIN` that matches no scenario is a classification somebody
+    believes is in effect and is not — the same silent miss this whole
+    taxonomy exists to surface, so it is an error rather than a no-op.
+    """
+    by_id = {s.id: s for s in SCENARIOS}
+    unknown = sorted(set(ORIGIN) - set(by_id))
+    if unknown:
+        raise AssertionError(f"ORIGIN names scenario(s) that do not exist: {unknown}")
+    bad = sorted({v for v in ORIGIN.values() if v not in ORIGINS})
+    if bad:
+        raise AssertionError(f"ORIGIN uses origin(s) that are not defined: {bad}")
+    for scenario_id, origin in ORIGIN.items():
+        by_id[scenario_id].origin = origin
+
+
+_apply_origins()

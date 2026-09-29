@@ -1882,12 +1882,30 @@ def hooks_run(
         print(f"agentfox: {exc}", file=sys.stderr)
         raise typer.Exit(0) from exc
 
+    slug = agent or call.session_id or "unknown"
     try:
-        verdict = client.guard_tool_call(
-            agent=agent or call.session_id or "unknown",
-            tool=call.tool,
-            arguments=call.arguments,
-        )
+        if call.checks_content:
+            # PostToolUse and UserPromptSubmit carry text, not a call to
+            # authorise. Same daemon, same policy set, different surface —
+            # which is what makes nine surfaces a real claim at a hook rather
+            # than an architecture diagram.
+            if not call.content.strip():
+                # Nothing to check. Say nothing rather than run the engine over
+                # an empty string and record a decision about it.
+                print("{}")
+                return
+            verdict = client.guard_content(
+                agent=slug,
+                surface=call.surface,
+                content=call.content,
+                tool=call.tool,
+            )
+        else:
+            verdict = client.guard_tool_call(
+                agent=slug,
+                tool=call.tool,
+                arguments=call.arguments,
+            )
     except DaemonUnavailable as exc:
         client.report_unavailable(exc)
         raise typer.Exit(0) from exc
@@ -1919,22 +1937,38 @@ def hooks_install(
 
     settings = path / ".claude" / "settings.json"
     command = f"agentfox hooks run --harness {harness} --agent {agent}"
+    # Three events, because one event is one surface. PreToolUse sees
+    # arguments, PostToolUse sees results — the canonical indirect-injection
+    # vector, and the one a tool-call-only hook is blind to — and
+    # UserPromptSubmit sees the turn. `matcher` is a tool-name filter and the
+    # two non-tool events do not take one.
+    events = _hook_events(harness)
     block = {
         "hooks": {
-            "PreToolUse": [{"matcher": "*", "hooks": [{"type": "command", "command": command}]}]
+            event: [
+                {"matcher": "*", "hooks": [{"type": "command", "command": command}]}
+                if event.endswith("ToolUse")
+                else {"hooks": [{"type": "command", "command": command}]}
+            ]
+            for event in events
         }
     }
 
     console.print(f"  [bold]{settings}[/]")
     console.print(f"[dim]{_json.dumps(block, indent=2)}[/]")
 
-    # The honest line, and the reason the capability table exists.
-    console.print(f"\n  {capability.describe(harness, 'PreToolUse')}")
-    if not capability.capability_of(harness, "PreToolUse"):
-        console.print(
-            "  [yellow]This hook will record and will not be relied on to stop "
-            "anything[/] until that is probed."
-        )
+    # The honest line per event, and the reason the capability table exists.
+    # These differ, and reporting them as one would be the exact overclaim
+    # capability.py was written to stop: a deny on PreToolUse stops the call,
+    # and a deny on PostToolUse does not, because the call has already run.
+    console.print("")
+    for event in events:
+        console.print(f"  {capability.describe(harness, event)}")
+        if not capability.capability_of(harness, event):
+            console.print(
+                f"  [yellow]{event} will record and must not be relied on to stop "
+                "anything[/] until that is probed."
+            )
     console.print(
         "\n  [dim]A hook governs the agent on this machine. It is not a boundary: "
         "anything not going through this harness is not going through this.[/]"
@@ -1963,13 +1997,32 @@ def hooks_install(
         except _json.JSONDecodeError:
             console.print(f"[red]{settings} is not valid JSON[/] — not overwriting it.")
             raise typer.Exit(1) from None
-    hooks = existing.setdefault("hooks", {}).setdefault("PreToolUse", [])
-    if any(command in _json.dumps(entry) for entry in hooks):
+    added = []
+    for event, entries in block["hooks"].items():
+        hooks = existing.setdefault("hooks", {}).setdefault(event, [])
+        if any(command in _json.dumps(entry) for entry in hooks):
+            continue
+        hooks.extend(entries)
+        added.append(event)
+    if not added:
         console.print("\n  [dim]already installed.[/]")
         return
-    hooks.extend(block["hooks"]["PreToolUse"])
     settings.write_text(_json.dumps(existing, indent=2) + "\n")
-    console.print(f"\n  [green]written[/] {settings}")
+    console.print(f"\n  [green]written[/] {settings} [dim]({', '.join(added)})[/]")
+
+
+def _hook_events(harness: str) -> list[str]:
+    """Which events we have an adapter for, in the order they fire.
+
+    Read off the capability table rather than hard-coded, so an event nobody
+    has established anything about cannot be installed by accident — and so
+    adding one is a row plus an adapter branch, not an edit here.
+    """
+    from ..hooks.capability import EVENT_SURFACE
+
+    order = {"UserPromptSubmit": 0, "PreToolUse": 1, "PostToolUse": 2}
+    events = [event for (h, event) in EVENT_SURFACE if h == harness]
+    return sorted(events, key=lambda e: (order.get(e, 99), e))
 
 
 def _declare_harness_tools(harness: str) -> int:

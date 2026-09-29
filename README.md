@@ -73,6 +73,13 @@ is refused because of *where the value came from*, not because anything recognis
 
 ## Use it with your agent
 
+**One policy set, six places it binds.** No single gateway sees every agent, and routing all of your
+traffic through one is a migration rather than a control. So the policy is written once and bound
+wherever your agents already run — a coding agent's hooks, an HTTP gateway, the Python SDK, the MCP
+call path, a LangGraph node, the CLI. Same `Enforcer`, same packs, same decision record; what changes
+is which surface it sees. Each block below says what that one actually governs, because they differ
+and a claim that flattened them would be the overclaim this project exists to avoid.
+
 <details open>
 <summary><b>Python — one line</b></summary>
 
@@ -135,15 +142,57 @@ LangGraph's own `interrupt()` — one pause mechanism, not two.
 </details>
 
 <details>
-<summary><b>MCP, and coding agents</b></summary>
+<summary><b>MCP</b></summary>
 
-`agentfox scan mcp` checks MCP tool hygiene, including rug-pull detection on changed tool
-descriptions. [`harness/`](harness/) packages the product as Claude Code skills, slash commands,
-subagents, an MCP server and safety hooks:
+`agentfox scan mcp` checks MCP tool hygiene before anything runs. At call time the governor compares
+the tool's digest against the one in force when the agent was authorised against it — the rug pull, a
+server that passed review on Monday and changed on Thursday, which no scan can catch. An undeclared
+tool becomes a discovery finding rather than an invisible call, and results are evaluated on the
+`tool_result` surface with the taint propagated, so an argument later derived from an MCP result
+cannot exceed the ceiling for tool-sourced data.
+
+</details>
+
+<details>
+<summary><b>Claude Code — three hook points</b></summary>
+
+```bash
+agentfox hooks daemon                                   # the warm process, once
+agentfox hooks install --agent my-agent --write         # writes .claude/settings.json
+```
+
+Three events, because one event is one surface:
+
+| Event | What it sees | What a refusal does |
+| --- | --- | --- |
+| `UserPromptSubmit` | the turn you submitted | stops it reaching the model |
+| `PreToolUse` | the call about to run | stops the call, or rewrites its arguments |
+| `PostToolUse` | what the tool returned | **cannot** withdraw the call; tells the model the result is untrusted |
+
+That third row is the one worth reading twice. By the time `PostToolUse` fires the side effect has
+happened, and we say so rather than reporting the event as a gate — `agentfox hooks status` prints
+the same line, per event, with how it was established and against which version. The claims come from
+[`hooks/capability.py`](src/agentfox/hooks/capability.py): `PreToolUse` and `PostToolUse` were probed
+against a live session, `UserPromptSubmit` was read in the shipped bundle, and an event nobody has
+checked has no row at all.
+
+A hook runs in a process the harness creates and destroys per call, so it talks to a warm daemon over
+a private Unix socket: 3.9s cold, about 6ms warm. Turn on the pack built for this job:
+
+```bash
+agentfox policy observe coding-agent
+```
+
+[`harness/`](harness/) additionally packages the product as Claude Code skills, slash commands,
+subagents and an MCP server:
 
 ```bash
 claude plugin marketplace add architsharm/agentfox
 ```
+
+**What a hook is not.** It governs the agent on this machine. Anything not going through this harness
+is not going through this, and a session that runs in the vendor's cloud rather than on the laptop is
+not visible to it at all.
 
 </details>
 
