@@ -65,6 +65,10 @@ scan_app = typer.Typer(
     help="Snapshot an MCP server's tools and check them for hygiene (Pillar 1).",
     no_args_is_help=True,
 )
+hooks_app = typer.Typer(
+    help="Run AgentFox where the agent already is: a warm daemon and a thin per-call hook.",
+    no_args_is_help=True,
+)
 db_app = typer.Typer(
     help="Apply, roll back and inspect the database schema.", no_args_is_help=True
 )
@@ -90,6 +94,7 @@ app.add_typer(scan_app, name="scan")
 app.add_typer(tools_app, name="tools")
 app.add_typer(access_app, name="access")
 app.add_typer(db_app, name="db")
+app.add_typer(hooks_app, name="hooks")
 
 # The three commands a new user runs, registered as top-level verbs. The rest of this
 # CLI is right for an operator running a governance programme and wrong for the first
@@ -1811,6 +1816,62 @@ def scan_mcp(
     external = result["external_scan"]
     if not external["ran"]:
         console.print(f"  [dim]mcp-scan: {external['reason']}[/]")
+
+
+@hooks_app.command("daemon")
+def hooks_daemon(
+    socket: Path | None = typer.Option(None, "--socket", help="Override the socket path."),
+) -> None:
+    """Run the warm process a hook talks to.
+
+    A harness spawns its hook as a fresh process per tool call, and importing
+    AgentFox costs seconds — measured here at 3.9s on the first call against a
+    cold daemon, then 6ms once warm. That gap is the whole reason this exists:
+    a hook that costs two seconds a call is a hook the operator removes.
+    """
+    from ..hooks import HookDaemon
+    from ..hooks.daemon import warm
+
+    daemon = HookDaemon(socket)
+    console.print("[bold]AgentFox hook daemon[/]")
+    console.print(f"  socket   [dim]{daemon.path}[/]")
+    with console.status("warming detectors and the database…"):
+        warm()
+    daemon.start()
+    console.print("  [green]ready[/]  [dim]ctrl-c to stop[/]")
+    try:
+        daemon.serve_forever()
+    except KeyboardInterrupt:
+        console.print("\n  stopping")
+    finally:
+        daemon.stop()
+
+
+@hooks_app.command("status")
+def hooks_status() -> None:
+    """Is the daemon up, and does a deny on this harness actually stop anything?"""
+    from ..hooks import capability, ping, socket_path
+
+    path = socket_path()
+    up = ping()
+    console.print(f"  socket    [dim]{path}[/]")
+    console.print(f"  daemon    {'[green]listening[/]' if up else '[red]not running[/]'}")
+    if not up:
+        console.print("            [dim]start it with `agentfox hooks daemon`[/]")
+
+    console.print(f"\n  verified harness events: {len(capability.CAPABILITY)}")
+    if not capability.CAPABILITY:
+        # The honest state, and said as a fact rather than a gap to apologise
+        # for. A table filled with plausible values would be worse than empty.
+        console.print(
+            "  [dim]None yet. Whether a deny stops a call is a property of each\n"
+            "  harness's own wire contract, and this table only holds rows somebody\n"
+            "  has probed. Until then a hook observes and records; it does not\n"
+            "  promise to block.[/]"
+        )
+        return
+    for (harness, event), row in sorted(capability.CAPABILITY.items()):
+        console.print(f"  {harness}/{event}: {row.capability}  [dim]{row.evidence} {row.version}[/]")
 
 
 @app.command()
