@@ -164,8 +164,8 @@ export function Hero() {
             <em>Runtime firewall</em> for AI agents
           </h1>
           <p className="mk-lede mk-up mk-d3" style={{ marginTop: 22 }}>
-            Your agents move money, delete records and answer for you. Every call is
-            checked against what you actually granted.
+            Agents can move money, delete records and send mail. AgentFox checks
+            every tool call against what that agent is allowed to do.
           </p>
           <div className="mk-row mk-up mk-d4" style={{ marginTop: 30 }}>
             <Link href="/playground" className="mk-btn mk-btn-primary">
@@ -195,8 +195,9 @@ export function Hero() {
             sizes="(max-width: 940px) 92vw, 720px"
             caption={
               <>
-                A support agent, talked into asking for a transfer it was never granted.
-                The first preset in the <Link href="/playground">playground</Link>.
+                A support agent is asked to transfer $5,000. It has no grant for payments,
+                so the call is blocked. Try it in the{" "}
+                <Link href="/playground">playground</Link>.
               </>
             }
           />
@@ -240,55 +241,6 @@ export function Stack() {
   );
 }
 
-/* --- 2a. The proof band ------------------------------------------------- */
-
-/**
- * The slot every site in this category fills with customer logos and a
- * Gartner badge, and we have neither.
- *
- * The temptation is to leave it empty and the mistake would be to fake it.
- * What goes here instead is the thing those logos are a proxy for — a reason
- * to believe — and ours is checkable in a way a logo never is. Every figure
- * below resolves to a page that names the run it came from, which is a
- * stronger claim than a customer who cannot be asked.
- *
- * Five, because four reads as a feature grid and six starts wrapping into a
- * second row of small numbers, which is where a stat band stops being a
- * statement and becomes a table.
- */
-const PROOF: { n: string; label: string; href: string }[] = [
-  { n: "42 / 42", label: "attacker tool calls contained, every detector off", href: "/benchmark" },
-  { n: "116", label: "failure scenarios scored — including the ones we miss", href: "/coverage" },
-  { n: "43", label: "controls across seven compliance frameworks", href: "/frameworks" },
-  { n: "9", label: "surfaces checked, from the prompt to the model's reasoning", href: "/runtime" },
-  { n: "0", label: "network calls at request time. It runs offline", href: "/security" },
-];
-
-export function ProofBand() {
-  return (
-    <section className="mk-section-tight mk-reveal" aria-label="Evidence">
-      <div className="mk-wrap">
-        <div className="pb mk-stagger">
-          {PROOF.map((item) => (
-            <Link key={item.label} href={item.href} className="pb-item">
-              <b>{item.n}</b>
-              <span>{item.label}</span>
-            </Link>
-          ))}
-        </div>
-        {/* The honest version of a logo wall, said with a straight back.
-            Announcing that we have no customers is true and is not the point;
-            the point is that a figure you can trace beats a logo you cannot
-            interrogate, and that is a claim worth making confidently. */}
-        <p className="mk-fine" style={{ marginTop: 22 }}>
-          Every figure links to the run that produced it — which is more than a
-          logo can tell you.
-        </p>
-      </div>
-    </section>
-  );
-}
-
 /* --- 2b. Where the policy binds ----------------------------------------- */
 
 /**
@@ -327,11 +279,11 @@ export function ControlPoints() {
         <div className="mk-narrow">
           <span className="mk-eyebrow mk-up">One policy set, six places it binds</span>
           <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12 }}>
-            You should not have to re-architect to get a guardrail
+            Works where your agents already run
           </h2>
           <p className="mk-lede" style={{ marginTop: 16 }}>
-            No single gateway sees every agent. Write the policy once and bind it
-            where your agents already run.
+            No single gateway sees every agent. Write the policy once and use it in all
+            six places.
           </p>
         </div>
 
@@ -345,7 +297,7 @@ export function ControlPoints() {
         </div>
 
         <p className="mk-fine" style={{ marginTop: 20 }}>
-          Each one sees a different surface, and each one is blind to something.{" "}
+          Each one covers a different part.{" "}
           <Link href="/control-points">What each can and cannot see</Link>.
         </p>
 
@@ -357,8 +309,8 @@ export function ControlPoints() {
           <div>
             <h3 className="mk-h3">Nothing blocks until you say so</h3>
             <p className="mk-body">
-              Every pack ships in observe, recording the verdict it <em>would</em>{" "}
-              have returned against real calls and changing nothing.
+              Every policy starts in observe mode. It records what it would have blocked
+              and changes nothing until you turn it on.
             </p>
           </div>
           <Link href="/hooks" className="mk-btn mk-btn-outline">
@@ -395,20 +347,20 @@ export function ControlPoints() {
 const ORIGINS: { name: string; line: string; example: string }[] = [
   {
     name: "Someone attacked it",
-    line: "Text that was not written by you, arriving where the model will read it.",
+    line: "Someone put instructions where the model would read them.",
     example:
-      "A line in an issue comment telling the agent to push its credentials somewhere.",
+      "A line in an issue comment telling the agent to push its credentials.",
   },
   {
     name: "Someone over-granted it",
-    line: "Nobody attacked anything. It was doing as it was told, holding more than it needed.",
+    line: "The agent had more access than the job needed.",
     example: "A read-only assistant with a token that can also delete.",
   },
   {
     name: "It improvised",
-    line: "No attacker and no bad grant. It hit a problem and found a way around it.",
+    line: "The agent hit a problem and found its own way around it.",
     example:
-      "Blocked on a deploy, it goes looking for a credentials file nobody handed it.",
+      "Blocked on a deploy, it goes looking for a credentials file.",
   },
 ];
 
@@ -419,8 +371,7 @@ export function Origins() {
         <div className="mk-narrow">
           <h2 className="mk-h2 mk-up">Three ways an agent does the wrong thing</h2>
           <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16 }}>
-            Only the first is an attack. The other two are an agent working exactly as
-            built, and they are the ones a text scanner cannot see.
+            Only one of them is an attack.
           </p>
         </div>
 
@@ -438,9 +389,8 @@ export function Origins() {
         </div>
 
         <p className="mk-fine" style={{ marginTop: 22 }}>
-          A fourth kind has no actor at all — the model is simply wrong, or a provider
-          is down. It is two thirds of what we track and most of it is not a security
-          problem.{" "}
+          A fourth kind has no attacker at all: the model is wrong, or a provider is
+          down.{" "}
           <Link href="/coverage">All 116 scenarios, scored</Link>.
         </p>
       </div>
@@ -480,8 +430,7 @@ export function Boundaries() {
         <div className="mk-narrow">
           <h2 className="mk-h2 mk-up">Stop the call before it spends, sends or deletes</h2>
           <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16 }}>
-            One support request, three checks, each against what this agent and the
-            person behind it actually hold.
+            One support request, three checks.
           </p>
         </div>
 

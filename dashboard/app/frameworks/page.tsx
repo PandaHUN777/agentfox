@@ -31,17 +31,17 @@ export default function Page() {
     <CapabilityPage
       kicker="Compliance"
       title={["Mapped to the decisions,", "not to a spreadsheet"]}
-      lede="43 controls across seven frameworks, computed from what actually ran."
+      lede="43 controls across seven frameworks, based on what actually ran."
       challenge={
         <p>
-          Compliance for AI systems is usually a document describing controls somebody
-          believes are in place. The gap between that document and the running system is
-          invisible until an incident, and then it is the only thing anyone reads.
+          AI compliance is usually a document describing controls someone believes are
+          in place. Nobody notices the gap between the document and the running system
+          until there is an incident.
         </p>
       }
       feature={{
         title: "Seven frameworks, 43 controls",
-        lede: "One control set mapped across all of them, so a control evidenced once is not re-evidenced by hand for the next framework.",
+        lede: "One control set mapped across all of them, so you evidence each control once.",
         body: (
           <div className="fw-grid mk-stagger">
             {FRAMEWORKS.map((f) => (

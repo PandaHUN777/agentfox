@@ -75,18 +75,17 @@ export default function Page() {
     <CapabilityPage
       kicker="Open enforcement"
       title={["One policy set,", "six places it binds"]}
-      lede="No single gateway sees every agent, and routing everything through one is a migration rather than a control."
+      lede="No single gateway sees every agent."
       challenge={
         <p>
-          Agents do not arrive through one door. One team is in LangGraph, one is
-          calling an API from Go, one is running Claude Code on a laptop — and a
-          guardrail that only works if all three move onto your gateway is a migration
-          plan wearing a product&rsquo;s clothes.
+          One team uses LangGraph, one calls an API from Go, one runs Claude Code on a
+          laptop. A guardrail that only works once all three move onto your gateway is
+          a migration project.
         </p>
       }
       feature={{
         title: "What each one is blind to",
-        lede: "Every integrations page in this category lists logos. The useful column is the last one.",
+        lede: "What each one covers, and what it does not.",
         body: (
           <div className="cp-list mk-stagger">
             {POINTS.map((point) => (

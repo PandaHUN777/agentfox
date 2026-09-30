@@ -8,7 +8,6 @@ import { Platform } from "@/components/marketing/platform";
 import {
   Hero,
   Stack,
-  ProofBand,
   ControlPoints,
   Origins,
   Boundaries,
@@ -174,7 +173,6 @@ function Landing() {
             mentioned on no public page. */}
         <Hero />
         <Stack />
-        <ProofBand />
         <Origins />
         <Platform />
         <Boundaries />

@@ -26,18 +26,16 @@ export default function Page() {
     <CapabilityPage
       kicker="Evidence and audit"
       title={["A record an auditor can check", "without us"]}
-      lede="A log you control is not evidence. It is a claim about evidence."
+      lede="A record an auditor can check for themselves."
       challenge={
         <p>
-          The awkward question about any governance product is who checks the checker. If
-          the only proof that a control ran is a line in a database the vendor also
-          controls, then the vendor is the evidence — and that is exactly the position a
-          regulator will not accept.
+          If the only proof a control ran is a row in a database the vendor also
+          controls, an auditor has to take the vendor&rsquo;s word for it.
         </p>
       }
       feature={{
         title: "What one decision record holds",
-        lede: "Reconstructing a decision a year later needs all of it. A verdict and a timestamp is a log line, not evidence.",
+        lede: "A verdict and a timestamp are not enough to reconstruct a decision a year later.",
         body: (
           <div className="rec-grid mk-stagger">
             {RECORD.map((r) => (

@@ -38,17 +38,17 @@ export default function Page() {
     <CapabilityPage
       kicker="Discovery and registry"
       title={["Find the agents", "before you govern them"]}
-      lede="You cannot write a policy for something nobody has told you exists."
+      lede="Find what you are running before you try to govern it."
       challenge={
         <p>
-          Agents arrive the way scripts always have: one engineer, one afternoon, one
-          API key that still works six months later. By the time anyone asks what is
-          running, the answer lives in four repositories and somebody&rsquo;s laptop.
+          Agents get built quickly and rarely get written down. By the time someone
+          asks what is running, the answer is spread across a few repos and
+          somebody&rsquo;s laptop.
         </p>
       }
       feature={{
         title: "Four kinds of thing, four ways of finding them",
-        lede: "Each one is found differently, and each one is a different sort of blind spot when it is missing.",
+        lede: "Each is found a different way.",
         body: (
           <div className="find-grid mk-stagger">
             {FINDS.map((f) => (

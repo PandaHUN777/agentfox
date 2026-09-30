@@ -33,18 +33,17 @@ export default function Page() {
     <CapabilityPage
       kicker="Capability grants"
       title={["Your agent can be fooled.", "Its grants cannot"]}
-      lede="Detection is a probability. A grant is a fact about the call."
+      lede="Set what each agent can do, and check it on every call."
       challenge={
         <p>
-          Every text-based guard has the same ceiling: it is trying to decide whether a
-          string is an attack, and attackers get a fresh attempt every request. A
-          capability check asks a different question — was this agent ever allowed to do
-          this? — and the answer does not change because the prose was persuasive.
+          Text filters have to guess whether a string is an attack, and an attacker
+          gets a new try every request. Asking whether the agent was ever allowed to
+          do this does not depend on how the request was worded.
         </p>
       }
       feature={{
         title: "Two ladders, and a call has a rung on each",
-        lede: "What the tool can do, and how much the data reaching it can be trusted. A refusal is usually the pair, not either one alone.",
+        lede: "What the tool can do, and where the data came from.",
         body: (
           <div className="ladders mk-stagger">
             <div className="ladder">

@@ -38,12 +38,12 @@ const PILLARS: Pillar[] = [
   {
     verb: "Discover",
     product: "AI-SPM",
-    headline: "Surface every agent, tool, MCP server and skill",
+    headline: "Find every agent, tool, MCP server and skill",
     points: [
-      "Static scan of a repository — reads the code, never runs it",
-      "Local coding-assistant sessions, so you see what is running today and not only what was committed",
-      "MCP tools snapshotted with a digest, which is the only thing that makes a later change detectable",
-      "An agent with no owner is a reportable finding, not a row in a table",
+      "Scans your repository without running it",
+      "Picks up agents running locally, not just committed code",
+      "Snapshots MCP tools so later changes are caught",
+      "Flags any agent with no owner",
     ],
     href: "/discovery",
     cta: "How discovery works",
@@ -51,12 +51,12 @@ const PILLARS: Pillar[] = [
   {
     verb: "Govern",
     product: "Agent Access Control",
-    headline: "Decide what each agent may actually do",
+    headline: "Set what each agent is allowed to do",
     points: [
-      "Impact declared per tool: read, write, high impact, irreversible",
-      "Grants carry their limits — a value ceiling, an environment, a maximum taint for the data that may reach them",
-      "Untrusted content may fill a value, never choose an action",
-      "Anything not granted is refused by default, not by a rule somebody remembered to write",
+      "Every tool is read, write, high impact or irreversible",
+      "Grants carry limits: a value ceiling, an environment, a data source",
+      "Data from a document can fill a value but cannot choose an action",
+      "Anything you have not granted is refused",
     ],
     href: "/grants",
     cta: "How grants work",
@@ -64,12 +64,12 @@ const PILLARS: Pillar[] = [
   {
     verb: "Protect",
     product: "AI-DR",
-    headline: "Check every call at runtime, on nine surfaces",
+    headline: "Check every call while it happens",
     points: [
-      "Prompts, tool calls, tool results, retrieved documents, memory, agent-to-agent messages — plus the model's own reasoning and its claim that it finished",
-      "50 rules across four packs, as YAML in your own repository",
-      "A detector over its budget is marked degraded on that decision rather than quietly skipped",
-      "Observe first: it records the verdict it would have returned and changes nothing",
+      "Nine surfaces: prompts, tool calls, tool results, retrieved documents, memory, agent messages, model reasoning and completions",
+      "50 rules in four packs, as YAML in your repository",
+      "A detector that runs out of time is marked, not skipped",
+      "Starts in observe mode and changes nothing until you turn it on",
     ],
     href: "/runtime",
     cta: "How enforcement works",
@@ -77,12 +77,12 @@ const PILLARS: Pillar[] = [
   {
     verb: "Test",
     product: "AI Red Teaming",
-    headline: "Attack your own configuration before somebody else does",
+    headline: "Attack your own setup first",
     points: [
-      "116 failure scenarios, built from the architecture of a request rather than from our feature list",
-      "105 of them executed against the running product every night",
-      "42 of 42 attacker tool calls contained with every detector switched off",
-      "The scenarios we do not catch are published beside the ones we do",
+      "116 failure scenarios",
+      "105 of them run against the product every night",
+      "42 of 42 attacker tool calls blocked with all detectors off",
+      "We publish the ones we miss too",
     ],
     href: "/coverage",
     cta: "See the coverage",
@@ -90,12 +90,12 @@ const PILLARS: Pillar[] = [
   {
     verb: "Prove",
     product: "Audit & Compliance",
-    headline: "A record an auditor can check without us",
+    headline: "Show an auditor what happened",
     points: [
-      "Every decision hash-chained, so removing one breaks the chain from that point on",
-      "Evidence packages ship with a standard-library-only verifier that imports none of our code",
-      "43 controls across seven frameworks, including the EU AI Act and ISO 42001",
-      "Status computed from telemetry rather than attested in a questionnaire",
+      "Every decision is hash-chained, so a deletion shows up",
+      "Evidence packages come with a verifier that does not use our code",
+      "43 controls across seven frameworks, including the EU AI Act",
+      "Status comes from telemetry, not a questionnaire",
     ],
     href: "/evidence",
     cta: "How evidence works",
@@ -112,11 +112,10 @@ export function Platform() {
         <div className="mk-narrow">
           <p className="mk-kicker">The control plane</p>
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
-            One platform for everything your agents can reach
+            One platform for every agent you run
           </h2>
           <p className="mk-lede" style={{ marginTop: 16 }}>
-            Five jobs, one policy set, one decision record. Each is a page of its own
-            because each is a product, not a checkbox.
+Five products, one policy set, one audit trail.
           </p>
         </div>
 
