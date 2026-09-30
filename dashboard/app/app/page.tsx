@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { api, apiErrorProps } from "@/lib/api";
+import { api, apiErrorProps, safeApi } from "@/lib/api";
 import { appPageMetadata } from "@/lib/site";
 import { ApiDown, InfoTip, InventoryStrip, Severity, Stat, findingTypeInfo, ts } from "@/components/ui";
 import { PageHeader } from "@/components/PageHeader";
+import { Coverage } from "@/components/Coverage";
 
 export const dynamic = "force-dynamic";
 
@@ -30,14 +31,53 @@ export const metadata: Metadata = appPageMetadata("Overview");
  * reader do the ranking themselves, so this one leads with what needs a human and
  * puts the inventory underneath.
  */
+/**
+ * The same detector firing on the same surface of repeated requests produces
+ * several findings that are word-for-word identical. They are correct as
+ * records and wrong as a queue: the reader triages one fact three times, and
+ * the repeats crowd different problems off the visible top of the list.
+ *
+ * The key is deliberately the full title and not just subject + type +
+ * severity. Grouping more loosely than that merges genuinely different
+ * problems — an injection block and a PII block on the same agent are both
+ * `guardrail_detection / high`, and collapsing them leaves one title standing
+ * for an incident it does not describe. Under-collapsing costs a duplicate
+ * row; over-collapsing hides an incident behind another incident's name, so
+ * only exact repeats are folded, and the count travels with the row rather
+ * than the records being silently dropped.
+ */
+function dedupe(items: any[]): (any & { dupes: number })[] {
+  const out: any[] = [];
+  const seen = new Map<string, any>();
+  for (const item of items) {
+    const key = `${item.subject}|${item.type}|${item.severity}|${item.title}`;
+    const hit = seen.get(key);
+    if (hit) {
+      hit.dupes += 1;
+      continue;
+    }
+    const row = { ...item, dupes: 1 };
+    seen.set(key, row);
+    out.push(row);
+  }
+  return out;
+}
+
 async function Overview() {
   let attention: any, onboarding: any, agents: any, posture: any;
+  // The coverage strip is additive context, never the reason this page fails —
+  // a detector registry that 404s should cost the reader that one tile, not the
+  // list of things that need a person today.
+  let policies: any, detectors: any, probes: any;
   try {
-    [attention, onboarding, agents, posture] = await Promise.all([
+    [attention, onboarding, agents, posture, policies, detectors, probes] = await Promise.all([
       api("/api/attention"),
       api("/api/onboarding"),
       api("/api/agents"),
       api("/api/compliance/status"),
+      safeApi("/api/policies", { policies: [] }),
+      safeApi("/api/detectors", { detectors: [] }),
+      safeApi("/api/redteam/probes", { probes: [] }),
     ]);
   } catch (e: any) {
     return (
@@ -66,12 +106,25 @@ async function Overview() {
             Start here →
           </Link>
         </div>
+
+        {/* The worst version of this screen is the one a new reader used to get:
+            a single card saying nothing is here, on a deployment that already
+            has policy packs, rules and controls loaded and waiting. "No traffic
+            yet" is a fact about their integration, not about whether the
+            product does anything. */}
+        <Coverage
+          policies={policies.policies || []}
+          detectors={detectors.detectors || []}
+          probes={probes.probes || []}
+          controls={posture}
+        />
       </>
     );
   }
 
   const counts = attention.counts || {};
   const inv = agents.inventory;
+  const rows = dedupe(attention.items || []);
 
   return (
     <>
@@ -103,9 +156,13 @@ async function Overview() {
               tone={counts.high ? "warn" : "ok"}
               hint="Worth fixing this week — not an emergency, but not fine to ignore either."
             />
+            {/* The only number on this page that is good news when it is high.
+                Left tone-less it read as one more grey count in a row of
+                problems, which buries the single thing the product is for. */}
             <Stat
               n={counts.blocked_in_window || 0}
               label={`stopped automatically, last ${attention.window_hours}h`}
+              tone={counts.blocked_in_window ? "ok" : undefined}
               hint="Requests a guardrail actually refused before they reached the customer — this is the system working, not a problem to fix."
             />
             <Stat
@@ -139,7 +196,7 @@ async function Overview() {
                 </tr>
               </thead>
               <tbody>
-                {attention.items.slice(0, 6).map((item: any, i: number) => {
+                {rows.slice(0, 6).map((item: any, i: number) => {
                   const typeInfo = findingTypeInfo(item.type);
                   return (
                     <tr key={i}>
@@ -148,6 +205,15 @@ async function Overview() {
                       </td>
                       <td>
                         <Link href={item.href}>{item.title}</Link>
+                        {item.dupes > 1 && (
+                          <span
+                            className="tag"
+                            style={{ marginLeft: 8 }}
+                            title={`${item.dupes} separate findings share this subject, kind and severity. Every one is kept — see all findings for the individual records.`}
+                          >
+                            ×{item.dupes}
+                          </span>
+                        )}
                         <div className="small muted">{typeInfo.blurb || typeInfo.label}</div>
                       </td>
                       <td className="mono small">{item.subject}</td>
@@ -162,9 +228,24 @@ async function Overview() {
                 {attention.total - 6} more — <Link href="/app/findings">see all findings</Link>
               </div>
             )}
+            {/* Say when collapsing has hidden rows, rather than letting the
+                reader wonder why six rows and eleven findings disagree. */}
+            {rows.length < attention.items.length && (
+              <div className="body small muted">
+                {attention.items.length - rows.length} duplicate record(s) collapsed —
+                rows marked × cover more than one finding.
+              </div>
+            )}
           </div>
         </>
       )}
+
+      <Coverage
+        policies={policies.policies || []}
+        detectors={detectors.detectors || []}
+        probes={probes.probes || []}
+        controls={posture}
+      />
 
       <h2>Inventory</h2>
       <InventoryStrip
