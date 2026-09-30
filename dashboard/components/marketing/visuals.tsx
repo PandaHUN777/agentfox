@@ -86,8 +86,7 @@ function Code({ children, style }: { children: ReactNode; style?: CSSProperties 
         color: "var(--mk-text)",
         lineHeight: 1.6,
         overflowWrap: "anywhere",
-        ...style,
-      }}
+        ...style }}
     >
       {children}
     </div>
@@ -102,8 +101,7 @@ function Field({ name, children }: { name: string; children: ReactNode }) {
         display: "grid",
         gridTemplateColumns: "minmax(94px, auto) 1fr",
         gap: "4px 12px",
-        alignItems: "baseline",
-      }}
+        alignItems: "baseline" }}
     >
       <span className="mk-label">{name}</span>
       <span className="mk-mono" style={{ color: "var(--mk-text)", overflowWrap: "anywhere" }}>
@@ -141,8 +139,7 @@ function Verdict({
         borderRadius: `0 var(--mk-r-sm) var(--mk-r-sm) 0`,
         padding: "10px 12px",
         display: "grid",
-        gap: 7,
-      }}
+        gap: 7 }}
     >
       <div className="mk-row" style={{ gap: 8 }}>
         <span className={`mk-chip mk-chip-${tone}`}>{verdict}</span>
@@ -169,8 +166,7 @@ function Panel({ children, style }: { children: ReactNode; style?: CSSProperties
         display: "grid",
         gap: 8,
         alignContent: "start",
-        ...style,
-      }}
+        ...style }}
     >
       {children}
     </div>
@@ -198,8 +194,7 @@ function Cols({
       className="mk-grid"
       style={{
         gridTemplateColumns: track,
-        ...(cap ? { maxWidth: cap * 260, width: "100%" } : null),
-      }}
+        ...(cap ? { maxWidth: cap * 260, width: "100%" } : null) }}
     >
       {children}
     </div>
@@ -609,8 +604,7 @@ export function RedactionMock({ className }: { className?: string }) {
             style={{
               display: "grid",
               gridTemplateColumns: "1fr",
-              gap: 4,
-            }}
+              gap: 4 }}
           >
             <div className="mk-row" style={{ gap: 7 }}>
               <span className="mk-chip mk-chip-accent">{row.entity}</span>
@@ -886,8 +880,7 @@ export function EvalMock({ className }: { className?: string }) {
           overflowX: "auto",
           border: "1px solid var(--mk-border)",
           borderRadius: "var(--mk-r-sm)",
-          background: "var(--mk-surface-2)",
-        }}
+          background: "var(--mk-surface-2)" }}
       >
         <table
           className="mk-mono"
@@ -895,8 +888,7 @@ export function EvalMock({ className }: { className?: string }) {
             borderCollapse: "collapse",
             width: "100%",
             minWidth: 300,
-            color: "var(--mk-text)",
-          }}
+            color: "var(--mk-text)" }}
         >
           <thead>
             <tr>
@@ -910,8 +902,7 @@ export function EvalMock({ className }: { className?: string }) {
                     padding: "8px 10px",
                     fontWeight: 400,
                     borderBottom: "1px solid var(--mk-border)",
-                    whiteSpace: "nowrap",
-                  }}
+                    whiteSpace: "nowrap" }}
                 >
                   {h}
                 </th>
@@ -925,8 +916,7 @@ export function EvalMock({ className }: { className?: string }) {
                   style={{
                     padding: "7px 10px",
                     color: s.regressed ? "var(--mk-stop)" : "var(--mk-text)",
-                    whiteSpace: "nowrap",
-                  }}
+                    whiteSpace: "nowrap" }}
                 >
                   {s.key}
                 </td>
@@ -938,8 +928,7 @@ export function EvalMock({ className }: { className?: string }) {
                       textAlign: "right",
                       color: s.regressed && i === 0 ? "var(--mk-stop)" : "var(--mk-muted)",
                       fontVariantNumeric: "tabular-nums",
-                      whiteSpace: "nowrap",
-                    }}
+                      whiteSpace: "nowrap" }}
                   >
                     {v}
                   </td>
@@ -1135,8 +1124,7 @@ export function RedteamMock({ className }: { className?: string }) {
               display: "grid",
               gap: 5,
               paddingLeft: 10,
-              borderLeft: `2px solid ${p.blocked ? "var(--mk-good)" : "var(--mk-stop)"}`,
-            }}
+              borderLeft: `2px solid ${p.blocked ? "var(--mk-good)" : "var(--mk-stop)"}` }}
           >
             <div className="mk-row" style={{ gap: 7 }}>
               <span className={`mk-chip ${p.blocked ? "mk-chip-go" : "mk-chip-stop"}`}>

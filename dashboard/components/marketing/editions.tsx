@@ -102,7 +102,7 @@ export function Editions({
           <span className="mk-eyebrow">Editions</span>
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
             Two ways to run it. Both free today</h2>
-          <p className="mk-lede" style={{ marginTop: 14, maxWidth: "62ch" }}>
+          <p className="mk-lede" style={{ marginTop: 14 }}>
             The same control plane either way. Nothing is priced yet, and no card is taken anywhere on this site.
           </p>
         </div>
@@ -278,7 +278,7 @@ export function WhyOpen() {
   return (
     <section id="why-open" className="mk-section mk-band">
       <div className="mk-wrap">
-        <div className="mk-up" style={{ maxWidth: "34ch" }}>
+        <div className="mk-up" >
           <span className="mk-eyebrow">Why open</span>
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
             The core is open, and stays open</h2>

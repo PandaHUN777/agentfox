@@ -54,7 +54,7 @@ function Head({ eyebrow, title, lede }: { eyebrow: string; title: string; lede?:
         {title}
       </h2>
       {lede && (
-        <p className="mk-lede" style={{ marginTop: 14, maxWidth: "62ch" }}>
+        <p className="mk-lede" style={{ marginTop: 14 }}>
           {lede}
         </p>
       )}
@@ -181,7 +181,7 @@ export default function Support() {
           <div className="mk-wrap">
             <h1 className="mk-h1 mk-up mk-d1" style={{ marginTop: 18, maxWidth: "18ch" }}>
               Every report gets <em>read</em></h1>
-            <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "58ch" }}>
+            <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20 }}>
               This is one developer&rsquo;s project, so none of the routes below carries a
               promised response time. All of them are read.
             </p>
@@ -211,8 +211,7 @@ export default function Support() {
                   borderColor: "var(--mk-stop)",
                   background: "var(--mk-stop-soft)",
                   display: "grid",
-                  gap: 8,
-                }}
+                  gap: 8 }}
               >
                 <span className="mk-label" style={{ color: "var(--mk-stop)" }}>
                   Redact first
@@ -280,11 +279,11 @@ export default function Support() {
               <span className="mk-eyebrow">The one that matters most</span>
               <h2 className="mk-h2" style={{ marginTop: 14 }}>
                 A wrong verdict is the best report we get</h2>
-              <p className="mk-body" style={{ marginTop: 14, maxWidth: "48ch" }}>
+              <p className="mk-body" style={{ marginTop: 14 }}>
                 A false positive costs you an afternoon. A false negative is the thing the product
                 exists to prevent. There is a template for both.
               </p>
-              <p className="mk-fine" style={{ marginTop: 18, maxWidth: "48ch" }}>
+              <p className="mk-fine" style={{ marginTop: 18 }}>
                 The trace id and the rule id are what is needed, not the payload. Redact it and
                 keep the structure.
               </p>

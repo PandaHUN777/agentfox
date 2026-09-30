@@ -98,8 +98,7 @@ function Code({ children, style }: { children: ReactNode; style?: CSSProperties 
         color: "var(--mk-text)",
         lineHeight: 1.6,
         overflowWrap: "anywhere",
-        ...style,
-      }}
+        ...style }}
     >
       {children}
     </div>
@@ -114,8 +113,7 @@ function Field({ name, children }: { name: string; children: ReactNode }) {
         display: "grid",
         gridTemplateColumns: "minmax(94px, auto) 1fr",
         gap: "4px 12px",
-        alignItems: "baseline",
-      }}
+        alignItems: "baseline" }}
     >
       <span className="mk-label">{name}</span>
       <span className="mk-mono" style={{ color: "var(--mk-text)", overflowWrap: "anywhere" }}>
@@ -153,8 +151,7 @@ function Verdict({
         borderRadius: `0 var(--mk-r-sm) var(--mk-r-sm) 0`,
         padding: "10px 12px",
         display: "grid",
-        gap: 7,
-      }}
+        gap: 7 }}
     >
       <div className="mk-row" style={{ gap: 8 }}>
         <span className={`mk-chip mk-chip-${tone}`}>{verdict}</span>
@@ -414,8 +411,7 @@ function ChainEntry({ row, broken, i = 0 }: { row: ChainRow; broken?: boolean; i
         background: "var(--mk-surface-2)",
         padding: "9px 11px",
         display: "grid",
-        gap: 5,
-      }}
+        gap: 5 }}
     >
       <div className="mk-row" style={{ gap: 7 }}>
         <span className="mk-mono" style={{ color: "var(--mk-muted)" }}>
@@ -435,8 +431,7 @@ function ChainEntry({ row, broken, i = 0 }: { row: ChainRow; broken?: boolean; i
         className="mk-mono"
         style={{
           color: broken ? "var(--mk-stop)" : "var(--mk-text)",
-          overflowWrap: "anywhere",
-        }}
+          overflowWrap: "anywhere" }}
       >
         hash {row.digest}&hellip;
       </div>
@@ -499,8 +494,7 @@ function ModePanel({
         padding: 12,
         display: "grid",
         gap: 9,
-        alignContent: "start",
-      }}
+        alignContent: "start" }}
     >
       <div className="mk-row" style={{ gap: 8 }}>
         <span className={`mk-chip ${mode === "observe" ? "mk-chip-hold" : "mk-chip-accent"}`}>

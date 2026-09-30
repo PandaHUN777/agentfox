@@ -80,7 +80,7 @@ function Head({ eyebrow, title, lede }: { eyebrow: string; title: string; lede?:
         {title}
       </h2>
       {lede && (
-        <p className="mk-lede" style={{ marginTop: 14, maxWidth: "62ch" }}>
+        <p className="mk-lede" style={{ marginTop: 14 }}>
           {lede}
         </p>
       )}
@@ -250,11 +250,11 @@ export default function Compare() {
           <div className="mk-wrap">
             <h1 className="mk-h1 mk-up mk-d1" style={{ marginTop: 18, maxWidth: "19ch" }}>
               Two camps, each with <em>half the problem</em></h1>
-            <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "60ch" }}>
+            <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20 }}>
               One camp owns policy and framework mapping. The other owns runtime
               guardrails.
             </p>
-            <p className="mk-fine mk-up mk-d3" style={{ marginTop: 18, maxWidth: "62ch" }}>
+            <p className="mk-fine mk-up mk-d3" style={{ marginTop: 18 }}>
               Every competitor statement below comes from{" "}
               <Out href={ANALYSIS}>docs/competitor-analysis.md</Out> or a benchmark in this
               repository, named next to the claim. No vendor is scored from its own marketing
@@ -302,7 +302,7 @@ export default function Compare() {
             </div>
             <p
               className="mk-fine mk-up mk-d3"
-              style={{ maxWidth: "var(--measure)", marginTop: 24,}}
+              style={{ maxWidth: "var(--measure)", marginTop: 24 }}
             >
               The alternative that wins most often is neither camp: 6 of 11 vetted senior
               engineers had already hand-built a guardrail layer inside their employer. The
@@ -432,7 +432,7 @@ export default function Compare() {
                 </tbody>
               </table>
             </div>
-            <p className="mk-fine mk-up mk-d3" style={{ marginTop: 16, maxWidth: "76ch" }}>
+            <p className="mk-fine mk-up mk-d3" style={{ marginTop: 16 }}>
               &ldquo;None surveyed&rdquo; is the competitor analysis speaking about the field it
               checked, not a claim that nobody anywhere does this. The 8 of 8 figure is the
               containment benchmark with every detector switched off. The procurement row counts
@@ -462,7 +462,7 @@ export default function Compare() {
             </div>
             <p
               className="mk-lede mk-up mk-d5"
-              style={{ maxWidth: "58ch", marginTop: 40,}}
+              style={{ marginTop: 40 }}
             >
               The numbers are on <Link href="/benchmark">the benchmark page</Link>, the mechanism
               on <Link href="/product">the product page</Link>.

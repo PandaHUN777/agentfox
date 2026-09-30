@@ -412,8 +412,7 @@ export function DecisionCard({
         alignContent: fill ? "space-between" : "start",
         height: fill ? "100%" : undefined,
         boxShadow: wide ? "var(--mk-shadow-float)" : undefined,
-        minWidth: 0,
-      }}
+        minWidth: 0 }}
     >
       {heading ? (
         <div>
@@ -451,8 +450,7 @@ export function DecisionCard({
                 fontSize: row.mono ? undefined : "var(--t-small)",
                 lineHeight: row.mono ? 1.45 : 1.5,
                 overflowWrap: "anywhere",
-                minWidth: 0,
-              }}
+                minWidth: 0 }}
             >
               {row.value}
               {row.note ? (
@@ -479,8 +477,7 @@ export function DecisionCard({
           borderRadius: "0 var(--mk-r-sm) var(--mk-r-sm) 0",
           padding: "10px 12px",
           display: "grid",
-          gap: 9,
-        }}
+          gap: 9 }}
       >
         <div className="mk-row" style={{ gap: 8 }}>
           <span className={CHIP[tone]}>{decision.verdict}</span>
@@ -515,7 +512,7 @@ export function Decisions() {
         <span className="mk-eyebrow">Tool calls</span>
         <h2 className="mk-h2" style={{ marginTop: 12, maxWidth: "18ch" }}>
           One call, four possible outcomes</h2>
-        <p className="mk-lede" style={{ margin: "16px 0 0", maxWidth: "58ch" }}>
+        <p className="mk-lede" style={{ margin: "16px 0 0" }}>
           The same agent and the same tool each time. The argument is what changes the
           answer.
         </p>
@@ -524,8 +521,7 @@ export function Decisions() {
           className="mk-grid mk-grid-quad"
           style={{
             marginTop: 40,
-            alignItems: "stretch",
-          }}
+            alignItems: "stretch" }}
         >
           {DECISIONS.map((d) => (
             <DecisionCard key={d.key} decision={d} heading />

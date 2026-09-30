@@ -1,8 +1,32 @@
 import type { Metadata, Viewport } from "next";
 import { GeistMono } from "geist/font/mono";
 import { GeistSans } from "geist/font/sans";
+import { Archivo } from "next/font/google";
 
 import { SITE_NAME, SITE_URL, SITE_DESCRIPTION, HOME_TITLE, REPO_URL } from "@/lib/site";
+
+/**
+ * The display face.
+ *
+ * Until now `--mk-display` was aliased to Geist — the body font, and Vercel's
+ * developer-tooling face. One family for everything is why this site read as a
+ * repository with a stylesheet rather than as a product: there was no
+ * typographic voice, only sizes.
+ *
+ * Archivo is a grotesk with an industrial cast and, unusually, a real width
+ * axis, so headlines can sit slightly expanded without a second file. That is
+ * the choice — sturdy and instrument-like, which is what the subject is —
+ * and it is deliberately none of the faces this kind of page defaults to.
+ *
+ * Headings only. Geist keeps the body, where its shorter ascenders and plain
+ * figures are better at small sizes and in tables.
+ */
+const archivo = Archivo({
+  subsets: ["latin"],
+  axes: ["wdth"],
+  display: "swap",
+  variable: "--font-archivo",
+});
 import "./globals.css";
 import "./marketing.css";
 
@@ -147,7 +171,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       lang="en-GB"
       data-theme="light"
       suppressHydrationWarning
-      className={`${GeistMono.variable} ${GeistSans.variable}`}
+      className={`${GeistMono.variable} ${GeistSans.variable} ${archivo.variable}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />

@@ -63,7 +63,7 @@ export default function Page() {
     <CapabilityPage
       kicker="Claude Code"
       title={["Govern the agent", "on your machine"]}
-      lede="Two commands, three checkpoints, and a straight answer about which of them can stop a call."
+      lede="Two commands, three checkpoints, and which of them can actually stop a call."
       commands={[
         "agentfox hooks daemon",
         "agentfox hooks install --agent my-agent --write",
@@ -71,14 +71,13 @@ export default function Page() {
       challenge={
         <p>
           A coding agent on a laptop can reach production. It reads issue comments and
-          CI logs written by people you have never met, it holds credentials for
-          everything the developer holds credentials for, and nothing between it and
-          the shell is looking.
+          CI logs written by strangers, and it holds the same credentials the developer
+          does.
         </p>
       }
       feature={{
         title: "Three checkpoints, and they are not equal",
-        lede: "Every product in this category claims enforcement at a hook. None of them tells you which hook is a gate and which is a bystander.",
+        lede: "Two of the three can stop a call. One cannot.",
         body: (
           <div className="hk-events mk-stagger">
             {EVENTS.map((row) => (
@@ -101,8 +100,7 @@ export default function Page() {
               </div>
             ))}
           </div>
-        ),
-      }}
+        ) }}
       steps={[
         {
           title: "The one a tool-call hook cannot see",
@@ -167,8 +165,7 @@ export default function Page() {
             </a>
             .
           </p>
-        ),
-      }}
+        ) }}
       related={["/mcp", "/runtime", "/control-points"]}
     />
   );

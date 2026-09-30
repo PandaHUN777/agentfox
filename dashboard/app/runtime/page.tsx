@@ -33,18 +33,17 @@ export default function Page() {
     <CapabilityPage
       kicker="Runtime guardrails"
       title={["Detectors read the text.", "A policy decides"]}
-      lede="Nine places content can enter or leave an agent, and a rule set you can read."
+      lede="Nine places content enters or leaves an agent, and rules you can read."
       challenge={
         <p>
-          A scanner returns a score. A score is not a decision, and the gap between them
-          is where most guardrail products leave the hard part to you: which surface was
-          this, how much do we trust its source, what is this agent allowed to do, and
-          is the answer different because a check was down.
+          A scanner gives you a score. You still have to decide what to do with it:
+          which surface it came from, how far to trust the source, what this agent is
+          allowed to do, and whether a check was down at the time.
         </p>
       }
       feature={{
         title: "Nine places content enters or leaves",
-        lede: "The same sentence means different things depending on where it turned up, so the surface is part of the decision rather than metadata attached to it.",
+        lede: "The same sentence means different things depending on where it turned up.",
         body: (
           <div className="surf-grid mk-stagger">
             {SURFACES.map((s) => (
@@ -55,8 +54,7 @@ export default function Page() {
               </div>
             ))}
           </div>
-        ),
-      }}
+        ) }}
       steps={[
         {
           title: "Nine surfaces, not one",
@@ -126,8 +124,7 @@ export default function Page() {
             detection tasks a specialised scanner is more precise than ours, and{" "}
             <a href="/compare">/compare</a> names which.
           </p>
-        ),
-      }}
+        ) }}
       related={["/grants", "/hooks", "/evidence"]}
     />
   );

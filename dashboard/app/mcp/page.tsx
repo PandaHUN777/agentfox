@@ -69,18 +69,17 @@ export default function Page() {
     <CapabilityPage
       kicker="Model Context Protocol"
       title={["The tool was safe", "when you approved it"]}
-      lede="A scan tells you what a server was. Agents call tools later, and servers change."
+      lede="A scan tells you what a server was. Servers change."
       commands={["agentfox scan mcp"]}
       challenge={
         <p>
-          MCP is what makes an agent capable, and every server is somebody else&rsquo;s
-          code deciding what your agent can reach. Review happens once; calls happen
-          for months afterwards.
+          MCP is how agents reach tools, and every server is somebody else&rsquo;s code.
+          You review it once. The agent calls it for months.
         </p>
       }
       feature={{
         title: "Six risks, and the two we miss",
-        lede: "Scored against the list a well-funded competitor publishes on their own MCP page, because their list is a good one.",
+        lede: "Scored against the six risks the rest of this market lists.",
         body: (
           <div className="mcp-risks mk-stagger">
             {RISKS.map((row) => (
@@ -99,8 +98,7 @@ export default function Page() {
               </article>
             ))}
           </div>
-        ),
-      }}
+        ) }}
       steps={[
         {
           title: "Snapshot the tools, with a digest",
@@ -153,8 +151,7 @@ export default function Page() {
             broker upstream credentials, so we cannot consolidate them — credential
             sprawl is a real MCP risk and one we leave where it is.
           </p>
-        ),
-      }}
+        ) }}
       related={["/hooks", "/grants", "/discovery"]}
     />
   );

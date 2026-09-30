@@ -42,7 +42,7 @@ export default function Product() {
             <h1 className="mk-h1 mk-up" style={{ maxWidth: "19ch" }}>
               Every decision, on a <em>real screen</em>
             </h1>
-            <p className="mk-lede mk-up mk-d1" style={{ marginTop: 18, maxWidth: "54ch" }}>
+            <p className="mk-lede mk-up mk-d1" style={{ marginTop: 18 }}>
               What the product actually shows you when an agent reads, answers and
               acts. <Link href="/playground">The playground</Link> needs no account.
             </p>
