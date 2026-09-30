@@ -465,7 +465,7 @@ export function FAQ({ n, more }: { n?: number; more?: boolean } = {}) {
 
 export function CTA() {
   return (
-    <section className="mk-section">
+    <section className="mk-section mk-ink-act">
       <div className="mk-wrap">
         <div
           className="mk-card mk-card-raised mk-up"

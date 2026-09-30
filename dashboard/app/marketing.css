@@ -41,6 +41,26 @@
   --mk-muted: #6e6e73;
   --mk-faint: var(--mk-muted);
 
+  /* A warm third value.
+     The measured problem: four background tokens, all within six points of
+     each other on the same neutral axis, so the whole page rendered as one
+     flat field with hairlines on it. Paper is warm enough to read as a
+     different material next to white rather than as a slightly dirty white. */
+  --mk-paper: #f7f4ef;
+
+  /* Ink — navy as a *surface*, not only a button.
+     The single biggest thing the reference sites have that this did not: a
+     dark act. A page that alternates paper, white and ink has a rhythm a
+     reader feels before they read a word; a page with four greys has none.
+     Deeper and slightly bluer than --mk-navy, which was mixed for 15.4:1
+     against a white label at button size and goes muddy across a whole
+     screen. */
+  --mk-ink: #0b1b33;
+  --mk-ink-2: #12294a;
+  --mk-ink-text: #f2f5fa;
+  --mk-ink-muted: #9fb0c9;
+  --mk-ink-border: rgba(255, 255, 255, 0.12);
+
   /* The brand is the two colours in the mark: navy #012455 and orange #fd4901.
      They are split by job rather than used interchangeably, because the measured
      contrast forces it.
@@ -85,7 +105,9 @@
 
   --mk-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI",
     system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
-  --mk-display: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI",
+  /* Was `var(--font-geist-sans)` — the body font under a different name, which
+     is to say no display face at all. */
+  --mk-display: var(--font-archivo), "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI",
     system-ui, Roboto, "Helvetica Neue", Arial, sans-serif;
   --mk-code: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -100,6 +122,13 @@
     --mk-text: #f5f5f7;
     --mk-muted: #a1a1a6;
     --mk-faint: var(--mk-muted);
+    /* Paper is a *warm* value against white; on a black ground the warmth has
+       nothing to sit against, so it becomes the raised surface instead. The job
+       either way is a third value rather than another grey. Ink barely moves — a
+       dark act on a dark page still has to read as a deliberate field. */
+    --mk-paper: #141414;
+    --mk-ink: #0a1526;
+    --mk-ink-2: #14294a;
     --mk-brand: #fd4901;
     --mk-navy: #9ab4e2;
     --mk-accent: #ff7a45;
@@ -136,6 +165,7 @@
   --mk-shadow-raise: 0 4px 16px rgba(0, 0, 0, .55);
   --mk-shadow-pop: 0 18px 48px -12px rgba(0, 0, 0, .7);
   --mk-shadow-float: none;
+  --mk-paper: #141414; --mk-ink: #0a1526; --mk-ink-2: #14294a;
 }
 
 /* --- Shell ------------------------------------------------------------- */
@@ -429,9 +459,16 @@
 }
 .mk-hero > * { min-width: 0; }
 @media (min-width: 940px) {
-  /* The left column carries a 72px headline now, so it needs the room: at
-     1.05fr "Runtime firewall" did not fit on one line at any weight. */
-  .mk-hero { grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr); gap: 52px; }
+  /* The left column carries a 72px headline, so it needs the room: at 1.05fr
+     "Runtime firewall" did not fit on one line at any weight.
+
+     The shot gets its size from bleeding past the container instead of from
+     the grid. Beside a full-width headline a product shot that stops at the
+     text margin looks like an illustration of the product; one that runs off
+     the edge looks like a window onto it. The act clips it, so on a narrow
+     screen this costs nothing. */
+  .mk-hero { grid-template-columns: minmax(0, 1.14fr) minmax(0, 1fr); gap: 56px; }
+  .mk-hero-shot { margin-right: clamp(-96px, calc(560px - 50vw), -24px); }
 }
 
 /* The line a reader would actually type, at the size they would read it. */
@@ -498,7 +535,6 @@
    value reads on white, on the #f5f5f7 tile and on the band. */
 .mk-chip {
   display: inline-flex; align-items: center; gap: 6px;
-  font-family: var(--mk-code);
   font-size: var(--t-small); letter-spacing: .01em;
   padding: 3px 8px; border-radius: var(--mk-r-md);
   background: #e8e8ed; color: var(--mk-muted);
@@ -1100,7 +1136,6 @@
 .mk-threat span { display: block; margin-top: 3px; font-size: var(--t-small); color: var(--mk-muted); }
 .mk-threat-verdict {
   flex: 0 0 auto;
-  font-family: var(--mk-code);
   font-size: var(--t-small);
   font-weight: 600;
   color: var(--mk-good);
@@ -1452,7 +1487,7 @@
 .seq-stage-stop { border-top-color: var(--mk-stop); }
 
 .seq-head { display: flex; align-items: baseline; gap: 10px; }
-.seq-n { font-family: var(--mk-code); font-size: var(--t-micro); font-weight: 600; color: var(--mk-muted); flex: 0 0 auto; }
+.seq-n { font-size: var(--t-micro); font-weight: 600; color: var(--mk-muted); flex: 0 0 auto; }
 .seq-head .mk-h3 { margin: 0; }
 
 /* --- The artefacts -------------------------------------------------------- */
@@ -2146,7 +2181,6 @@
   text-wrap: pretty;
 }
 .cov-origin-absent {
-  font-family: var(--mk-code);
   font-size: var(--t-micro) !important;
 }
 
@@ -2213,7 +2247,6 @@
   padding-top: 16px;
 }
 .mk-origin-n {
-  font-family: var(--mk-code);
   font-size: var(--t-micro);
   color: var(--mk-muted);
 }
@@ -2830,3 +2863,166 @@
 }
 .rec code { font-family: var(--mk-code); font-size: var(--t-micro); }
 .rec p { margin: 0; font-size: var(--t-small); color: var(--mk-muted); text-wrap: pretty; }
+
+/* ========================================================================
+   A dark act
+   ========================================================================
+   The one structural thing the reference sites had that this did not: the
+   page changes material. Paper, then ink, then white — a rhythm a reader
+   feels before reading a word. Four greys within six points of each other
+   gave none.
+
+   The trick that makes it cheap: `.mk-ink-act` does not restyle its
+   children, it *remaps the tokens they already read*. Any section, card,
+   chip or tick list dropped inside themes itself, so a dark act costs one
+   class rather than a parallel stylesheet. Anything that hard-codes a
+   colour instead of taking a token will not follow — which is a useful
+   thing to have made visible.
+*/
+.mk-ink-act {
+  --mk-bg: var(--mk-ink);
+  --mk-surface: var(--mk-ink-2);
+  --mk-surface-2: color-mix(in srgb, var(--mk-ink-2) 76%, var(--mk-ink));
+  --mk-border: var(--mk-ink-border);
+  --mk-border-strong: rgba(255, 255, 255, 0.22);
+  --mk-text: var(--mk-ink-text);
+  --mk-muted: var(--mk-ink-muted);
+  --mk-faint: var(--mk-ink-muted);
+  /* The darkened orange exists for 5.32:1 on white and is far too dim here.
+     On ink the logo orange is the readable one, which is the happy case. */
+  --mk-accent: #ff7a45;
+  --mk-accent-soft: rgba(253, 73, 1, 0.14);
+  --mk-cta: var(--mk-brand);
+  --mk-cta-hover: #ff6a2a;
+  --mk-cta-fg: #17110d;
+  --mk-good: #5ddba0;
+  --mk-good-soft: rgba(93, 219, 160, 0.14);
+  --mk-stop: #ff8a80;
+  --mk-stop-soft: rgba(255, 138, 128, 0.14);
+
+  background: var(--mk-ink);
+  color: var(--mk-ink-text);
+}
+/* The band treatment inside an ink act would be a grey rectangle on navy. */
+.mk-ink-act .mk-band { background: var(--mk-ink-2); }
+/* The hairline rule this stylesheet draws between consecutive sections is a
+   light-mode device and shows as a scratch on ink. */
+.mk-ink-act + .mk-section::before,
+.mk-ink-act::before { display: none; }
+
+/* Paper, the warm act. */
+.mk-paper-act { background: var(--mk-paper); }
+.mk-paper-act .mk-band { background: color-mix(in srgb, var(--mk-paper) 84%, #000); }
+
+/* ========================================================================
+   Display type
+   ========================================================================
+   Archivo, and the width axis is the point: at `wdth 108` a headline reads
+   as drawn rather than as the body font enlarged, which is what a single
+   family for everything always produces. Tracking tightens as size grows,
+   because a grotesk set large and loose looks accidental.
+*/
+.mk-h1,
+.mk-h2,
+.mk-display {
+  font-family: var(--mk-display);
+  font-variation-settings: "wdth" 108;
+  font-weight: 600;
+  letter-spacing: -0.022em;
+}
+.mk-h1 { letter-spacing: -0.032em; line-height: 1.02; }
+.mk-h2 { line-height: 1.1; }
+/* The italic accent in a headline is a different voice, not a different
+   colour: same face, lighter, so the phrase reads as an aside rather than
+   as a highlighter pass. */
+.mk-h1 em,
+.mk-h2 em {
+  font-style: normal;
+  font-weight: 500;
+  color: var(--mk-accent);
+}
+
+/* ========================================================================
+   Product screenshots
+   ======================================================================== */
+.shot { margin: 0; display: grid; gap: 12px; }
+.shot-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid var(--mk-border);
+  background: var(--mk-surface);
+  /* Two shadows: a tight one that reads as an edge and a wide soft one that
+     reads as distance. One shadow doing both is always either too hard at the
+     edge or too vague underneath. */
+  box-shadow:
+    0 1px 2px rgba(11, 27, 51, 0.06),
+    0 24px 60px -24px rgba(11, 27, 51, 0.28);
+}
+.shot-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Captures are wide; when a crop is set the interesting part is the top. */
+  object-fit: cover;
+  object-position: top left;
+}
+.shot-frame[style*="aspect-ratio"] img { height: 100%; }
+.shot figcaption {
+  font-size: var(--t-small);
+  color: var(--mk-muted);
+  text-wrap: pretty;
+  max-width: 54ch;
+}
+/* On ink the white capture would glare, and a light border round a light
+   image is invisible. A hairline of light and a deeper shadow instead. */
+.mk-ink-act .shot-frame {
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 32px 80px -28px rgba(0, 0, 0, 0.65);
+}
+
+/* ========================================================================
+   The hero act
+   ========================================================================
+   Paper, not white. The screenshot beside the copy is a white interface, and
+   a white interface on a white page has no edge — the frame ends up doing
+   work the ground should be doing. On paper the capture reads as an object
+   sitting on a surface.
+*/
+.mk-hero-act {
+  position: relative;
+  overflow: hidden;
+  background: var(--mk-paper);
+  border-bottom: 1px solid color-mix(in srgb, var(--mk-paper) 82%, #000);
+}
+/* Two soft pools rather than a gradient across the whole field: a linear
+   wash reads as a banner, and banners are what this page is trying to stop
+   looking like. Low opacity on purpose — it should be felt, not seen. */
+.mk-hero-glow {
+  position: absolute;
+  inset: -20% -10% auto -10%;
+  height: 130%;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 52% at 18% 28%, rgba(253, 73, 1, 0.13), transparent 70%),
+    radial-gradient(38% 48% at 82% 16%, rgba(1, 36, 85, 0.10), transparent 72%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .mk-hero-glow { animation: mk-drift 26s ease-in-out infinite alternate; }
+}
+/* Barely moves. The point is that the page is not quite static, not that
+   anything is happening. */
+@keyframes mk-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-2.5%, 1.5%, 0) scale(1.06); }
+}
+:root[data-theme="dark"] .mk-hero-glow,
+:root:not([data-theme="light"]) .mk-hero-glow {
+  background:
+    radial-gradient(42% 52% at 18% 28%, rgba(253, 73, 1, 0.16), transparent 70%),
+    radial-gradient(38% 48% at 82% 16%, rgba(70, 120, 220, 0.14), transparent 72%);
+}
+
+/* The proof screenshot sits wider than the threat rows above it, because it
+   is the evidence for them and evidence should not be smaller than the claim. */
+.proof-shot { margin-top: 36px; max-width: 900px; }

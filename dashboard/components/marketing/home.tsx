@@ -3,9 +3,9 @@ import type { ReactNode } from "react";
 
 import { BoundarySequence } from "@/components/marketing/sequence";
 import { EstateScan, TraceAnatomy } from "@/components/marketing/product";
-import { Boundary } from "@/components/marketing/boundary";
 import { REPO } from "@/components/marketing/nav";
 import { ThreatMarquee } from "@/components/marketing/motion";
+import { Shot } from "@/components/marketing/shot";
 
 /*
  * The homepage sections.
@@ -150,68 +150,23 @@ function BenefitWide({
  */
 export function Hero() {
   return (
-    <section style={{ position: "relative", overflow: "hidden" }}>
-      <div className="mk-wash" aria-hidden />
+    <section className="mk-hero-act">
+      {/* Ambient, behind everything, and doing one job: giving the paper
+          ground somewhere to be warmer, so the screenshot beside it reads as
+          a lit object rather than as a rectangle pasted on a flat field.
+          Two soft brand-tinted pools, no hard edge, no gradient banding. */}
+      <div className="mk-hero-glow" aria-hidden />
+
       <div className="mk-wrap mk-hero" style={{ position: "relative" }}>
         <div>
-          {/* Four attempts to get this line right, and what each one got wrong:
-                "The injection worked. The transfer didn't." was a riddle — it
-              needs you to know what a prompt injection is before the sentence
-              parses, and "the transfer" referred to nothing on screen yet.
-                "Your agent can only call the tools you gave it" was plain but
-              inert: it describes how anyone would assume agents already work,
-              so it reads as a restatement rather than a product.
-                "Prompt injection stops at the tool call" named the threat, but
-              in a practitioner's vocabulary — a CISO reads it cold, a VP Eng
-              skims past it.
-                This one borrows a category every buyer already understands and
-              does the differentiating in one word. "Runtime" is what separates
-              it from both neighbours a reader might file it under: a WAF reads
-              HTTP at the edge, a text scanner grades a string offline, and this
-              sits inline on the call itself. See /compare, which draws the line
-              against an actual network firewall — the two pages have to agree,
-              so that passage says "not a network firewall, an action-layer one"
-              rather than "not a firewall". */}
-          {/* A third level above the headline. Mono, because this product's
-              subject is code and the panel beside it is a list of tool calls —
-              a tracked-out uppercase grotesk here would be the generic choice.
-              The dot is a status light: the thing is running. */}
           <p className="mk-kicker mk-up mk-d1">Runtime, on every tool call</p>
           <h1 className="mk-h1 mk-up mk-d2">
             <em>Runtime firewall</em> for AI agents
           </h1>
-          {/* Every version of this line before it failed the same way: it described
-              the mechanism. "Sits between your agent and its tools, checks each
-              call against the permissions you set" is the dictionary definition of
-              the word in the headline — a reader who understood "firewall" already
-              knew all of it, so the subhead cost them four lines and told them
-              nothing.
-              A subhead's job is to add what the headline cannot carry. Here that is
-              stakes and concreteness: the tools in question move money, delete
-              records and send mail, which is why any of this matters, and the
-              payoff is that being tricked does not get the model an exception. */}
-          {/* Was 28 words across four lines. Measured against the competitor
-              page that reads fastest: their whole hero is 33 words and ours
-              was 90, which is the single biggest density gap on the site. The
-              cut keeps both halves of the argument — what the agent can do,
-              and what happens to a call outside it — and drops the list.
-              "Granted" rather than "allowed" because grants are the noun the
-              rest of the page and the product both use. */}
-          <p className="mk-lede mk-up mk-d3" style={{ marginTop: 22, maxWidth: "42ch" }}>
+          <p className="mk-lede mk-up mk-d3" style={{ marginTop: 22, maxWidth: "40ch" }}>
             Your agents move money, delete records and answer for you. Every call is
             checked against what you actually granted.
           </p>
-          {/* The install block used to read `pip install …` / `import agentfox;
-              agentfox.auto()` directly beside the stream showing payments.transfer
-              refused, which invited exactly one conclusion: add that import and this
-              tool call is stopped. It is not. autoguard.py's _PATCHERS are
-              (_patch_openai, _patch_anthropic, _patch_litellm, _patch_langchain) —
-              model clients — and the only callers of Enforcer.guard_tool_call are
-              the LangGraph tool node, the MCP governor, the SDK and the gateway's
-              /v1/guard/tool_call. On a security product, implying protection that a
-              reader has not actually wired up is the worst error available, so the
-              hero no longer pairs an import with a refusal. The two paths are named
-              on /how-it-works, and the one action here is the playground. */}
           <div className="mk-row mk-up mk-d4" style={{ marginTop: 30 }}>
             <Link href="/playground" className="mk-btn mk-btn-primary">
               Try it, no account
@@ -220,19 +175,31 @@ export function Hero() {
               View the source
             </a>
           </div>
-          <p className="mk-fine mk-up mk-d5" style={{ marginTop: 16 }}>
+          <p className="mk-fine mk-up mk-d5" style={{ marginTop: 18 }}>
             Runs offline · No API key · Apache-2.0
           </p>
         </div>
 
-        {/* Was a 1600px capture of the findings table. At this width it rendered a
-            sidebar, a help paragraph, a filter row and seven columns of 8px grey —
-            a picture of a document, with nothing for the eye to land on. */}
-        {/* Was a panel of log rows — accurate, and carrying no argument of its
-            own. The Boundary draws the thing the product is instead: calls
-            approach a check, three cross it, one does not. See boundary.tsx. */}
-        <div className="mk-up mk-d3">
-          <Boundary />
+        {/* Was a diagram drawn in CSS: calls approaching a line, one refused.
+            Accurate, and unmistakably the work of a repository. This is the
+            same event, actually happening — a real transfer, refused, with
+            the rule that refused it and how long it took. A reader believes
+            the second one and only follows the first. */}
+        <div className="mk-up mk-d3 mk-hero-shot">
+          <Shot
+            src="/product/refusal.png"
+            alt="A support agent asks to transfer $5,000. AgentFox refuses the call: capability.denied, in 81.8 milliseconds."
+            width={1600}
+            height={670}
+            priority
+            sizes="(max-width: 940px) 92vw, 720px"
+            caption={
+              <>
+                A support agent, talked into asking for a transfer it was never granted.
+                The first preset in the <Link href="/playground">playground</Link>.
+              </>
+            }
+          />
         </div>
       </div>
     </section>
@@ -398,7 +365,7 @@ const ORIGINS: { name: string; line: string; example: string }[] = [
 
 export function Origins() {
   return (
-    <section id="origins" className="mk-section mk-reveal">
+    <section id="origins" className="mk-section mk-reveal mk-ink-act">
       <div className="mk-wrap">
         <div className="mk-narrow">
           <h2 className="mk-h2 mk-up">Three ways an agent does the wrong thing</h2>
@@ -585,7 +552,7 @@ const FRAMEWORKS = [
 
 export function Proof() {
   return (
-    <section id="proof" className="mk-section mk-reveal">
+    <section id="proof" className="mk-section mk-reveal mk-paper-act">
       <div className="mk-wrap">
         <span className="mk-eyebrow mk-up">Measured with every detector switched off</span>
         <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12, maxWidth: "24ch" }}>
@@ -635,7 +602,21 @@ export function Proof() {
           </div>
         </div>
 
-        <p className="mk-row mk-up mk-d5" style={{ marginTop: 24 }}>
+        {/* The rows above are the argument; this is the receipt. A reader who
+            does not believe "42 of 42" is not going to be convinced by a
+            fourth sentence about it — they want to see the run. */}
+        <div className="proof-shot mk-up mk-d4">
+          <Shot
+            src="/product/benchmark.png"
+            alt="The benchmark page: detector precision and recall on named public datasets, each figure naming the run it came from."
+            width={1600}
+            height={904}
+            sizes="(max-width: 900px) 100vw, 900px"
+            caption="Every figure on /benchmark names the results file it came from."
+          />
+        </div>
+
+        <p className="mk-row mk-up mk-d5" style={{ marginTop: 28 }}>
           <Link href="/benchmark" className="mk-btn mk-btn-outline">
             See every number
           </Link>
