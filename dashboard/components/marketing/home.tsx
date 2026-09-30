@@ -365,7 +365,7 @@ const ORIGINS: { name: string; line: string; example: string }[] = [
 
 export function Origins() {
   return (
-    <section id="origins" className="mk-section mk-reveal mk-ink-act">
+    <section id="origins" className="mk-section mk-reveal">
       <div className="mk-wrap">
         <div className="mk-narrow">
           <h2 className="mk-h2 mk-up">Three ways an agent does the wrong thing</h2>

@@ -2900,6 +2900,19 @@
   --mk-stop: #ff8a80;
   --mk-stop-soft: rgba(255, 138, 128, 0.14);
 
+  /* The app's own token names, remapped too.
+     Found the hard way: globals.css sets `h3 { color: var(--text) }` — the
+     application token, not the marketing one — so the platform panel's
+     headline rendered near-black on navy while every sibling took the
+     marketing token and rendered correctly. An act that claims "inside here
+     the foreground is light" has to mean it for both vocabularies, or the
+     bug reappears the next time a marketing section reuses an app component. */
+  --text: var(--mk-ink-text);
+  --muted: var(--mk-ink-muted);
+  --border: var(--mk-ink-border);
+  --surface: var(--mk-ink-2);
+  --bg: var(--mk-ink);
+
   background: var(--mk-ink);
   color: var(--mk-ink-text);
 }
@@ -3026,3 +3039,116 @@
 /* The proof screenshot sits wider than the threat rows above it, because it
    is the evidence for them and evidence should not be smaller than the claim. */
 .proof-shot { margin-top: 36px; max-width: 900px; }
+
+/* ========================================================================
+   The platform section
+   ========================================================================
+   Tabs down the left, panel on the right. Across the top is the obvious
+   arrangement and it is wrong here: five labels each carrying a verb *and* a
+   product name is two lines apiece, and five two-line tabs in a row is a
+   paragraph pretending to be navigation. Down the side they read as a list
+   of what the product does, which is what they are.
+*/
+.pf {
+  display: grid;
+  gap: 1px;
+  background: var(--mk-ink-border);
+  border: 1px solid var(--mk-ink-border);
+  border-radius: 16px;
+  overflow: hidden;
+  grid-template-columns: minmax(200px, 268px) minmax(0, 1fr);
+}
+@media (max-width: 860px) { .pf { grid-template-columns: 1fr; } }
+
+.pf-tabs { display: grid; align-content: start; gap: 1px; background: var(--mk-ink-border); }
+@media (max-width: 860px) {
+  /* A horizontal strip on a phone, scrolled rather than wrapped: five stacked
+     tabs above a panel means the panel starts below the fold. */
+  .pf-tabs {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .pf-tabs::-webkit-scrollbar { display: none; }
+}
+.pf-tab {
+  display: grid;
+  gap: 2px;
+  justify-items: start;
+  text-align: left;
+  padding: 16px 20px;
+  border: 0;
+  background: var(--mk-ink);
+  color: var(--mk-ink-muted);
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  /* The selected marker is an inset rule rather than a border, so selecting a
+     tab does not move the text by a pixel. */
+  box-shadow: inset 3px 0 0 transparent;
+}
+@media (max-width: 860px) {
+  .pf-tab { box-shadow: inset 0 -3px 0 transparent; white-space: nowrap; }
+}
+.pf-tab:hover { background: var(--mk-ink-2); color: var(--mk-ink-text); }
+.pf-tab-on {
+  background: var(--mk-ink-2);
+  color: var(--mk-ink-text);
+  box-shadow: inset 3px 0 0 var(--mk-brand);
+}
+@media (max-width: 860px) { .pf-tab-on { box-shadow: inset 0 -3px 0 var(--mk-brand); } }
+.pf-verb {
+  font-family: var(--mk-display);
+  font-variation-settings: "wdth" 108;
+  font-size: var(--t-body);
+  font-weight: 600;
+}
+.pf-product { font-size: var(--t-micro); opacity: 0.72; letter-spacing: 0.01em; }
+
+.pf-panel {
+  background: var(--mk-ink-2);
+  padding: clamp(24px, 3vw, 40px);
+  display: grid;
+  gap: 18px;
+  align-content: start;
+}
+.pf-panel h3 {
+  margin: 0;
+  font-family: var(--mk-display);
+  font-variation-settings: "wdth" 108;
+  font-size: clamp(1.25rem, 2.2vw, 1.6rem);
+  font-weight: 600;
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  max-width: 24ch;
+}
+.pf-panel ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 12px; }
+.pf-panel li {
+  position: relative;
+  padding-left: 22px;
+  font-size: var(--t-small);
+  color: var(--mk-ink-text);
+  text-wrap: pretty;
+  max-width: 62ch;
+}
+/* A rule, not a bullet or a tick. A tick means "included", and half of these
+   are descriptions of how something works rather than things you get. */
+.pf-panel li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.62em;
+  width: 12px;
+  height: 1px;
+  background: var(--mk-brand);
+}
+.pf-panel .mk-btn { justify-self: start; margin-top: 4px; }
+@media (prefers-reduced-motion: no-preference) {
+  .pf-panel { animation: mk-pf-in 0.28s cubic-bezier(0.22, 0.68, 0, 1) both; }
+}
+@keyframes mk-pf-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}

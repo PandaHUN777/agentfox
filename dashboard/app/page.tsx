@@ -4,6 +4,7 @@ import { CATEGORY_CAP } from "./how-it-works/_public";
 import { SITE_URL, SUPPORT_EMAIL, publicPageMetadata, HOME_TITLE, HOME_DESCRIPTION } from "@/lib/site";
 import { MarketingNav, REPO } from "@/components/marketing/nav";
 import { CTA, Footer } from "@/components/marketing/sections";
+import { Platform } from "@/components/marketing/platform";
 import {
   Hero,
   Stack,
@@ -173,6 +174,7 @@ function Landing() {
         <Hero />
         <Stack />
         <Origins />
+        <Platform />
         <Boundaries />
         <ControlPoints />
         <Proof />
