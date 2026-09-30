@@ -13,9 +13,9 @@ import { CapabilityPage } from "@/components/marketing/capability";
 import { publicPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "One policy set, six places it binds",
+  title: "Open enforcement across six control points",
   description:
-    "No single gateway sees every agent. Write the policy once and bind it where your agents already run — with a straight account of what each binding point can and cannot see.",
+    "One policy, enforced at the hooks, gateway, SDK and MCP governor you already run. Each control point says what it cannot see.",
   path: "/control-points",
 });
 
@@ -74,8 +74,8 @@ export default function Page() {
   return (
     <CapabilityPage
       kicker="Open enforcement"
-      title={["One policy set,", "six places it binds"]}
-      lede="No single gateway sees every agent."
+      title={["One policy,", "six control points"]}
+      lede="Write the policy once. Bind it at the hooks, gateway, SDK and MCP governor you already run."
       challenge={
         <p>
           One team uses LangGraph, one calls an API from Go, one runs Claude Code on a

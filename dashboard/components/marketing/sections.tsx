@@ -50,7 +50,6 @@ function SectionHead({
   eyebrow,
   title,
   lede,
-  center = false,
 }: {
   eyebrow?: string;
   title: string;
@@ -58,10 +57,7 @@ function SectionHead({
   center?: boolean;
 }) {
   return (
-    <div
-      className={center ? "mk-narrow mk-up" : "mk-up"}
-      style={{ maxWidth: center ? undefined : "34ch" }}
-    >
+    <div className="mk-narrow mk-up">
       {eyebrow && <span className="mk-eyebrow">{eyebrow}</span>}
       <h2 className="mk-h2" style={{ marginTop: eyebrow ? 14 : 0 }}>
         {title}
@@ -145,8 +141,8 @@ const STATS: { n: string; label: string; tone?: string }[] = [
 
 export function Evidence() {
   return (
-    <section id="evidence" className="mk-band">
-      <div className="mk-section mk-wrap">
+    <section id="evidence" className="mk-section mk-band">
+      <div className="mk-wrap">
         <SectionHead
           eyebrow="Evidence"
           title="Measured with every detector switched off"
@@ -165,7 +161,7 @@ export function Evidence() {
         </div>
         <p
           className="mk-fine mk-up mk-d3"
-          style={{ maxWidth: "var(--measure)", marginTop: 24 }}
+          style={{ maxWidth: "var(--w-prose)", marginTop: 24 }}
         >
           The three calls that escaped the AgentDojo replay are all read-only, and the
           benchmark page names them one by one. The weakest figure is in the set on purpose.
@@ -472,9 +468,9 @@ export function CTA() {
           style={{ padding: "36px 32px" }}
         >
           <div className="mk-narrow">
-            <h2 className="mk-h2">Try to break it before you trust it</h2>
+            <h2 className="mk-h2">Red team a call in the browser</h2>
             <p className="mk-lede" style={{ marginTop: 12 }}>
-              No account, no install, and the same enforcement code as the product.
+              No account. The playground uses the same enforcement code as the product.
             </p>
             <div className="mk-row" style={{ marginTop: 20, gap: 10 }}>
               <Link href="/playground" className="mk-btn mk-btn-primary">

@@ -177,15 +177,15 @@ export default function Support() {
     <div className="mk">
       <MarketingNav />
       <main>
-        <section className="mk-section" style={{ paddingBottom: 0 }}>
+        <section className="mk-section mk-page-hero mk-ink-act">
           <div className="mk-wrap">
-            <h1 className="mk-h1 mk-up mk-d1" style={{ marginTop: 18, maxWidth: "18ch" }}>
-              Every report gets <em>read</em></h1>
+            <h1 className="mk-h1 mk-up mk-d1">
+              Support</h1>
             <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20 }}>
               This is one developer&rsquo;s project, so none of the routes below carries a
               promised response time. All of them are read.
             </p>
-            <div className="mk-row mk-up mk-d3" style={{ justifyContent: "center", marginTop: 26, gap: 10 }}>
+            <div className="mk-row mk-up mk-d3" style={{ marginTop: 26, gap: 10 }}>
               <a href={NEW_ISSUE} target="_blank" rel="noreferrer" className="mk-btn mk-btn-primary">
                 Open an issue
               </a>
@@ -242,8 +242,8 @@ export default function Support() {
         </section>
 
         {/* 2. Routing table */}
-        <section className="mk-band">
-          <div className="mk-section mk-wrap mk-reveal">
+        <section className="mk-section mk-band mk-reveal">
+          <div className="mk-wrap">
             <Head
               eyebrow="Where it goes"
               title="Which template, for which problem"
@@ -317,7 +317,7 @@ export default function Support() {
 
         {/* 4. Security */}
         <section className="mk-section mk-band mk-reveal">
-          <div className="mk-wrap mk-narrow">
+          <div className="mk-wrap">
             <div
               className="mk-card mk-card-raised mk-up"
               style={{ display: "grid", gap: 12, minWidth: 0 }}

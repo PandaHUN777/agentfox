@@ -4,9 +4,9 @@ import { CapabilityPage } from "@/components/marketing/capability";
 import { publicPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "Compliance",
+  title: "Compliance: EU AI Act, NIST, OWASP, ATLAS",
   description:
-    "43 controls across seven frameworks — EU AI Act, ISO 42001, NIST AI RMF, SOC 2, OWASP LLM and Agentic, MITRE ATLAS — computed from telemetry rather than attested in a spreadsheet.",
+    "43 controls across EU AI Act, ISO 42001, NIST AI RMF, SOC 2, OWASP LLM and Agentic, and MITRE ATLAS. Status comes from what ran, not from a questionnaire.",
   path: "/frameworks",
 });
 
@@ -30,8 +30,8 @@ export default function Page() {
   return (
     <CapabilityPage
       kicker="Compliance"
-      title={["Mapped to the decisions,", "not to a spreadsheet"]}
-      lede="43 controls across seven frameworks, based on what actually ran."
+      title={["EU AI Act, NIST,", "OWASP and ATLAS"]}
+      lede="43 controls. Status is computed from what ran, not from a questionnaire."
       challenge={
         <p>
           AI compliance is usually a document describing controls someone believes are

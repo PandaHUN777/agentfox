@@ -28,7 +28,7 @@ import coverage from "@/lib/coverage.json";
 import { publicPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "Coverage: what an agent can get wrong",
+  title: "Red team coverage, gaps included",
   // Interpolated, not typed. The two figures in this sentence were already
   // stale by four scenarios and two probes when this was written, which is
   // the whole argument for the generated file underneath the page.
@@ -97,12 +97,12 @@ export default function CoveragePage() {
     <div className="mk">
       <MarketingNav />
       <main>
-        <section className="mk-section cap-hero">
+        <section className="mk-section cap-hero mk-ink-act">
           <div className="mk-hero-glow" aria-hidden />
           <div className="mk-wrap" style={{ position: "relative" }}>
-            <p className="mk-kicker">Coverage</p>
+            <p className="mk-kicker">Red team coverage</p>
             <h1 className="mk-h1">
-              What an agent can get wrong, and <em>what we catch</em>
+              What the red team covers, and <em>what it misses</em>
             </h1>
             <p className="mk-lede">
               {scenarios} ways an agentic request can fail, built from the

@@ -510,7 +510,7 @@ export function Decisions() {
     <section id="decisions" className="mk-section">
       <div className="mk-wrap">
         <span className="mk-eyebrow">Tool calls</span>
-        <h2 className="mk-h2" style={{ marginTop: 12, maxWidth: "18ch" }}>
+        <h2 className="mk-h2" style={{ marginTop: 12 }}>
           One call, four possible outcomes</h2>
         <p className="mk-lede" style={{ margin: "16px 0 0" }}>
           The same agent and the same tool each time. The argument is what changes the

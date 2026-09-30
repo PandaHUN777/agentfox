@@ -4,9 +4,9 @@ import { CapabilityPage } from "@/components/marketing/capability";
 import { publicPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "Find the agents before you govern them",
+  title: "AI-SPM: agents, tools, MCP servers and skills",
   description:
-    "Static scanning, running-session detection, MCP snapshots and skill analysis — with an owner attached to each, because an agent nobody owns is a finding.",
+    "AI security posture for agents: static scanning, running-session detection, MCP snapshots and skill analysis, with an owner on each.",
   path: "/discovery",
 });
 
@@ -36,9 +36,9 @@ const FINDS = [
 export default function Page() {
   return (
     <CapabilityPage
-      kicker="Discovery and registry"
-      title={["Find the agents", "before you govern them"]}
-      lede="Find what you are running before you try to govern it."
+      kicker="AI-SPM"
+      title={["Every agent, tool,", "MCP server and skill"]}
+      lede="Including shadow AI: agents in a repo, and agents only running on a laptop."
       challenge={
         <p>
           Agents get built quickly and rarely get written down. By the time someone

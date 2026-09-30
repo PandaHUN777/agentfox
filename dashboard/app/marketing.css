@@ -32,11 +32,14 @@
 :root {
   /* Apple's neutral ramp. The greys are true neutrals rather than tinted, because a
      warm grey next to a product screenshot makes the screenshot look colour-cast. */
-  --mk-bg: #fbfbfd;
+  /* The ground has to be a step under white, or a white card on this page
+     has nothing to sit on and the whole light theme reads as a wireframe.
+     #fbfbfd against #ffffff was that failure: a 1.5% difference. */
+  --mk-bg: #f3f4f7;
   --mk-surface: #ffffff;
-  --mk-surface-2: #f5f5f7;
-  --mk-border: #e3e3e6;
-  --mk-border-strong: #d2d2d7;
+  --mk-surface-2: #e7e9ee;
+  --mk-border: #d5d9e0;
+  --mk-border-strong: #c3c8d1;
   --mk-text: #1d1d1f;
   --mk-muted: #6e6e73;
   --mk-faint: var(--mk-muted);
@@ -46,7 +49,9 @@
      each other on the same neutral axis, so the whole page rendered as one
      flat field with hairlines on it. Paper is warm enough to read as a
      different material next to white rather than as a slightly dirty white. */
-  --mk-paper: #f7f4ef;
+  /* Cool, like the rest of the light page. The warm cream read as a stain
+     next to the navy acts and the grey ground. */
+  --mk-paper: #eef1f6;
 
   /* ---- Measure ---------------------------------------------------------
      Three widths, in rem, and the rem is the whole point.
@@ -63,7 +68,10 @@
        intro  a section's heading and its lede, as one block
        prose  long-form body copy
        wide   a figure or table that may run past the reading column       */
-  --w-intro: 40rem;
+  /* One text measure. Headlines, ledes and long-form docs all stop
+     at this width, and they all start at the wrap's left edge. Grids,
+     tables and product shots still use the full 1120px column. */
+  --w-intro: 46rem;
   --w-prose: 46rem;
   --w-wide: 56rem;
 
@@ -95,8 +103,11 @@
   --mk-accent-hover: #a32d00;
   --mk-accent-fg: #ffffff;
   --mk-accent-soft: #fff0e9;
-  --mk-cta: #012455;
-  --mk-cta-hover: #01326f;
+  /* Darkened brand orange. Logo orange (#fd4901) is 3.31:1 with a white
+     label, which fails at button size. This is the same orange as --mk-accent,
+     measured at 5.32:1, so the button can actually be the brand. */
+  --mk-cta: #c23600;
+  --mk-cta-hover: #a32d00;
   --mk-cta-fg: #ffffff;
 
   /* Semantic colours for verdicts. Separate from the accent, and never used for
@@ -206,6 +217,10 @@
 /* Apple's content column is a little under 1000px and the page is centred in it.
    Wider than this and running text stops being comfortable to read. */
 .mk-wrap { max-width: 1120px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
+/* mk-narrow on the wrap used to shrink the column to 40rem and center it,
+   so the hero's left edge sat ~240px to the right of every section below.
+   The narrow measure belongs on the text, not on the column. */
+.mk-wrap.mk-narrow { max-width: 1120px; }
 /* The one container a section intro goes in. Everything inside it inherits
    the same right edge, which is what stops the page shifting as you scroll. */
 .mk-narrow { max-width: var(--w-intro); }
@@ -219,8 +234,13 @@
    difference is room, and at desktop the clamp was still topping out well
    below where the reference sits. Raised again, and the ceiling is what
    moves: a phone does not need 140px of air between sections. */
-.mk-section { padding-block: clamp(64px, 9vw, 148px); }
-.mk-section-tight { padding-block: clamp(40px, 5vw, 80px); }
+/* One vertical step. Two adjacent sections meet with 56px of pad on
+   each side, so the gap between blocks is 112px on every page. The old
+   clamp ran from 40px to 96px depending on the viewport and the class,
+   and several heroes then zeroed their bottom pad, so the same seam was
+   72px on one page and 190px on the next. */
+.mk-section,
+.mk-section-tight { padding-block: 56px; }
 
 /* --- Type -------------------------------------------------------------- */
 
@@ -232,7 +252,7 @@
    half-pixel px values in globals.css. A reader cannot perceive a hierarchy with
    48 levels; they perceive a mistake. Every size below is a whole pixel. */
 :root {
-  --t-display: 72px;
+  --t-display: 84px;
   --t-title: 32px;
   --t-subhead: 20px;
   --t-body: 15px;
@@ -322,6 +342,8 @@
    is what makes the difference, not the size alone.
    `1.02` line-height because at this size the default leading opens a visible
    gap between the two lines of a two-line headline. */
+.mk .mk-h1 { max-width: var(--w-intro); }
+.mk .mk-lede { max-width: var(--w-prose); }
 .mk-h1 {
   font-size: clamp(2.5rem, 5.6vw, var(--t-display));
   line-height: 1.03;
@@ -401,10 +423,10 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: var(--mk-r-md);
-  padding: 9px 16px;
+  border-radius: 8px;
+  padding: 12px 18px;
   font-size: var(--t-body);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: -.01em;
   text-decoration: none;
   border: 1px solid transparent;
@@ -436,10 +458,11 @@
    border only appears in dark mode, where a panel and the black ground would
    otherwise have no edge between them. */
 .mk-card {
-  background: transparent;
+  background: var(--mk-surface);
   border: 1px solid var(--mk-border);
   border-radius: var(--mk-r-md);
   padding: 22px;
+  box-shadow: var(--mk-shadow-card);
 }
 .mk-band .mk-card { background: var(--mk-surface); }
 .mk-card-raised { background: var(--mk-surface); box-shadow: var(--mk-shadow-raise); }
@@ -718,11 +741,20 @@
 /* The "works with what you already run" strip. Names, not logos: we integrate with
    these projects and have no permission to use anyone's mark. */
 .mk-strip {
-  display: flex; flex-wrap: wrap; justify-content: center;
-  gap: 10px 28px;
-  font-size: var(--t-body); color: var(--mk-muted);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  margin: 0 -8px;
 }
-.mk-strip span { white-space: nowrap; }
+.mk-strip span {
+  white-space: nowrap;
+  padding: 6px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--mk-text);
+}
 
 /* One statement per section, set large. Used where a section has a single idea and
    no list, so the page has a change of pace rather than eight identical grids. */
@@ -807,10 +839,17 @@
   position: sticky; top: 0; z-index: 40;
   backdrop-filter: saturate(180%) blur(20px);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
-  background: color-mix(in srgb, var(--mk-bg) 72%, transparent);
+  background: color-mix(in srgb, var(--mk-bg) 88%, transparent);
   border-bottom: 1px solid var(--mk-border);
 }
-.mk-nav-inner { display: flex; align-items: center; gap: 20px; height: 52px; }
+/* On the grey ground a translucent grey bar disappears. White keeps the
+   nav a separate object, which is what the dark theme gets for free. */
+:root[data-theme="light"] .mk-nav {
+  background: color-mix(in srgb, #ffffff 90%, transparent);
+  border-bottom-color: #e3e6ed;
+}
+:root[data-theme="light"] .mk-footer { background: #fff; }
+.mk-nav-inner { display: flex; align-items: center; gap: 20px; height: 64px; }
 /* `align-items: center` and a shared box on both kinds of child, because the
    row mixes <a> and <button>. The button had its own padding and its own
    colour, so the two sat on different baselines at different weights — which
@@ -876,7 +915,7 @@
 .mk-menu > summary {
   position: absolute;
   right: 16px;
-  top: -44px;
+  top: -52px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1151,7 +1190,7 @@
   justify-content: space-between;
   gap: 8px 20px;
   padding: 15px 18px;
-  background: var(--mk-bg);
+  background: var(--mk-surface);
 }
 .mk-threat b { display: block; font-size: var(--t-body); font-weight: 600; color: var(--mk-text); }
 .mk-threat span { display: block; margin-top: 3px; font-size: var(--t-small); color: var(--mk-muted); }
@@ -2039,6 +2078,13 @@
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 22%, #000 78%, transparent);
 }
+/* The orange tick marks were a light-mode ornament. On the grey ground they
+   read as a broken rule between every section. The gap is the separator. */
+:root[data-theme="light"] .mk-section + .mk-section::before,
+:root[data-theme="light"] .mk-section + .mk-section-tight::before,
+:root[data-theme="light"] .mk-section-tight + .mk-section::before {
+  display: none;
+}
 
 /* --- /coverage -------------------------------------------------------
    The numbers on this page come from `lib/coverage.json`, so the layout
@@ -2142,7 +2188,7 @@
 .cov-neveropen dd { margin: 0; font-size: var(--t-small); color: var(--mk-muted); }
 @media (max-width: 560px) { .cov-neveropen > div { grid-template-columns: 1fr; gap: 4px; } }
 
-.cov-note { font-size: var(--t-small); color: var(--mk-muted); max-width: var(--measure); }
+.cov-note { font-size: var(--t-small); color: var(--mk-muted); max-width: var(--w-prose); }
 .cov-note code { font-size: 0.92em; }
 
 /* --- /coverage: the origin cut ------------------------------------------
@@ -2262,14 +2308,22 @@
 }
 .mk-origin {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   align-content: start;
-  border-top: 2px solid var(--mk-text);
-  padding-top: 16px;
+  background: var(--mk-surface);
+  border: 1px solid var(--mk-border);
+  border-top: 3px solid var(--mk-brand);
+  border-radius: 16px;
+  padding: 22px 22px 24px;
+  box-shadow: var(--mk-shadow-card);
 }
 .mk-origin-n {
-  font-size: var(--t-micro);
-  color: var(--mk-muted);
+  font-family: var(--mk-display);
+  font-size: 28px;
+  font-weight: 560;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  color: var(--mk-brand);
 }
 .mk-origin b { font-size: var(--t-h3, 1.25rem); font-weight: 600; text-wrap: balance; }
 .mk-origin p { margin: 0; font-size: var(--t-small); color: var(--mk-text); text-wrap: pretty; }
@@ -2349,7 +2403,10 @@
   white-space: nowrap;
   font-family: var(--mk-code);
   font-size: var(--t-small);
-  color: var(--mk-muted);
+  color: var(--mk-text);
+}
+:root[data-theme="light"] .mk-marquee {
+  background: var(--mk-surface);
 }
 .mk-marquee-run i { font-style: normal; color: var(--mk-accent); }
 @keyframes mk-marquee {
@@ -2939,6 +2996,7 @@
 }
 /* The band treatment inside an ink act would be a grey rectangle on navy. */
 .mk-ink-act .mk-band { background: var(--mk-ink-2); }
+.mk-ink-act .mk-card { box-shadow: none; }
 /* The hairline rule this stylesheet draws between consecutive sections is a
    light-mode device and shows as a scratch on ink. */
 .mk-ink-act + .mk-section::before,
@@ -3026,8 +3084,12 @@
 .mk-hero-act {
   position: relative;
   overflow: hidden;
-  background: var(--mk-paper);
-  border-bottom: 1px solid color-mix(in srgb, var(--mk-paper) 82%, #000);
+  background:
+    radial-gradient(90% 80% at 88% 20%, rgba(253, 73, 1, 0.16), transparent 46%),
+    radial-gradient(70% 60% at 0% 0%, rgba(36, 86, 170, 0.28), transparent 52%),
+    #071422;
+  border-bottom: 0;
+  color: var(--mk-ink-text);
 }
 /* Two soft pools rather than a gradient across the whole field: a linear
    wash reads as a banner, and banners are what this page is trying to stop
@@ -3059,7 +3121,7 @@
 
 /* The proof screenshot sits wider than the threat rows above it, because it
    is the evidence for them and evidence should not be smaller than the claim. */
-.proof-shot { margin-top: 36px; max-width: 900px; }
+.proof-shot { margin-top: 36px; max-width: none; }
 
 /* ========================================================================
    The platform section
@@ -3204,10 +3266,248 @@
 /* A capability page's hero, on paper like the homepage's. Same treatment,
    smaller: these pages open with copy alone, so the glow is quieter and the
    act does not need the homepage's height. */
-.cap-hero {
+.cap-hero,
+.mk-page-hero {
   position: relative;
   overflow: hidden;
-  background: var(--mk-paper);
-  border-bottom: 1px solid color-mix(in srgb, var(--mk-paper) 82%, #000);
+  background:
+    radial-gradient(80% 90% at 100% 0%, rgba(253, 73, 1, 0.14), transparent 46%),
+    #071422;
+  border-bottom: 0;
+  color: var(--mk-ink-text);
 }
-.cap-hero .mk-hero-glow { opacity: 0.65; }
+.cap-hero .mk-hero-glow,
+.mk-page-hero .mk-hero-glow { opacity: 0.45; }
+.mk-page-hero .mk-h1,
+.cap-hero .mk-h1 { color: #f4f7fb; }
+.mk-page-hero .mk-h1 em,
+.cap-hero .mk-h1 em { color: #ff7a45; }
+.mk-page-hero .mk-lede,
+.cap-hero .mk-lede,
+.mk-page-hero .mk-fine,
+.cap-hero .mk-fine { color: #c5d0e0; }
+.mk-page-hero .mk-kicker,
+.cap-hero .mk-kicker,
+.mk-page-hero .mk-eyebrow,
+.cap-hero .mk-eyebrow { color: #ffb088; }
+.mk-page-hero .mk-btn-outline,
+.cap-hero .mk-btn-outline {
+  color: #f4f7fb;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.mk-page-hero .mk-btn-outline:hover,
+.cap-hero .mk-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+/* Long-form pages (how it works, the benchmark write-up) used an 820px
+   rail while every other page's prose stopped at the intro measure, so
+   the right edge jumped as you moved between them. */
+.mk .bm-doc,
+.mk .bm-rail { max-width: none; }
+/* Running text stays on the shared measure. Tables, charts and the
+   button row use the full column, same as every other page's grids. */
+.mk .bm-doc > :is(p, h2, h3, h4, ul, ol, blockquote, .callout, .lede) {
+  max-width: var(--w-prose);
+}
+/* The benchmark hero is dark, and these cards were drawn for a light page.
+   Pin them so the figures stay dark on white instead of inheriting the
+   hero's light text. */
+.mk-page-hero .bm-claim,
+.mk-page-hero .bm-index a { background: #fff; color: #1d1d1f; }
+.mk-page-hero .bm-claim h2,
+.mk-page-hero .bm-claim-limit { color: #6e6e73; }
+.mk-page-hero .bm-claim-figure { color: #1d1d1f; }
+.mk-page-hero .bm-claim-detail { color: #424245; }
+.mk-page-hero .bm-index a:hover { background: #f5f5f7; color: #1d1d1f; }
+/* The long-form pages open with the same hero as everything else, then a
+   document whose first heading already carries 64px of margin. Without this
+   the seam under the hero is that margin plus two section pads. */
+.mk-page-hero + .mk-section .bm-doc > :first-child { margin-top: 0; }
+.pg { padding-block: 0; }
+.pg-h1 {
+  max-width: var(--w-intro);
+  font-family: var(--mk-display);
+  font-variation-settings: "wdth" 108;
+  font-size: clamp(2.5rem, 5.6vw, var(--t-display));
+  line-height: 1.03;
+  letter-spacing: -0.035em;
+  font-weight: 430;
+}
+.pg-lede { max-width: var(--w-prose); font-size: var(--t-subhead); line-height: 1.5; }
+
+/* Homepage hero. The opening is a product, so the type is larger than the
+   page h1, the secondary button is light-on-navy, and the three figures sit
+   in the first screen rather than halfway down the page. */
+.mk-hero-act .mk-h1 {
+  font-size: clamp(44px, 6.2vw, 84px);
+  font-weight: 560;
+  letter-spacing: -0.045em;
+  line-height: 0.96;
+  max-width: 12ch;
+  color: #f4f7fb;
+}
+.mk-hero-act .mk-h1 em { color: #ff7a45; white-space: normal; }
+.mk-hero-act .mk-lede {
+  max-width: 38ch;
+  color: #c5d0e0;
+  font-size: 18px;
+  line-height: 1.45;
+}
+.mk-hero-act .mk-fine { color: #9aabC2; }
+.mk-hero-act .mk-kicker { color: #ffb088; }
+.mk-hero-act .mk-btn-outline {
+  color: #f4f7fb;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+.mk-hero-act .mk-btn-outline:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+.mk-hero-act .shot figcaption { color: #c5d0e0; max-width: none; }
+.mk-hero-act .shot figcaption a { color: #ffb088; }
+@media (min-width: 940px) {
+  .mk-hero-act .mk-hero {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: 48px;
+    align-items: center;
+    padding-top: clamp(28px, 4vw, 56px);
+    padding-bottom: 8px;
+  }
+  .mk-hero-act .mk-hero-shot { margin-right: 0; }
+}
+.mk-hero-stats {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px;
+  margin: 8px auto clamp(28px, 4vw, 48px);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  overflow: hidden;
+}
+@media (min-width: 760px) {
+  .mk-hero-stats { grid-template-columns: repeat(3, 1fr); }
+}
+.mk-hero-stat {
+  padding: 16px 18px 18px;
+  background: rgba(7, 20, 34, 0.45);
+}
+.mk-hero-stat b {
+  display: block;
+  font-family: var(--mk-display);
+  font-variation-settings: "wdth" 108;
+  font-size: clamp(22px, 2.2vw, 28px);
+  font-weight: 560;
+  letter-spacing: -0.03em;
+  color: #f4f7fb;
+}
+.mk-hero-stat span {
+  display: block;
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #c5d0e0;
+}
+/* The name row sits on the hero, not in a field of empty page. */
+.mk-hero-act + .mk-section-tight {
+  padding-block: 22px 26px;
+  background: #fff;
+  border-bottom: 1px solid var(--mk-border);
+}
+
+/* Light theme keeps the same sections, without the navy fields.
+   Those backgrounds and the light-on-navy type are hardcoded, so a
+   token swap does not reach them. Dark mode is unchanged. */
+:root[data-theme="light"] .mk-ink-act {
+  --mk-bg: #f3f4f7;
+  --mk-surface: #ffffff;
+  --mk-surface-2: #e7e9ee;
+  --mk-border: #d5d9e0;
+  --mk-border-strong: #c3c8d1;
+  --mk-text: #1d1d1f;
+  --mk-muted: #6e6e73;
+  --mk-faint: #6e6e73;
+  --mk-accent: #c23600;
+  --mk-accent-soft: #fff0e9;
+  --mk-cta: #c23600;
+  --mk-cta-hover: #a32d00;
+  --mk-cta-fg: #ffffff;
+  --mk-good: #1a7f52;
+  --mk-good-soft: #e9f5ef;
+  --mk-stop: #b3261e;
+  --mk-stop-soft: #fceceb;
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --border: #d5d9e0;
+  --surface: #ffffff;
+  --bg: #f3f4f7;
+  background: var(--mk-bg);
+  color: var(--mk-text);
+}
+:root[data-theme="light"] .mk-ink-act .mk-band { background: var(--mk-surface-2); }
+:root[data-theme="light"] .mk-ink-act .shot-frame {
+  border-color: var(--mk-border);
+  box-shadow: var(--mk-shadow-card);
+}
+:root[data-theme="light"] .mk-hero-act,
+:root[data-theme="light"] .cap-hero,
+:root[data-theme="light"] .mk-page-hero {
+  background:
+    radial-gradient(80% 70% at 100% 0%, rgba(253, 73, 1, 0.07), transparent 46%),
+    var(--mk-bg);
+  color: var(--mk-text);
+}
+:root[data-theme="light"] .mk-hero-act .mk-h1,
+:root[data-theme="light"] .mk-page-hero .mk-h1,
+:root[data-theme="light"] .cap-hero .mk-h1,
+:root[data-theme="light"] .pg-h1 { color: var(--mk-text); }
+:root[data-theme="light"] .mk-hero-act .mk-h1 em,
+:root[data-theme="light"] .mk-page-hero .mk-h1 em,
+:root[data-theme="light"] .cap-hero .mk-h1 em { color: var(--mk-accent); }
+:root[data-theme="light"] .mk-hero-act .mk-lede,
+:root[data-theme="light"] .mk-page-hero .mk-lede,
+:root[data-theme="light"] .cap-hero .mk-lede,
+:root[data-theme="light"] .mk-page-hero .mk-fine,
+:root[data-theme="light"] .cap-hero .mk-fine,
+:root[data-theme="light"] .mk-hero-act .mk-fine,
+:root[data-theme="light"] .pg-lede { color: var(--mk-muted); }
+:root[data-theme="light"] .mk-hero-act .mk-kicker,
+:root[data-theme="light"] .mk-page-hero .mk-kicker,
+:root[data-theme="light"] .cap-hero .mk-kicker,
+:root[data-theme="light"] .mk-page-hero .mk-eyebrow,
+:root[data-theme="light"] .cap-hero .mk-eyebrow { color: var(--mk-accent); }
+:root[data-theme="light"] .mk-hero-act .mk-btn-outline,
+:root[data-theme="light"] .mk-page-hero .mk-btn-outline,
+:root[data-theme="light"] .cap-hero .mk-btn-outline {
+  color: var(--mk-text);
+  border-color: var(--mk-border-strong);
+}
+:root[data-theme="light"] .mk-hero-act .mk-btn-outline:hover,
+:root[data-theme="light"] .mk-page-hero .mk-btn-outline:hover,
+:root[data-theme="light"] .cap-hero .mk-btn-outline:hover {
+  background: var(--mk-accent-soft);
+  border-color: var(--mk-accent);
+}
+:root[data-theme="light"] .mk-hero-act .shot figcaption { color: var(--mk-muted); }
+:root[data-theme="light"] .mk-hero-act .shot figcaption a { color: var(--mk-accent); }
+:root[data-theme="light"] .mk-hero-stats {
+  background: var(--mk-border);
+  border-color: var(--mk-border);
+}
+:root[data-theme="light"] .mk-hero-stat { background: #fff; }
+:root[data-theme="light"] .mk-hero-stat b { color: var(--mk-text); }
+:root[data-theme="light"] .mk-hero-stat span { color: var(--mk-muted); }
+:root[data-theme="light"] .pf,
+:root[data-theme="light"] .pf-tabs { background: var(--mk-border); border-color: var(--mk-border); }
+:root[data-theme="light"] .pf-tab {
+  background: #fff;
+  color: var(--mk-muted);
+}
+:root[data-theme="light"] .pf-tab:hover,
+:root[data-theme="light"] .pf-tab-on {
+  background: var(--mk-accent-soft);
+  color: var(--mk-text);
+}
+:root[data-theme="light"] .pf-panel { background: #fff; }
+:root[data-theme="light"] .pf-panel li { color: var(--mk-text); }

@@ -92,9 +92,12 @@ export async function MarketingNav() {
             </svg>
           </a>
           <ThemeToggle compact />
+          <Link href="/playground" className="mk-btn mk-btn-primary mk-nav-try">
+            Try it
+          </Link>
           <Link
             href={signedIn ? "/app" : "/login"}
-            className="mk-btn mk-btn-primary"
+            className="mk-btn mk-btn-outline"
             style={{ padding: "8px 14px" }}
           >
             {signedIn ? "Dashboard" : "Sign in"}

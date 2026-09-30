@@ -4,9 +4,9 @@ import { CapabilityPage } from "@/components/marketing/capability";
 import { publicPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "Evidence and audit",
+  title: "Audit trail for agent decisions",
   description:
-    "Every governed decision recorded in a hash chain, exportable as a package an auditor verifies with a stdlib-only script — without us, and without trusting us.",
+    "Every allow and every block in a hash-chained audit trail, with a verifier an auditor can run without our code.",
   path: "/evidence",
 });
 
@@ -24,9 +24,9 @@ const RECORD = [
 export default function Page() {
   return (
     <CapabilityPage
-      kicker="Evidence and audit"
-      title={["A record an auditor can check", "without us"]}
-      lede="A record an auditor can check for themselves."
+      kicker="Audit trail"
+      title={["An audit trail", "you can verify"]}
+      lede="Every allow and every block, hash-chained, with a verifier that does not use our code."
       challenge={
         <p>
           If the only proof a control ran is a row in a database the vendor also

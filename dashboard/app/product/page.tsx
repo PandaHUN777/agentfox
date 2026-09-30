@@ -12,9 +12,9 @@ export const dynamic = "force-dynamic";
 // description ran to 244 characters and was cut mid-clause in every search result
 // and every unfurl; this one says the same six things inside the ~160 that get shown.
 export const metadata: Metadata = publicPageMetadata({
-  title: "What AgentFox does, on real screens",
+  title: "AI agent security control plane",
   description:
-    "The whole control plane on one page: what each of the six areas does, and the page that covers it in depth.",
+    "Discover, govern, protect, test and prove: AI-SPM, access control, runtime guardrails, red teaming and an audit trail.",
   path: "/product",
 });
 
@@ -37,14 +37,14 @@ export default function Product() {
     <div className="mk">
       <MarketingNav />
       <main>
-        <section className="mk-section" style={{ paddingBottom: 0 }}>
+        <section className="mk-section mk-page-hero mk-ink-act">
           <div className="mk-wrap">
-            <h1 className="mk-h1 mk-up" style={{ maxWidth: "19ch" }}>
-              Every decision, on a <em>real screen</em>
+            <h1 className="mk-h1 mk-up">
+              Discover, govern, protect, <em>test, prove</em>
             </h1>
             <p className="mk-lede mk-up mk-d1" style={{ marginTop: 18 }}>
-              What the product actually shows you when an agent reads, answers and
-              acts. <Link href="/playground">The playground</Link> needs no account.
+              AI-SPM, access control, runtime guardrails, red teaming and an audit
+              trail, each on a real screen. <Link href="/playground">The playground</Link> needs no account.
             </p>
           </div>
         </section>

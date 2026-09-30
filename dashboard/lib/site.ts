@@ -28,13 +28,13 @@ export const SITE_NAME = "AgentFox";
  * cannot say two different things, which is how "AgentFox Control Plane" became a
  * fourth name for the product alongside the strapline and the body copy.
  *
- * 56 and 151 characters: a title is truncated by Google at roughly 60 and a
+ * 56 and 140 characters: a title is truncated by Google at roughly 60 and a
  * description at roughly 160, and a sentence that is cut mid-clause reads as
  * carelessness in the one place a stranger is deciding whether to click.
  */
 export const HOME_TITLE = "AgentFox: AI agent governance and security control plane";
 export const HOME_DESCRIPTION =
-  "AgentFox checks every model call and tool call an agent makes against what that agent was granted, refuses the rest, and keeps a tamper-evident record.";
+  "Runtime guardrails for AI agents. AgentFox blocks a tool call the agent was not granted, and keeps an audit trail you can check without us.";
 
 /** The site-wide default, for routes that do not describe themselves. */
 export const SITE_DESCRIPTION =

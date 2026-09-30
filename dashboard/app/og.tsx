@@ -93,9 +93,8 @@ export function ogImage(): ImageResponse {
           </div>
         </div>
 
-        {/* Headline. The same sentence components/marketing/hero.tsx renders, with
-            the same clause carrying the accent, so the card and the page a reader
-            lands on say one thing rather than two. */}
+        {/* Headline. The same sentence the homepage hero renders, so the card
+            and the page a reader lands on say one thing. */}
         <div style={{ display: "flex", flexDirection: "column", maxWidth: 1000 }}>
           <div
             style={{
@@ -107,12 +106,12 @@ export function ogImage(): ImageResponse {
               letterSpacing: "-0.03em",
             }}
           >
-            <span>Your agent believes what it reads.&nbsp;</span>
-            <span style={{ color: MK.brand }}>Limit what it is allowed to do.</span>
+            <span>Stop the agent before it&nbsp;</span>
+            <span style={{ color: MK.brand }}>spends.</span>
           </div>
           <div style={{ display: "flex", fontSize: 26, color: MK.muted, marginTop: 22, lineHeight: 1.45 }}>
-            Hidden text in a document can tell an AI agent to move money. AgentFox
-            refuses any call the agent was never granted.
+            Runtime guardrails for agents that transfer money, delete rows and
+            send mail. The call is checked against the grant.
           </div>
         </div>
 

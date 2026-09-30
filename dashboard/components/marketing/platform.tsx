@@ -50,8 +50,8 @@ const PILLARS: Pillar[] = [
   },
   {
     verb: "Govern",
-    product: "Agent Access Control",
-    headline: "Set what each agent is allowed to do",
+    product: "Access control",
+    headline: "Least privilege on every tool call",
     points: [
       "Every tool is read, write, high impact or irreversible",
       "Grants carry limits: a value ceiling, an environment, a data source",
@@ -59,12 +59,12 @@ const PILLARS: Pillar[] = [
       "Anything you have not granted is refused",
     ],
     href: "/grants",
-    cta: "How grants work",
+    cta: "How access control works",
   },
   {
     verb: "Protect",
-    product: "AI-DR",
-    headline: "Check every call while it happens",
+    product: "Runtime",
+    headline: "Guard the action, not only the prompt",
     points: [
       "Nine surfaces: prompts, tool calls, tool results, retrieved documents, memory, agent messages, model reasoning and completions",
       "50 rules in four packs, as YAML in your repository",
@@ -72,12 +72,12 @@ const PILLARS: Pillar[] = [
       "Starts in observe mode and changes nothing until you turn it on",
     ],
     href: "/runtime",
-    cta: "How enforcement works",
+    cta: "How runtime guardrails work",
   },
   {
     verb: "Test",
-    product: "AI Red Teaming",
-    headline: "Attack your own setup first",
+    product: "Red team",
+    headline: "Red team this deployment",
     points: [
       "116 failure scenarios",
       "105 of them run against the product every night",
@@ -85,12 +85,12 @@ const PILLARS: Pillar[] = [
       "We publish the ones we miss too",
     ],
     href: "/coverage",
-    cta: "See the coverage",
+    cta: "See the red team coverage",
   },
   {
     verb: "Prove",
-    product: "Audit & Compliance",
-    headline: "Show an auditor what happened",
+    product: "Audit",
+    headline: "An audit trail an auditor can verify",
     points: [
       "Every decision is hash-chained, so a deletion shows up",
       "Evidence packages come with a verifier that does not use our code",
@@ -98,7 +98,7 @@ const PILLARS: Pillar[] = [
       "Status comes from telemetry, not a questionnaire",
     ],
     href: "/evidence",
-    cta: "How evidence works",
+    cta: "How the audit trail works",
   },
 ];
 
@@ -110,12 +110,13 @@ export function Platform() {
     <section id="platform" className="mk-section mk-ink-act mk-reveal">
       <div className="mk-wrap">
         <div className="mk-narrow">
-          <p className="mk-kicker">The control plane</p>
+          <p className="mk-kicker">The platform</p>
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
-            One platform for every agent you run
+            Discover, govern, protect, test, prove.
           </h2>
           <p className="mk-lede" style={{ marginTop: 16 }}>
-Five products, one policy set, one audit trail.
+            AI-SPM, access control, runtime guardrails, red teaming and an audit
+            trail. One policy across all five.
           </p>
         </div>
 

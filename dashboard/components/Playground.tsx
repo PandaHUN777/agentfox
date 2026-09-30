@@ -472,12 +472,18 @@ export function Playground({ apiBase }: { apiBase: string }) {
   // Component. It has to be: the nav reads the session cookie, and a client
   // component cannot import `next/headers`.
   return (
-    <div className="mk-wrap">
-          <h1 className="pg-h1">Try to break a real agent</h1>
+    <>
+      <section className="mk-section mk-page-hero mk-ink-act">
+        <div className="mk-wrap">
+          <h1 className="pg-h1">Red team a running agent</h1>
           <p className="pg-lede">
-            Pick an agent. The chips run a real tool call; the box checks the text you
-            type. Both verdicts come from the same enforcement code.
+            Prompt injection, indirect injection, or a tool call the agent was not
+            granted. Both verdicts come from the same enforcement code.
           </p>
+        </div>
+      </section>
+      <section className="mk-section">
+        <div className="mk-wrap">
 
           <div className="pg-agents" role="tablist" aria-label="Agent">
             {world?.agents.map((a) => (
@@ -504,7 +510,7 @@ export function Playground({ apiBase }: { apiBase: string }) {
               <p>{sandboxLost ? "That sandbox expired. Nothing was saved." : bootstrapError}</p>
               <button
                 type="button"
-                className="btn-primary"
+                className="mk-btn mk-btn-primary"
                 onClick={() => void bootstrap()}
                 disabled={bootstrapping}
               >
@@ -639,7 +645,7 @@ export function Playground({ apiBase }: { apiBase: string }) {
               <aside className="pg-rail" aria-label="Sandbox">
                 <div className="pg-mode">
                   <span className={`tag ${mode === "enforce" ? "bad" : ""}`}>{mode}</span>
-                  <button type="button" className="btn-scan" onClick={toggleMode}>
+                  <button type="button" className="mk-btn mk-btn-outline" onClick={toggleMode}>
                     switch to {mode === "observe" ? "enforce" : "observe"}
                   </button>
                 </div>
@@ -667,6 +673,8 @@ export function Playground({ apiBase }: { apiBase: string }) {
           )}
 
       {!sessionId && !bootstrapError && <p className="pg-lede">Setting up your sandbox…</p>}
-    </div>
+        </div>
+      </section>
+    </>
   );
 }

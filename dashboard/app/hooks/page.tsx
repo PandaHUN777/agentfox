@@ -18,9 +18,9 @@ import { REPO } from "@/components/marketing/nav";
 import { publicPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "Govern your coding agent",
+  title: "Agent hooks for coding agents",
   description:
-    "Three hook points in Claude Code, and a straight answer about which of them can actually stop a call. Probed against a live session, not read off a docs page.",
+    "Three hook points in Claude Code. Two can block a call. One cannot, and the page says which.",
   path: "/hooks",
 });
 
@@ -61,9 +61,9 @@ const EVENTS = [
 export default function Page() {
   return (
     <CapabilityPage
-      kicker="Claude Code"
-      title={["Govern the agent", "on your machine"]}
-      lede="Two commands, three checkpoints, and which of them can actually stop a call."
+      kicker="Agent hooks"
+      title={["Which hooks", "can actually block"]}
+      lede="Claude Code has three checkpoints. Two can stop a call. One cannot, and the page says so."
       commands={[
         "agentfox hooks daemon",
         "agentfox hooks install --agent my-agent --write",

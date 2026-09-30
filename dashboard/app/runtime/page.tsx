@@ -4,9 +4,9 @@ import { CapabilityPage } from "@/components/marketing/capability";
 import { publicPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "Runtime guardrails",
+  title: "Runtime guardrails for AI agents",
   description:
-    "Nine surfaces, 50 rules across four packs, a declared latency budget, and a detector that runs out of time saying so in the record rather than being skipped.",
+    "Input and output guards plus tool calls, tool results, retrieval and memory. Fifty rules, and a detector that times out is recorded rather than skipped.",
   path: "/runtime",
 });
 
@@ -32,8 +32,8 @@ export default function Page() {
   return (
     <CapabilityPage
       kicker="Runtime guardrails"
-      title={["Detectors read the text.", "A policy decides"]}
-      lede="Nine places content enters or leaves an agent, and rules you can read."
+      title={["Guard the action,", "not only the prompt"]}
+      lede="Input and output guards, plus tool calls, tool results, retrieval and memory. A detector that times out is recorded."
       challenge={
         <p>
           A scanner gives you a score. You still have to decide what to do with it:

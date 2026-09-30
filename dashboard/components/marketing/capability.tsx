@@ -74,9 +74,9 @@ export function CapabilityPage({
             hero uses, so the two do not arrive differently. */}
         {/* Paper, like the homepage hero, so a reader moving between them
             feels one site. */}
-        <section className="mk-section cap-hero">
+        <section className="mk-section cap-hero mk-ink-act">
           <div className="mk-hero-glow" aria-hidden />
-          <div className="mk-wrap mk-narrow" style={{ position: "relative" }}>
+          <div className="mk-wrap" style={{ position: "relative" }}>
             <p className="mk-kicker mk-up mk-d1">{kicker}</p>
             <h1 className="mk-h1 mk-up mk-d2" style={{ marginTop: 14 }}>
               {title[0]} <em>{title[1]}</em>

@@ -43,9 +43,9 @@ export default async function Pricing({
     <div className="mk">
       <MarketingNav />
       <main>
-        <section className="mk-section" style={{ paddingBottom: 0 }}>
+        <section className="mk-section mk-page-hero mk-ink-act">
           <div className="mk-wrap">
-            <h1 className="mk-h1 mk-up mk-d1" style={{ marginTop: 18, maxWidth: "16ch" }}>
+            <h1 className="mk-h1 mk-up mk-d1">
               Free to self-host, <em>forever</em></h1>
             <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20 }}>
               Everything in the repository is Apache-2.0 and nothing is gated behind a paid tier.

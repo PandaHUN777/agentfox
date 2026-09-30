@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import { publicPageMetadata } from "@/lib/site";
 import { Playground } from "@/components/Playground";
 import { MarketingNav } from "@/components/marketing/nav";
+import { Footer } from "@/components/marketing/sections";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "Playground: try to break a live agent",
+  title: "Red team a running agent",
   description:
-    "Attack a running agent from the browser with no account: prompt injection, indirect injection, payload splitting, and the enforcement verdict for every try.",
+    "Red team a running agent in the browser, no account: prompt injection, indirect injection, payload splitting, and the enforcement verdict for every try.",
   path: "/playground",
 });
 
@@ -36,6 +37,7 @@ export default function PlaygroundPage() {
       <main className="pg">
         <Playground apiBase={apiBase} />
       </main>
+      <Footer />
     </div>
   );
 }

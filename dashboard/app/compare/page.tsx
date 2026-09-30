@@ -29,9 +29,9 @@ export const dynamic = "force-dynamic";
  */
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "How AgentFox compares",
+  title: "AI governance and runtime security",
   description:
-    "Two market camps, where competitors genuinely beat us including a measured loss to llm-guard, and what containment without detection actually changes.",
+    "Governance platforms and runtime tools, where each camp beats us, including a measured loss to llm-guard, and what least privilege changes when detection fails.",
   path: "/compare",
 });
 
@@ -246,13 +246,13 @@ export default function Compare() {
     <div className="mk">
       <MarketingNav />
       <main>
-        <section className="mk-section" style={{ paddingBottom: 0 }}>
+        <section className="mk-section mk-page-hero mk-ink-act">
           <div className="mk-wrap">
-            <h1 className="mk-h1 mk-up mk-d1" style={{ marginTop: 18, maxWidth: "19ch" }}>
-              Two camps, each with <em>half the problem</em></h1>
+            <h1 className="mk-h1 mk-up mk-d1">
+              Governance platforms and <em>runtime tools</em></h1>
             <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20 }}>
               One camp owns policy and framework mapping. The other owns runtime
-              guardrails.
+              guardrails. This page says where each one beats us.
             </p>
             <p className="mk-fine mk-up mk-d3" style={{ marginTop: 18 }}>
               Every competitor statement below comes from{" "}
@@ -302,7 +302,7 @@ export default function Compare() {
             </div>
             <p
               className="mk-fine mk-up mk-d3"
-              style={{ maxWidth: "var(--measure)", marginTop: 24 }}
+              style={{ maxWidth: "var(--w-prose)", marginTop: 24 }}
             >
               The alternative that wins most often is neither camp: 6 of 11 vetted senior
               engineers had already hand-built a guardrail layer inside their employer. The
@@ -312,8 +312,8 @@ export default function Compare() {
         </section>
 
         {/* 2. Where they win */}
-        <section className="mk-band">
-          <div className="mk-section mk-wrap mk-reveal">
+        <section className="mk-section mk-band mk-reveal">
+          <div className="mk-wrap">
             <Head
               eyebrow="Concessions"
               title="Where a competitor beats us"
@@ -403,8 +403,8 @@ export default function Compare() {
         </section>
 
         {/* 4. Category table */}
-        <section className="mk-band">
-          <div className="mk-section mk-wrap mk-reveal">
+        <section className="mk-section mk-band mk-reveal">
+          <div className="mk-wrap">
             <Head
               eyebrow="Category by category"
               title="Capabilities, by camp rather than by vendor"

@@ -13,9 +13,9 @@ import { CapabilityPage } from "@/components/marketing/capability";
 import { publicPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "Govern the MCP call path",
+  title: "MCP security: tool poisoning and rug pulls",
   description:
-    "Rug-pull detection at call time, undeclared tools as findings, and results treated as untrusted context — plus the two MCP risks we do not cover.",
+    "Tool poisoning and rug pulls checked at call time. Undeclared tools become findings. Two MCP risks on this page are not covered.",
   path: "/mcp",
 });
 
@@ -67,9 +67,9 @@ const RISKS = [
 export default function Page() {
   return (
     <CapabilityPage
-      kicker="Model Context Protocol"
-      title={["The tool was safe", "when you approved it"]}
-      lede="A scan tells you what a server was. Servers change."
+      kicker="MCP security"
+      title={["Tool poisoning", "and rug pulls"]}
+      lede="Checked when the call happens, not only when the server was approved."
       commands={["agentfox scan mcp"]}
       challenge={
         <p>

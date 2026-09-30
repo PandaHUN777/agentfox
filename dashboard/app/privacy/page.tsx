@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * copied from a template, and the phrase "industry-standard encryption".
  */
 export const metadata: Metadata = publicPageMetadata({
-  title: "Privacy",
+  title: "Privacy policy",
   description:
     "What the hosted playground and GitHub sign-in actually store, for how long, the three companies that touch it, and why a copy you run yourself sends us nothing.",
   path: "/privacy",
@@ -48,12 +48,12 @@ export default function Privacy() {
     <div className="mk">
       <MarketingNav />
       <main>
-        <section className="mk-section" style={{ paddingBottom: 0 }}>
+        <section className="mk-section mk-page-hero mk-ink-act">
           <div className="mk-wrap">
             <div className="mk-narrow">
               <span className="mk-eyebrow">Privacy</span>
-              <h1 className="mk-h1" style={{ margin: "18px 0 0", maxWidth: "16ch" }}>
-                What we <em>actually</em> hold</h1>
+              <h1 className="mk-h1" style={{ margin: "18px 0 0" }}>
+                Privacy policy</h1>
               <p className="mk-lede" style={{ marginTop: 20 }}>
                 This covers the hosted site you are reading, at{" "}
                 <span className="mk-mono">useagentfox.com</span>, and

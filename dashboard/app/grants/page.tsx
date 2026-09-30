@@ -4,9 +4,9 @@ import { CapabilityPage } from "@/components/marketing/capability";
 import { publicPageMetadata } from "@/lib/site";
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "Capability grants",
+  title: "Access control for agent tool calls",
   description:
-    "What an agent may do, declared up front and checked on every call — so a model that has been talked into something still cannot do it.",
+    "Least privilege for agents: capability grants declared up front and checked on every call, so a prompt cannot raise what the agent is allowed to do.",
   path: "/grants",
 });
 
@@ -31,9 +31,9 @@ const TAINT = [
 export default function Page() {
   return (
     <CapabilityPage
-      kicker="Capability grants"
-      title={["Your agent can be fooled.", "Its grants cannot"]}
-      lede="Set what each agent can do, and check it on every call."
+      kicker="Access control"
+      title={["Least privilege,", "checked on the call"]}
+      lede="Capability grants say what the agent may do. A prompt that talks it into more does not raise the grant."
       challenge={
         <p>
           Text filters have to guess whether a string is an attack, and an attacker

@@ -27,9 +27,9 @@ import { FollowRequest } from "@/components/marketing/follow";
  */
 
 export const metadata: Metadata = publicPageMetadata({
-  title: "How it works",
+  title: "Runtime enforcement, end to end",
   description:
-    "The path one call takes through the control plane, and what each of the six areas of the product is for.",
+    "How one tool call is enforced: input and output guards, retrieval, provenance, the action check, and the audit trail.",
   path: "/how-it-works",
 });
 
@@ -42,22 +42,17 @@ export default function HowItWorks() {
     <div className="mk">
       <MarketingNav />
       <main>
-        <section className="mk-section-tight">
+        <section className="mk-section mk-page-hero mk-ink-act">
           <div className="mk-wrap">
-            <div >
-              <h1
-                className="mk-h1"
-                style={{ marginTop: 12, fontSize: "clamp(2.25rem, 4.4vw, var(--t-display))" }}
-              >
-                One call, all the way through</h1>
+              <h1 className="mk-h1">
+                Runtime enforcement, end to end</h1>
               <p className="mk-lede" style={{ marginTop: 18 }}>
-                AgentFox is a {CATEGORY}. It sits between your agent and everything it
-                can act on.
+                AgentFox is a {CATEGORY}. It checks the call before the tool runs.
               </p>
-            </div>
           </div>
         </section>
 
+      <section className="mk-section">
       <div className="mk-wrap">
         <article className="bm-doc">
 
@@ -350,29 +345,17 @@ export default function HowItWorks() {
           </a>
         </div>
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginTop: 28 }}>
-          <Link
-            href="/playground"
-            className="btn-primary"
-            style={{ height: "auto", minHeight: 32, padding: "7px 16px", textDecoration: "none" }}
-          >
+        <div className="mk-row" style={{ marginTop: 28, gap: 10 }}>
+          <Link href="/playground" className="mk-btn mk-btn-primary">
             Try it, no account
           </Link>
-          <Link
-            href="/benchmark"
-            className="btn-scan"
-            style={{
-              height: "auto",
-              minHeight: 32,
-              padding: "7px 16px",
-              whiteSpace: "normal",
-              textDecoration: "none" }}
-          >
+          <Link href="/benchmark" className="mk-btn mk-btn-outline">
             The numbers, and where a competitor beats us
           </Link>
         </div>
         </article>
       </div>
+      </section>
       </main>
       <Footer />
     </div>

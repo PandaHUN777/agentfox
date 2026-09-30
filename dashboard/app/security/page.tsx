@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
  * unhedged statement of what has never been done.
  */
 export const metadata: Metadata = publicPageMetadata({
-  title: "Security",
+  title: "Security and vulnerability disclosure",
   description:
     "How to report a vulnerability, what is in scope, the properties that hold in code, and what has never been audited or tested by anyone else.",
   path: "/security",
@@ -44,17 +44,15 @@ export default function Security() {
     <div className="mk">
       <MarketingNav />
       <main>
-        <section className="mk-section" style={{ paddingBottom: 0 }}>
+        <section className="mk-section mk-page-hero mk-ink-act">
           <div className="mk-wrap">
             <div className="mk-narrow">
               <span className="mk-eyebrow">Security</span>
-              <h1 className="mk-h1" style={{ margin: "18px 0 0", maxWidth: "17ch" }}>
-                What holds, and <em>who has checked</em></h1>
+              <h1 className="mk-h1" style={{ margin: "18px 0 0" }}>
+                Security and <em>disclosure</em></h1>
               <p className="mk-lede" style={{ marginTop: 20 }}>
-                Two separate questions, and most security pages answer only the first.
-                Below: how to report something, the properties this product enforces in
-                code rather than in prose, and the honest answer to who has independently
-                verified any of it.
+                How to report a vulnerability, what the product enforces in code, and
+                what has not been independently verified.
               </p>
             </div>
           </div>

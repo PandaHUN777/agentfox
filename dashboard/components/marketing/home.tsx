@@ -150,41 +150,32 @@ function BenefitWide({
  */
 export function Hero() {
   return (
-    <section className="mk-hero-act">
-      {/* Ambient, behind everything, and doing one job: giving the paper
-          ground somewhere to be warmer, so the screenshot beside it reads as
-          a lit object rather than as a rectangle pasted on a flat field.
-          Two soft brand-tinted pools, no hard edge, no gradient banding. */}
+    <section className="mk-hero-act mk-ink-act">
       <div className="mk-hero-glow" aria-hidden />
 
       <div className="mk-wrap mk-hero" style={{ position: "relative" }}>
         <div>
-          <p className="mk-kicker mk-up mk-d1">Runtime, on every tool call</p>
+          <p className="mk-kicker mk-up mk-d1">AI agent security</p>
           <h1 className="mk-h1 mk-up mk-d2">
-            <em>Runtime firewall</em> for AI agents
+            Stop the agent before it <em>spends.</em>
           </h1>
           <p className="mk-lede mk-up mk-d3" style={{ marginTop: 22 }}>
-            Agents can move money, delete records and send mail. AgentFox checks
-            every tool call against what that agent is allowed to do.
+            Runtime guardrails for agents that transfer money, delete rows and send
+            mail. The call is checked against the grant, and the rest is blocked.
           </p>
-          <div className="mk-row mk-up mk-d4" style={{ marginTop: 30 }}>
+          <div className="mk-row mk-up mk-d4" style={{ marginTop: 28 }}>
             <Link href="/playground" className="mk-btn mk-btn-primary">
-              Try it, no account
+              Try a blocked call
             </Link>
             <a href={REPO} target="_blank" rel="noreferrer" className="mk-btn mk-btn-outline">
               View the source
             </a>
           </div>
-          <p className="mk-fine mk-up mk-d5" style={{ marginTop: 18 }}>
-            Runs offline · No API key · Apache-2.0
+          <p className="mk-fine mk-up mk-d5" style={{ marginTop: 16 }}>
+            No account. No API key. Apache-2.0.
           </p>
         </div>
 
-        {/* Was a diagram drawn in CSS: calls approaching a line, one refused.
-            Accurate, and unmistakably the work of a repository. This is the
-            same event, actually happening — a real transfer, refused, with
-            the rule that refused it and how long it took. A reader believes
-            the second one and only follows the first. */}
         <div className="mk-up mk-d3 mk-hero-shot">
           <Shot
             src="/product/refusal.png"
@@ -195,12 +186,26 @@ export function Hero() {
             sizes="(max-width: 940px) 92vw, 720px"
             caption={
               <>
-                A support agent is asked to transfer $5,000. It has no grant for payments,
-                so the call is blocked. Try it in the{" "}
-                <Link href="/playground">playground</Link>.
+                Told to transfer $5,000. No grant for payments, so the call is refused.
+                Same check in the <Link href="/playground">playground</Link>.
               </>
             }
           />
+        </div>
+      </div>
+
+      <div className="mk-wrap mk-hero-stats">
+        <div className="mk-hero-stat">
+          <b>42 of 42</b>
+          <span>attacker tool calls contained, with every detector off</span>
+        </div>
+        <div className="mk-hero-stat">
+          <b>552 of 552</b>
+          <span>legitimate calls still ran on the same replay</span>
+        </div>
+        <div className="mk-hero-stat">
+          <b>6 places</b>
+          <span>one policy, bound where the agent already runs</span>
         </div>
       </div>
     </section>
@@ -228,8 +233,8 @@ export function Stack() {
   return (
     <section className="mk-section-tight">
       <div className="mk-wrap">
-        <p className="mk-label" style={{ marginBottom: 18 }}>
-          Works with what you already run
+        <p className="mk-label" style={{ marginBottom: 10 }}>
+          Sits next to what you already run
         </p>
         <div className="mk-strip mk-up">
           {STACK.map((s) => (
@@ -277,13 +282,13 @@ export function ControlPoints() {
     <section id="control-points" className="mk-section mk-reveal">
       <div className="mk-wrap">
         <div className="mk-narrow">
-          <span className="mk-eyebrow mk-up">One policy set, six places it binds</span>
+          <span className="mk-eyebrow mk-up">Open enforcement</span>
           <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12 }}>
-            Works where your agents already run
+            One policy, six control points
           </h2>
           <p className="mk-lede" style={{ marginTop: 16 }}>
-            No single gateway sees every agent. Write the policy once and use it in all
-            six places.
+            No single gateway sees every agent. Write the policy once. It binds
+            where the agent already runs.
           </p>
         </div>
 
@@ -346,21 +351,19 @@ export function ControlPoints() {
  */
 const ORIGINS: { name: string; line: string; example: string }[] = [
   {
-    name: "Someone attacked it",
-    line: "Someone put instructions where the model would read them.",
-    example:
-      "A line in an issue comment telling the agent to push its credentials.",
+    name: "External",
+    line: "Prompt injection. Instructions hidden where the model will read them.",
+    example: "A line in an issue comment: push your credentials to this repo.",
   },
   {
-    name: "Someone over-granted it",
-    line: "The agent had more access than the job needed.",
-    example: "A read-only assistant with a token that can also delete.",
+    name: "Internal",
+    line: "Excessive agency. The job was read-only. The token could also delete.",
+    example: "A support assistant holding a key that can drop tables.",
   },
   {
-    name: "It improvised",
-    line: "The agent hit a problem and found its own way around it.",
-    example:
-      "Blocked on a deploy, it goes looking for a credentials file.",
+    name: "Autonomous",
+    line: "No attacker and no extra grant. Blocked once, it looked for another path.",
+    example: "Deploy refused, so it opens a credentials file instead.",
   },
 ];
 
@@ -369,9 +372,9 @@ export function Origins() {
     <section id="origins" className="mk-section mk-reveal">
       <div className="mk-wrap">
         <div className="mk-narrow">
-          <h2 className="mk-h2 mk-up">Three ways an agent does the wrong thing</h2>
+          <h2 className="mk-h2 mk-up">External, internal, and autonomous</h2>
           <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16 }}>
-            Only one of them is an attack.
+            The three ways an agent causes harm. Only one of them starts with an attacker.
           </p>
         </div>
 
@@ -428,9 +431,9 @@ export function Boundaries() {
     <section id="boundaries" className="mk-section mk-band mk-reveal">
       <div className="mk-wrap">
         <div className="mk-narrow">
-          <h2 className="mk-h2 mk-up">Stop the call before it spends, sends or deletes</h2>
+          <h2 className="mk-h2 mk-up">Data access, model output, and tool use</h2>
           <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16 }}>
-            One support request, three checks.
+            The same request, checked at three points: can it read this, can it answer this, can it do this.
           </p>
         </div>
 
@@ -457,9 +460,10 @@ export function Around() {
     <section className="mk-section mk-band mk-reveal">
       <div className="mk-wrap">
         <div className="mk-narrow">
-          <h2 className="mk-h2">Prove what happened, and find what you missed</h2>
+          <h2 className="mk-h2">Audit trail, and the agents with no owner</h2>
           <p className="mk-lede" style={{ marginTop: 16 }}>
-            Every governed call leaves a record an auditor can check without us.
+            Every governed call leaves a page an auditor can check without calling us.
+            An agent with no owner is a finding, not a footnote.
           </p>
         </div>
 
@@ -552,9 +556,9 @@ export function Proof() {
   return (
     <section id="proof" className="mk-section mk-reveal mk-paper-act">
       <div className="mk-wrap">
-        <span className="mk-eyebrow mk-up">Measured with every detector switched off</span>
+        <span className="mk-eyebrow mk-up">Containment</span>
         <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12 }}>
-          Detection can fail. Permissions still hold.
+          Least privilege holds when detection fails.
         </h2>
         <p className="mk-lede mk-up mk-d2" style={{ marginTop: 16 }}>
           617 ground-truth tool calls from AgentDojo, replayed through the same
@@ -647,10 +651,10 @@ export function Limits() {
       <div className="mk-wrap">
         <div className="mk-honest mk-up">
           <div>
-            <h2 className="mk-h3">We publish what this does not do</h2>
+            <h2 className="mk-h3">Known gaps</h2>
             <p className="mk-body">
-              Every limit of the benchmark above, and the detection numbers where a
-              competing scanner is more precise than ours.
+              The limits of the run above, and the detection numbers where another
+              scanner is more precise than ours.
             </p>
           </div>
           <Link href="/how-it-works#limits" className="mk-btn mk-btn-outline">

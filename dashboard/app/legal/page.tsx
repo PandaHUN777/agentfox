@@ -62,19 +62,24 @@ export default function Legal() {
     <div className="mk">
       <MarketingNav />
       <main>
-        <section className="mk-section">
+        <section className="mk-section mk-page-hero mk-ink-act">
           <div className="mk-wrap">
             <div className="mk-narrow">
               <span className="mk-eyebrow">Legal</span>
-              <h1 className="mk-h1" style={{ margin: "18px 0 0", maxWidth: "14ch" }}>
-                All of it, in <em>one place</em></h1>
+              <h1 className="mk-h1" style={{ margin: "18px 0 0" }}>
+                Legal</h1>
               <p className="mk-lede" style={{ marginTop: 20 }}>
                 Five documents. Three of them describe the hosted service at this domain;
                 two of them describe the software, which you can run without agreeing to
                 anything.
               </p>
+            </div>
+          </div>
+        </section>
 
-              <div className="mk-grid" style={{ marginTop: 34 }}>
+        <section className="mk-section">
+          <div className="mk-wrap">
+              <div className="mk-grid mk-grid-2">
                 {ROWS.map((row) => (
                   <div className="mk-card" key={row.href}>
                     <h2 className="mk-h3">
@@ -99,7 +104,6 @@ export default function Legal() {
                 not go to that address; the route for those is on the{" "}
                 <Link href="/security">security page</Link>.
               </p>
-            </div>
           </div>
         </section>
       </main>

@@ -108,7 +108,6 @@ function Head({
   eyebrow,
   title,
   children,
-  center = false,
 }: {
   eyebrow: string;
   title: string;
@@ -116,11 +115,9 @@ function Head({
   center?: boolean;
 }) {
   return (
-    <div
-      className={center ? "mk-narrow mk-up" : "mk-up"}
-    >
+    <div className="mk-narrow mk-up">
       <span className="mk-eyebrow">{eyebrow}</span>
-      <h2 className="mk-h2" style={{ marginTop: 14, maxWidth: center ? undefined : "20ch" }}>
+      <h2 className="mk-h2" style={{ marginTop: 14 }}>
         {title}
       </h2>
       {children ? (
@@ -163,7 +160,7 @@ export function Pillars() {
   return (
     <section id="pillars" className="mk-section">
       <div className="mk-wrap">
-        <Head eyebrow="The whole product" title="What each area does" center>
+        <Head eyebrow="The platform" title="What a security team asks first" center>
           Each one answers a question an organisation has to answer about its agents.
         </Head>
 
@@ -279,8 +276,8 @@ const CONTAINMENT_ITEMS: Item[] = [
  */
 export function Containment() {
   return (
-    <section id="containment" className="mk-band">
-      <div className="mk-section mk-wrap">
+    <section id="containment" className="mk-section mk-band">
+      <div className="mk-wrap">
         <div className="mk-narrow">
           <span className="mk-eyebrow">Area 2 · Containment</span>
           <h2 className="mk-h2" style={{ marginTop: 12 }}>
@@ -435,8 +432,8 @@ const ASSURANCE_ITEMS: Item[] = [
  */
 export function Assurance() {
   return (
-    <section id="assurance" className="mk-band">
-      <div className="mk-section mk-wrap">
+    <section id="assurance" className="mk-section mk-band">
+      <div className="mk-wrap">
         <Split wide>
           <Half>
             <Head

@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
  * ordering here is deliberate: that clause is above everything else.
  */
 export const metadata: Metadata = publicPageMetadata({
-  title: "Terms",
+  title: "Terms of service",
   description:
     "Terms for the hosted AgentFox service: as-is, no SLA, a shared playground that gets reset, and nothing that narrows the Apache-2.0 licence.",
   path: "/terms",
@@ -31,12 +31,12 @@ export default function Terms() {
     <div className="mk">
       <MarketingNav />
       <main>
-        <section className="mk-section" style={{ paddingBottom: 0 }}>
+        <section className="mk-section mk-page-hero mk-ink-act">
           <div className="mk-wrap">
             <div className="mk-narrow">
               <span className="mk-eyebrow">Terms</span>
-              <h1 className="mk-h1" style={{ margin: "18px 0 0", maxWidth: "15ch" }}>
-                Terms for the <em>hosted</em> service</h1>
+              <h1 className="mk-h1" style={{ margin: "18px 0 0" }}>
+                Terms of service</h1>
               <p className="mk-lede" style={{ marginTop: 20 }}>
                 These terms govern your use of the site at{" "}
                 <span className="mk-mono">useagentfox.com</span>: the

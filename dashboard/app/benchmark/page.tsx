@@ -149,14 +149,11 @@ export default function BenchmarkPage() {
     <div className="mk">
       <MarketingNav />
       <main>
-        <section className="mk-section-tight">
+        <section className="mk-section mk-page-hero mk-ink-act">
           <div className="mk-wrap">
-            <div className="bm-rail">
-              <h1
-                className="mk-h1"
-                style={{ marginTop: 12, fontSize: "clamp(2.25rem, 4.4vw, var(--t-display))" }}
-              >
-                What was measured, and what it does not show</h1>
+            <div>
+              <h1 className="mk-h1">
+                Benchmarks, including the ones we lose</h1>
               <p className="mk-lede" style={{ marginTop: 18 }}>
                 Five benchmarks, written up in full. Some of them make this product look
                 good and some of them do not, and they are here for the same reason: a
@@ -183,7 +180,7 @@ export default function BenchmarkPage() {
               ))}
             </div>
 
-            <nav className="bm-index bm-rail" style={{ marginTop: 18 }} aria-label="Sections">
+            <nav className="bm-index" style={{ marginTop: 28 }} aria-label="Sections">
               {CONTENTS.map((c, i) => (
                 <a key={c.id} href={`#${c.id}`}>
                   <i>{String(i + 1).padStart(2, "0")}</i>
@@ -194,6 +191,7 @@ export default function BenchmarkPage() {
           </div>
         </section>
 
+        <section className="mk-section">
         <div className="mk-wrap">
           <article className="bm-doc">
       <p className="lede">
@@ -1201,6 +1199,7 @@ export default function BenchmarkPage() {
 
           </article>
         </div>
+        </section>
       </main>
       <Footer />
     </div>
