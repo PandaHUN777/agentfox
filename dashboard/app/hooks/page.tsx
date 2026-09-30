@@ -101,8 +101,7 @@ export default function Page() {
               </div>
             ))}
           </div>
-        ),
-      }}
+        ) }}
       steps={[
         {
           title: "The one a tool-call hook cannot see",
@@ -167,8 +166,7 @@ export default function Page() {
             </a>
             .
           </p>
-        ),
-      }}
+        ) }}
       related={["/mcp", "/runtime", "/control-points"]}
     />
   );

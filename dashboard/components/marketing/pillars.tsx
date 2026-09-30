@@ -126,7 +126,7 @@ function Head({
       {children ? (
         <p
           className="mk-body"
-          style={{ marginTop: 14, maxWidth: center ? "64ch" : "46ch" }}
+          style={{ marginTop: 14 }}
         >
           {children}
         </p>
@@ -138,7 +138,7 @@ function Head({
 /** Short labelled items: the mono identifier the product actually emits, then one line. */
 function Items({ items }: { items: Item[] }) {
   return (
-    <div style={{ display: "grid", gap: 13, marginTop: 24, maxWidth: "46ch" }}>
+    <div style={{ display: "grid", gap: 13, marginTop: 24 }}>
       {items.map((it) => (
         <div key={it.label} style={{ display: "grid", gap: 3 }}>
           <span className="mk-mono" style={{ color: "var(--mk-accent)", overflowWrap: "anywhere" }}>
@@ -171,7 +171,7 @@ export function Pillars() {
           <PillarGrid />
         </div>
 
-        <p className="mk-fine mk-up mk-d3" style={{ maxWidth: "52ch", marginTop: 20 }}>
+        <p className="mk-fine mk-up mk-d3" style={{ marginTop: 20 }}>
           Areas 1, 2, 3 and 5 run on the request itself —{" "}
           <Link href="/how-it-works">the path one call takes &rarr;</Link>
         </p>
@@ -223,7 +223,7 @@ export function Guardrails() {
             <Items items={GUARDRAIL_ITEMS} />
             <div
               className="mk-card"
-              style={{ marginTop: 26, background: "var(--mk-surface-2)", maxWidth: "46ch" }}
+              style={{ marginTop: 26, background: "var(--mk-surface-2)" }}
             >
               <span className="mk-label">What this layer is worth</span>
               {/* Both figures: README.md, "Where a competitor beats us" and the adaptive
@@ -283,10 +283,10 @@ export function Containment() {
       <div className="mk-section mk-wrap">
         <div className="mk-narrow">
           <span className="mk-eyebrow">Area 2 · Containment</span>
-          <h2 className="mk-h2" style={{ marginTop: 12, maxWidth: "20ch" }}>
+          <h2 className="mk-h2" style={{ marginTop: 12 }}>
             A convinced agent still needs permission
           </h2>
-          <p className="mk-lede" style={{ marginTop: 14, maxWidth: "56ch" }}>
+          <p className="mk-lede" style={{ marginTop: 14 }}>
             Each tool has an impact tier, each agent explicit grants, each argument its
             provenance. None of it reads the text that produced the call.
           </p>
@@ -295,12 +295,12 @@ export function Containment() {
         {/* The measurement gets the full column. This is the case that defeats the
             obvious objection — "so don't give the agent the tool" — and it only
             works if the reader sees that the agent DOES hold the tool. */}
-        <div className="mk-up mk-d2" style={{ marginTop: 32, maxWidth: 760 }}>
+        <div className="mk-up mk-d2" style={{ marginTop: 32 }}>
           <GrantLimit />
         </div>
 
         <div className="mk-grid mk-grid-2" style={{ marginTop: 28, gap: 26 }}>
-          <div style={{ display: "grid", gap: 10, maxWidth: "46ch" }}>
+          <div style={{ display: "grid", gap: 10 }}>
             <span className="mk-label">Impact tier, declared per tool</span>
             <div className="mk-row" style={{ gap: 6 }}>
               {/* dashboard/app/glossary/page.tsx, "Impact tier". */}
@@ -328,7 +328,7 @@ export function Containment() {
           </div>
         </div>
 
-        <p className="mk-fine" style={{ marginTop: 24, maxWidth: "62ch" }}>
+        <p className="mk-fine" style={{ marginTop: 24 }}>
           Containment is only as good as the declarations behind it. A destructive tool
           declared <span className="mk-mono">read</span> is not contained.{" "}
           <Link href="/benchmark">What it measured, with detection switched off &rarr;</Link>
@@ -382,7 +382,7 @@ export function Discovery() {
               says exactly that instead of reporting clean.
             </Head>
             <Items items={DISCOVERY_ITEMS} />
-            <p className="mk-fine" style={{ marginTop: 22, maxWidth: "46ch" }}>
+            <p className="mk-fine" style={{ marginTop: 22 }}>
               <span className="mk-mono">agentfox quickscan</span> is the zero-config first
               look. Nothing leaves the machine.
             </p>
@@ -449,7 +449,7 @@ export function Assurance() {
             <Items items={ASSURANCE_ITEMS} />
             <div
               className="mk-card"
-              style={{ marginTop: 26, maxWidth: "46ch" }}
+              style={{ marginTop: 26 }}
             >
               <div className="mk-row" style={{ gap: 8 }}>
                 <span className="mk-chip mk-chip-hold">Draft mappings</span>

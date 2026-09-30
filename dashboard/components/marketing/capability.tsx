@@ -72,8 +72,11 @@ export function CapabilityPage({
             view, and an IntersectionObserver firing on something the reader
             is looking at reads as a flicker. Same staggered classes the home
             hero uses, so the two do not arrive differently. */}
-        <section className="mk-section">
-          <div className="mk-wrap mk-narrow">
+        {/* Paper, like the homepage hero, so a reader moving between them
+            feels one site. */}
+        <section className="mk-section cap-hero">
+          <div className="mk-hero-glow" aria-hidden />
+          <div className="mk-wrap mk-narrow" style={{ position: "relative" }}>
             <p className="mk-kicker mk-up mk-d1">{kicker}</p>
             <h1 className="mk-h1 mk-up mk-d2" style={{ marginTop: 14 }}>
               {title[0]} <em>{title[1]}</em>
@@ -101,7 +104,10 @@ export function CapabilityPage({
         </section>
 
         {feature && (
-          <section className="mk-section mk-band mk-reveal">
+          /* The centrepiece takes ink, exactly as the platform section does
+             on the homepage: it is the one thing this page is really about,
+             and it should read as the page's dark act. */
+          <section className="mk-section mk-ink-act mk-reveal">
             <div className="mk-wrap">
               <div className="mk-narrow">
                 <h2 className="mk-h2">{feature.title}</h2>
@@ -117,7 +123,7 @@ export function CapabilityPage({
         )}
 
         <section
-          className={feature ? "mk-section mk-reveal" : "mk-section mk-band mk-reveal"}
+          className={feature ? "mk-section mk-reveal" : "mk-section mk-ink-act mk-reveal"}
         >
           <div className="mk-wrap">
             <ol className="cap-steps mk-stagger">
@@ -137,7 +143,9 @@ export function CapabilityPage({
           </div>
         </section>
 
-        <section className="mk-section mk-reveal">
+        {/* The limits and the way out, on paper. A page that ended on the
+            same white as its middle has no full stop. */}
+        <section className="mk-section mk-paper-act mk-reveal">
           <div className="mk-wrap">
             <div className="mk-honest">
               <div>

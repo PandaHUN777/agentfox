@@ -67,7 +67,7 @@ function SectionHead({
         {title}
       </h2>
       {lede && (
-        <p className="mk-lede" style={{ margin: "14px 0 0", maxWidth: "62ch" }}>
+        <p className="mk-lede" style={{ margin: "14px 0 0" }}>
           {lede}
         </p>
       )}
@@ -165,7 +165,7 @@ export function Evidence() {
         </div>
         <p
           className="mk-fine mk-up mk-d3"
-          style={{ maxWidth: "var(--measure)", marginTop: 24,}}
+          style={{ maxWidth: "var(--measure)", marginTop: 24 }}
         >
           The three calls that escaped the AgentDojo replay are all read-only, and the
           benchmark page names them one by one. The weakest figure is in the set on purpose.
@@ -234,7 +234,7 @@ export function HowItWorks() {
               what the heading now says rather than what the body has to correct. */}
           <h2 className="mk-h2" style={{ marginTop: 14 }}>
             Detectors watch first. Grants hold from the first request</h2>
-          <p className="mk-body" style={{ marginTop: 14, maxWidth: "48ch" }}>
+          <p className="mk-body" style={{ marginTop: 14 }}>
             The rules that read model traffic ship in observe: they record what they
             would have done and let the call through. You tune against your own traffic,
             then turn them on when the findings look right.
@@ -449,7 +449,7 @@ export function FAQ({ n, more }: { n?: number; more?: boolean } = {}) {
             </details>
           ))}
           {more && (
-            <p className="mk-fine" style={{ marginTop: 22,}}>
+            <p className="mk-fine" style={{ marginTop: 22 }}>
               <Link href="/product#faq">
                 {QUESTIONS.length - shown.length} more, on the product page
               </Link>
@@ -494,8 +494,7 @@ export function CTA() {
                 border: "1px solid var(--mk-border)",
                 borderRadius: "var(--mk-r-md)",
                 color: "var(--mk-muted)",
-                lineHeight: 1.7,
-              }}
+                lineHeight: 1.7 }}
             >
               {`pip install agentfox\nagentfox init && agentfox demo`}
             </pre>
@@ -567,7 +566,7 @@ export function Footer() {
         className="mk-wrap"
         style={{ display: "flex", flexWrap: "wrap", gap: 28, justifyContent: "space-between" }}
       >
-        <div style={{ maxWidth: "34ch" }}>
+        <div >
           <BrandLockup size={30} sub />
           {/* "Maintained in the open by one developer" and "MVP v0.3" were in the
               footer of all nine pages, so anyone who browsed four of them read that

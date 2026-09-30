@@ -44,13 +44,13 @@ export default function HowItWorks() {
       <main>
         <section className="mk-section-tight">
           <div className="mk-wrap">
-            <div style={{ maxWidth: 760 }}>
+            <div >
               <h1
                 className="mk-h1"
                 style={{ marginTop: 12, fontSize: "clamp(2.25rem, 4.4vw, var(--t-display))" }}
               >
                 One call, all the way through</h1>
-              <p className="mk-lede" style={{ marginTop: 18, maxWidth: "58ch" }}>
+              <p className="mk-lede" style={{ marginTop: 18 }}>
                 AgentFox is a {CATEGORY}. It sits between your agent and everything it
                 can act on.
               </p>
@@ -366,8 +366,7 @@ export default function HowItWorks() {
               minHeight: 32,
               padding: "7px 16px",
               whiteSpace: "normal",
-              textDecoration: "none",
-            }}
+              textDecoration: "none" }}
           >
             The numbers, and where a competitor beats us
           </Link>

@@ -47,8 +47,7 @@ export default function Page() {
               </div>
             ))}
           </div>
-        ),
-      }}
+        ) }}
       steps={[
         {
           title: "One record per decision, with what decided it",
@@ -114,8 +113,7 @@ export default function Page() {
             external timestamping authority and no third party has audited any of this —{" "}
             <a href="/security">/security</a> says so at more length.
           </p>
-        ),
-      }}
+        ) }}
       related={["/frameworks", "/runtime", "/discovery"]}
     />
   );

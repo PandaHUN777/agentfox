@@ -99,8 +99,7 @@ export default function Page() {
               </article>
             ))}
           </div>
-        ),
-      }}
+        ) }}
       steps={[
         {
           title: "Snapshot the tools, with a digest",
@@ -153,8 +152,7 @@ export default function Page() {
             broker upstream credentials, so we cannot consolidate them — credential
             sprawl is a real MCP risk and one we leave where it is.
           </p>
-        ),
-      }}
+        ) }}
       related={["/hooks", "/grants", "/discovery"]}
     />
   );

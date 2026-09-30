@@ -48,6 +48,25 @@
      different material next to white rather than as a slightly dirty white. */
   --mk-paper: #f7f4ef;
 
+  /* ---- Measure ---------------------------------------------------------
+     Three widths, in rem, and the rem is the whole point.
+
+     The site had twenty-two different content widths — 76, 62, 60, 58, 56,
+     54, 52, 50, 48, 46, 42, 40 and 34ch, plus a bare 760px — set inline at
+     each call site. That alone would move the right edge from section to
+     section, and `ch` makes it worse: it resolves against each element's own
+     font-size, so 46ch on a lede and 46ch on a body paragraph are different
+     numbers of pixels. The stylesheet already carried a comment diagnosing
+     this for the benchmark page and the lesson never reached the rest.
+
+     In rem they are the same width everywhere, whatever the type is doing.
+       intro  a section's heading and its lede, as one block
+       prose  long-form body copy
+       wide   a figure or table that may run past the reading column       */
+  --w-intro: 40rem;
+  --w-prose: 46rem;
+  --w-wide: 56rem;
+
   /* Ink — navy as a *surface*, not only a button.
      The single biggest thing the reference sites have that this did not: a
      dark act. A page that alternates paper, white and ink has a rhythm a
@@ -187,7 +206,9 @@
 /* Apple's content column is a little under 1000px and the page is centred in it.
    Wider than this and running text stops being comfortable to read. */
 .mk-wrap { max-width: 1120px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
-.mk-narrow { max-width: 60ch; }
+/* The one container a section intro goes in. Everything inside it inherits
+   the same right edge, which is what stops the page shifting as you scroll. */
+.mk-narrow { max-width: var(--w-intro); }
 /* Space is the main compositional device here, so sections are generous and scale
    with the viewport rather than sitting at one fixed value. */
 /* Raised from clamp(48px, 5vw, 72px) after measuring both sites: the same
@@ -1236,7 +1257,7 @@
   color: var(--mk-accent-fg);
 }
 .rp-body h3 { display: flex; align-items: baseline; flex-wrap: wrap; gap: 10px; }
-.rp-body p { margin: 6px 0 0; max-width: 62ch; font-size: var(--t-small); }
+.rp-body p { margin: 6px 0 0; max-width: var(--w-prose); font-size: var(--t-small); }
 .rp-tag {
   font-family: var(--mk-sans);
   font-size: var(--t-micro);
@@ -1379,7 +1400,7 @@
   border-radius: var(--mk-r-md);
 }
 .mk-honest h2 { margin: 0; }
-.mk-honest p { margin: 6px 0 0; max-width: 62ch; font-size: var(--t-small); }
+.mk-honest p { margin: 6px 0 0; max-width: var(--w-prose); font-size: var(--t-small); }
 .mk-honest .mk-btn { flex: 0 0 auto; }
 
 /* Which experiment each row came from. Quiet, but present — two benchmarks under
@@ -1785,7 +1806,7 @@
   border: 1px solid var(--mk-border);
   border-radius: var(--mk-r-md);
 }
-.ed-support p { margin: 0; max-width: 64ch; font-size: var(--t-small); line-height: 1.55; color: var(--mk-muted); }
+.ed-support p { margin: 0; max-width: var(--w-prose); font-size: var(--t-small); line-height: 1.55; color: var(--mk-muted); }
 .ed-support strong { color: var(--mk-text); }
 .ed-support .mk-btn { flex: 0 0 auto; }
 
@@ -3201,3 +3222,39 @@
 }
 .pb-item:hover b { color: var(--mk-accent); }
 .pb-item:hover span { color: var(--mk-text); }
+
+
+/* ========================================================================
+   One measure, everywhere
+   ========================================================================
+   The system, so a call site does not have to remember it: a heading or a
+   lede sitting directly in a section's wrap gets the intro measure, body
+   copy gets prose. Inline `maxWidth` beats both, which is exactly why the
+   thirty-nine inline values had to come out rather than be adjusted.
+*/
+.mk-section > .mk-wrap > .mk-h1,
+.mk-section > .mk-wrap > .mk-h2,
+.mk-section > .mk-wrap > .mk-lede,
+.mk-section-tight > .mk-wrap > .mk-h2,
+.mk-section-tight > .mk-wrap > .mk-lede,
+.mk-narrow > .mk-h1,
+.mk-narrow > .mk-h2,
+.mk-narrow > .mk-lede {
+  max-width: var(--w-intro);
+}
+.mk-section > .mk-wrap > .mk-body,
+.mk-narrow > .mk-body,
+.mk-narrow > .mk-fine {
+  max-width: var(--w-prose);
+}
+
+/* A capability page's hero, on paper like the homepage's. Same treatment,
+   smaller: these pages open with copy alone, so the glow is quieter and the
+   act does not need the homepage's height. */
+.cap-hero {
+  position: relative;
+  overflow: hidden;
+  background: var(--mk-paper);
+  border-bottom: 1px solid color-mix(in srgb, var(--mk-paper) 82%, #000);
+}
+.cap-hero .mk-hero-glow { opacity: 0.65; }

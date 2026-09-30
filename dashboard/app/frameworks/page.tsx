@@ -57,8 +57,7 @@ export default function Page() {
               </div>
             ))}
           </div>
-        ),
-      }}
+        ) }}
       steps={[
         {
           title: "Seven frameworks, one control set",
@@ -112,8 +111,7 @@ export default function Page() {
             a reading can be wrong. Treat it as a head start on the evidence an assessor
             will ask for, not as the assessment.
           </p>
-        ),
-      }}
+        ) }}
       related={["/evidence", "/runtime", "/product"]}
     />
   );

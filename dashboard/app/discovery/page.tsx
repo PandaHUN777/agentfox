@@ -59,8 +59,7 @@ export default function Page() {
               </div>
             ))}
           </div>
-        ),
-      }}
+        ) }}
       steps={[
         {
           title: "Read the code without running it",
@@ -129,8 +128,7 @@ export default function Page() {
             analysis also cannot see an agent assembled at runtime from configuration it
             has never been shown.
           </p>
-        ),
-      }}
+        ) }}
       related={["/grants", "/mcp", "/hooks"]}
     />
   );

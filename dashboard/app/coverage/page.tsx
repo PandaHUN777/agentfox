@@ -97,8 +97,9 @@ export default function CoveragePage() {
     <div className="mk">
       <MarketingNav />
       <main>
-        <section className="mk-section">
-          <div className="mk-wrap">
+        <section className="mk-section cap-hero">
+          <div className="mk-hero-glow" aria-hidden />
+          <div className="mk-wrap" style={{ position: "relative" }}>
             <p className="mk-kicker">Coverage</p>
             <h1 className="mk-h1">
               What an agent can get wrong, and <em>what we catch</em>
@@ -149,7 +150,7 @@ export default function CoveragePage() {
           * security-shaped than it is. Two thirds of the taxonomy lands
           * there, and the page says so rather than burying it.
           */}
-        <section className="mk-section mk-band mk-reveal">
+        <section className="mk-section mk-ink-act mk-reveal">
           <div className="mk-wrap">
             <h2>Why the agent did it</h2>
             <p className="mk-lede">

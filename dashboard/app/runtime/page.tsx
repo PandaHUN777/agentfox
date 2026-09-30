@@ -55,8 +55,7 @@ export default function Page() {
               </div>
             ))}
           </div>
-        ),
-      }}
+        ) }}
       steps={[
         {
           title: "Nine surfaces, not one",
@@ -126,8 +125,7 @@ export default function Page() {
             detection tasks a specialised scanner is more precise than ours, and{" "}
             <a href="/compare">/compare</a> names which.
           </p>
-        ),
-      }}
+        ) }}
       related={["/grants", "/hooks", "/evidence"]}
     />
   );

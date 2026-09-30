@@ -71,7 +71,7 @@ function Benefit({
           <h2 className="mk-h2" style={{ marginTop: eyebrow ? 12 : 0 }}>
             {title}
           </h2>
-          <p className="mk-body" style={{ marginTop: 16, fontSize: "var(--t-body)", maxWidth: "46ch" }}>
+          <p className="mk-body" style={{ marginTop: 16, fontSize: "var(--t-body)" }}>
             {lede}
           </p>
           <Ticks items={ticks} />
@@ -163,7 +163,7 @@ export function Hero() {
           <h1 className="mk-h1 mk-up mk-d2">
             <em>Runtime firewall</em> for AI agents
           </h1>
-          <p className="mk-lede mk-up mk-d3" style={{ marginTop: 22, maxWidth: "40ch" }}>
+          <p className="mk-lede mk-up mk-d3" style={{ marginTop: 22 }}>
             Your agents move money, delete records and answer for you. Every call is
             checked against what you actually granted.
           </p>
@@ -329,7 +329,7 @@ export function ControlPoints() {
           <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12 }}>
             You should not have to re-architect to get a guardrail
           </h2>
-          <p className="mk-lede" style={{ marginTop: 16, maxWidth: "52ch" }}>
+          <p className="mk-lede" style={{ marginTop: 16 }}>
             No single gateway sees every agent. Write the policy once and bind it
             where your agents already run.
           </p>
@@ -418,7 +418,7 @@ export function Origins() {
       <div className="mk-wrap">
         <div className="mk-narrow">
           <h2 className="mk-h2 mk-up">Three ways an agent does the wrong thing</h2>
-          <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16, maxWidth: "56ch" }}>
+          <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16 }}>
             Only the first is an attack. The other two are an agent working exactly as
             built, and they are the ones a text scanner cannot see.
           </p>
@@ -479,7 +479,7 @@ export function Boundaries() {
       <div className="mk-wrap">
         <div className="mk-narrow">
           <h2 className="mk-h2 mk-up">Stop the call before it spends, sends or deletes</h2>
-          <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16, maxWidth: "58ch" }}>
+          <p className="mk-lede mk-up mk-d1" style={{ marginTop: 16 }}>
             One support request, three checks, each against what this agent and the
             person behind it actually hold.
           </p>
@@ -509,7 +509,7 @@ export function Around() {
       <div className="mk-wrap">
         <div className="mk-narrow">
           <h2 className="mk-h2">Prove what happened, and find what you missed</h2>
-          <p className="mk-lede" style={{ marginTop: 16, maxWidth: "50ch" }}>
+          <p className="mk-lede" style={{ marginTop: 16 }}>
             Every governed call leaves a record an auditor can check without us.
           </p>
         </div>
@@ -604,10 +604,10 @@ export function Proof() {
     <section id="proof" className="mk-section mk-reveal mk-paper-act">
       <div className="mk-wrap">
         <span className="mk-eyebrow mk-up">Measured with every detector switched off</span>
-        <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12, maxWidth: "24ch" }}>
+        <h2 className="mk-h2 mk-up mk-d1" style={{ marginTop: 12 }}>
           Detection can fail. Permissions still hold.
         </h2>
-        <p className="mk-lede mk-up mk-d2" style={{ marginTop: 16, maxWidth: "56ch" }}>
+        <p className="mk-lede mk-up mk-d2" style={{ marginTop: 16 }}>
           617 ground-truth tool calls from AgentDojo, replayed through the same
           tool-call guard with every detector disabled.
         </p>

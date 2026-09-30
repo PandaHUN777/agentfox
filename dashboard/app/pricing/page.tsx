@@ -47,7 +47,7 @@ export default async function Pricing({
           <div className="mk-wrap">
             <h1 className="mk-h1 mk-up mk-d1" style={{ marginTop: 18, maxWidth: "16ch" }}>
               Free to self-host, <em>forever</em></h1>
-            <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20, maxWidth: "58ch" }}>
+            <p className="mk-lede mk-up mk-d2" style={{ marginTop: 20 }}>
               Everything in the repository is Apache-2.0 and nothing is gated behind a paid tier.
               The hosted version is open and free while it is in preview — sign in with
               GitHub and you have a workspace in about ten seconds. Nothing is priced

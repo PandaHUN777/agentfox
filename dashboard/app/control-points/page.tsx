@@ -112,8 +112,7 @@ export default function Page() {
               </article>
             ))}
           </div>
-        ),
-      }}
+        ) }}
       steps={[
         {
           title: "One engine behind all six",
@@ -166,8 +165,7 @@ export default function Page() {
             to find which door your agents already use — not to assume the list is
             exhaustive.
           </p>
-        ),
-      }}
+        ) }}
       related={["/hooks", "/mcp", "/runtime"]}
     />
   );

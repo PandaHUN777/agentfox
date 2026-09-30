@@ -37,13 +37,13 @@ export function Hero() {
               Your agent can be fooled. <em>Its grants cannot.</em>
             </h1>
 
-            <p className="mk-lede mk-d2" style={{ margin: "20px 0 0", maxWidth: "46ch" }}>
+            <p className="mk-lede mk-d2" style={{ margin: "20px 0 0" }}>
               Hidden text in a document can talk an agent into moving money or leaking
               data, so every tool call is checked against what that agent was actually
               given permission to do.
             </p>
 
-            <p style={{ margin: "20px 0 0", fontWeight: 600, maxWidth: "42ch" }}>
+            <p style={{ margin: "20px 0 0", fontWeight: 600 }}>
               Two commands and about six seconds after install. Evidence an auditor can
               check without us.
             </p>

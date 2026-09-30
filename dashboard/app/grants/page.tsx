@@ -70,8 +70,7 @@ export default function Page() {
               </ol>
             </div>
           </div>
-        ),
-      }}
+        ) }}
       steps={[
         {
           title: "Declare what each tool actually does",
@@ -138,8 +137,7 @@ export default function Page() {
             a tool does on the other side of its own API: if a tool you declared as a
             read deletes something, containment believed you.
           </p>
-        ),
-      }}
+        ) }}
       related={["/runtime", "/discovery", "/control-points"]}
     />
   );
