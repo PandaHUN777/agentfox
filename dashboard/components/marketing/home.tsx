@@ -240,6 +240,55 @@ export function Stack() {
   );
 }
 
+/* --- 2a. The proof band ------------------------------------------------- */
+
+/**
+ * The slot every site in this category fills with customer logos and a
+ * Gartner badge, and we have neither.
+ *
+ * The temptation is to leave it empty and the mistake would be to fake it.
+ * What goes here instead is the thing those logos are a proxy for — a reason
+ * to believe — and ours is checkable in a way a logo never is. Every figure
+ * below resolves to a page that names the run it came from, which is a
+ * stronger claim than a customer who cannot be asked.
+ *
+ * Five, because four reads as a feature grid and six starts wrapping into a
+ * second row of small numbers, which is where a stat band stops being a
+ * statement and becomes a table.
+ */
+const PROOF: { n: string; label: string; href: string }[] = [
+  { n: "42 / 42", label: "attacker tool calls contained, every detector off", href: "/benchmark" },
+  { n: "116", label: "failure scenarios scored — including the ones we miss", href: "/coverage" },
+  { n: "43", label: "controls across seven compliance frameworks", href: "/frameworks" },
+  { n: "9", label: "surfaces checked, from the prompt to the model's reasoning", href: "/runtime" },
+  { n: "0", label: "network calls at request time. It runs offline", href: "/security" },
+];
+
+export function ProofBand() {
+  return (
+    <section className="mk-section-tight mk-reveal" aria-label="Evidence">
+      <div className="mk-wrap">
+        <div className="pb mk-stagger">
+          {PROOF.map((item) => (
+            <Link key={item.label} href={item.href} className="pb-item">
+              <b>{item.n}</b>
+              <span>{item.label}</span>
+            </Link>
+          ))}
+        </div>
+        {/* The honest version of a logo wall, said with a straight back.
+            Announcing that we have no customers is true and is not the point;
+            the point is that a figure you can trace beats a logo you cannot
+            interrogate, and that is a claim worth making confidently. */}
+        <p className="mk-fine" style={{ marginTop: 22 }}>
+          Every figure links to the run that produced it — which is more than a
+          logo can tell you.
+        </p>
+      </div>
+    </section>
+  );
+}
+
 /* --- 2b. Where the policy binds ----------------------------------------- */
 
 /**
